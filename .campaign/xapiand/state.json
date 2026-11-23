@@ -2975,6 +2975,94 @@
         "quest": "detent:consensus-fetch-alongside-flake"
       },
       "text": "detent:consensus-fetch-alongside-flake started and changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:install-request, which your group-heal consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T13:07:47",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T13:07:46",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-268",
+      "items": {
+        "consensus-join-v2": "frees include/consensus/transport/node_hello*, fuzz/*join*, fuzz/*hello*, fuzz/*token*, CMakeLists.txt for consensus-join-v2"
+      },
+      "settles": {
+        "start": [
+          "consensus-join-v2"
+        ]
+      },
+      "text": "consensus-request-install landed: unlocks frees include/consensus/transport/node_hello*, fuzz/*join*, fuzz/*hello*, fuzz/*token*, CMakeLists.txt for consensus-join-v2"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T13:13:07",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T13:13:07",
+      "by": "consensus-join-v2",
+      "closed": "added links.h, connection.h, links_test.cc, connection_test.cc, mutant_commit.py to consensus-join-v2's files (Xapiand master); no active quest holds them",
+      "id": "msg-269",
+      "text": "consensus-join-v2 file set: A3 (join exchange on the transport port, its pool outside handshakes), A4 (reload closing links whose chain no longer verifies) and A5 (the acceptor's boot check) all live in the accept path, which is include/consensus/transport/links.h and connection.h, plus their tests test/transport/links_test.cc and connection_test.cc. None is in the quest's files (host_connection* matches no file; connection.h is the host connection). Please add include/consensus/transport/links.h, include/consensus/transport/connection.h, test/transport/links_test.cc, test/transport/connection_test.cc and test/transport/mutant_commit.py. Until then I work on A1, A2 and the SPKI pins (in the file set)."
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T13:15:19",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T13:15:19",
+      "by": "consensus-join-v2",
+      "closed": "added seeds_test.cc, rpc_hosts.h, transport_idle.cc, flow_bench.cc; groups_test.cc is held by detent:consensus-fetch-alongside-flake, so consensus-join-v2 now lands after it and adds that one line after merging consensus main once it lands",
+      "id": "msg-270",
+      "text": "consensus-join-v2, msg-269 thanks. One more for A4 (pins over the key's SPKI): every NodePins user computes its pins with certificate_fingerprint in a one-line helper, so switching NodePins to key pins breaks them unless they move too. Please add test/transport/seeds_test.cc, test/transport/rpc_hosts.h, test/transport/groups_test.cc, bench/transport_idle.cc and bench/flow_bench.cc (one line each: the pin helper calls key_pin). Peers (peers.h, session.h, Detent's certificate_sha256 config) keeps the DER fingerprint until worker-pump-removal deletes it; I ask Detent's lead separately whether it wants SPKI there (F11)."
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T13:32:36",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T13:32:36",
+      "by": "site-core",
+      "closed": "asked site-core to hold the docs/->site/ move until journal-replaces-wal lands; tested_docs/pages.yml change needs the owner's yes (asked)",
+      "id": "msg-271",
+      "text": "Heads-up: I am moving the Astro/Starlight site from docs/{src,public,package*,astro.config.mjs,...} to site/ on master while extracting the four-site shared engine. docs/design, docs/dev, docs/discussions, and campaign records stay in docs/. I will update Pages, harness fixture paths, edit links, and README references, then push only the site migration. Please avoid landing new docs/src or docs/public edits until this lands; after it lands, use site/ for page ownership and change tested_docs from docs/src/content/docs/** to site/src/content/docs/**."
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T14:33:50",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T14:33:50",
+      "by": "lead",
+      "closed": "info: no strata quest of ours sets WorkerLimits::flow or scheduling.flow; group-heal pins consensus at 6e1122c and keeps Flow{}",
+      "id": "msg-272",
+      "text": "Landed on consensus main (pushed): consensus-install-test-faultfs (consensus:973fada) and consensus-driver-flow (consensus:e58ea96: WorkerLimits::flow / GroupOptions::scheduling.flow reach every Core, default Flow{} unchanged). Pipelined appends through a Driver are not yet proven end to end (consensus-driver-pipelined-sim); hold strata at Flow{} until it lands."
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T15:01:10",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T15:01:10",
+      "by": "campaign detent",
+      "closed": "consensus-join-v2 ordered after detent:consensus-faultlab-repin; a pin bump changes no contract group-heal (pinned at consensus 6e1122c) or cluster consumes",
+      "id": "msg-273",
+      "settles": {
+        "ours": [
+          "cluster",
+          "consensus-join-v2",
+          "group-heal"
+        ],
+        "quest": "detent:consensus-faultlab-repin"
+      },
+      "text": "detent:consensus-faultlab-repin started and may change files your consensus-join-v2 changes (order them with --after detent:consensus-faultlab-repin, or narrow the files); changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:node-admission, which your consensus-join-v2 consumes; changes contract consensus:install-request, which your group-heal consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
     }
   ],
   "quests": {
@@ -7074,7 +7162,12 @@
     },
     "consensus-join-v2": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "detent:consensus-fetch-alongside-flake",
+        "detent:consensus-faultlab-repin"
+      ],
+      "base": "6e1122cc691ddcdd3b5e527a1d4ac037cd7add57",
+      "branch": "quest/xapiand/consensus-join-v2",
       "checks": [
         {
           "cmd": "ci:macos-arm64",
@@ -7123,8 +7216,18 @@
         "docs/mechanisms/admission.md",
         "docs/mechanisms/hello.md",
         "docs/mechanisms/host-connection.md",
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "include/consensus/transport/links.h",
+        "include/consensus/transport/connection.h",
+        "test/transport/links_test.cc",
+        "test/transport/connection_test.cc",
+        "test/transport/mutant_commit.py",
+        "test/transport/seeds_test.cc",
+        "test/transport/rpc_hosts.h",
+        "bench/transport_idle.cc",
+        "bench/flow_bench.cc"
       ],
+      "journal": "../Xapiand-wt/xapiand/consensus-join-v2",
       "landed": [],
       "lenses": [
         "security"
@@ -7138,9 +7241,10 @@
       ],
       "repo": "../consensus",
       "risk": "high",
-      "status": "planned",
+      "status": "review",
       "title": "consensus joins a node by token v2 on the transport port, pins keys, reloads certificates and checks the boot",
-      "updated": "2026-11-21T17:35:42"
+      "updated": "2026-11-23T15:14:35",
+      "worktree": "../consensus-wt/xapiand/consensus-join-v2"
     },
     "consensus-request-install": {
       "accepted": {
@@ -13405,18 +13509,20 @@
     "group-heal": {
       "accepted": {
         "durability": {
-          "at": "2026-11-23T04:11:46",
-          "base": "00eb018da75d20715b3e05a2593937a970b40201",
+          "at": "2026-11-23T13:18:16",
+          "base": "93d104461a79e17b0b9e43b93965a77d7ab711ed",
           "blobs": {
-            "CMakeLists.txt": "100644:a5dfca17b158a4227349ac948a64c64d1c9a3882",
-            "docs/mechanisms/group-install.md": "100644:8b6522fe020e09b95a7637459abaeaaf761c9048",
+            "CMakeLists.txt": "100644:afa13d2ba3cf8d4e5ec7a47dcca5f3527a71ed6e",
+            "docs/gates/phase-3r.md": "100644:c2e1230f7b6d1ed684c408343d35aa6c09b75ca5",
+            "docs/mechanisms/group-install.md": "100644:3f23f3eb93ca595012ae6a6b3a8198e6c8cb49cb",
             "docs/mechanisms/replication-group.md": "100644:50f10ab6bd4e42ac68d21dfb929a2f474c5dc50d",
             "docs/mechanisms/simulator.md": "100644:ade41f699cff5472d4c8f284cb6b4f577ac917d4",
             "include/strata/group/file_set.hh": "100644:6a259e7b977a1a94c9a401dd5e03fc1b6f30f5cd",
-            "include/strata/group/group.hh": "100644:8f4e2e33ad7cca4d63f535065a6a43c784b7adf9",
-            "include/strata/group/install.hh": "100644:3014373ff872bab2955a3ad1c8af31e0dc905ed4",
+            "include/strata/group/group.hh": "100644:20b2ef7c0181453cda901853d4c39c0210779f85",
+            "include/strata/group/install.hh": "100644:4391c96d6987a863c4171a561aac9b5af6153d79",
+            "include/strata/group/repair.hh": "100644:a9b6765cd28a9c67ed91130231aecac21fca368d",
             "include/strata/group/witness.hh": "100644:c22ed0ab0ef04bd3fcbbb488fa286245442255e5",
-            "sim/CMakeLists.txt": "100644:3ad5d3cbfcec2f4720ce0a37ac0b571c655f6448",
+            "sim/CMakeLists.txt": "100644:154b89c5b1861d7e9e73898df219a781d92f4b64",
             "sim/LICENSE": "100644:b735c45c9e67b1dd3d57691552a3bd72e08237fd",
             "sim/cmake/same_history.cmake": "100644:016d2502a68be2a3a1e1c8cdc6f1fbd6bc9e0b83",
             "sim/include/simulation/checker.hh": "100644:ae3baf59547639ceb75e20688e424a40e54f2de3",
@@ -13436,27 +13542,33 @@
             "sim/tools/sim_check.cc": "100644:046319f820464b586828038d793a0f99e5e6489c",
             "sim/tools/sim_run.cc": "100644:c126f101a32e22218035ccad764c1783dbc621fe",
             "test/group/footprint_test.cc": "100644:8e1a215d0aa28da38863c581ae7abe309bc5b9bb",
-            "test/group/install_mutants.py": "100644:63afa639d4f263197cfa5140f3ac369c017dfd57",
-            "test/group/install_suite.sh": "100644:9dbc31c302202715f502b9455fc66cadc7c7792d",
-            "test/group/install_test.cc": "100644:ab110aa136d395cfcf9ce9faa8964f0d3fbed21b",
-            "test/group/mutants.py": "100644:6715937cf9566285f53305c60c931ccaeaa57ed1",
-            "test/group/voters_test.cc": "100644:8b7967af2ddc8e3fb804b1b47511eca033b86eb8",
+            "test/group/install_mutants.py": "100644:447bed428af7f2b52051ff2748130618062688e9",
+            "test/group/install_test.cc": "100644:6230f7be25c87a26d191fa13d25683d93a6eba47",
+            "test/group/mutants.py": "100644:d872c5662363f53a931b36cc0a079651400d90f5",
+            "test/group/repair_mutants.py": "100755:182e60da22c3d2b1a97fce48a581cc5250018f3d",
+            "test/group/repair_test.cc": "100644:1f54f24a46760326b389f81f9a4ffaf169d399f5",
+            "test/group/sim_mutants.py": "100755:4012124e3f4cbbefac3d911df62c2a249d475243",
+            "test/group/sim_test.cc": "100644:7ca4e6b36b01179d70051eff1175022d8d047a9d",
+            "test/group/suite.sh": "100755:f193054cba597130cd935ca70b51e71c13610d3c",
+            "test/group/voters_test.cc": "100644:cc99e88b067a74deecd9aeb35d54daee4b38dd4e",
             "test/group/witness_test.cc": "100644:708061f4eed05b5fc75ac9ca7800e0eee3827b06",
-            "test/group/world.hh": "100644:ec43297ace9e87efb0262312328ebdca69908876"
+            "test/group/world.hh": "100644:03453d0e8178491a8cdf9256becb174beacd5745"
           },
           "by": "review",
-          "commit": "a1e786f4a1c08c4f2a0c314ea484b8c2a1e80301",
+          "commit": "870ac9f57c12bcb0534e4c4f288d01dd0bd0984e",
           "criteria": "987c23accdcf1e4c",
           "diffs": {
-            "CMakeLists.txt": "4d742e4335f7a946",
-            "docs/mechanisms/group-install.md": "7bb754f968c0e64d",
+            "CMakeLists.txt": "4451978a73839a3e",
+            "docs/gates/phase-3r.md": "097a54437ffdf624",
+            "docs/mechanisms/group-install.md": "27f63326784a2f1e",
             "docs/mechanisms/replication-group.md": "878c7efc5f901062",
             "docs/mechanisms/simulator.md": "6a00cc48303b6ba2",
             "include/strata/group/file_set.hh": "f95e0c0f28158d0a",
-            "include/strata/group/group.hh": "8f8249faa9060860",
-            "include/strata/group/install.hh": "22c784f9f275f979",
+            "include/strata/group/group.hh": "778d4274a119460f",
+            "include/strata/group/install.hh": "a692a61db33f3f87",
+            "include/strata/group/repair.hh": "b6c765028228d274",
             "include/strata/group/witness.hh": "98bbd093192fdb84",
-            "sim/CMakeLists.txt": "2abe92058e8c74e6",
+            "sim/CMakeLists.txt": "1147f62fcd79877b",
             "sim/LICENSE": "b373a14186e00f7b",
             "sim/cmake/same_history.cmake": "b1dc0901f06aa71d",
             "sim/include/simulation/checker.hh": "fe499a334461f5a8",
@@ -13476,54 +13588,23 @@
             "sim/tools/sim_check.cc": "0e42874374ca792a",
             "sim/tools/sim_run.cc": "49ef76828b058df5",
             "test/group/footprint_test.cc": "1cac1719ea084bd3",
-            "test/group/install_mutants.py": "54b764eafa00e59e",
-            "test/group/install_suite.sh": "87c4131d1d009f51",
-            "test/group/install_test.cc": "dea189c745e5bae0",
-            "test/group/mutants.py": "10ad5e4e61d24a41",
-            "test/group/voters_test.cc": "ade38ac211075e0b",
+            "test/group/install_mutants.py": "caa15c2225f66f86",
+            "test/group/install_test.cc": "67313f59485f44cb",
+            "test/group/mutants.py": "dd47ce85f32e0635",
+            "test/group/repair_mutants.py": "4129c410ea3d3725",
+            "test/group/repair_test.cc": "8c5b9058964095b0",
+            "test/group/sim_mutants.py": "e5d9a993ca8f2a4a",
+            "test/group/sim_test.cc": "745433cbf541cbd0",
+            "test/group/suite.sh": "b9438e5ce1f9a8c6",
+            "test/group/voters_test.cc": "19e52ba3e67b71c7",
             "test/group/witness_test.cc": "1fa1d3a0fe64c93f",
-            "test/group/world.hh": "6c9a28a48f313d0a"
+            "test/group/world.hh": "7087c7c8a4841bbd"
           },
-          "findings": {
-            "F1": {
-              "jobs": [
-                {
-                  "cmd": "sh -c 'CONSENSUS_DIR=$JOB_REF_CONSENSUS sh test/group/install_suite.sh build-heal'",
-                  "commit": "a1e786f4a1c08c4f2a0c314ea484b8c2a1e80301",
-                  "exit": 0,
-                  "host": "kronuz",
-                  "job": "261123-025745-1cfc1e",
-                  "level": "light",
-                  "seconds": 370.0,
-                  "state": "done",
-                  "what": "group suite at the durability fix (reopen_short_of_space, deferred_learner_crash, install deferred)"
-                }
-              ],
-              "kind": "defect",
-              "reproduced": false
-            },
-            "F2": {
-              "jobs": [
-                {
-                  "cmd": "sh -c 'CONSENSUS_DIR=$JOB_REF_CONSENSUS sh test/group/install_suite.sh build-heal'",
-                  "commit": "a1e786f4a1c08c4f2a0c314ea484b8c2a1e80301",
-                  "exit": 0,
-                  "host": "kronuz",
-                  "job": "261123-025745-1cfc1e",
-                  "level": "light",
-                  "seconds": 370.0,
-                  "state": "done",
-                  "what": "group suite at the durability fix (reopen_short_of_space, deferred_learner_crash, install deferred)"
-                }
-              ],
-              "kind": "defect",
-              "reproduced": false
-            }
-          },
+          "findings": {},
           "note": "",
-          "review": "ca986675efb5dbb28c520ba8621732852aa5bbba",
-          "reviewed": "908b58c0d2ee3512744c68be8a083daea72715ec",
-          "verdict": "CHANGES"
+          "review": "b2c3450e4416f8a1dc30a785e1bb2b311529c59c",
+          "reviewed": "870ac9f57c12bcb0534e4c4f288d01dd0bd0984e",
+          "verdict": "APPROVE"
         }
       },
       "after": [
@@ -13711,7 +13792,7 @@
         }
       },
       "title": "Replication groups grow, heal and run in the simulator",
-      "updated": "2026-11-23T08:35:22",
+      "updated": "2026-11-23T13:18:16",
       "worktree": "../strata-wt/xapiand/group-heal"
     },
     "group-install": {
@@ -14567,6 +14648,85 @@
       "title": "Xapiand takes http's half-close fix",
       "updated": "2026-11-20T05:27:22"
     },
+    "hunt-faultfs-at-mark-clear": {
+      "accepted": {},
+      "after": [],
+      "base": "42cc324032aca53668451f9a175f1620da9e6f6f",
+      "branch": "quest/xapiand/hunt-faultfs-at-mark-clear",
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:ci",
+          "level": "light",
+          "minutes": 30,
+          "name": "ci"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/faultlab/faultfs/**",
+        "src/faultfs/**",
+        "test/faultfs_test.cc",
+        "docs/**"
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-23T14:59:31",
+          "ci": {
+            "commit": "5d4df9b04d7064fc978c84d29e7db8e6789bb10c",
+            "runs": [
+              45270163673
+            ]
+          },
+          "commit": "5d4df9b04d7064fc978c84d29e7db8e6789bb10c",
+          "criteria": {
+            "A1": "261123-132542-c99f18 (the build-test check), 261123-132542-c99f18",
+            "A2": "261123-132538-2cb7f4; fails without: 261123-132536-5edf40",
+            "A3": "CI green at 5d4df9b04d70"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "5d4df9b04d7064fc978c84d29e7db8e6789bb10c",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-132542-c99f18",
+              "level": "light",
+              "seconds": 59.1,
+              "state": "done",
+              "what": "hunt-faultfs-at-mark-clear check build-test at 5d4df9b04d70"
+            },
+            {
+              "check": "ci",
+              "ci": "ci:ci",
+              "commit": "5d4df9b04d7064fc978c84d29e7db8e6789bb10c",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "42cc324032aca53668451f9a175f1620da9e6f6f",
+          "reason": "",
+          "tested": "5d4df9b04d7064fc978c84d29e7db8e6789bb10c"
+        }
+      ],
+      "lenses": [],
+      "messages": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../faultlab",
+      "risk": "low",
+      "status": "landed",
+      "title": "faultfs clears a removed ordering point's at_mark record",
+      "updated": "2026-11-23T14:59:44",
+      "worktree": ""
+    },
     "hunt-faultlab-at-mark": {
       "accepted": {},
       "after": [],
@@ -14699,6 +14859,50 @@
       "title": "Header static tables: one copy and one initializer per program",
       "updated": "2026-11-22T21:43:36",
       "worktree": ""
+    },
+    "hunt-htm-constexpr-start": {
+      "accepted": {},
+      "after": [],
+      "base": "c4577b702aed9bfdecc837e8a9b309e2b267c48f",
+      "branch": "quest/xapiand/hunt-htm-constexpr-start",
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:ci",
+          "level": "light",
+          "minutes": 30,
+          "name": "ci"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "htm.h",
+        "htm.cc",
+        "*.h",
+        "src/**",
+        "include/**",
+        "test/**",
+        "tests/**",
+        "CMakeLists.txt",
+        "docs/**"
+      ],
+      "journal": "../Xapiand-wt/xapiand/hunt-htm-constexpr-start",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../htm",
+      "risk": "low",
+      "status": "active",
+      "title": "htm start tables constant-initialized",
+      "updated": "2026-11-23T13:23:15",
+      "worktree": "../htm-wt/xapiand/hunt-htm-constexpr-start"
     },
     "hunt-lua-fetch": {
       "accepted": {},
@@ -14875,6 +15079,53 @@
       "title": "radix-router: bound slow matching inputs found by fuzzing",
       "updated": "2026-11-17T22:45:34",
       "worktree": ""
+    },
+    "hunt-soundex-one-definition": {
+      "accepted": {},
+      "after": [],
+      "base": "2bddab7700748709ba6189f9af0140f0b3efc03d",
+      "branch": "quest/xapiand/hunt-soundex-one-definition",
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:ci",
+          "level": "light",
+          "minutes": 30,
+          "name": "ci"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "*.h",
+        "*.cc",
+        "src/**",
+        "include/**",
+        "test/**",
+        "tests/**",
+        "CMakeLists.txt",
+        "README.md",
+        "docs/**",
+        "AGENTS.md",
+        "ARCHITECTURE.md",
+        "CHANGELOG.md"
+      ],
+      "journal": "../Xapiand-wt/xapiand/hunt-soundex-one-definition",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../soundex",
+      "risk": "low",
+      "status": "active",
+      "title": "soundex tables defined once, not per including TU",
+      "updated": "2026-11-23T14:54:10",
+      "worktree": "../soundex-wt/xapiand/hunt-soundex-one-definition"
     },
     "hunt-tls-expiry": {
       "accepted": {},
@@ -35307,7 +35558,7 @@
     "turn-log-parity": {
       "accepted": {
         "design": {
-          "at": "2026-11-20T14:32:43",
+          "at": "2026-11-23T14:43:14",
           "base": "d956c0f413f058d6c0e1bdc0f1e3993f62a34ba1",
           "blobs": {
             "CMakeLists.txt": "100644:b5877040359fbe468d0e9cb52a03ec4e6c4bdb27",
@@ -35335,7 +35586,7 @@
           },
           "by": "review",
           "commit": "68e1c6a893ebf45357d847722b08213740bf908c",
-          "criteria": "8f631ec112931fb7",
+          "criteria": "46b16d548ccf3281",
           "diffs": {
             "CMakeLists.txt": "5f4c15076e32dc97",
             "bench/kv/kvdriver.hh": "42c34ec1c8ef8dba",
@@ -35398,66 +35649,6 @@
               "kind": "defect",
               "reproduced": false
             },
-            "F12": {
-              "jobs": [
-                {
-                  "cmd": "python3 -I bench/kv/probes/rocksdb-parity/d6_wake_model.py 14",
-                  "commit": "e287a47b927aeb7f0c3b56faae83857e9bc4c9e7",
-                  "docs": [
-                    "docs/design/rocksdb-parity.md"
-                  ],
-                  "exit": 0,
-                  "host": "kronuz",
-                  "job": "261120-133245-22acfd",
-                  "level": "light",
-                  "seconds": 1.4,
-                  "state": "done",
-                  "what": "rocksdb-parity F12: D6 wake model, depth 14"
-                }
-              ],
-              "kind": "gap",
-              "reproduced": false
-            },
-            "F13": {
-              "jobs": [
-                {
-                  "cmd": "python3 -I bench/kv/probes/rocksdb-parity/d1_ladder_model.py",
-                  "commit": "e287a47b927aeb7f0c3b56faae83857e9bc4c9e7",
-                  "docs": [
-                    "docs/design/rocksdb-parity.md"
-                  ],
-                  "exit": 0,
-                  "host": "kronuz",
-                  "job": "261120-133247-a1f4a0",
-                  "level": "light",
-                  "seconds": 0.3,
-                  "state": "done",
-                  "what": "rocksdb-parity F13: D1 ladder model"
-                }
-              ],
-              "kind": "gap",
-              "reproduced": false
-            },
-            "F14": {
-              "jobs": [
-                {
-                  "cmd": "python3 -I bench/kv/probes/rocksdb-parity/d7_model.py",
-                  "commit": "e287a47b927aeb7f0c3b56faae83857e9bc4c9e7",
-                  "docs": [
-                    "docs/design/rocksdb-parity.md"
-                  ],
-                  "exit": 0,
-                  "host": "kronuz",
-                  "job": "261120-133248-df88a3",
-                  "level": "light",
-                  "seconds": 1.2,
-                  "state": "done",
-                  "what": "rocksdb-parity D7 model with the A3 large-transaction rows"
-                }
-              ],
-              "kind": "gap",
-              "reproduced": false
-            },
             "F8": {
               "jobs": [
                 {
@@ -35505,7 +35696,7 @@
           "verdict": "CHANGES"
         },
         "durability": {
-          "at": "2026-11-23T04:09:17",
+          "at": "2026-11-23T14:43:11",
           "base": "7131ed4480b14dacbb975ca9de06a4c43881cff2",
           "blobs": {
             "CMakeLists.txt": "100644:b798f28bfed3f83ed7413eff757961653c271b48",
@@ -35551,7 +35742,7 @@
           },
           "by": "review",
           "commit": "f5f6b7dceeac4bddd28bab74c34ffc0356b1e4c2",
-          "criteria": "8f631ec112931fb7",
+          "criteria": "46b16d548ccf3281",
           "diffs": {
             "": "337c1c59a6bf310b",
             "CMakeLists.txt": "459f87b11ffd6b5f",
@@ -35702,17 +35893,53 @@
         }
       ],
       "journal": "../Xapiand-wt/xapiand/turn-log-parity",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-23T14:43:39",
+          "ci": {
+            "commit": "cbc4dd1b264330e2d25af138ab6646e754079d7e",
+            "runs": [
+              45240441455
+            ]
+          },
+          "commit": "757c00ab4a0c03044394bd0dda87a138f5a98f9b",
+          "criteria": {
+            "A1": "261123-103824-1a142a, 261123-103824-c55688; fails without: 261121-090430-5cd461, 261121-090433-fa1d1f, 261121-090436-c180a4, 261121-151648-9ffb16, 261123-002143-aa5d40",
+            "A2": "261123-132004-4e6fad, 261123-132007-eebb45; fails without: 261121-115241-8bbc79, 261121-145613-34602d, 261121-214545-0d42a7",
+            "A3": "261123-132013-a6ff01, 261123-132010-1e093e, 261123-132000-0586f1, 261123-132020-d42c76; fails without: 261121-104113-4f8cbb, 261121-104116-816fc6, 261121-104119-d0dd11, 261121-110107-c64ff6, 261121-110108-aa171b, 261121-110110-5b9806, 261121-110112-a647c1, 261121-151703-21b6d5",
+            "A4": "261123-103821-e0c376; fails without: 261120-082448-f562c7, 261121-101433-65f5c5, 261121-151523-00cd16, 261122-212021-14ab70",
+            "A5": "[artifact] strata:3a29aa9b, `docs/design/standalone-turn-log.md`, \"Questions for the owner\": Q3, Q4, Q5 closed with mechanisms, file:line, tests and mutants"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "cbc4dd1b264330e2d25af138ab6646e754079d7e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-103754-039064",
+              "level": "light",
+              "seconds": 1640.8,
+              "state": "done",
+              "what": "turn-log-parity check build-test at cbc4dd1b2643"
+            }
+          ],
+          "final": true,
+          "from": "93d104461a79e17b0b9e43b93965a77d7ab711ed",
+          "reason": "",
+          "tested": "757c00ab4a0c03044394bd0dda87a138f5a98f9b"
+        }
+      ],
       "lenses": [
         "durability",
         "design"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "tasks": {
         "checkpoint-window": {
           "base": "fcf5b55b98b2027ed2cd7f5171322ad5cc3885e1",
@@ -35842,7 +36069,7 @@
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-23T06:57:19",
+      "updated": "2026-11-23T14:43:40",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {

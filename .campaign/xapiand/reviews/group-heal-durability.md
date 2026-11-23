@@ -1,7 +1,7 @@
 # group-heal review: durability
 
-Commit: strata:bea1f5687823bdcb6a35d51750bff6f233945b09
-Verdict: CHANGES
+Commit: strata:870ac9f57c12bcb0534e4c4f288d01dd0bd0984e
+Verdict: APPROVE
 Date: 2026-11-23
 
 APPROVE: lands as is, at this commit's code, with no blocking finding. CHANGES: lands once each
@@ -131,3 +131,112 @@ guard; both need `CONSENSUS_DIR`, a consensus 59ae07f checkout). Probe jobs 2611
 - Whether F7's wedged activation also blocks close(): I did not close the learner in B1.
 - Five-voter repair, and repair during a membership change.
 - F10 against a built journal main: reasoned from journal main's source, not run.
+
+## Re-check (round 2 fixes)
+
+Commit: strata:870ac9f57c12bcb0534e4c4f288d01dd0bd0984e
+Verdict: APPROVE
+
+Range strata:bea1f568..870ac9f5: e256792b, c76c68f9, 870ac9f5. The round 2 review above was at
+strata:bea1f568.
+
+Evidence relied on, not rebuilt: simulator rows 261123-115259-ccf2c8 (corruption row passed, not
+skipped), suite `^group_` 261123-115301-3839f5, mutants killed 42b792 (settle-keeps-isolation),
+fdca6d (marker-kept, corruption row), 1cf54a (install-damage-escapes), and at c76c68f9 b51e5e
+(refusal-rejected), acb4e2 (pin-unchecked), 49bd41 (refusal-unchecked), 94c61e (handoff-first),
+4f156c (handoff-fixed), ccaf0c (quarantine-deletes), 100baf (quarantine-kept). My round 2 probes
+B1, B3 and B4 at 870ac9f5: 261123-123604-a54cf2, all pass (B1 rested and unread heal on both
+seeds; B3 view off: `1 0 2 0 3`, `1 0 2 0 1 0 3`, healed).
+
+The B4 rewrite (`probes2.inc`, original kept as `probes2.inc.orig-bea1f568`) is fair and stronger
+than mine. Mine counted strata names, which the fix now moves under `iq.`, so it would fail a
+correct fix. The rewrite reads every strata file's bytes after the damage and before the reopen,
+then requires each one byte-equal under its own name or `iq.<name>`, both after the reopen and
+after 50,000 steps, with a non-empty set.
+
+New probes (`run3.sh`, `probes3.inc` in `.scratch/xapiand/review-group-heal-durability/`):
+job 261123-125154-78bf1e (R5, R6, R7; exit 0) and 261123-125156-b3a6de (falsepos).
+
+- F7, closed. make_pin now reads each pinned segment whole (`checked_segment`: footer, size, then
+  `verify_all` on every section) and takes the CRC32C from those bytes (install.hh:150-166, :360).
+  So body rot behind a valid footer, present when the pin is made, is the source's damage ("the
+  pin met damage"; B1 rested and unread, test `body`). Rot after the pin: the learner's stage
+  fails the pin's CRC32C, or `check_stage` refuses the staged checkpoint (group.hh:1430). Either
+  way it answers validation_failed, which consensus 59ae07f releases as `Unavailable`
+  (core.h:829; Rejected is only a SnapshotReply refusal, core.h:1374). Every `Unavailable`
+  release now re-reads the pin against its CRC32Cs on the chore (group.hh:511, :1284-1300;
+  install.hh:376-389). That covers a learner refusing mid-stream and rot that starts after the
+  flight did: test `rot`, mutant refusal-rejected b51e5e. Rot after the learner has already
+  fetched that file is not the learner's damage. The source then meets it at its next pin or
+  read, which is enough. An activation whose `ix.install` throws damage now marks, sweeps and
+  answers `activated` damaged (install.hh:643-652, group.hh:1449-1468), and the wedge is gone:
+  mutant install-damage-escapes 1cf54a.
+  The false-positive question, from code: a pinned file changes only by rot. Segments and the
+  holder manifest log are kept while the generation is pinned. A log is append-only up to its
+  pinned length, and a rollover writes a new name (index.hh:5569-5600). Set files keep their
+  bundle-length prefix (group-install.md:34-36; retired files stop unlinking below the lowest pin,
+  group.hh:1406-1408). `open_if` maps only ENOENT to "missing" (install.hh:95-102), and an EIO or
+  EMFILE is not `damage()` (repair.hh:43-55), so a transient I/O error marks nothing. Job
+  261123-125156-b3a6de instruments check_refused_pin and runs every simulator row and the group
+  tests with no source damage injected. It was still queued behind two exclusive holds when I
+  wrote this (see Not run). The sim rows and `two-damaged` pass, but they would not show a false
+  positive: a sound source wrongly marked damaged reinstalls and the row still settles. So the
+  false-positive answer rests on the code above, not on a run.
+- F8, closed. hand_leadership_away no longer reads a host view. Each try goes to the next voter
+  in the sorted ring of `MemberRole::Voter` members (witnesses are `MemberRole::Witness`,
+  consensus types.h:73), one step further per try (`handoffs_`, group.hh:1596-1609). So every
+  host behaves as the test world does. Each damaged leader moves its target on by one per try.
+  When leadership only passes among damaged voters, one of them leads infinitely often and so
+  names every other voter, the sound one included. B3 view off heals on both seeds (a54cf2), test
+  `two-damaged` and `handoff-down` pass (3839f5), and mutants handoff-first and handoff-fixed are
+  killed. R6, five voters with 1, 2 and 3 damaged (the ring's +1 hops cross damaged voters) and
+  damaged node 1 leading, heals on seeds 1-3 (`1 0 2 0 3 0 4`) with equal digests (78bf1e).
+- F9, closed. open_index marks the replica, then renames each strata name to `iq.<name>`
+  (repair.hh:90-104). A name already set aside keeps its first copy. The aside names go only in
+  `adopt` once the replica is unmarked (group.hh:1178): at recovery, or after an activation
+  cleared the marker (group.hh:1456). B4 and test `lone` keep the lone voter's bytes. R5 cuts power
+  after each of the 8 directory mutations of the lone voter's damaged reopen (9 cuts). After the
+  cut and after the reboot, both strata files are byte-equal under their names or `iq.`, and the
+  replica reboots damaged and marked. R7 damages the manifest log on every replica of three (no
+  source; seeds 1, 2). Each keeps its 2 strata files whole and stays damaged through 100,000
+  steps, then a power cut of all three and 100,000 more. The repair crash sweeps' `staging_left`
+  now counts `iq.` (repair_test.cc:66), so a repaired replica keeps no aside name (3839f5).
+- F12, closed. `simulation_group_corruption` runs (sim/CMakeLists.txt:59-60, no skip code). It
+  damages a stopped follower's segment footer, every manifest log or a sealed set file, 3 seeds
+  each, between two stretches of the faults row's traffic and faults with no host view. Then
+  `finish` waits for every damaged replica to reinstall before it settles (sim_test.cc:1054-1101,
+  :662). Those are A3's three classes and the ones A5 names. It passed in ccf2c8, and marker-kept
+  fails it (fdca6d). The settle change hides no stall. `isolated` is a test fault, and the sim's own
+  step clears it at `isolated_until` (sim_test.cc:584). `world::settle` drives world steps, which
+  never advance that clock, so an isolation left by a cut upload could never end inside a settle.
+  Clearing it there is the sim's own heal, as booting the down nodes already was (world.hh:438-443).
+  The check that matters, "every damaged replica reinstalls", runs before the settle, under the
+  sim's own steps. No group test isolates a node and then calls settle expecting it to stay cut
+  off (each clears `isolated` first: voters_test.cc:292, :332, :384, :412, :830;
+  repair_test.cc:346). settle_heals and mutant settle-keeps-isolation (42b792) pin the new
+  behavior.
+
+| ID | Blocking | Kind | Finding | Evidence | Fix |
+|---|---|---|---|---|---|
+| F7 | no | defect | Closed: the pin checks each segment whole; every Unavailable release re-reads the pin; a refused activation answers damaged. | install.hh:150-166, :360, :376-389, :643-652; group.hh:511, :1284-1300, :1430; a54cf2 (B1), 3839f5 (`body`, `rot`), b51e5e, 1cf54a; false positives: code only, b3a6de queued | - |
+| F8 | no | defect | Closed: hand-offs go round the voter ring with no host view. | group.hh:1596-1609; a54cf2 (B3 view off), 78bf1e (R6, five voters), 94c61e, 4f156c | - |
+| F9 | no | defect | Closed: a damaged index's names are set aside under `iq.` and go only once the replica is unmarked. | repair.hh:90-115; group.hh:206, :1178; a54cf2 (B4), 78bf1e (R5 9 cuts, R7), ccaf0c, 100baf | - |
+| F12 | no | gap | Closed: the corruption row runs on segment, manifest and set files and waits for every reinstall; settle's heal masks no stall. | sim/CMakeLists.txt:59-60; sim_test.cc:584, :662, :1054-1101; world.hh:438-443; ccf2c8, fdca6d, 42b792 | - |
+| F13 | no | gap | Every `Unavailable` release re-reads the whole pin on the chore, and so stalls apply for the read of the pinned index. That includes a learner crash, a lost link, a learner short of space, and each retry of a flight that keeps failing. A learner failing over and over costs the leader one full read of its index per flight. It is correct, but the cost scales with index size, not with the failure. | group.hh:511, :1284-1300; install.hh:376-389 | Re-check a pin once per pin (a flag on `pinned`, set at its first check), or only when the learner reports a CRC32C or check failure. That needs a refusal reason from consensus, which is the owner's call. |
+| F14 | no | gap | Pre-existing, outside this range: the stalled leader's hand-off (D3) still runs only with a host view (`r == step::stall && loop_->applied_past`, group.hh:857). It is the gap F8 had, on the stall path, and no production host sets `applied_past`. | group.hh:857, :114 | The same ring, or drop the view from D3 as well, in a later quest. |
+| F15 | no | gap | With every replica damaged (R7), damaged leaders hand leadership round the ring forever. The bytes are kept (F9), but the group churns leadership with no end and nothing tells the host it needs an operator or a restore. | 78bf1e (R7) | A host-visible state ("no sound replica") for placement or an operator, in the placement quest. |
+| F16 | no | nit | Two copies each of `open_if` (install.hh:95, repair.hh:31) and `error_text` (install.hh:167, group.hh:1474). | file:line | One of each. |
+
+Not run (re-check):
+
+- CI at strata:870ac9f5 is red on every platform: run 45253641038 fails to compile (`no member
+  named 'reinstall' in Driver`, group.hh:1586) against the consensus pin in CMakeLists.txt. That is
+  the pending consensus-request-install, not this range. No ASan, TSan or platform result covers
+  these fixes yet.
+- R5 cuts only the directory disk and only the manifest class. The segment class at open (eager
+  segments) and the host disk were not cut on a lone voter.
+- F13's cost is not measured.
+- Job 261123-125156-b3a6de (`run3.sh falsepos`: check_refused_pin instrumented, every sim row and
+  the group tests; any `RVW-PIN-DAMAGE` line is a sound source marked damaged) was queued behind
+  the exclusive jobs 261123-005923-f76b83 and 261123-060708-4a7840. It is exit 0 when no false
+  positive occurs; the lead can read its result when it runs.
