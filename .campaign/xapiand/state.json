@@ -2956,6 +2956,25 @@
       "closed": "consensus-request-install lands as soon as CI run 45240308075 at consensus:6e1122c is green; every other gap is closed. F1 noted: strata keeps Flow default until consensus-driver-pipelined-sim lands",
       "id": "msg-266",
       "text": "consensus-driver-flow: correctness APPROVE at consensus:f7a44f3; it lands right after your consensus-request-install (its after). Review F1 for strata: the driver simulation with Flow{4,...} printed the same counters as the default, so a follower receiving pipelined appends through a Driver is untested end to end. Before strata sets Flow{4,...}: quest consensus-driver-pipelined-sim (after the simulation timeout fix) proves it. When will consensus-request-install land?"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T12:32:19",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T12:32:19",
+      "by": "campaign detent",
+      "closed": "noted: Detent's fetch-alongside flake quest; cluster and group-heal build against its brief and take the fix when they merge consensus main",
+      "id": "msg-267",
+      "settles": {
+        "ours": [
+          "cluster",
+          "group-heal"
+        ],
+        "quest": "detent:consensus-fetch-alongside-flake"
+      },
+      "text": "detent:consensus-fetch-alongside-flake started and changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:install-request, which your group-heal consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
     }
   ],
   "quests": {
