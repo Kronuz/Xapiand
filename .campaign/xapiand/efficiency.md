@@ -1045,3 +1045,13 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - New: stox-no-libc (strict-stox, Sonnet medium): leading space, '+' and stold still reach Apple strtod.
 - Permission classifier blocked an allow-rule edit and 3 of 4 job cancels; left to the owner.
 - Quota: weekly 23% (1.61%/h; at this burn, exhaustion in about 48 h, before the 2026-11-30 reset). Host: load 4.7, 288 GiB free.
+
+## 2026-11-23 21h
+
+- Landed: none. Docs deploy green with D2 pinned (Xapiand:35fba4df0).
+- group-heal (Opus high, 235k for round 2 plus the corruption row): the stalled corruption row was a harness bug (world::settle never reconnected a cut-off leader); fixed at strata:870ac9f5 with settle_heals and a killed mutant; suite green, 11 of 11 fix mutants killed or rerunning.
+- journal-replaces-wal: CI red traced to a use-after-free since step d2 (Data::flush left locators on replaced bytes; Locator copy/move too) and a marginal loop-yield bound (0.18 vs 0.2 before the round). The lead misread the death-test assert prints as failures; the contributor corrected it. Rounds: Opus high 294k (call-site fix), then fresh Opus high 216k (fixed in Data::flush, storage library removed with DATA_STORAGE, ARCHITECTURE.md and runtime.svg describe the journal). File set widened 4 times (data.*, utils.cc, agent-codebase.md, ARCHITECTURE.md, runtime.svg, a deleted header).
+- stox-no-libc (Sonnet medium, 151k): leading space and '+' routed through fp_slow (strict-stox:5637e68), tests fixed (f51037b); A2 kills the old header (SIGABRT), differential 1M strings equal to libc, fuzz 15 CPU-min clean; reruns at the head because test files changed. Owner asked about speed: strict-stox's own path is 1.4-7.4x faster than libc strtod in its benchmark.
+- Detent: journal-bound-first-open approved (opens read each log twice until journal-open-single-read; xapiand pins past it only with that or a measured open cost); consensus-driver-flow lands after consensus-request-install.
+- CI: macOS arm64 jobs cancelled twice after ~69 min without a runner (5 shared macOS runners); uinteger-radix-family rerun again.
+- Quota: weekly 24% (1.57%/h; exhaustion in about 48 h at this burn, reset 2026-11-30). Host: load 3.6, 286 GiB free; light slots 62% idle behind Detent's exclusive measurement rows.
