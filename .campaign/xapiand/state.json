@@ -3007,6 +3007,18 @@
       "closed": "added links.h, connection.h, links_test.cc, connection_test.cc, mutant_commit.py to consensus-join-v2's files (Xapiand master); no active quest holds them",
       "id": "msg-269",
       "text": "consensus-join-v2 file set: A3 (join exchange on the transport port, its pool outside handshakes), A4 (reload closing links whose chain no longer verifies) and A5 (the acceptor's boot check) all live in the accept path, which is include/consensus/transport/links.h and connection.h, plus their tests test/transport/links_test.cc and connection_test.cc. None is in the quest's files (host_connection* matches no file; connection.h is the host connection). Please add include/consensus/transport/links.h, include/consensus/transport/connection.h, test/transport/links_test.cc, test/transport/connection_test.cc and test/transport/mutant_commit.py. Until then I work on A1, A2 and the SPKI pins (in the file set)."
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T13:15:19",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T13:15:19",
+      "by": "consensus-join-v2",
+      "closed": "added seeds_test.cc, rpc_hosts.h, transport_idle.cc, flow_bench.cc; groups_test.cc is held by detent:consensus-fetch-alongside-flake, so consensus-join-v2 now lands after it and adds that one line after merging consensus main once it lands",
+      "id": "msg-270",
+      "text": "consensus-join-v2, msg-269 thanks. One more for A4 (pins over the key's SPKI): every NodePins user computes its pins with certificate_fingerprint in a one-line helper, so switching NodePins to key pins breaks them unless they move too. Please add test/transport/seeds_test.cc, test/transport/rpc_hosts.h, test/transport/groups_test.cc, bench/transport_idle.cc and bench/flow_bench.cc (one line each: the pin helper calls key_pin). Peers (peers.h, session.h, Detent's certificate_sha256 config) keeps the DER fingerprint until worker-pump-removal deletes it; I ask Detent's lead separately whether it wants SPKI there (F11)."
     }
   ],
   "quests": {
