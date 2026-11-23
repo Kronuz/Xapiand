@@ -1,6 +1,6 @@
 # group-heal: journal
 
-State: waiting on jobs 261122-215230-313ac4 (probe: where every install flight fails; 35th of 65 queued at 21:27)
+State: waiting on jobs 261122-221746-290a7a (probe 2: is the leader's chore running pin_for; queued since 22:17)
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,25 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Round 3 (2026-11-22, this session). Probe 261122-215230-313ac4 read: every failing flight in
+install_gap(3) and grow_and_heal(3) stops at the learner's pin fetch ("fetch 2<-1 3/pin: none",
+fetch_pin "the source holds no pin at the bundle", validation_failed, SnapshotReleased reason 3,
+the next flight the same, 500 times). The leader's pin_for never traces: neither "no pin"
+(boundary/recovered mismatch) nor "make_pin threw", and install_needed saw boundary == recovered
+(3, 13). The flight's frames start 5-45 ms after SnapshotNeeded, ticks in which every chore
+drains, so the pin is not merely late: the leader's chore does not run pin_for at all, or a
+pin is removed before the fetch. Probe 2 (261122-221746-290a7a, .scratch/group-heal/probe2.sh,
+outputs {gap3,heal3}-chore.out) traces every notice item run, kick refusals (stalled, hold,
+installing), pin_for successes and unpin_for.
+
+Seed 132's separate cause, fixed at strata:cc2d0b3f: the leader fenced on ENOSPC in
+unpin_for's release_pin (an uncaught strata commit on the chore). The release now stalls as an
+apply does and repeats after resume(); test release_short_of_space, mutant release-fences.
+Found, outside the file set (strata core): index::checkpoint() leaves pending_pin_ set when its
+second commit fails, so the next commit pins that generation and nothing releases it before a
+reopen (make_pin under ENOSPC).
+
 
 Install stall, round 2 (lead's note 2026-11-22). cd2a4a40's fix (frames in order, snapshot_timeout
 3600) did not settle anything: plain 261121-210217-362497 at cd2a4a40 fails install_gap (3, 5),
