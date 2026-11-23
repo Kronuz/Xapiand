@@ -2868,18 +2868,51 @@
         "docs/dev/agent-*.md",
         "docs/dev/contributing.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-23T10:12:39",
+          "ci": {
+            "commit": "b56d857c3faac9ebd41e765f45edc399ef751730",
+            "runs": [
+              45219576164
+            ]
+          },
+          "commit": "2e03250ea98c02a27a668470e2d9ac973e19272b",
+          "criteria": {
+            "A1": "`AGENTS.md` is 55 lines; rules present: GPL paths, identity, no attribution, Ninja-only build, campaign skill authoritative, docs locations.",
+            "A2": "`docs/dev/agent-codebase.md` holds the moved sections; removed sections listed below, one line each."
+          },
+          "evidence": [
+            {
+              "cmd": "test $(wc -l < AGENTS.md) -le 80",
+              "commit": "b56d857c3faac9ebd41e765f45edc399ef751730",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-101135-6a47f1",
+              "level": "light",
+              "seconds": 1.2,
+              "state": "done",
+              "what": "agents-md check lines at b56d857c3faa"
+            }
+          ],
+          "final": true,
+          "from": "3e1ff7bc8d3b9921ea95f58a189c46711f8b306a",
+          "reason": "",
+          "tested": "b56d857c3faac9ebd41e765f45edc399ef751730"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "reason": "started by force: ninja-only changes one line of AGENTS.md (the configure command); this rewrite keeps -G Ninja and lands after it (after=ninja-only)",
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "AGENTS.md says how Xapiand is built and worked on today",
-      "updated": "2026-11-21T09:47:14",
-      "worktree": "../Xapiand-wt/xapiand/agents-md"
+      "updated": "2026-11-23T10:13:40",
+      "worktree": ""
     },
     "agg-shard-parity": {
       "accepted": {
