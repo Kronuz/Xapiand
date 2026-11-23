@@ -34872,9 +34872,9 @@
       "provides": [],
       "repo": "../uinteger_t",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "uinteger_t: the algorithms leave the 5,709-line class body, one header per family",
-      "updated": "2026-11-21T22:28:22",
+      "updated": "2026-11-23T04:57:04",
       "worktree": "../uinteger_t-wt/xapiand/uinteger-restructure"
     },
     "unpin-after-kick": {
