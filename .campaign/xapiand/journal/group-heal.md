@@ -1,6 +1,6 @@
 # group-heal: journal
 
-State: waiting on jobs 261123-014752-b1fede 261123-014459-375c2a 261123-014502-a2527e 261123-014506-1871b5 261123-014646-0ebc24 261123-014651-e0f143 261123-014655-73ffe0 261123-014705-499a3a (and CI at strata:82ea744c, strata:e4828884)
+State: waiting on jobs 261123-021413-a25890 261123-021416-01f061 261123-021418-f94527 261123-021420-2fb770 261123-021423-f55c10 261123-021425-711463 261123-021427-94e042 261123-021429-dfeb44 (and CI at strata:908b58c0)
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,60 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Round 5 (2026-11-23): strata main taken (group-catalog, strata:00eb018d). Merge at
+strata:11672618, then one fix at strata:908b58c0; pushed. Nothing built locally: the jobs below
+are the first compile. Jobs at 908b58c0 (priority 3): suite a25890 (install_suite.sh, every
+group_ test: catalog, install, voters, witness, lifetime, lone_voter, file_set, footprint);
+voters mutants release-fences 01f061, pin-per-flight f94527, install-silent 2fb770,
+close-skips-install-tasks f55c10 (new); witness 711463, witness-holds-range 94e042,
+witness-refuses-image dfeb44.
+
+Conflict hunks and their resolution (for the durability review):
+- group.hh includes: both (`<charconv>` for serve's parse, `<condition_variable>` for
+  open_blocking/close_blocking).
+- group.hh close(): main's (checkpoint loop unless fenced, row closed, leave(), group_fenced on a
+  fenced close). The quest's `release_pins_held()` moved from the old teardown item to an
+  `on_chore` after `driver().close()` and before `leave()`, unfenced only: no notice pins after
+  the row closes, and the index stays open (the catalog's), so the release commits on the
+  chore under its own lease as before. A fenced close leaves its pins to the next recover.
+- group.hh recover(): main's (no index open; the borrowed `*ix_`) plus the quest's
+  `release_pins` and `adopt()`. `release_pins` now returns when the directory holds no manifest
+  (a deferred index: before, it ran only inside the open's try, past `index_not_created`).
+- group.hh members: main's (no `dir_`). The quest's `shared_ptr<jn::IO> dir_` existed so a serve
+  that took a pin read on past the teardown; with a borrowed directory that is unsound, so
+  `pinned` carries no directory, every use reads `files_.io()` (new accessor in file_set.hh),
+  and `serve()` counts itself (`serving_`, a 4-byte atomic): the teardown, after `closed_` and
+  the chore idle, waits for serves in flight, so close returns with no read of the directory
+  left. `!ix_` guards in pin_for, release_superseded and release_pins_held dropped (never null).
+- voters_test.cc: the quest's (the world lives in world.hh); main's `default_limits` borrow
+  edit auto-merged. world.hh gets main's migration: `borrowed<group_type>` per data node, config
+  without uuid/strata options (the uuid moves to `emplace`).
+- mutants.py: main's side. close-keeps-directory (`dir_.reset()`) and destroy-keeps-member
+  (detach in the destructor) target code group-catalog removed; main's close-keeps-member,
+  attach-at-construction, failed-open-stays, payload-unmarked and the catalog mutants replace
+  them. Every pattern in mutants.py and install_mutants.py applies exactly once on the merge
+  (checked by script). Docstring names both quests.
+- Not a conflict: install_suite.sh builds group_catalog_test (ctest `^group_` runs its cases).
+
+Fix found by the merge, strata:908b58c0: a learner's stage and activation are tasks the group
+spawns on the loop, outside the chore's `running_`. Main's teardown waits only for the chore,
+so a close returned while a stage awaited its pin fetch, and the host (the catalog) could then
+close the index and destroy the group under it. The idle wait now also counts install tasks
+(`tasks_` under mu_, `task_scope` at each task's end); an activation a close refused answers
+and fences nothing. Test `close_mid_install` (voters_test, 3 voters): a fenced learner closes
+with its pin fetch pending; the close must not end until the fetch fails. Mutant
+close-skips-install-tasks restores the chore-only wait (job f55c10).
+
+grow_and_heal's and witness join's changed expectation (rounds 4, carried into the merge): the
+replaced voter stays one entry behind (applied = committed = N-1, the others N) after the core
+removes it. consensus at 8780e44: core.h:284-286 (`removal()`, D3: the leader's next admitted
+Tick proposes the removal of a committed replacement's leaving member), core.h:1305-1309 (D3:
+whichever leader holds the committed membership removes it; D4: a member whose removal
+committed is no longer replicated to), core.h:468-471 (`replicas()`: the committed membership's
+members until their removal commits, D4). So the removed voter never learns the commit of its
+own removal; the tests wait for the next leader's membership to drop it, retire it, and check
+the remaining members' digests.
 
 Round 4 (2026-11-23). Suite 261123-005919-bdfe69 at 75b5ac9b: installs complete; grow_and_heal
 (3, 5) failed "the cluster settles after the promotion" with the leaving voter one entry behind
@@ -104,8 +158,9 @@ voters_test.cc world edit carried into world.hh at that merge).
 
 ## Next
 
-1. Read the jobs in State and CI at strata:82ea744c (footprint's Linux rows) and e4828884; a
-   failing case is fixed at the next commit. Paste `campaign brief`'s evidence table.
+1. Read the jobs in State and CI at strata:908b58c0 (footprint's Linux rows: the merge adds
+   8 B, tasks_ and serving_); a failing case is fixed at the next commit. Paste `campaign
+   brief`'s evidence table. Then the lead launches the durability reviewer.
 2. witness: once its jobs pass, the lead merges the task (quest/xapiand/group-heal--witness).
 3. repair: ruled (lead, 2026-11-23, quest Decisions): option (c), through consensus-request-install; built after that quest lands. sim-rows (order 3) after repair and witness.
 
@@ -141,9 +196,17 @@ Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generat
 Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
 checked what), and answer each message by its id (msg-N).
 
+At strata:908b58c0 (2026-11-23, jobs queued; the head before the merge, 82ea744c, passed: suite
+b1fede, witness 0ebc24, its suite 499a3a):
+
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | <261121-225628-12c599 failed; 261123-021413-a25890 queued; 261123-014456-7941e0 cancelled; 261123-005919-bdfe69 failed; 261123-005922-93c9ac ran other code> |
+| A2 | <261123-021413-a25890 queued; 261123-005919-bdfe69 failed> |
+| A3 | <no evidence yet> |
+| A4 | <261123-021425-711463 queued> |
+| A5 | <no evidence yet> |
+| A6 | <no evidence yet> |
 
 ## Result
 
@@ -165,3 +228,11 @@ and what it leaves open. Results and how it works go in the docs of the reposito
   the 1024 B own-heap bound on libstdc++; the bound stays as it is.
 - A pin release short of space stalls the chore (as an apply does) rather than fencing or
   deferring (cc2d0b3f).
+- Merge (11672618): pins are released at close on the chore after the row closes, unfenced
+  only; a fenced close's pins wait for the next recover's release_pins (strata commits on a
+  fenced replica are not attempted).
+- Merge: serve's directory guard is a count the teardown waits on, not a shared directory: the
+  catalog owns the directory (D169). No deterministic test: the world calls serve on the loop
+  thread, so no serve is ever in flight at a teardown there; TSan in CI covers the threads.
+- 908b58c0: close waits for in-flight install tasks; a stage waiting on its pin fetch delays a
+  close until the fetch answers (the fetch lane's own deadline bounds it).
