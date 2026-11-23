@@ -1065,19 +1065,32 @@ Shard::apply_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std:
 
 // apply_slice() through the index's group (D17): in the turn, a chore prepares the slice's writes, each an
 // unconditional replace by key, into RestoreBatcher's commands of as many writes as fit one log entry; each command
-// is then proposed at quorum, in input order, and its verdict assigns its writes' docids and versions.
+// is then proposed at quorum, in input order, and its verdict assigns its writes' docids and versions. The chore also
+// encodes each command's entry: the loop only proposes it.
 task::task<void>
 Shard::restore_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std::size_t& at, std::chrono::nanoseconds slice, std::unordered_set<std::string>& missed_terms)
 {
 	auto turn = co_await endpoint().take_turn(flags, cancel);
 	auto& entry = endpoint();
 	struct Batch {
-		Command command;
+		Command command;                   // the writes' keys, and their bytes when `entry` is empty
 		std::vector<std::size_t> writes;   // their positions in `writes`, in the command's order
+		std::string entry;                 // the command's one log entry; empty when it is chunked
 	};
 	std::vector<Batch> batches;
 	RestoreBatcher batcher;
 	std::vector<std::size_t> filling;
+	const auto close = [&](Command command) {
+		Batch batch{std::move(command), std::exchange(filling, {}), {}};
+		if (auto entries = split_command(batch.command, 0); entries.size() == 1) {
+			batch.entry = std::move(entries.front());
+			for (auto& write : batch.command.writes) {
+				std::string().swap(write.document.bytes);   // the entry holds them
+				write.blobs.clear();
+			}
+		}
+		batches.push_back(std::move(batch));
+	};
 	co_await chores.run(engine::ChoreClass::flush, [&] {
 		ShardEndpoint::InlineEngine inline_engine(entry, "a RESTORE's apply slice prepares on a worker in the index's turn");
 		if (DocIndexer::seams.throw_in_slice.exchange(false)) {
@@ -1104,7 +1117,7 @@ Shard::restore_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, st
 					CommandWrite batched;
 					write.info = engine::sync_wait(entry.do_replace_term(eng, write.term, std::move(write.doc), false, nullptr, &batched));
 					if (auto closed = batcher.add(std::move(batched), 0)) {
-						batches.push_back({std::move(*closed), std::exchange(filling, {})});
+						close(std::move(*closed));
 					}
 					filling.push_back(position);
 				} catch (...) {
@@ -1118,15 +1131,17 @@ Shard::restore_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, st
 				break;
 			}
 		}
+		if (auto closed = batcher.flush()) {
+			close(std::move(*closed));
+		}
 	});
-	if (auto closed = batcher.flush()) {
-		batches.push_back({std::move(*closed), std::exchange(filling, {})});
-	}
 	auto& eng = entry.engine();
 	for (auto& batch : batches) {
 		std::exception_ptr failed;
 		try {
-			const auto answer = co_await propose(*entry.group(), batch.command);
+			auto proposing = batch.entry.empty() ? propose(*entry.group(), batch.command)
+				: propose_entry(*entry.group(), std::move(batch.entry), strata::group::ack::quorum);
+			const auto answer = co_await std::move(proposing);
 			landed(eng, engine::PreparedWrite{}, answer);   // a refusal raises for the whole batch
 			const auto results = restore_results(batch.command, *answer.applied);
 			for (std::size_t i = 0; i < batch.writes.size(); ++i) {

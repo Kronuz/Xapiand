@@ -146,9 +146,11 @@ place_stored(std::string bytes, const std::vector<StoredPlace>& places)
 		data.update(ct_type_t(place.ct_type), static_cast<ssize_t>(place.volume), static_cast<size_t>(place.offset), static_cast<size_t>(place.size));
 	}
 	data.flush();
+	// A flush leaves its locators viewing the bytes it replaced: the codecs are set on the new bytes, parsed again.
 	// The locators just set come last, so a codec set in place moves no other locator's bytes.
+	Data placed(std::string(data.serialize()));
 	bool typed = false;
-	for (auto& locator : data) {
+	for (auto& locator : placed) {
 		for (const auto& place : places) {
 			const auto type = static_cast<Locator::Type>(place.type);
 			if (type != Locator::Type::stored && locator.ct_type.to_string() == place.ct_type) {
@@ -158,9 +160,9 @@ place_stored(std::string bytes, const std::vector<StoredPlace>& places)
 		}
 	}
 	if (typed) {
-		data.flush();
+		placed.flush();
 	}
-	return data.serialize();
+	return placed.serialize();
 }
 
 
