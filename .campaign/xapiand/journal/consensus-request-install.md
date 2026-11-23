@@ -1,6 +1,6 @@
 # consensus-request-install: journal
 
-State: waiting on jobs 261123-014604-5bfb1e (F1 fails-without), 261123-014608-9d6850 (cases+codec+replay), 261123-014612-ecc91b (A2 mutant), 261123-014617-4a6a56 (A4 mutant), 261123-014626-1d15f8 (TSan cases); CI at consensus:1869826 (pushed). Lead confirm once they pass: `--confirm F1=261123-014604-5bfb1e`.
+State: waiting on jobs 261123-033638-0820c7 (cases at the main merge), 261123-033648-43dc77 (TSan cases), 261123-033712-4c866b 261123-033654-45c17f 261123-033657-79fa97 (fetch x96 at main, quest head, Detent's fix), 261123-033853-954db1 (fetch peak RSS); CI run 45166729737 at consensus:59ae07f (pushed). Blocked on Detent for the fetch flake (Blocked on).
 Quest: .campaign/xapiand/quests/consensus-request-install.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,35 +9,43 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Round 3, review F1 (correctness review CHANGES at consensus:1443159), fixed at consensus:1869826:
-- F1: the leader set `imaged = base` at grant and at SnapshotNeeded, so an owed image that lands
-  CaughtUp (the follower's in-memory request lost to a restart or a NotLeader timeout) used up
-  the base's one image. `imaged` is now set only on Installed (as before) and Rejected
-  (release_snapshot, the key's boundary); CaughtUp leaves it. Grant and replicate no longer
-  touch it; `requested`/`snapshot` still answer InFlight until the peer answers whole.
-- Loop check: a follower with a request pending to (leader, term) always accepts that leader's
-  image at or below its commit: its base cannot move while pending (LocalCheckpoint, Repair
-  Busy), the boundary is committed so log matching gives `retains_suffix`, and the Worker's
-  cutover waits for !busy, so no Busy rejection. So CaughtUp from a requester means its record
-  was lost; every further grant needs a new InstallRequest, sent only by a host call. Images are
-  bounded by host calls, one installed per base.
-- Test `lost_record` (the review probe, now asserting NotLeader first, no activation from the
-  CaughtUp image, the image on the next call, then Current x5 and one activation). Note and
-  ctest list updated.
-- CI at consensus:1443159: linux-tsan failed transport_groups_owe-order and
-  transport_rpc_host_fetch (timing tests outside this quest's code; consensus main 42a8cde,
-  which 1443159 contains, was green); asan timed out at 1h. Fresh CI at 1869826 decides.
-- N1, N2: non-blocking, filed in hunt.md by the lead; left.
-
+Round 4 (lead, 2026-11-23): merge main, CI's fetch failure, A7.
+- Merged consensus main e396c1e (quiesce-election-stall and peers-wake landed) at
+  consensus:59ae07f. One conflict, as expected: Core::next_deadline's follower line keeps both,
+  `std::min({election, acknowledge_at_, install_deadline()})`. Pushed; CI run 45166729737.
+- CI at 1869826 (run 45150071779): linux-x86_64-gcc hit the 1 h job cap in its ccache step
+  (exit 127, never built: a runner fault). macos-x86_64 failed only rpc_host_fetch: "16 MiB
+  arrived exact yes (ok) in 5937 ms beside 159 MiB ... heartbeats' longest gap 4411 ms".
+- Fetch: pre-existing, not this quest's. CI history (80 runs, every attempt of failed and
+  rerun ones), the same failure without this quest's code:
+  - macos-x86_64 at consensus:304bb1e (detent leaving-removal, 2026-11-21, run 44925311406):
+    exact yes in 7320 ms beside 256 MiB, gap 4711 ms. The only other macOS fetch failure is ours.
+  - linux-tsan at main 5a114dd (run 44930858682): gap 4092 ms, fetch NO; and on 8 branch runs
+    (node-admission x3, netlab-consensus x2, full-window-stall, leaving-removal, quiescence x2):
+    gaps 1358-4592 ms. This quest's 1443159 TSan failure (gap 2032 ms) is the same.
+  - The test and transport are untouched here; rpc_host_test builds codec.h and types.h only
+    through host_transport.h (two more Message alternatives).
+- Mechanism, from the two macOS logs: not a heartbeat behind Bulk. In both, the fetch took
+  about its normal ~2.2 s plus the gap (5937-4411 = 1.5 s; 7320-4711 = 2.6 s), so Bulk stalled
+  as long as Control. And stalled-peer, the one test ctest ran beside it (--parallel 2), took
+  8.32 s and 8.42 s against 4.79 s in main's green run 45127143008, its extra ~3.5 s starting
+  when fetch started (it should have ended ~0.6 s after). A stall of the whole runner, or of
+  both processes, for ~4 s at fetch's start: the shape Detent found for group-full ("a runner
+  that pauses the process"). Main's green run had the same overlap with no stall, so it is
+  intermittent: 2 macOS fetch failures in 65 completed run attempts (11-21 to 11-23).
+- Detent's consensus-transport-test-flakes (review, consensus:3d7738f) owns this test: its fix
+  moves fetch's 16 MiB generation off the loops and sends uploads one frame per turn (the TSan
+  cause), and adds a host Lag sampler to group-full only. A 4 s stall of every thread is not
+  bounded by its fetch fix; fetch would need the same Lag allowance (a measured bound) or the
+  runner's stall named. Jobs 4c866b/45c17f/79fa97 compare 96 runs each at main, this head and
+  that fix on this x86_64 Mac (6 at once on 4 cores, CI's macOS flags); 954db1 measures the
+  test's peak RSS (a memory-pressure stall is the other candidate).
 ## Next
 
-1. Read the jobs in State and CI at consensus:1869826; if the TSan transport tests fail again,
-   run them at consensus main's commit to show them pre-existing.
-2. Merge consensus main once detent:consensus-quiesce-election-stall and
-   detent:consensus-peers-wake land (merge, never rebase). Expect one conflict: Core's
-   next_deadline follower line (theirs adds acknowledge_at_, mine install_deadline()); keep both
-   in one std::min.
-
+1. Read jobs 0820c7, 43dc77 and the fetch jobs; record the fetch gap and fetch-time spreads
+   (main vs head: same distribution means no attribution to this quest) and peak RSS.
+2. Read CI run 45166729737 at 59ae07f; cite its `ci:` jobs in A7. If fetch fails again on
+   macos-x86_64, it is the Blocked-on item, for the lead to rerun or take to Detent.
 ## API (consensus:c7a1ad7)
 
 - `Driver::reinstall(GroupId, cancel_token) -> task<RepairCompleted>`: a follower asks its leader
@@ -157,30 +165,28 @@ Out of scope: the strata side (group-heal's `repair` task). `docs/DRIVER.md` gai
 
 ## Blocked on
 
-Lead (file set): the bodies need files outside this quest's set.
-- `include/consensus/transport/codec.h`: wire tags 10 and 11. Its `static_assert` refuses a new
-  Message alternative without them.
-- `include/consensus/admission.h`: admission plans for the two frames and for `RequestInstall`.
-  Its `static_assert` refuses either without them.
-- `include/consensus/worker.h`: the `RequestInstall` busy gate beside Repair's (worker.h:745), and
-  a `witness_bound()` accessor. The Driver reaches Core only through the Worker.
-- The codec round-trip test, in whichever test file holds it: cases for the new tags.
-- `docs/DRIVER.md`: the call's entry.
+Detent (through the lead): rpc_host_fetch on macos-x86_64 and linux-tsan (A7). Pre-existing
+(Doing: macOS at consensus:304bb1e gap 4711 ms; linux-tsan at main 5a114dd gap 4092 ms), and
+test/transport/rpc_host_test.cc and the transport are outside this file set. Detent's
+consensus-transport-test-flakes (review, consensus:3d7738f) owns the test.
+- Option 1 (recommended): Detent's fix adds group-full's Lag allowance to fetch (gap < 1000 ms
+  plus the measured host lag), since the macOS failures stall Bulk and Control alike.
+- Option 2: land this quest on a green rerun of macos-x86_64 (2 failures in 65 run attempts), with
+  the flake named.
+- Option 3: `--no-ci` naming the fetch flake, if CI at 59ae07f fails only there.
 
-Until then, the frames and the event are declared but are not part of `Message` or `Event`, so
-the tree compiles. The wider file set is needed before step 3, not for the review.
-
+Earlier (lead, file set): settled; the wider set is in the quest's files.
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | job 261123-014608-9d6850 (lost_state, behind) at consensus:1869826 |
+| A1 | job 261123-014608-9d6850 (lost_state, behind) at consensus:1869826; 261123-033638-0820c7 at 59ae07f (main merge) |
 | A2 | job 261123-014608-9d6850 (current, after_install, lost_record, unrequested); fails without: 261123-014612-ecc91b (loop-guard mutant, after_install), 261123-014604-5bfb1e (F1: 1443159's core.h, lost_record) |
 | A3 | job 261123-014608-9d6850 (leader_lost, second_request, non_leader) |
 | A4 | job 261123-014608-9d6850 (witness_bound); fails without: 261123-014617-4a6a56 (bound+1 mutant) |
 | A5 | [artifact] docs/mechanisms/install-request.md at consensus:1869826 |
 | A6 | codec round-trip and corpus replay in 261123-014608-9d6850; fuzz 261122-235137-643930 (30 CPU-min, ASan+UBSan, at 1443159; the wire format is unchanged since); wire version ruling in the note's Wire section |
-| A7 | CI at consensus:1869826 (asan, tsan, every platform); TSan of the cases 261123-014626-1d15f8 |
+| A7 | CI run 45166729737 at consensus:59ae07f (pending): `ci:linux-asan-ubsan`, `ci:linux-tsan`, `ci:macos-arm64`, `ci:macos-x86_64`, `ci:freebsd-x86_64`, `ci:linux-arm64-gcc`, `ci:linux-x86_64-gcc`, `ci:linux-x86_64-clang`; TSan of the cases 261123-033648-43dc77. At 1869826 (run 45150071779) every job but two passed: macos-x86_64 fetch (pre-existing, Blocked on), linux-x86_64-gcc a runner timeout in ccache |
 
 Review findings: F1 fixed at consensus:1869826 (test lost_record; fails without:
 261123-014604-5bfb1e). N1, N2 left (hunt.md).
