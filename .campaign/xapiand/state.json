@@ -18997,11 +18997,54 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/node-admission",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-22T22:52:54",
+          "ci": {
+            "commit": "42a8cde325912df0cd463dabc39af0d15d2f8923",
+            "runs": [
+              44996891191
+            ]
+          },
+          "commit": "42a8cde325912df0cd463dabc39af0d15d2f8923",
+          "criteria": {
+            "A1": "261121-230902-815d26, 261121-230902-b3d90f; fails without: 261120-105031-bebe74, 261120-173338-bff111, 261120-173341-5fae97",
+            "A2": "261121-230902-815d26, 261121-230903-02ac18, 261121-230902-ad199a, 261121-230903-c5db6f; fails without: 261120-105033-4b9fdb, 261120-173345-1b7fb0, 261120-185145-6600d3, 261120-190024-386b01",
+            "A3": "261121-230903-02ac18",
+            "A4": "`docs/mechanisms/admission.md` (consensus:674bb21)",
+            "A5": "261121-230902-b3d90f, 261121-230903-02ac18, 261121-230902-b6c772; fails without: 261120-105035-bb5634, 261120-173348-7a0880, 261120-185148-3c31ce, 261120-185150-a20006, 261120-190026-ce7445, 261120-190027-3570be"
+          },
+          "evidence": [
+            {
+              "check": "suite",
+              "ci": "ci:macos-arm64",
+              "commit": "42a8cde325912df0cd463dabc39af0d15d2f8923",
+              "state": "done"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "42a8cde325912df0cd463dabc39af0d15d2f8923",
+              "state": "done"
+            },
+            {
+              "check": "tsan",
+              "ci": "ci:linux-tsan",
+              "commit": "42a8cde325912df0cd463dabc39af0d15d2f8923",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "a068ba067362beaa4b27c4943b95a70fbfb32e18",
+          "reason": "",
+          "tested": "42a8cde325912df0cd463dabc39af0d15d2f8923"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [
@@ -19009,10 +19052,10 @@
       ],
       "repo": "../consensus",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "consensus admits a node's address and pin into a running transport",
-      "updated": "2026-11-22T21:16:12",
-      "worktree": "../consensus-wt/xapiand/node-admission"
+      "updated": "2026-11-22T22:53:03",
+      "worktree": ""
     },
     "numeric-range": {
       "accepted": {},
