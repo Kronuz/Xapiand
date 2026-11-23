@@ -35694,7 +35694,7 @@
           "verdict": "CHANGES"
         },
         "durability": {
-          "at": "2026-11-23T04:09:17",
+          "at": "2026-11-23T14:43:11",
           "base": "7131ed4480b14dacbb975ca9de06a4c43881cff2",
           "blobs": {
             "CMakeLists.txt": "100644:b798f28bfed3f83ed7413eff757961653c271b48",
@@ -35740,7 +35740,7 @@
           },
           "by": "review",
           "commit": "f5f6b7dceeac4bddd28bab74c34ffc0356b1e4c2",
-          "criteria": "8f631ec112931fb7",
+          "criteria": "46b16d548ccf3281",
           "diffs": {
             "": "337c1c59a6bf310b",
             "CMakeLists.txt": "459f87b11ffd6b5f",
@@ -36031,7 +36031,7 @@
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-23T06:57:19",
+      "updated": "2026-11-23T14:43:11",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
