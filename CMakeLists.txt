@@ -774,7 +774,7 @@ FetchContent_Declare(varint GIT_REPOSITORY https://github.com/Kronuz/varint.git 
 # prospect: the search layout on the strata segment core, behind the strata engine
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
 # strata and the libraries strata links.
-FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG efa5214bacd3a0c7ecc4870071ee0bb611968799)  # strata main: strata::group (group-core), tests on faultlab's faultfs
+FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 00eb018da75d20715b3e05a2593937a970b40201)  # strata main: strata::group with the catalog's group slots (group-catalog)
 FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG eef601dce70260cc5a58e2089168d1cf1c7a8982)  # prospect main: completion's read-only opens, damaged segments at first map
 FetchContent_MakeAvailable(prospect)
 

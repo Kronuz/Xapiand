@@ -37,6 +37,7 @@
 #include "test_harness.h"
 
 #include <csignal>                 // for raise, SIGKILL
+#include <array>
 #include <cstdio>                  // for std::fprintf
 #include <cstdlib>                 // for std::getenv
 #include <filesystem>
@@ -150,10 +151,10 @@ group_type::config config() {
 	c.options.limits.log_bytes = 16 * COMMAND_ENTRY_BYTES;
 	c.options.timing = cs::Timing{20, 40, 100, 200, 60000};
 	c.identity = j::Identity{'X', 'S', 'H'};
-	c.uuid = {'c', 'h', 'u', 'n', 'k'};
-	c.strata = engine::strata::index_options({});
 	return c;
 }
+
+const std::array<char, 16> UUID{'c', 'h', 'u', 'n', 'k'};
 
 struct stuck {};
 
@@ -167,6 +168,9 @@ struct Node {
 	std::unique_ptr<j::Host> host;
 	std::unique_ptr<sg::loop> lp;
 	App app;
+	// The catalog slot's part (D169): the directory and the index the group borrows, destroyed after it.
+	std::unique_ptr<j::IO> io;
+	std::optional<prospect::index> ix;
 	std::unique_ptr<group_type> g;
 	task::cancel_source stop;
 	bool turns_done = false;
@@ -180,8 +184,10 @@ struct Node {
 		lp = std::make_unique<sg::loop>(loop_ref(), j::completion_ref::of(inline_io), *host, 0, 7);
 		task::spawn(loop_ref(), host->driver(0).run(j::completion_ref::of(held), stop.token()), [this](std::exception_ptr) { turns_done = true; });
 		task::spawn(loop_ref(), lp->run(stop.token()), [this](std::exception_ptr) { driver_done = true; });
-		app.index = [this]() -> const prospect::index& { return g->strata(); };
-		g = std::make_unique<group_type>(*lp, config(), std::make_unique<j::PosixIO>(root / "shard"), app, task::scheduler_ref::of(chore_s));
+		app.index = [this]() -> const prospect::index& { return *ix; };
+		io = std::make_unique<j::PosixIO>(root / "shard");
+		ix.emplace(group_type::open_index(*io, engine::strata::index_options({}), UUID));
+		g = std::make_unique<group_type>(*lp, config(), *io, *ix, app, task::scheduler_ref::of(chore_s));
 		propose = [this](std::string entry, sg::ack level) { return g->propose(std::move(entry), level); };
 		loop_s.run();
 	}
@@ -288,6 +294,8 @@ struct Node {
 			}
 		}
 		g.reset();
+		ix.reset();
+		io.reset();
 		lp.reset();
 		host.reset();
 	}
