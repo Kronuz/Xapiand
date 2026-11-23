@@ -134,5 +134,5 @@ thread. Each index the catalog opens is a lone voter (D2) whose group borrows th
   a write whose checkpoint failed on a faulted disk is read back from the journal by the next open.
 - `tests/test_shard_group.cc`: offsets from the state and idempotent effects, rotation in log order, a chunked
   command applied at its final entry, an upload into its own volume, a higher term retiring open commands,
-  entries outside their id's term applying nothing, an abort retiring its upload's volume, and the state's
-  bytes.
+  entries outside their id's term applying nothing, an abort retiring its upload's volume, the state's bytes, and
+  `place_stored`'s two flushes: each leaves the locators viewing the bytes it built, never the ones it replaced.
