@@ -25,11 +25,7 @@ before get_open_files_per_proc, so the test measures 3 open (minimum 78) and the
 
 ## Blocked on
 
-Lead: the fix is in Kronuz/system and Xapiand's CMakeLists.txt pin, outside this quest's file set.
-1. Recommended: close fd in both Linux readers of system.cc (one io::close after the read, and on the read-error
-   path), land in Kronuz/system, bump the GIT_TAG at CMakeLists.txt:633 on master. Fixes the leak, not the symptom.
-2. Not recommended: have the test call the two system-wide readers before measuring the open count; it hides a
-   real descriptor leak.
+Nothing. Resolved by the lead, 2026-11-23: system-file-nr-close landed (system:b2a874f, both Linux readers close through one helper); the pin moved to it at Xapiand:4729806 with CMakeLists.txt added to the file set.
 
 ## Evidence
 
