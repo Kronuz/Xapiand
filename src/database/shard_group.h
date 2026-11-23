@@ -118,8 +118,9 @@ private:
 };
 
 
-// Where the process's journal lives, relative to the data directory.
-inline constexpr const char* JOURNAL_DIRECTORY = ".journal";
+// Where the process's journal lives, relative to the data directory: inside `.xapiand`, the namespace Xapiand
+// owns, so it takes no name a user index can have.
+inline constexpr const char* JOURNAL_DIRECTORY = ".xapiand/journal";
 
 // The process's journal (docs/design/cluster-release.md D2): one journal host over a directory of the data root, the
 // group loop that runs its Driver on a thread of its own, and the chore threads the groups apply on. A shard's group

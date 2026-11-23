@@ -74,7 +74,7 @@ publishes.
 ## The group of an index
 
 `src/database/shard_group.h`, `ShardGroups` and `ShardGroup`. The process keeps one journal host over
-`.journal` in the data directory (`DatabasePool::set_journal`, called by the manager), its group loop on a
+`.xapiand/journal` in the data directory (Xapiand's own namespace, beside its system indexes) (`DatabasePool::set_journal`, called by the manager), its group loop on a
 thread of its own, and two chore threads the groups apply on. The journal's IO completes inline on the loop's
 thread. Each index the catalog opens is a lone voter (D2) whose group borrows the slot's directory and index
 (strata's group-catalog, D169):
