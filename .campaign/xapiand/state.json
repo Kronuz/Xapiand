@@ -2975,6 +2975,26 @@
         "quest": "detent:consensus-fetch-alongside-flake"
       },
       "text": "detent:consensus-fetch-alongside-flake started and changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:install-request, which your group-heal consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T13:07:47",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T13:07:46",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-268",
+      "items": {
+        "consensus-join-v2": "frees include/consensus/transport/node_hello*, fuzz/*join*, fuzz/*hello*, fuzz/*token*, CMakeLists.txt for consensus-join-v2"
+      },
+      "settles": {
+        "start": [
+          "consensus-join-v2"
+        ]
+      },
+      "text": "consensus-request-install landed: unlocks frees include/consensus/transport/node_hello*, fuzz/*join*, fuzz/*hello*, fuzz/*token*, CMakeLists.txt for consensus-join-v2"
     }
   ],
   "quests": {
@@ -7075,6 +7095,8 @@
     "consensus-join-v2": {
       "accepted": {},
       "after": [],
+      "base": "6e1122cc691ddcdd3b5e527a1d4ac037cd7add57",
+      "branch": "quest/xapiand/consensus-join-v2",
       "checks": [
         {
           "cmd": "ci:macos-arm64",
@@ -7125,6 +7147,7 @@
         "docs/mechanisms/host-connection.md",
         "CMakeLists.txt"
       ],
+      "journal": "../Xapiand-wt/xapiand/consensus-join-v2",
       "landed": [],
       "lenses": [
         "security"
@@ -7138,9 +7161,10 @@
       ],
       "repo": "../consensus",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "consensus joins a node by token v2 on the transport port, pins keys, reloads certificates and checks the boot",
-      "updated": "2026-11-21T17:35:42"
+      "updated": "2026-11-23T13:10:02",
+      "worktree": "../consensus-wt/xapiand/consensus-join-v2"
     },
     "consensus-request-install": {
       "accepted": {
