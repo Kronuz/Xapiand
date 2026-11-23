@@ -441,3 +441,10 @@ quest fixes them (2 of 5 on 11-20).
 - N3 (nit) Each create of a new id now reads its shard file twice: once in `status()` and again in `load()`. This matters for the many-indexes workload. 
 - N4 (gap) Deleted entries are never dropped, at 45 bytes each in the shard. Ids that are never reused grow the table without bound. This is documented in Limits. 
 - N5 (gap) This predates the quest: any Host open needs 16 KiB free, so a host on a full disk cannot open whether or not a delete ran. 
+
+## placement correctness review follow-ups (review at strata:ae70ff95)
+
+- F4 (gap): A2's scan is proven only over an in-memory test source; no scan source over the root's real index exists yet. Owner: placement's next quest or cluster.
+- F5 (owner decision): a drain with no free node shrinks shards below rf instead of waiting (documented, D7). Options in the review file.
+- F6 (gap): "a new root voter installs the root's records" is tested only as log catch-up; install waits on group-heal's binding. Recheck once group-heal lands.
+- F7 (test nit): the test driver collects group reports before the root read, so a step finishing during the read can be planned from the older report.
