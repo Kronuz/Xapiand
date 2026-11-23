@@ -1,6 +1,6 @@
 # hunt-header-tables: journal
 
-State: waiting on jobs 261122-002109-cfb3da (A1 suite), 261122-002121-a5a538 (A2 one-job A/B), 261122-002150-16faf1 (A3 startup)
+State: waiting on jobs 261122-002109-cfb3da (A1 suite), 261122-002121-a5a538 (A2 one-job A/B), 261122-211249-714471 (A3 startup)
 Quest: .campaign/xapiand/quests/hunt-header-tables.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -45,9 +45,9 @@ jobs no journal names), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261121-202645-79e453 (suite passed at b853eefa0) |
+| A1 | 261122-002109-cfb3da (suite passed at b853eefa0) |
 | A2 | 261121-202620-10935d (base sizes), 261121-202624-066a03 (head sizes), 261121-202633-71dbfb (diff; its sub_I rows read 0 because the pattern is `__GLOBAL__`, the rows are `_GLOBAL__sub_I_`: re-read from the two size tables, numbers in docs/dev/header-tables.md). Confounded: head links LZ4 statically (+17792 B `__text`), base the dylib; rerun needed |
-| A3 | 261121-202637-5516f1: head median 21.29 ms, base 22.04, base A/A 22.19, sd 0.8-1.8, 7 light holds beside it: no slower, within noise, not a speedup |
+| A3 | 261122-211249-714471: head median 21.29 ms, base 22.04, base A/A 22.19, sd 0.8-1.8, 7 light holds beside it: no slower, within noise, not a speedup |
 | A4 | docs/dev/header-tables.md |
 | CI | run 44985100739 at 8f26a9510 failed only test_pool under ASan+UBSan (heap-use-after-free in asio io_context execute): the known flake in docs/dev/test-pool-flake.md, unrelated to these headers; other 5 jobs green |
 
