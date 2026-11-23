@@ -8,17 +8,23 @@ Code: consensus worktree `../consensus-wt/xapiand/consensus-join-v2`, branch
 
 ## Doing
 
-Step 3 (A3): the join exchange on the transport port. Links::accept peeks the first byte inside
-the handshakes' pool; the join magic's 'D' leaves it for JoinService's pool (64, 8 per source,
-10/s per source delayed, slot deadline 10 s then answer 10 s). Test `flood` in
-admission_nodes_test (joiners from ::1, node 2 from 127.0.0.1). Uncommitted until it passes.
+Steps 3-6 written, uncommitted, building: A3 (Links::accept peeks the first byte inside the
+handshakes' pool; the join magic's 'D' goes to JoinService's pool: 64, 8 per source, 10/s per
+source delayed, slot 10 s, answer 10 s; test `flood`), A5 (DTHL0003: boot, directory, reason;
+LinkOptions::check_boot async at both ends, boot_refused at the dialer; HostTransport::boot();
+test `boot`), A6 fuzzers (fuzz/token_fuzz.cc, join_fuzz.cc, hello_fuzz.cc, CONSENSUS_FUZZ), A7
+docs (admission.md, hello.md, host-connection.md).
 
 Done: step 1 (A1, A2) consensus:166327d; step 2 (A4) consensus:a921f4e.
 
 ## Next
 
-1. Step 3 as above; commit; mutants `join-no-pool` / `join-no-slot-deadline`.
-4. Step 4 (A5): hello DTHL0003 with boot and directory version, acceptor check through a hook,
+1. Build, run admission_nodes (all cases), links, connection, node_hello, hello, seeds; commit.
+2. Mutant jobs: skip-boot-check (A5, boot), join-no-cap / join-no-slot-deadline / join-no-rate
+   (A3, flood). Fuzz jobs (A6): token, join, hello, 2 workers x 1000 s each, ASan+UBSan, built
+   with /usr/local/opt/llvm/bin/clang++ -DCONSENSUS_FUZZ=ON.
+3. Push the branch; `campaign verify consensus-join-v2` for A1-A5, A8 (CI).
+4. Old step list for reference: Step 4 (A5): hello DTHL0003 with boot and directory version, acceptor check through a hook,
    refusal reason in the refusing hello; mutant skip-boot-check.
 5. Step 5 (A6): fuzzers fuzz/join_fuzz.cc (token v2, offer, request, answer) and
    fuzz/hello_fuzz.cc, 30 CPU-minutes each under ASan+UBSan.
