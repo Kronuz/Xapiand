@@ -2743,6 +2743,24 @@
         "quest": "detent:consensus-driver-flow"
       },
       "text": "detent:consensus-driver-flow started and changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:install-request, which your group-heal consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T06:52:50",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T06:52:49",
+      "by": "campaign detent",
+      "closed": "noted: turn-log-parity rechecks journal:turn-buffers parity when journal-earlier-turn-loss lands; it does not wait on it",
+      "id": "msg-252",
+      "settles": {
+        "ours": [
+          "turn-log-parity"
+        ],
+        "quest": "detent:journal-earlier-turn-loss"
+      },
+      "text": "detent:journal-earlier-turn-loss started and changes contract journal:turn-buffers, which your turn-log-parity consumes"
     }
   ],
   "quests": {
