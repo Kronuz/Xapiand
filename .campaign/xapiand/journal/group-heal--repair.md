@@ -1,6 +1,6 @@
 # group-heal--repair: journal
 
-State: waiting on jobs 261123-053709-bfdcc2 (group_repair, group_repair_eager), 261123-053717-611002 (^group_), mutants 261123-053726-0f397b .. 261123-053801-c068cc (13) at strata:1d2c820f
+State: waiting on jobs 261123-053709-bfdcc2 (group_repair, group_repair_eager), 261123-053717-611002 (^group_), mutants 261123-053726-0f397b .. 261123-053801-c068cc (13) at strata:1d2c820f; queued behind sim-rows in the shared slot; not pushed (GitHub unreachable), committed locally
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 ## Doing
