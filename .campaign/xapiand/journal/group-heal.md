@@ -1,6 +1,6 @@
 # group-heal: journal
 
-State: waiting on jobs 261121-210217-362497 261121-210236-dca37d 261121-210245-1aac19 261121-210246-3f5652 261121-210246-ad33f8 261121-210247-218fb3 261121-210247-d363e5 261121-210247-fbfca9 261121-210248-1c5575 261121-210248-b81f77 261121-205709-52ed84 261121-204814-6859fe 261121-204824-971469 261121-214745-036576 261121-214749-38a541 261121-214752-5dffc3 (placement merges strata:cd2a4a40, the quest head, once plain 362497 passes)
+State: working (install stall at the quest head; probe 261122-211759-fd0696)
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,32 +9,42 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-group_voters failed at c79cf24e (261121-173201-4aa79d; CI red the same way on macos-arm64,
-asan, tsan: install_gap, grow_and_heal and the ungated seeds never settle, the leader naming the
-peer in installs_needed). The binding had never run green: every earlier voters job at it failed
-to compile (055544, 084738, 131656, 133859). Cause, from consensus's snapshot_channel.h at
-8780e44: the test's network reordered transfer frames with messages; a Chunk or Credit out of
-sequence closes the transfer ("invalid sequential Chunk", "unmatched Credit"), nothing
-retransmits, and the leader restarts only after snapshot_timeout, 60000 ms in the test's Timing,
-past the settle's 20 s. Frames dropped by a crash or a cut stall the same way.
+Install stall, round 2 (lead's note 2026-11-22). cd2a4a40's fix (frames in order, snapshot_timeout
+3600) did not settle anything: plain 261121-210217-362497 at cd2a4a40 fails install_gap (3, 5),
+grow_and_heal and seeds 16, 103, 108, 122, 123, 132, 140 the same way as before (leader names the
+peer in installs_needed, the peer stays at its old applied); CI run 44987690334 (asan, tsan,
+FreeBSD, macOS) the same. In a settle every message, fetch, IO and chore drains each 5 ms tick,
+so simulated time is not the cause: something fails every flight. Probe 261122-211759-fd0696
+(unversioned, .scratch/group-heal/probe.sh + probe-src, traced; consensus 8780e44 by --ref) shows
+where: install_gap(3) and grow_and_heal(3) at frame order kept and 3600 ms. The earlier probe
+261121-205709-52ed84 never built (JOB_REF_CONSENSUS unset: submitted without --ref).
 
-Fix strata:cd2a4a40 (pushed): a pair's frames keep their order (`world::in_order`), and
-snapshot_timeout 3600 ms (30 election timeouts, as at consensus's defaults). Its failing test is
-the plain job at c79cf24e (4aa79d). Jobs at cd2a4a40: plain 210217-362497 (A1, A2); install
-mutants 210245-1aac19 210246-3f5652 210246-ad33f8 210247-218fb3 210247-d363e5 210247-fbfca9
-210248-1c5575 210248-b81f77; install-silent at the regenerated mutant strata:6622d962
-(refs/mutants/group-heal/install-silent) 210236-dca37d. Attribution: 204814-6859fe (first parent
-2b080579) and 204824-971469 (main cc30217f). Probe 205709-52ed84 (unversioned, traced, from
-.scratch/group-heal/probe-src): which of the two changes each failing case needs.
+Separate cause, fixed at strata:74da850c: grow_and_heal(5) fenced every replica on "a retired
+file written again": write_and_compact reused upload ids 104 and 109 across calls, and a leader
+change between calls retires the earlier term's open uploads. The world now hands out upload ids
+once.
+
+Install task jobs (lead's note): 261121-225628-12c599 ran the retired `test/group/install_build.sh`
+(exit 127, no such file at f05b6672): a stale command; its rerun is install_suite.sh's
+`^group_install$`. 261121-225628-ca81f0 at f05b6672 fails group_voters: the stall above.
+
+Main merged at strata:44a0d295 (README.md).
+
+Witness jobs at 7db919a5 ended: plain 214745-036576 fails group_witness (loss: the lost voter
+never settles back; join: after the promotion), the install stall again (witness_test runs on the
+same harness, moved to test/group/world.hh). Mutants 38a541, 5dffc3 exited 1, which means nothing
+while the plain fails. The witness branch needs the stall fix merged in (and 74da850c's
+voters_test.cc world edit carried into world.hh at that merge).
 
 ## Next
 
-1. The jobs in State: plain must pass, every mutant fail on its named test; the probe says
-   whether both changes are needed. Then `campaign verify group-heal`. Quest CI at cd2a4a40
-   (run 44987690334) was still queued on runners at 21:45.
-2. witness (task group-heal--witness, strata:7db919a5, pushed): CI there is its first build;
-   A4 plain 214745-036576, mutants 214749-38a541, 214752-5dffc3. Its journal has the rest.
-3. repair: blocked on the design ruling below. sim-rows (order 3) after repair and witness.
+1. Read probe 261122-211759-fd0696 (its log, and .scratch/group-heal/{gap3,heal3}-trace.out in
+   the strata worktree): which step of the flight fails every time (pin_for no pin, fetch none,
+   validation_failed, Begin Busy, SnapshotTransferFailed). Fix it with a test that fails without.
+2. At the new head: install_suite.sh (A1, A2), install_test all cases (the install task's rerun),
+   install mutants, install-silent; push for CI.
+3. witness: merge the quest head into quest/xapiand/group-heal--witness, rerun its three jobs.
+4. repair: blocked on the design ruling below. sim-rows (order 3) after repair and witness.
 
 ## Blocked on
 
