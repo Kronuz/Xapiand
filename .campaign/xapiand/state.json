@@ -26080,19 +26080,66 @@
         "harness/bench/bulk_rss_probe.py",
         "docs/perf/bulk-load-rss.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-23T07:50:00",
+          "ci": {
+            "carried": true,
+            "commit": "0fc7485398b5d4fd3574d4a71f2512a105228cc2",
+            "runs": [
+              45166121262
+            ]
+          },
+          "commit": "6bb90251653ca1bfc8617f58685dc575e01491b2",
+          "criteria": {
+            "A1": "261123-072851-e9d3c2, 261123-072850-25717a",
+            "A2": "261123-072851-e9d3c2, 261123-072850-25717a",
+            "A3": "261123-072850-063d9a",
+            "A4": "261121-034148-685f8b (passed at c5b2c0689ce5; 16 merges from main since, none touching its files; ignores docs-only docs/perf/bulk-load-rss.md); fails without: 261121-034201-4acbcc, 261121-034203-69a143",
+            "A5": "261121-034148-685f8b (passed at c5b2c0689ce5; 16 merges from main since, none touching its files; ignores docs-only docs/perf/bulk-load-rss.md)",
+            "A6": "261123-072850-b73b5d",
+            "A7": "`docs/perf/bulk-load-rss.md`: \"With the body streamed, the peak is 344-405 MB, held mostly by strata's write buffer until the RESTORE's one closing\"",
+            "A8": "CI green at 0fc7485398b5 (carried to 84ea9a65a516 across clean merges)"
+          },
+          "evidence": [
+            {
+              "check": "build-test",
+              "ci": "ci:Build + unit + smoke",
+              "commit": "0fc7485398b5d4fd3574d4a71f2512a105228cc2",
+              "state": "done"
+            },
+            {
+              "check": "e2e",
+              "ci": "ci:Functional E2E (docs)",
+              "commit": "0fc7485398b5d4fd3574d4a71f2512a105228cc2",
+              "state": "done"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:AddressSanitizer + UBSan",
+              "commit": "0fc7485398b5d4fd3574d4a71f2512a105228cc2",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "a284c169884b887b137b0159898b943af9c8c040",
+          "reason": "",
+          "tested": "84ea9a65a516f0a5cf7ebc7a47a1b87e72246d67"
+        }
+      ],
       "lenses": [
         "security"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "a whole-database RESTORE streams a top-level MessagePack array element by element",
-      "updated": "2026-11-21T23:56:55",
-      "worktree": "../Xapiand-wt/xapiand/restore-stream"
+      "updated": "2026-11-23T07:50:04",
+      "worktree": ""
     },
     "retention": {
       "accepted": {},
