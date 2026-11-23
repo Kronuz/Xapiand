@@ -1,12 +1,17 @@
 # first-commit-crash: journal
 
-State: waiting on jobs 261123-050148-1c20df 261123-050150-0c1ced 261123-050152-1a9db0 261123-050154-7775a1 261123-050400-666aa7
+State: waiting on jobs 261123-053640-93a0e0 261123-053633-726a56 261123-053645-dd3621
 Quest: .campaign/xapiand/quests/first-commit-crash.md (the lead's; never edit it)
 
 ## Doing
 
 Code done at strata:606a1d62. A2 passed. Waiting on four A4 mutants
 and the suite (A1, A3). Branch not pushed: github.com unreachable from this host (port 443 refused).
+
+Review F1 folded in at strata:4955a679: install() commits the empty first generation before its
+copies; install sweep added; F3 comment on refresh(). Jobs: F1 sweep over main's index.hh
+261123-053640-93a0e0 (fails-without), targeted 261123-053633-726a56, mutant no-install-guard
+261123-053645-dd3621. Not pushed (github.com unreachable).
 
 ## Next
 
@@ -35,8 +40,7 @@ strata:606a1d62 (from strata:00eb018d): `flush()` rolls over the empty state as 
 before a deferred index's first data file (`commit_empty()`, include/strata/core/index.hh);
 recovery unchanged. Tests in test/lifecycle_test.cc (first commit, first refresh, second-commit
 control, create's one generation). Doc: docs/mechanisms/manifest-log-file.md "The first manifest",
-"Files no manifest names". Open: install() on a deferred index still relies on group's activate()
-committing first; a lone `manifest-2.tmp` (a first rollover retried after ENOSPC, then cut) still
+"Files no manifest names". Open: a lone `manifest-2.tmp` (a first rollover retried after ENOSPC, then cut) still
 reads as corrupt, as on main.
 
 ## Rulings I made
@@ -57,5 +61,5 @@ reads as corrupt, as on main.
   flush writes nothing and never reaches commit_empty() (05fc0d showed the refusal).
 - Cost, measured in the sweep (ad76e7 vs 9bf051): a deferred first commit of two documents takes 12
   mutations and 6 syncs, was 9 and 4; once per index. Recorded in the mechanism doc.
-- install()'s deferred path (group-heal's F2) is left to group's activate(), which commits first:
-  the lead scoped this to the commit and recover path.
+- install() into a deferred index takes the same guard (review F1, lead's ruling): the core owns
+  the one mechanism; group-heal's commit before install becomes redundant.
