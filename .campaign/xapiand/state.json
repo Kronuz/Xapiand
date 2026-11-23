@@ -31642,6 +31642,40 @@
       "title": "Test rejection of short stored sections",
       "updated": "2026-11-08T15:39:19"
     },
+    "stox-no-libc": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "strict_stox.hh",
+        "strict_stox/**",
+        "strict_stox_*",
+        "test/**",
+        "tests/**",
+        "fuzz/**",
+        "docs/**",
+        "CHANGELOG.md",
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../strict-stox",
+      "risk": "normal",
+      "status": "planned",
+      "title": "strict-stox parses every double without libc strtod",
+      "updated": "2026-11-23T11:22:02"
+    },
     "strata-engine-callbacks": {
       "accepted": {},
       "after": [],
