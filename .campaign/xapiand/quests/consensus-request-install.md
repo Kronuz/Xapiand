@@ -40,7 +40,7 @@ witness can compact its log (D9). group-heal's `repair` task (strata) builds on 
   codec round-trips both (test/transport/codec_test.cc), `fuzz/seed.cc` seeds both kinds into
   `fuzz/corpus/decoders`, and `fuzz/fuzz_decoders.cc` runs at least 30 CPU-minutes under ASan and
   UBSan with no finding (Detent's lead: decoder fuzz is a high-risk gate)
-- A7 The `asan` and `tsan` checks pass, and CI is green on every platform: [ci]
+- A7 [ci] The `asan` and `tsan` checks pass, and CI is green on every platform
 
 ## Contracts
 

@@ -409,3 +409,11 @@ quest fixes them (2 of 5 on 11-20).
 | faultfs: an ordering point that fails before its effect removes itself but leaves its at_mark record on the file. It holds the durable bytes, so it is harmless until a sync; check whether any later sync, crash or second ordering point can read it as staged, and clear it where the point is removed | hunt-faultlab-at-mark contributor, 2026-11-21 (faultlab:7f3910c journal): `settle_staged()` clears every record only while some ordering point exists | include/faultlab/faultfs/file.h (sync, line 157), the ordering-point removal path | faultlab | open |
 | soundex: german_soundex.h, french_soundex.h and spanish_soundex.h define 7 `static const` maps and vectors in the header; each of the 4 including Xapiand TUs (handler.cc, keymaker.cc, query_dsl.cc, serialize.cc) carries a ~12.5 KB static initializer (about 50 KB in all) and a heap copy of every table. One definition per table (a .cc, or constant tables) removes three of the four | hunt-header-tables size tables (Release+LTO macOS, Xapiand:073d466 docs/dev/header-tables.md, "Library rows"): sub_I 12,448-12,912 B per TU | soundex: german_soundex.h, french_soundex.h, spanish_soundex.h | soundex | open |
 | htm: `start_vertices` builds 6 `Cartesian`s through a non-constexpr constructor in each of the 35 including TUs; a constexpr `Cartesian` constructor makes the table constant-initialized. About 6.7 KB of initializers inferred from per-TU sizes (17 TUs whose only initializer is 192 B), not proven: measure first | hunt-header-tables size tables (Xapiand:073d466 docs/dev/header-tables.md, "Library rows") | htm: htm.h (start_vertices, start_trixels), the Cartesian constructor | htm | open |
+
+## group-heal findings (2026-11-23)
+
+- strata `index::checkpoint()`: when its second commit fails, `pending_pin_` stays set, so the next
+  commit pins that generation and nothing releases it until a reopen (a leaked pin holds its
+  segments). Found by group-heal's contributor reading the pin path, outside its file set. Needs a
+  test that fails the second commit (faultlab) and checks the pin count after the next commit.
+  Durability-adjacent: one fix with that test, normal risk. In include/strata/core/index.hh (pending_pin_ :1936, :5541), held by index-restructure and turn-log-parity: start after both land.
