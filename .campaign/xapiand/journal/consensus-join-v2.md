@@ -1,6 +1,6 @@
 # consensus-join-v2: journal
 
-State: waiting on jobs 261123-133811-fee953 261123-133816-735a28 261123-133820-3e888d 261123-150157-b0634d 261123-150202-29c750 261123-150206-ee4ab3 261123-150210-a56a49 261123-150215-ec3793 261123-150231-e1409c 261123-150234-473c5f 261123-150236-7aa566, and CI at consensus:45f2309
+State: waiting on jobs 261123-133816-735a28 261123-133820-3e888d 261123-150157-b0634d 261123-150202-29c750 261123-150206-ee4ab3 261123-150210-a56a49 261123-150215-ec3793 261123-150231-e1409c 261123-150234-473c5f 261123-150236-7aa566, and CI at consensus:45f2309
 Quest: .campaign/xapiand/quests/consensus-join-v2.md (the lead's; never edit it)
 
 Code: consensus worktree `../consensus-wt/xapiand/consensus-join-v2`, branch
@@ -44,11 +44,11 @@ with the redial fix, 0 failures (before it: 4 of 96). Fuzzers ran 15 s each loca
 | A1 | suite (CI at consensus:45f2309); `issue` case; mutants any-token, join-any-cluster, join-unpinned-ca, token-no-version |
 | A2 | sign-each-time 261123-132820-5a61c4 (fails issue: 3 signatures), save-in-place 261123-132818-a116ef (fails save: the kill-during-save crash test) |
 | A3 | `flood` case (suite, tsan in CI); join-no-cap 261123-150202-29c750, join-no-slot-deadline 261123-150206-ee4ab3, join-no-rate 261123-150210-a56a49 |
-| A4 | `renew`, `expired`, `reload`, `redial` cases; pin-der 261123-133811-fee953, reload-keeps-links 261123-133816-735a28, reload-keeps-trust 261123-133820-3e888d, redial-at-deadline 261123-150215-ec3793 |
+| A4 | `renew`, `expired`, `reload`, `redial` cases; pin-der 261123-133811-fee953 (done, fails renew), reload-keeps-links 261123-133816-735a28, reload-keeps-trust 261123-133820-3e888d, redial-at-deadline 261123-150215-ec3793 |
 | A5 | `boot` case; skip-boot-check 261123-150157-b0634d |
 | A6 | token 261123-150231-e1409c, join 261123-150234-473c5f, hello 261123-150236-7aa566 (2 workers x 16 min each, ASan+UBSan) |
 | A7 | docs/mechanisms/admission.md, hello.md, host-connection.md at consensus:45f2309 |
-| A8 | CI at consensus:45f2309 |
+| A8 | CI run 45285292077 at consensus:45f2309 (queued) |
 
 ## Result
 
