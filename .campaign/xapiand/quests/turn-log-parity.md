@@ -63,7 +63,7 @@ No new public API. Log and checkpoint bytes change (pre-release, D30); `format-f
 - Owner, 2026-11-23: split. A1-A5 land here; A6 and the parity tasks not merged here move to
   `rocksdb-parity`, which A6 gates unchanged. Review N1 (journal lost-bound, first open after
   rule-5 damage plus a power cut) lands as a recorded limit (journal `docs/mechanisms/lost-bound.md`,
-  Limits; strata `docs/design/rocksdb-parity.md`, A2) and is fixed by quest `journal-bound-first-open`.
+  Limits) and is fixed by quest `journal-bound-first-open`.
 
 ## When done
 

@@ -9,7 +9,9 @@ Split from `turn-log-parity` (owner, 2026-11-23): its A6 and the parity tasks no
 
 strata is at par or better than RocksDB on every row and axis of document-gate's gate report,
 through the remaining tasks of strata `docs/design/rocksdb-parity.md`, "Tasks for turn-log-parity"
-(tasks 2-6 and 9-14, and the parts of 4 and 8 not merged in turn-log-parity).
+(tasks 2-6 and 9-14, and the parts of 4 and 8 not merged in turn-log-parity). Its first commit adds
+to the design's A2 section the lost bound's first-open limit (journal `docs/mechanisms/lost-bound.md`,
+Limits), closed by `journal-bound-first-open`.
 
 ## Acceptance criteria
 
