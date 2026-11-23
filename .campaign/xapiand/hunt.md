@@ -433,3 +433,11 @@ quest fixes them (2 of 5 on 11-20).
 ## turn-log-parity durability follow-up (2026-11-23)
 
 - G1 (gap, availability) One flipped byte in a log's last turn, in a fragment crossing its sector, reads as a torn tail (journal `docs/mechanisms/turn-log-damage.md`, Limits): the host reports no damage, and strata's open refuses with `the index's head names turn-log records its log lacks` (strata `index.hh`, main's check from 6e455aca). The refusal is safe (opening would reissue applied sequences), but the index stays closed until repaired. Opening it needs a journal change: a per-fragment checksum, or the group's sequence kept at its head. Evidence: the D2 probe's `small (control)` and `last chunk damaged` cases (261121-213954-ecd99d, and again 261123-002234-c8c5d2 at strata:f5f6b7dc). Owner: Detent's journal (coordinate with its lead).
+
+## journal-group-delete durability review notes (2026-11-23, APPROVE at journal:d8453f6; full text in reviews/journal-group-delete-durability.md)
+
+- N1 (nit) The doc says "a view of the deleted group lists nothing once the first commit publishes its range". The first commit publishes the deleted entry with its old incarnation and `[mark, high)`, so views list the old serials until the second commit. If that commit fails, views keep listing serials whose files are gone. 
+- N2 (nit) R4 and the doc say a failed first commit "leaves the group closed". A failure after the rename (for example, the directory sync fails with EIO) leaves the entry closed in memory, but the disk may hold it deleted, and a crash then yields deleted. Either outcome is whole, so this is wording only. 
+- N3 (nit) Each create of a new id now reads its shard file twice: once in `status()` and again in `load()`. This matters for the many-indexes workload. 
+- N4 (gap) Deleted entries are never dropped, at 45 bytes each in the shard. Ids that are never reused grow the table without bound. This is documented in Limits. 
+- N5 (gap) This predates the quest: any Host open needs 16 KiB free, so a host on a full disk cannot open whether or not a delete ran. 
