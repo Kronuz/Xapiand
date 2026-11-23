@@ -24932,17 +24932,51 @@
         "tests/test_harness.h",
         "tests/test_string.cc"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-23T03:29:46",
+          "ci": {
+            "commit": "946c7380c0402bee83c2cad83ead3a20b806c4a6",
+            "runs": [
+              45151756302
+            ]
+          },
+          "commit": "a0ee6c59e8ff62429aec8c4dbdad8ff297d042d0",
+          "criteria": {
+            "A1": "261122-230814-920115 (the suite check); fails without: 261122-230842-8fa903",
+            "A2": "261122-230814-920115 (the suite check); suite 261122-230814-920115",
+            "A3": "manual, below"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "b6e852ebaa51128858bea8d07d377c121cebbc56",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261122-230814-920115",
+              "level": "light",
+              "seconds": 1344.4,
+              "state": "done",
+              "what": "require-once check suite at b6e852ebaa51"
+            }
+          ],
+          "final": true,
+          "from": "4e0754b9c36cd44288400ca4d1eacb1a34dbea6d",
+          "reason": "",
+          "tested": "946c7380c0402bee83c2cad83ead3a20b806c4a6"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "REQUIRE evaluates its condition once",
-      "updated": "2026-11-22T23:06:30",
-      "worktree": "../Xapiand-wt/xapiand/require-once"
+      "updated": "2026-11-23T03:29:59",
+      "worktree": ""
     },
     "research-indexing": {
       "accepted": {},
