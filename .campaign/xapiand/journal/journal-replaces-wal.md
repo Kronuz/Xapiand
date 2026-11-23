@@ -1,6 +1,6 @@
 # journal-replaces-wal: journal
 
-State: waiting on jobs at Xapiand:91113fb2f (pushed; CI runs there), all -DASSERTS=ON: test_pool 261123-113325-ab914d, test_node 261123-113327-576cc8, test_loop_yield 261123-113329-ae325b, test_pool under ASan 261123-113332-95fb3d, test_shard_group under ASan 261123-113334-eca738; fails without the Data::flush fix (data.{cc,h} as at a7f0aabd6): 261123-113337-a11289. The 819a107b7 set (ad7b9a, e32cb8, 9a6eb0, b06fa2) was superseded unrun by these. Still queued from before: 261123-112555-9f402f (test_pool ASan at a22e1537f, before any fix: fails), 261123-101801-e33085 (test_loop_yield pre-fix diagnostic). Next: when they pass and CI at 91113fb2f is green, the lead submits the crash check and the full job set at that commit, without --after (the d4 checkpoint mutant takes the perl pattern of 261123-101712-4f0aa1).
+State: waiting on jobs. At Xapiand:91113fb2f (the flush fix; the code they test is unchanged since), all -DASSERTS=ON: test_pool 261123-113325-ab914d, test_node 261123-113327-576cc8, test_loop_yield 261123-113329-ae325b, test_pool under ASan 261123-113332-95fb3d, test_shard_group under ASan 261123-113334-eca738; fails without the flush fix (data.{cc,h} as at a7f0aabd6): 261123-113337-a11289. At Xapiand:ecf684865 (storage library removed): full build, tests on, 261123-113717-eb5101. Still queued from before: 261123-112555-9f402f (test_pool ASan at a22e1537f, before any fix: fails), 261123-101801-e33085 (test_loop_yield pre-fix diagnostic). Next: when they pass and CI at the pushed head is green, the lead submits the crash check and the full job set at that commit, without --after (the d4 checkpoint mutant takes the perl pattern of 261123-101712-4f0aa1).
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
@@ -20,6 +20,13 @@ Session 10 (2026-11-23), the lead's step (Blocked on 6 and 7, file set widened t
    the group's `app.vol-N` file set), two invariants (apply is a function of entry and starting state; prepare
    writes nothing), two traps (durable at the journal's ack, commit is the checkpoint; a locator views its Data's
    bytes). `git grep -i wal` on it is empty; `no-wal` greps src only and is unaffected.
+3. Xapiand:ecf684865 (lead 2026-11-23: remove the storage library in this quest): its FetchContent block, the
+   STORAGE_IO_HEADER/STORAGE_TRACE_HEADER defines, src/xapiand_storage_{io,trace}.h, the storage.h includes in
+   manager.cc and database/utils.cc (outside the set; the include would not compile without the library), the
+   async allowlist row. DATA_STORAGE (option, config.h.in define, the ifdefs in handler, pool, shard,
+   search_views) goes; the stored-blob paths it gated always build. README and building.md option rows,
+   dependencies.md (row and tree), testing.md's storage paragraph and the zstd comments in CMakeLists stop naming
+   it. cmake/ and .github/ name neither. Proof: build job 261123-113717-eb5101.
 Observed, not changed: no `Storage<>` is instantiated in src any more (manager.cc and database/utils.cc include
 storage.h for nothing or its magic constants; xapiand_storage_io.h is unused), yet CMakeLists still fetches the
 storage library and has DATA_STORAGE. For the lead: removing it is the WAL removal's tail (Proposed tasks).
@@ -231,6 +238,13 @@ strata: `group-catalog` (item 4), which `core` step c waits on.
    that does is exposed. Recommend: add src/database/data.* and have flush feed() its new bytes at its end (one
    parse), with a unit test that flushes twice under ASan. Until then, nothing in the quest depends on it.
 
+8. (2026-11-23) Outside the file set: ARCHITECTURE.md still describes the storage library and the WAL as current
+   (the Storage engine row and section, `storage.h` citations, the "Haystack-style store" extraction row, three
+   storage/WAL bug entries, the format-as-type gem; 17 WAL mentions). It reads as a dated close-read review, but
+   its subsystem table and sections are descriptive. Recommend: widen the set and I rewrite the storage-engine row
+   and section to the journal and drop the removed code's bug entries, or a docs quest refreshes the whole file
+   (its scheduler and threadpool text is stale too, as is dependencies.md's tree on master).
+
 Items 6 and 7 are done (session 10). Earlier items are answered below.
 
 Lead rulings, 2026-11-23:
@@ -331,3 +345,9 @@ Drafts, applied when the code lands; each names the contract it shapes (format-f
     (`data(string_view)`), and a copy or move keeps that. Callers never reparse to work around a flush.
 28. The codebase guide drops the storage library's write-cursor invariant and footer trap with the WAL's: no
     Storage<> volume is written in src now (the blob volumes are the group's file set).
+29. DATA_STORAGE goes with the library (lead's instruction): it no longer selected a store, only whether stored blobs
+    build; every index's group serves them, so there is one build shape. config.h stays included in pool.h and
+    shard.h (comment dropped): about twenty files read XAPIAND_* macros through transitive includes, and a lost
+    one fails silently.
+30. database/utils.cc (outside the set) loses its storage.h include and a history comment: required for the build
+    once the library is gone.
