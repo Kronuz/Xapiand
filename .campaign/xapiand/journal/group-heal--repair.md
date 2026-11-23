@@ -1,6 +1,6 @@
 # group-heal--repair: journal
 
-State: waiting on jobs 261123-045314-e451c4
+State: waiting on jobs 261123-045314-e451c4 (still queued after a 600 s wait)
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 ## Doing
@@ -17,7 +17,9 @@ A red build or case is fixed next commit.
 2. Mutants as plain `--quest group-heal --fails-without` jobs (no `--task`), one per name in
    `test/group/repair_mutants.py --list`: `sh -c 'CONSENSUS_DIR=$JOB_REF_CONSENSUS python3
    test/group/repair_mutants.py build-repair-mut NAME'`.
-3. Push the branch once the round is green.
+3. Push the branch once the round is green. Not pushed yet: CI builds against CMakeLists.txt's
+   consensus pin (8780e44), which lacks `Driver::reinstall`, so CI goes red until the pin moves to
+   59ae07f or later (the lead's call, with consensus-request-install's landing).
 
 ## Blocked on
 
