@@ -6816,17 +6816,17 @@
     "consensus-request-install": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-23T01:53:14",
-          "base": "42a8cde325912df0cd463dabc39af0d15d2f8923",
+          "at": "2026-11-23T04:03:55",
+          "base": "e396c1e342bef76924a38b08c6a226cb48f82214",
           "blobs": {
-            "CMakeLists.txt": "100644:2527398f8c4b10045a4d5efc31ae6304fa1271b2",
+            "CMakeLists.txt": "100644:77d9ac4edbafde1d460e38b3e2f5a93b39d0c156",
             "docs/DRIVER.md": "100644:c52f8d382ab8e0a1565ae2cb3500565024a38b8e",
             "docs/mechanisms/install-request.md": "100644:fafcd6e502492e17caa6f867f3e42c1148e88e7a",
             "fuzz/corpus/decoders/seed-install-request": "100644:25be67ccc98de2db331058dc221751599d4f508d",
             "fuzz/corpus/decoders/seed-install-request-response": "100644:9734f0444f869831ddccc7af55659798dd3a438d",
             "fuzz/seed.cc": "100644:9a67cfb00271b94ab349ac83b6d89ad30f8652af",
             "include/consensus/admission.h": "100644:ca43989facdecc139c60563b16d0ca2d6e2dfd62",
-            "include/consensus/core.h": "100644:7e7b61e5409b479eaa26b4cfe3ea71422f913f61",
+            "include/consensus/core.h": "100644:cc539a017fb70b677a8110fab3d628253756188e",
             "include/consensus/driver.h": "100644:eef7f9b8e12c587f1d56bcc191874eb7858b95e7",
             "include/consensus/transport/codec.h": "100644:22b3b4a5de9a3562996f8dfd11194f42e24d3904",
             "include/consensus/types.h": "100644:041f19f1facf0ba2f1bc9c228df1a0201823ba17",
@@ -6835,7 +6835,7 @@
             "test/transport/codec_test.cc": "100644:b9fbac41b639bc315aaa7322392cfa711c455134"
           },
           "by": "review",
-          "commit": "1869826a021041598cf228f7dddfaabd18256631",
+          "commit": "59ae07f74b953485c79795ad347ac65674465dcb",
           "criteria": "003ee84105c0bd43",
           "diffs": {
             "": "8d8f81e2e0cc1ce9",
@@ -6844,7 +6844,7 @@
             "docs/mechanisms/install-request.md": "4ec34aa00ad28333",
             "fuzz/seed.cc": "77d9a41bb506cb14",
             "include/consensus/admission.h": "aa363c439ec8afb4",
-            "include/consensus/core.h": "b7c18975cadf2ac2",
+            "include/consensus/core.h": "0a012eb7b60357e0",
             "include/consensus/driver.h": "c763d411f0103285",
             "include/consensus/transport/codec.h": "16df610a5ec7a314",
             "include/consensus/types.h": "b8d48aef6fa16f04",
@@ -6856,15 +6856,15 @@
             "F1": {
               "jobs": [
                 {
-                  "cmd": "build-m/consensus_driver_install_request_test lost_record",
-                  "commit": "1869826a021041598cf228f7dddfaabd18256631",
-                  "exit": 1,
+                  "cmd": "bash -c 'ctest --test-dir build-ir --output-on-failure -R \"consensus_install_request_|consensus_transport_codec|consensus_fuzz_decoders_replay\"'",
+                  "commit": "59ae07f74b953485c79795ad347ac65674465dcb",
+                  "exit": 0,
                   "host": "kronuz",
-                  "job": "261123-014604-5bfb1e",
+                  "job": "261123-033638-0820c7",
                   "level": "light",
-                  "seconds": 5.6,
+                  "seconds": 1.7,
                   "state": "done",
-                  "what": "F1: lost_record with 1443159aae93's core.h must fail"
+                  "what": "install request cases + codec + corpus replay at the main merge (Release)"
                 }
               ],
               "kind": "defect",
@@ -6935,7 +6935,7 @@
       "risk": "high",
       "status": "active",
       "title": "consensus: a follower asks its leader for an install; the Driver exposes witness_bound",
-      "updated": "2026-11-23T01:53:14",
+      "updated": "2026-11-23T04:03:55",
       "worktree": "../consensus-wt/xapiand/consensus-request-install"
     },
     "consensus-rpc-lane": {
