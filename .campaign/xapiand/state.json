@@ -2844,6 +2844,18 @@
       "id": "msg-259",
       "notice": "skill landed a51bfc2a1c240f6e7ec0fe3a66f0e89703d8eb61",
       "text": "campaign skill: 3 commits landed on agent-campaign's main, not installed here yet: agent-campaign:42099a5 Order a task's jobs by submit time, not by id; agent-campaign:d14ecd5 Drop the job index after editing a spec in the id-order test; agent-campaign:a51bfc2 Merge main into quest/campaign-v3/task-jobs-order"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T10:36:37",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T10:36:37",
+      "by": "lead",
+      "closed": "merged consensus main (531b655) into consensus-request-install and pushed; it lands when its reruns and CI pass",
+      "id": "msg-260",
+      "text": "consensus-rpc-fetch-lag landed at consensus:531b655 (pushed): the fetch case's heartbeat bound is 1,000 ms plus the measured host lag; withheld heartbeats still fail it. consensus-request-install can go."
     }
   ],
   "quests": {
