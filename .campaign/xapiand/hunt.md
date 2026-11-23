@@ -433,3 +433,32 @@ quest fixes them (2 of 5 on 11-20).
 ## turn-log-parity durability follow-up (2026-11-23)
 
 - G1 (gap, availability) One flipped byte in a log's last turn, in a fragment crossing its sector, reads as a torn tail (journal `docs/mechanisms/turn-log-damage.md`, Limits): the host reports no damage, and strata's open refuses with `the index's head names turn-log records its log lacks` (strata `index.hh`, main's check from 6e455aca). The refusal is safe (opening would reissue applied sequences), but the index stays closed until repaired. Opening it needs a journal change: a per-fragment checksum, or the group's sequence kept at its head. Evidence: the D2 probe's `small (control)` and `last chunk damaged` cases (261121-213954-ecd99d, and again 261123-002234-c8c5d2 at strata:f5f6b7dc). Owner: Detent's journal (coordinate with its lead).
+
+## journal-group-delete durability review notes (2026-11-23, APPROVE at journal:d8453f6; full text in reviews/journal-group-delete-durability.md)
+
+- N1 (nit) The doc says "a view of the deleted group lists nothing once the first commit publishes its range". The first commit publishes the deleted entry with its old incarnation and `[mark, high)`, so views list the old serials until the second commit. If that commit fails, views keep listing serials whose files are gone. 
+- N2 (nit) R4 and the doc say a failed first commit "leaves the group closed". A failure after the rename (for example, the directory sync fails with EIO) leaves the entry closed in memory, but the disk may hold it deleted, and a crash then yields deleted. Either outcome is whole, so this is wording only. 
+- N3 (nit) Each create of a new id now reads its shard file twice: once in `status()` and again in `load()`. This matters for the many-indexes workload. 
+- N4 (gap) Deleted entries are never dropped, at 45 bytes each in the shard. Ids that are never reused grow the table without bound. This is documented in Limits. 
+- N5 (gap) This predates the quest: any Host open needs 16 KiB free, so a host on a full disk cannot open whether or not a delete ran. 
+
+## placement correctness review follow-ups (review at strata:ae70ff95)
+
+- F4 (gap): A2's scan is proven only over an in-memory test source; no scan source over the root's real index exists yet. Owner: placement's next quest or cluster.
+- F5 (owner decision): a drain with no free node shrinks shards below rf instead of waiting (documented, D7). Options in the review file.
+- F6 (gap): "a new root voter installs the root's records" is tested only as log catch-up; install waits on group-heal's binding. Recheck once group-heal lands.
+- F7 (test nit): the test driver collects group reports before the root read, so a step finishing during the read can be planned from the older report.
+
+## uinteger-restructure correctness review follow-ups (APPROVE at uinteger_t:5fedce24)
+
+- F1 (nit) `radix_decode.hh` also holds the output side (`_store_be`, `_store_bytes`, `_digits_append`, `_digits_radix`); move them to `radix_encode.hh` or `digits.hh` so it is one family (a map change, tool-made).
+- F2 (docs) `README.md:33` ("One header, no dependencies.") and `docs/TESTING.md:3` still describe one header. Fix right after landing.
+- F4 (note) A5 proves nothing about dependencies between family headers (each includes the umbrella); step 2 must not cite it.
+- F5 (note) the A3 allowlist matches by symbol name, so it would not catch a later body change in a listed symbol.
+
+## first-commit-crash durability review notes (APPROVE at strata:606a1d62)
+
+- F2 (nit, pre-existing on main) a first rollover retried after ENOSPC uses generation 2; a crash during the retry leaves a lone `manifest-2.tmp`, which reopens as `corrupt_index`. `create()` on main does the same.
+- Once first-commit-crash lands with its install() guard (review F1), group-heal's caller guard in include/strata/group/install.hh is redundant: remove it (one mechanism, in the core).
+- R1 (nit, re-check at strata:4955a679) install()'s guard runs before the source checkpoint check and storage admission, so a failed install leaves a committed empty generation 1 (valid, durable) while install()'s comment says a bad checkpoint "leaves this index as it was". Move the guard to just before the copies, or fix the comment.
+- R2 (test nit) the install sweep checks the installed documents, not the applied position.

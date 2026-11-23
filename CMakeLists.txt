@@ -26,6 +26,11 @@ message(STATUS "CMake v${CMAKE_VERSION}")
 cmake_minimum_required(VERSION 3.12)
 project(xapiand C CXX)
 
+# Ninja is the only supported generator (the top-level project only).
+if (CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR AND NOT CMAKE_GENERATOR MATCHES "^Ninja")
+	message(FATAL_ERROR "Ninja only: configure with -G Ninja (not ${CMAKE_GENERATOR})")
+endif ()
+
 cmake_policy(SET CMP0074 NEW)
 
 # Make sure we can import out CMake functions
@@ -1921,6 +1926,9 @@ if (BUILD_TESTS)
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
 				"${PROJECT_SOURCE_DIR}/tests/test_stubs.cc"
 			)
+			# A large test keeps its pieces in tests/test_NAME/.
+			file(GLOB TEST_PIECES CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}/*.cc")
+			target_sources(${PROJECT_TEST} PRIVATE ${TEST_PIECES})
 			target_link_libraries(${PROJECT_TEST} PRIVATE
 				XAPIAND_PACKAGE_OBJ
 				XAPIAND_OBJ

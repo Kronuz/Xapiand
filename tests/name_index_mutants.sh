@@ -69,7 +69,7 @@ case $mutant in
 	*) echo "unknown mutant $mutant"; exit 126 ;;
 esac
 
-cmake -S . -B build -DFETCHCONTENT_BASE_DIR="$PWD/.deps" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF >cmake.log 2>&1 || { tail -30 cmake.log; exit 126; }
+cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR="$PWD/.deps" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF >cmake.log 2>&1 || { tail -30 cmake.log; exit 126; }
 cmake --build build -j4 --target "$target" >build.log 2>&1 || { grep -E "error:" build.log | head -20; tail -10 build.log; exit 126; }
 bin=$(find build -name "$target" -type f -perm -u+x | head -1)
 "$bin" "$test" >out.txt 2>&1

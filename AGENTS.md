@@ -49,8 +49,10 @@ Entry point is `src/main.cc`; the process is orchestrated by
 
 ## Build & toggles
 
+Build with CMake and Ninja only: every configure passes `-G Ninja`; the top-level CMakeLists refuses any other generator.
+
 ```sh
-mkdir build && cd build && cmake .. && make
+cmake -G Ninja -S . -B build && cmake --build build
 ```
 
 C++20, CMake ≥ 3.12. The feature toggles matter when reproducing behavior:

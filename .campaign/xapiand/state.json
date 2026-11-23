@@ -2680,6 +2680,69 @@
         ]
       },
       "text": "set require-once: unlocks frees tests/test_harness.h, tests/test_harness_self.cc, tests/CMakeLists.txt for require-once"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T05:58:57",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T05:58:57",
+      "by": "campaign detent",
+      "closed": "expected: consensus-request-install waits on consensus-rpc-fetch-lag; cluster and group-heal rebuild against its contracts when it lands",
+      "id": "msg-249",
+      "settles": {
+        "ours": [
+          "cluster",
+          "group-heal"
+        ],
+        "quest": "detent:consensus-rpc-fetch-lag"
+      },
+      "text": "detent:consensus-rpc-fetch-lag started and changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:install-request, which your group-heal consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T05:58:30",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T05:58:30",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "read: agent-campaign:bd54f12 installed; retrying msg-28 landings with plain campaign land",
+      "id": "msg-248",
+      "notice": "skill installed bd54f12b7ff3c0c19fdd4f95714358abb9118517",
+      "text": "campaign skill: agent-campaign:bd54f12 installed here, 12 commits: agent-campaign:7023ca3 Tell every campaign's lead of skill commits it did not land; agent-campaign:5614004 Merge branch 'main' into quest/campaign-v3/broadcast-every-lead; agent-campaign:8969e84 Tell a lander of its own commits when they are installed; agent-campaign:b6cf285 Merge main into quest/campaign-v3/broadcast-every-lead; agent-campaign:3fc989d Contributor: never run campaign land, --merge-main included; agent-campaign:c72a1c2 Evidence rows and their hints follow the land gate; agent-campaign:05a9e8e Read a cited fails-without job by its own rule; share ci_named; agent-campaign:b4ee5cf Revert A4 and the ci_named move; land A1-A3 first; agent-campaign:8ab02c3 Merge main into quest/campaign-v3/evidence-hints; agent-campaign:2cfe40c Merge main into quest/campaign-v3/evidence-hints; agent-campaign:8f4d92b Merge main into quest/campaign-v3/evidence-hints; agent-campaign:bd54f12 Make A1's test merge code from main, as msg-32's landings do"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T06:03:05",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T06:03:04",
+      "by": "lead",
+      "closed": "noted: consensus-request-install lands after consensus-rpc-fetch-lag",
+      "id": "msg-250",
+      "text": "consensus-transport-test-flakes landed at consensus:3d7738f; consensus-rpc-fetch-lag started now (contributor running). I will tell you the moment it lands, so consensus-request-install can go."
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T06:08:31",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T06:08:31",
+      "by": "campaign detent",
+      "closed": "noted: group-heal and cluster rebuild against consensus-driver-flow's contracts when it lands; consensus-request-install is ordered after Detent's flow quests",
+      "id": "msg-251",
+      "settles": {
+        "ours": [
+          "cluster",
+          "group-heal"
+        ],
+        "quest": "detent:consensus-driver-flow"
+      },
+      "text": "detent:consensus-driver-flow started and changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:install-request, which your group-heal consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
     }
   ],
   "quests": {
@@ -6816,17 +6879,17 @@
     "consensus-request-install": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-23T01:53:14",
-          "base": "42a8cde325912df0cd463dabc39af0d15d2f8923",
+          "at": "2026-11-23T04:03:55",
+          "base": "e396c1e342bef76924a38b08c6a226cb48f82214",
           "blobs": {
-            "CMakeLists.txt": "100644:2527398f8c4b10045a4d5efc31ae6304fa1271b2",
+            "CMakeLists.txt": "100644:77d9ac4edbafde1d460e38b3e2f5a93b39d0c156",
             "docs/DRIVER.md": "100644:c52f8d382ab8e0a1565ae2cb3500565024a38b8e",
             "docs/mechanisms/install-request.md": "100644:fafcd6e502492e17caa6f867f3e42c1148e88e7a",
             "fuzz/corpus/decoders/seed-install-request": "100644:25be67ccc98de2db331058dc221751599d4f508d",
             "fuzz/corpus/decoders/seed-install-request-response": "100644:9734f0444f869831ddccc7af55659798dd3a438d",
             "fuzz/seed.cc": "100644:9a67cfb00271b94ab349ac83b6d89ad30f8652af",
             "include/consensus/admission.h": "100644:ca43989facdecc139c60563b16d0ca2d6e2dfd62",
-            "include/consensus/core.h": "100644:7e7b61e5409b479eaa26b4cfe3ea71422f913f61",
+            "include/consensus/core.h": "100644:cc539a017fb70b677a8110fab3d628253756188e",
             "include/consensus/driver.h": "100644:eef7f9b8e12c587f1d56bcc191874eb7858b95e7",
             "include/consensus/transport/codec.h": "100644:22b3b4a5de9a3562996f8dfd11194f42e24d3904",
             "include/consensus/types.h": "100644:041f19f1facf0ba2f1bc9c228df1a0201823ba17",
@@ -6835,7 +6898,7 @@
             "test/transport/codec_test.cc": "100644:b9fbac41b639bc315aaa7322392cfa711c455134"
           },
           "by": "review",
-          "commit": "1869826a021041598cf228f7dddfaabd18256631",
+          "commit": "59ae07f74b953485c79795ad347ac65674465dcb",
           "criteria": "003ee84105c0bd43",
           "diffs": {
             "": "8d8f81e2e0cc1ce9",
@@ -6844,7 +6907,7 @@
             "docs/mechanisms/install-request.md": "4ec34aa00ad28333",
             "fuzz/seed.cc": "77d9a41bb506cb14",
             "include/consensus/admission.h": "aa363c439ec8afb4",
-            "include/consensus/core.h": "b7c18975cadf2ac2",
+            "include/consensus/core.h": "0a012eb7b60357e0",
             "include/consensus/driver.h": "c763d411f0103285",
             "include/consensus/transport/codec.h": "16df610a5ec7a314",
             "include/consensus/types.h": "b8d48aef6fa16f04",
@@ -6856,15 +6919,15 @@
             "F1": {
               "jobs": [
                 {
-                  "cmd": "build-m/consensus_driver_install_request_test lost_record",
-                  "commit": "1869826a021041598cf228f7dddfaabd18256631",
-                  "exit": 1,
+                  "cmd": "bash -c 'ctest --test-dir build-ir --output-on-failure -R \"consensus_install_request_|consensus_transport_codec|consensus_fuzz_decoders_replay\"'",
+                  "commit": "59ae07f74b953485c79795ad347ac65674465dcb",
+                  "exit": 0,
                   "host": "kronuz",
-                  "job": "261123-014604-5bfb1e",
+                  "job": "261123-033638-0820c7",
                   "level": "light",
-                  "seconds": 5.6,
+                  "seconds": 1.7,
                   "state": "done",
-                  "what": "F1: lost_record with 1443159aae93's core.h must fail"
+                  "what": "install request cases + codec + corpus replay at the main merge (Release)"
                 }
               ],
               "kind": "defect",
@@ -6935,7 +6998,7 @@
       "risk": "high",
       "status": "active",
       "title": "consensus: a follower asks its leader for an install; the Driver exposes witness_bound",
-      "updated": "2026-11-23T01:53:14",
+      "updated": "2026-11-23T04:03:55",
       "worktree": "../consensus-wt/xapiand/consensus-request-install"
     },
     "consensus-rpc-lane": {
@@ -11340,6 +11403,65 @@
       "title": "Sparse field design proposal",
       "updated": "2026-11-08T15:39:37"
     },
+    "first-commit-crash": {
+      "accepted": {
+        "durability": {
+          "at": "2026-11-23T06:10:22",
+          "base": "00eb018da75d20715b3e05a2593937a970b40201",
+          "blobs": {
+            "docs/mechanisms/manifest-log-file.md": "100644:c0b15ab330640348731c7d7bc384fdf10248568e",
+            "include/strata/core/index.hh": "100644:7aae55693b7cae00aa889247dc3f6e5bf06323ef",
+            "test/lifecycle_test.cc": "100644:9dd78a422080f4e6143e1d8a2986ae6aad79ea40"
+          },
+          "by": "review",
+          "commit": "4955a679f16083f36f5b4b7b27b35fd96c4dbc4e",
+          "criteria": "a7698271d5f05884",
+          "diffs": {
+            "docs/mechanisms/manifest-log-file.md": "a4508ed1703dc0a5",
+            "include/strata/core/index.hh": "f4e1ad8d400c6593",
+            "test/lifecycle_test.cc": "956ea9472305def8"
+          },
+          "findings": {},
+          "note": "",
+          "review": "3ee1c6dd2216345abc8e9638408384f8692fef7a",
+          "reviewed": "4955a679f16083f36f5b4b7b27b35fd96c4dbc4e",
+          "verdict": "APPROVE"
+        }
+      },
+      "after": [
+        "turn-log-parity"
+      ],
+      "base": "00eb018da75d20715b3e05a2593937a970b40201",
+      "branch": "quest/xapiand/first-commit-crash",
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/strata/core/index.hh",
+        "test/lifecycle_test.cc",
+        "docs/mechanisms/manifest-log-file.md"
+      ],
+      "journal": "../Xapiand-wt/xapiand/first-commit-crash",
+      "landed": [],
+      "lenses": [
+        "durability"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "review",
+      "title": "A crash in a fresh index's first commit leaves an index that opens",
+      "updated": "2026-11-23T06:10:22",
+      "worktree": "../strata-wt/xapiand/first-commit-crash"
+    },
     "flush-memory": {
       "accepted": {},
       "after": [],
@@ -12936,7 +13058,129 @@
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-heal": {
-      "accepted": {},
+      "accepted": {
+        "durability": {
+          "at": "2026-11-23T04:11:46",
+          "base": "00eb018da75d20715b3e05a2593937a970b40201",
+          "blobs": {
+            "CMakeLists.txt": "100644:a5dfca17b158a4227349ac948a64c64d1c9a3882",
+            "docs/mechanisms/group-install.md": "100644:8b6522fe020e09b95a7637459abaeaaf761c9048",
+            "docs/mechanisms/replication-group.md": "100644:50f10ab6bd4e42ac68d21dfb929a2f474c5dc50d",
+            "docs/mechanisms/simulator.md": "100644:ade41f699cff5472d4c8f284cb6b4f577ac917d4",
+            "include/strata/group/file_set.hh": "100644:6a259e7b977a1a94c9a401dd5e03fc1b6f30f5cd",
+            "include/strata/group/group.hh": "100644:8f4e2e33ad7cca4d63f535065a6a43c784b7adf9",
+            "include/strata/group/install.hh": "100644:3014373ff872bab2955a3ad1c8af31e0dc905ed4",
+            "include/strata/group/witness.hh": "100644:c22ed0ab0ef04bd3fcbbb488fa286245442255e5",
+            "sim/CMakeLists.txt": "100644:3ad5d3cbfcec2f4720ce0a37ac0b571c655f6448",
+            "sim/LICENSE": "100644:b735c45c9e67b1dd3d57691552a3bd72e08237fd",
+            "sim/cmake/same_history.cmake": "100644:016d2502a68be2a3a1e1c8cdc6f1fbd6bc9e0b83",
+            "sim/include/simulation/checker.hh": "100644:ae3baf59547639ceb75e20688e424a40e54f2de3",
+            "sim/include/simulation/clock.hh": "100644:5caaa15c67af7c682b84b16ea875a74710f50fbb",
+            "sim/include/simulation/engine.hh": "100644:f54e3e229757c1f8ebb9c6e4033cf23d0c0a9d81",
+            "sim/include/simulation/history.hh": "100644:c3915321a3ec5e17744ed561b1cbf9189bf405d7",
+            "sim/include/simulation/network.hh": "100644:9167296daabb76dc3335bb3ef20ba00b2d6073c6",
+            "sim/include/simulation/random.hh": "100644:712e71b6a067785bcd42713186100509c9bcdef7",
+            "sim/test/checker_test.cc": "100644:1468bd8ba3c9213fdb77c7b5583c3a81edee0cab",
+            "sim/test/engine_test.cc": "100644:f27850e0e0606112345d9a14e9ba3fbf917bac78",
+            "sim/test/engine_wrap_test.cc": "100644:d7fb631b457d31e07d24393ab56bfa707c67e7dc",
+            "sim/test/histories/linearizable.history": "100644:a6af7b950e32e3f04f95ee2617e1bb868778f83b",
+            "sim/test/histories/violation.history": "100644:a260f35566d5b80ebd0813fdf015439bda090519",
+            "sim/test/history_test.cc": "100644:9c08f810747d2d01ce41bb038f0f53f9c61f74b5",
+            "sim/test/network_test.cc": "100644:780780caa0495331c75e36d30fe7892480c9b752",
+            "sim/test/random_test.cc": "100644:604c866d20ad68f9787d49542f4b908a2f6c5962",
+            "sim/tools/sim_check.cc": "100644:046319f820464b586828038d793a0f99e5e6489c",
+            "sim/tools/sim_run.cc": "100644:c126f101a32e22218035ccad764c1783dbc621fe",
+            "test/group/footprint_test.cc": "100644:8e1a215d0aa28da38863c581ae7abe309bc5b9bb",
+            "test/group/install_mutants.py": "100644:63afa639d4f263197cfa5140f3ac369c017dfd57",
+            "test/group/install_suite.sh": "100644:9dbc31c302202715f502b9455fc66cadc7c7792d",
+            "test/group/install_test.cc": "100644:ab110aa136d395cfcf9ce9faa8964f0d3fbed21b",
+            "test/group/mutants.py": "100644:6715937cf9566285f53305c60c931ccaeaa57ed1",
+            "test/group/voters_test.cc": "100644:8b7967af2ddc8e3fb804b1b47511eca033b86eb8",
+            "test/group/witness_test.cc": "100644:708061f4eed05b5fc75ac9ca7800e0eee3827b06",
+            "test/group/world.hh": "100644:ec43297ace9e87efb0262312328ebdca69908876"
+          },
+          "by": "review",
+          "commit": "a1e786f4a1c08c4f2a0c314ea484b8c2a1e80301",
+          "criteria": "987c23accdcf1e4c",
+          "diffs": {
+            "CMakeLists.txt": "4d742e4335f7a946",
+            "docs/mechanisms/group-install.md": "7bb754f968c0e64d",
+            "docs/mechanisms/replication-group.md": "878c7efc5f901062",
+            "docs/mechanisms/simulator.md": "6a00cc48303b6ba2",
+            "include/strata/group/file_set.hh": "f95e0c0f28158d0a",
+            "include/strata/group/group.hh": "8f8249faa9060860",
+            "include/strata/group/install.hh": "22c784f9f275f979",
+            "include/strata/group/witness.hh": "98bbd093192fdb84",
+            "sim/CMakeLists.txt": "2abe92058e8c74e6",
+            "sim/LICENSE": "b373a14186e00f7b",
+            "sim/cmake/same_history.cmake": "b1dc0901f06aa71d",
+            "sim/include/simulation/checker.hh": "fe499a334461f5a8",
+            "sim/include/simulation/clock.hh": "c3c6e24ae351ad9a",
+            "sim/include/simulation/engine.hh": "70b710f76a97eee3",
+            "sim/include/simulation/history.hh": "9d2f75a70d76c39d",
+            "sim/include/simulation/network.hh": "54047348a138fab4",
+            "sim/include/simulation/random.hh": "7b7b08aaf0560e60",
+            "sim/test/checker_test.cc": "f0932ff7a77494f6",
+            "sim/test/engine_test.cc": "7e104df4288db05e",
+            "sim/test/engine_wrap_test.cc": "523d62d900c5b40a",
+            "sim/test/histories/linearizable.history": "73f1e153a255153f",
+            "sim/test/histories/violation.history": "a9e265f879fefd69",
+            "sim/test/history_test.cc": "9133d04e052ee4ee",
+            "sim/test/network_test.cc": "ed19f08275e855f9",
+            "sim/test/random_test.cc": "d65cfc2ffc19c029",
+            "sim/tools/sim_check.cc": "0e42874374ca792a",
+            "sim/tools/sim_run.cc": "49ef76828b058df5",
+            "test/group/footprint_test.cc": "1cac1719ea084bd3",
+            "test/group/install_mutants.py": "54b764eafa00e59e",
+            "test/group/install_suite.sh": "87c4131d1d009f51",
+            "test/group/install_test.cc": "dea189c745e5bae0",
+            "test/group/mutants.py": "10ad5e4e61d24a41",
+            "test/group/voters_test.cc": "ade38ac211075e0b",
+            "test/group/witness_test.cc": "1fa1d3a0fe64c93f",
+            "test/group/world.hh": "6c9a28a48f313d0a"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "sh -c 'CONSENSUS_DIR=$JOB_REF_CONSENSUS sh test/group/install_suite.sh build-heal'",
+                  "commit": "a1e786f4a1c08c4f2a0c314ea484b8c2a1e80301",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261123-025745-1cfc1e",
+                  "level": "light",
+                  "seconds": 370.0,
+                  "state": "done",
+                  "what": "group suite at the durability fix (reopen_short_of_space, deferred_learner_crash, install deferred)"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "F2": {
+              "jobs": [
+                {
+                  "cmd": "sh -c 'CONSENSUS_DIR=$JOB_REF_CONSENSUS sh test/group/install_suite.sh build-heal'",
+                  "commit": "a1e786f4a1c08c4f2a0c314ea484b8c2a1e80301",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261123-025745-1cfc1e",
+                  "level": "light",
+                  "seconds": 370.0,
+                  "state": "done",
+                  "what": "group suite at the durability fix (reopen_short_of_space, deferred_learner_crash, install deferred)"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "ca986675efb5dbb28c520ba8621732852aa5bbba",
+          "reviewed": "908b58c0d2ee3512744c68be8a083daea72715ec",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [
         "detent:consensus-driver-install",
         "consensus-request-install"
@@ -13062,7 +13306,23 @@
             "test/group/voters_test.cc"
           ],
           "journal": "../Xapiand-wt/xapiand/group-heal--install",
+          "reason": "already merged: quest/xapiand/group-heal--install is an ancestor of the quest branch (merged at strata:cd2a4a40); task merge refuses on superseded failing runs 12c599/ca81f0 at f05b667, and its evidence is the quest suite 1cfc1e at a1e786f4",
+          "status": "dropped",
           "worktree": "../strata-wt/xapiand/group-heal--install"
+        },
+        "repair": {
+          "base": "a1e786f4a1c08c4f2a0c314ea484b8c2a1e80301",
+          "branch": "quest/xapiand/group-heal--repair",
+          "files": [
+            "include/strata/group/repair*",
+            "include/strata/group/group.hh",
+            "include/strata/group/install.hh",
+            "test/group/repair*",
+            "CMakeLists.txt",
+            "docs/mechanisms/group-install.md"
+          ],
+          "journal": "../Xapiand-wt/xapiand/group-heal--repair",
+          "worktree": "../strata-wt/xapiand/group-heal--repair"
         },
         "sim-port": {
           "base": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
@@ -13075,6 +13335,17 @@
           "journal": "",
           "merged": "6d870c0536f2e5ddbde56ea3ec99c4100f87c110",
           "worktree": ""
+        },
+        "sim-rows": {
+          "base": "a1e786f4a1c08c4f2a0c314ea484b8c2a1e80301",
+          "branch": "quest/xapiand/group-heal--sim-rows",
+          "files": [
+            "sim/**",
+            "test/group/sim*",
+            "docs/gates/phase-3r.md"
+          ],
+          "journal": "../Xapiand-wt/xapiand/group-heal--sim-rows",
+          "worktree": "../strata-wt/xapiand/group-heal--sim-rows"
         },
         "witness": {
           "base": "cd2a4a40b996730386c9c3f12ac4084bdd9aba34",
@@ -13093,7 +13364,7 @@
         }
       },
       "title": "Replication groups grow, heal and run in the simulator",
-      "updated": "2026-11-23T02:04:15",
+      "updated": "2026-11-23T04:37:05",
       "worktree": "../strata-wt/xapiand/group-heal"
     },
     "group-install": {
@@ -14604,7 +14875,36 @@
       "updated": "2026-11-08T15:39:30"
     },
     "journal-group-delete": {
-      "accepted": {},
+      "accepted": {
+        "durability": {
+          "at": "2026-11-23T04:07:07",
+          "base": "a3eecb543a39193960ad4e2a0dbb67ef22d46a10",
+          "blobs": {
+            "CHANGELOG.md": "100644:862015d4bff90c0cc74ca00e6195cc4344720945",
+            "CMakeLists.txt": "100644:ee565482045f9c0f8b15203b599dda995f94f2b7",
+            "docs/mechanisms/host-delete.md": "100644:9540ef846b89fd0660da6982bb9e68b2fa1171a6",
+            "include/journal/host.h": "100644:6ebf59e16deede4df46dbdc9f2e8feff0a8beb42",
+            "include/journal/journal.h": "100644:8b8a7299ea549776bcdaa38f7658adde3536266b",
+            "test/host_delete_test.cc": "100644:638ae36b00626b5cef0a67e018048a7d5c7f48f6"
+          },
+          "by": "review",
+          "commit": "d8453f6b67da28c01266485f0d046ce917d34736",
+          "criteria": "77c367f1c18835f4",
+          "diffs": {
+            "CHANGELOG.md": "1fd0f3817d694133",
+            "CMakeLists.txt": "83f0b304d1f2f05f",
+            "docs/mechanisms/host-delete.md": "f327fca245d321f0",
+            "include/journal/host.h": "70f30139c4633927",
+            "include/journal/journal.h": "8529b4ca6f9c22c2",
+            "test/host_delete_test.cc": "344e181674216059"
+          },
+          "findings": {},
+          "note": "",
+          "review": "01df6f235090e2330ad4290da79137e4d80bd5be",
+          "reviewed": "d8453f6b67da28c01266485f0d046ce917d34736",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "detent:journal-idle-groups",
         "detent:journal-loop-handoff",
@@ -14696,11 +14996,61 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/journal-group-delete",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-23T04:07:37",
+          "ci": {
+            "commit": "d8453f6b67da28c01266485f0d046ce917d34736",
+            "runs": [
+              45143330663
+            ]
+          },
+          "commit": "d8453f6b67da28c01266485f0d046ce917d34736",
+          "criteria": {
+            "A1": "261123-010046-03aa5c, 261123-010040-e5a982; fails without: 261122-215058-e0f727, 261122-215102-3473fb, 261122-215107-13499e, 261123-010037-440d3e, 261123-010057-6b2d97, 261123-010100-86e760",
+            "A2": "261123-010048-467c0f, 261123-010040-e5a982; fails without: 261122-215050-32f31b, 261122-215053-70b4bc",
+            "A3": "261123-010051-5f60a2, 261123-010040-e5a982",
+            "A4": "261123-010006-f8221d, 261123-010043-3e6bf7",
+            "A5": "`docs/mechanisms/host-delete.md`, CHANGELOG.md 2026-11-22",
+            "A6": "CI green at d8453f6b67da",
+            "A7": "261123-010054-597440, 261123-010040-e5a982"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "d8453f6b67da28c01266485f0d046ce917d34736",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-010322-61cf68",
+              "level": "light",
+              "seconds": 62.1,
+              "state": "done",
+              "what": "journal-group-delete check suite at d8453f6b67da"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "d8453f6b67da28c01266485f0d046ce917d34736",
+              "state": "done"
+            },
+            {
+              "check": "tsan",
+              "ci": "ci:linux-tsan",
+              "commit": "d8453f6b67da28c01266485f0d046ce917d34736",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "a3eecb543a39193960ad4e2a0dbb67ef22d46a10",
+          "reason": "",
+          "tested": "d8453f6b67da28c01266485f0d046ce917d34736"
+        }
+      ],
       "lenses": [
         "durability"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [
         "detent:journal-idle-groups",
@@ -14713,10 +15063,10 @@
       ],
       "repo": "../journal",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "a host deletes a left group's journal, so the node can rejoin it",
-      "updated": "2026-11-23T01:03:00",
-      "worktree": "../journal-wt/xapiand/journal-group-delete"
+      "updated": "2026-11-23T04:07:48",
+      "worktree": ""
     },
     "journal-lost-bound": {
       "accepted": {
@@ -18922,17 +19272,52 @@
         "harness/restore_exit_check.sh",
         "tests/test_cjk_words_oracle.sh"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-23T06:28:09",
+          "ci": {
+            "carried": true,
+            "commit": "1fd02f84e3b49c1b540429d2854818b821c5f004",
+            "runs": [
+              45171674175
+            ]
+          },
+          "commit": "4050d4553dd5bc9543cb33d6cf9f16b210206611",
+          "criteria": {
+            "A1": "261123-060627-6e3f0b; fails without: 261121-091759-59baa5",
+            "A2": "261123-060629-786e9a",
+            "A3": "`harness/ninja_only_check.sh` (its grep half; run at the head by 261121-232251-214a22): lists configures without `-G Ninja` outside the records; docs/dev/engine-census.md is excluded by name, see Rulings"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "7e209e15a8f7eebc2d42423fbba49d1e2c724aed",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-060642-384b72",
+              "level": "light",
+              "seconds": 380.9,
+              "state": "done",
+              "what": "ninja-only check suite at 7e209e15a8f7"
+            }
+          ],
+          "final": true,
+          "from": "2c6a6c8133bf71cdde820178c95ed8b1e4016c1e",
+          "reason": "",
+          "tested": "7e209e15a8f7eebc2d42423fbba49d1e2c724aed"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "M2",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Xapiand builds with CMake and Ninja only",
-      "updated": "2026-11-21T22:29:09",
-      "worktree": "../Xapiand-wt/xapiand/ninja-only"
+      "updated": "2026-11-23T06:28:22",
+      "worktree": ""
     },
     "ninja-only-strata": {
       "accepted": {},
@@ -22010,7 +22395,194 @@
       "updated": "2026-11-08T15:39:52"
     },
     "placement": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-23T05:44:28",
+          "base": "00eb018da75d20715b3e05a2593937a970b40201",
+          "blobs": {
+            "CMakeLists.txt": "100644:12c74a9aa1ffbafd23d6b48fb3c499f68bcbd64f",
+            "docs/mechanisms/group-install.md": "100644:8b6522fe020e09b95a7637459abaeaaf761c9048",
+            "docs/mechanisms/placement-repair.md": "100644:ef87d40062ca949888b2ce0df126e61595c7d3fe",
+            "docs/mechanisms/placement-root.md": "100644:989e315f1d8557d0e841f88d3458976252cd06e8",
+            "docs/mechanisms/replication-group.md": "100644:50f10ab6bd4e42ac68d21dfb929a2f474c5dc50d",
+            "docs/mechanisms/simulator.md": "100644:ade41f699cff5472d4c8f284cb6b4f577ac917d4",
+            "include/strata/group/file_set.hh": "100644:6a259e7b977a1a94c9a401dd5e03fc1b6f30f5cd",
+            "include/strata/group/group.hh": "100644:8f4e2e33ad7cca4d63f535065a6a43c784b7adf9",
+            "include/strata/group/install.hh": "100644:3014373ff872bab2955a3ad1c8af31e0dc905ed4",
+            "include/strata/group/witness.hh": "100644:c22ed0ab0ef04bd3fcbbb488fa286245442255e5",
+            "include/strata/placement/placement.hh": "100644:a31fc962cfa2b4cd413360a15f8dbc645531cf5f",
+            "include/strata/placement/records.hh": "100644:4eb1ac5afab6f30acbc61173c0cd5d7173f41175",
+            "include/strata/placement/repair.hh": "100644:26cb2c79b882248a03f30545959119975778c8b4",
+            "include/strata/placement/root.hh": "100644:6400957b52bcace284c02510597a37e5df119321",
+            "include/strata/placement/scan.hh": "100644:7faffdffffd6856ae35750e4694c4369d6496d6d",
+            "sim/CMakeLists.txt": "100644:3ad5d3cbfcec2f4720ce0a37ac0b571c655f6448",
+            "sim/LICENSE": "100644:b735c45c9e67b1dd3d57691552a3bd72e08237fd",
+            "sim/cmake/same_history.cmake": "100644:016d2502a68be2a3a1e1c8cdc6f1fbd6bc9e0b83",
+            "sim/include/simulation/checker.hh": "100644:ae3baf59547639ceb75e20688e424a40e54f2de3",
+            "sim/include/simulation/clock.hh": "100644:5caaa15c67af7c682b84b16ea875a74710f50fbb",
+            "sim/include/simulation/engine.hh": "100644:f54e3e229757c1f8ebb9c6e4033cf23d0c0a9d81",
+            "sim/include/simulation/history.hh": "100644:c3915321a3ec5e17744ed561b1cbf9189bf405d7",
+            "sim/include/simulation/network.hh": "100644:9167296daabb76dc3335bb3ef20ba00b2d6073c6",
+            "sim/include/simulation/random.hh": "100644:712e71b6a067785bcd42713186100509c9bcdef7",
+            "sim/test/checker_test.cc": "100644:1468bd8ba3c9213fdb77c7b5583c3a81edee0cab",
+            "sim/test/engine_test.cc": "100644:f27850e0e0606112345d9a14e9ba3fbf917bac78",
+            "sim/test/engine_wrap_test.cc": "100644:d7fb631b457d31e07d24393ab56bfa707c67e7dc",
+            "sim/test/histories/linearizable.history": "100644:a6af7b950e32e3f04f95ee2617e1bb868778f83b",
+            "sim/test/histories/violation.history": "100644:a260f35566d5b80ebd0813fdf015439bda090519",
+            "sim/test/history_test.cc": "100644:9c08f810747d2d01ce41bb038f0f53f9c61f74b5",
+            "sim/test/network_test.cc": "100644:780780caa0495331c75e36d30fe7892480c9b752",
+            "sim/test/random_test.cc": "100644:604c866d20ad68f9787d49542f4b908a2f6c5962",
+            "sim/tools/sim_check.cc": "100644:046319f820464b586828038d793a0f99e5e6489c",
+            "sim/tools/sim_run.cc": "100644:c126f101a32e22218035ccad764c1783dbc621fe",
+            "test/group/footprint_test.cc": "100644:8e1a215d0aa28da38863c581ae7abe309bc5b9bb",
+            "test/group/install_mutants.py": "100644:63afa639d4f263197cfa5140f3ac369c017dfd57",
+            "test/group/install_suite.sh": "100644:9dbc31c302202715f502b9455fc66cadc7c7792d",
+            "test/group/install_test.cc": "100644:ab110aa136d395cfcf9ce9faa8964f0d3fbed21b",
+            "test/group/mutants.py": "100644:6715937cf9566285f53305c60c931ccaeaa57ed1",
+            "test/group/voters_test.cc": "100644:8b7967af2ddc8e3fb804b1b47511eca033b86eb8",
+            "test/group/witness_test.cc": "100644:708061f4eed05b5fc75ac9ca7800e0eee3827b06",
+            "test/group/world.hh": "100644:ec43297ace9e87efb0262312328ebdca69908876",
+            "test/placement/repair.cmake": "100644:6f55649f2f4f59ddcf8238f35c0869f5cf2a3cee",
+            "test/placement/repair_group_test.cc": "100644:b02275b76279abe94a365dd5e99e3944f6c63a62",
+            "test/placement/repair_mutants.py": "100755:049c51c55bde5bde14975fe3dc62e9d31e9d74ea",
+            "test/placement/repair_plan_test.cc": "100644:c6f95461f38a52da5998efb47816887fe472a612",
+            "test/placement/repair_world.hh": "100644:4b370405357b6823aaee076e44ad620dac8ee49c",
+            "test/placement/root.cmake": "100644:f08fcac432a11ddaec10064adf84e65894141aa6",
+            "test/placement/root_corpus/command-create": "100644:5c86425fb9b53cbc50a456ed3cd96eb0097d6c36",
+            "test/placement/root_corpus/command-erase-settings": "100644:7f925726d59da42ec1ddd4039628a65e9573d4c0",
+            "test/placement/root_corpus/command-put-erase": "100644:0cecb1cd4a1df29e0c68e8a2df420d6a228ace5a",
+            "test/placement/root_corpus/command-put-settings": "100644:4ed4e4a7d1399b32ce26320d3c211ce6b978426f",
+            "test/placement/root_corpus/crash-namespace-overlong-node": "100644:921201a7d7c106c03a48e1bcb9b2cd81b5c21f7c",
+            "test/placement/root_corpus/directory": "100644:5f064876e8ecf9f10f9434c7e0428f8d473e02ae",
+            "test/placement/root_corpus/groups": "100644:e99f542e62274193317ab2d19db300d2308a22ca",
+            "test/placement/root_corpus/load": "100644:a8f6a0d8664ba449d1c7803c1c6b34851757b36a",
+            "test/placement/root_corpus/namespace": "100644:1767f0f96f05fceecc2e4dbedd4dc651dba95f9b",
+            "test/placement/root_corpus/namespace-count": "100644:334bdc3cf5316a51196801c30d2b6baa5fc887ad",
+            "test/placement/root_corpus/namespace-overlong": "100644:6a529e301d0b698fbfd2f3029e63ce281e2addfb",
+            "test/placement/root_corpus/node": "100644:a44d0706de42e54de7f5408f0a0352d6a9211c1c",
+            "test/placement/root_corpus/settings": "100644:9cb10abe8588b640af55f92b2153666b43bfd329",
+            "test/placement/root_fuzz.cc": "100644:26005b9d051477daeacbf965d6fc7d4b9b5d50a0",
+            "test/placement/root_group_test.cc": "100644:f4d83dfbdbd849e105cd1592659b4f884c173e28",
+            "test/placement/root_mutants.py": "100755:6d8bb002a67610b316a407409e0a91062f7abda6",
+            "test/placement/root_placement_model.py": "100755:6cd35bd1f7635d20be2820d60f55f8ea82cddbe0",
+            "test/placement/root_placement_test.cc": "100644:a7aa430b23c5523d6c743516906dc1229c2a353f",
+            "test/placement/root_records_test.cc": "100644:d05fe246b14d742a8392277fc9028418c4e3d126",
+            "test/placement/root_world.hh": "100644:54851410cdc95605f1b92a33aac1b751b65a3c28",
+            "test/placement/scan.cmake": "100644:4c5f6ba497aa63725dd9ac8295e6412c8fe18dd7",
+            "test/placement/scan_glob.hh": "100644:8723d5aa112cac1392d58ba226039d065dffb90a",
+            "test/placement/scan_mutants.py": "100755:d7d5dd905285e571c0b29e5da3eecc1d0dc273f7",
+            "test/placement/scan_test.cc": "100644:08028bf100a0edde67b856fa9b4d90eda9a92dcb"
+          },
+          "by": "review",
+          "commit": "ef1e91e2155f1171621a55585d50de1232b22c30",
+          "criteria": "de2cbd4594a325fc",
+          "diffs": {
+            "": "9221c88788d4d56d",
+            "CMakeLists.txt": "e240e4b068eaa8a2",
+            "docs/mechanisms/group-install.md": "7bb754f968c0e64d",
+            "docs/mechanisms/placement-repair.md": "5e20737479874a9a",
+            "docs/mechanisms/placement-root.md": "c908118f5983bfd7",
+            "docs/mechanisms/replication-group.md": "878c7efc5f901062",
+            "docs/mechanisms/simulator.md": "6a00cc48303b6ba2",
+            "include/strata/group/file_set.hh": "f95e0c0f28158d0a",
+            "include/strata/group/group.hh": "8f8249faa9060860",
+            "include/strata/group/install.hh": "22c784f9f275f979",
+            "include/strata/group/witness.hh": "98bbd093192fdb84",
+            "include/strata/placement/placement.hh": "4eb5a394967da809",
+            "include/strata/placement/records.hh": "e1fdb4dd99a65026",
+            "include/strata/placement/repair.hh": "93ccfc5012067ad2",
+            "include/strata/placement/root.hh": "1868807d01863053",
+            "include/strata/placement/scan.hh": "bb71e6a5a50e9276",
+            "sim/CMakeLists.txt": "2abe92058e8c74e6",
+            "sim/LICENSE": "b373a14186e00f7b",
+            "sim/cmake/same_history.cmake": "b1dc0901f06aa71d",
+            "sim/include/simulation/checker.hh": "fe499a334461f5a8",
+            "sim/include/simulation/clock.hh": "c3c6e24ae351ad9a",
+            "sim/include/simulation/engine.hh": "70b710f76a97eee3",
+            "sim/include/simulation/history.hh": "9d2f75a70d76c39d",
+            "sim/include/simulation/network.hh": "54047348a138fab4",
+            "sim/include/simulation/random.hh": "7b7b08aaf0560e60",
+            "sim/test/checker_test.cc": "f0932ff7a77494f6",
+            "sim/test/engine_test.cc": "7e104df4288db05e",
+            "sim/test/engine_wrap_test.cc": "523d62d900c5b40a",
+            "sim/test/histories/linearizable.history": "73f1e153a255153f",
+            "sim/test/histories/violation.history": "a9e265f879fefd69",
+            "sim/test/history_test.cc": "9133d04e052ee4ee",
+            "sim/test/network_test.cc": "ed19f08275e855f9",
+            "sim/test/random_test.cc": "d65cfc2ffc19c029",
+            "sim/tools/sim_check.cc": "0e42874374ca792a",
+            "sim/tools/sim_run.cc": "49ef76828b058df5",
+            "test/group/footprint_test.cc": "1cac1719ea084bd3",
+            "test/group/install_mutants.py": "54b764eafa00e59e",
+            "test/group/install_suite.sh": "87c4131d1d009f51",
+            "test/group/install_test.cc": "dea189c745e5bae0",
+            "test/group/mutants.py": "10ad5e4e61d24a41",
+            "test/group/voters_test.cc": "ade38ac211075e0b",
+            "test/group/witness_test.cc": "1fa1d3a0fe64c93f",
+            "test/group/world.hh": "6c9a28a48f313d0a",
+            "test/placement/repair.cmake": "6f93cdabcef0d6de",
+            "test/placement/repair_group_test.cc": "97cd45a4a8d67a18",
+            "test/placement/repair_mutants.py": "ab9edc20b4617902",
+            "test/placement/repair_plan_test.cc": "b7996b97033f0f7f",
+            "test/placement/repair_world.hh": "400fe57e16d49d5a",
+            "test/placement/root.cmake": "464e2b866a3e910b",
+            "test/placement/root_corpus/groups": "de9009d4d0afc570",
+            "test/placement/root_corpus/load": "51676a55c7c1ff86",
+            "test/placement/root_corpus/settings": "af3d3a4c641594c7",
+            "test/placement/root_fuzz.cc": "b5c32eba1f7f5fde",
+            "test/placement/root_group_test.cc": "4bdbcb2984463fde",
+            "test/placement/root_mutants.py": "0c619d579b4995d5",
+            "test/placement/root_placement_model.py": "30bc0eeb3948be58",
+            "test/placement/root_placement_test.cc": "58b6444caaf6df44",
+            "test/placement/root_records_test.cc": "918d4a1d0b9c43c5",
+            "test/placement/root_world.hh": "246c1ea18a75b72b",
+            "test/placement/scan.cmake": "402f8ffae80e75a3",
+            "test/placement/scan_glob.hh": "ff082091886c6b0f",
+            "test/placement/scan_mutants.py": "7710f90303d317c1",
+            "test/placement/scan_test.cc": "342b932f2bc7dd7a"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'cmake -G Ninja -B build-n -DCMAKE_BUILD_TYPE=Release >/dev/null && cmake --build build-n -j4 --target placement_repair_plan_test && ./build-n/placement_repair_plan_test'",
+                  "commit": "ef1e91e2155f1171621a55585d50de1232b22c30",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261123-052058-5b15a2",
+                  "level": "light",
+                  "seconds": 38.7,
+                  "state": "done",
+                  "what": "placement fix F1-F3: repair plan test, 3000 seeds + new cases"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "F2": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'cmake -G Ninja -B build-n -DCMAKE_BUILD_TYPE=Release >/dev/null && cmake --build build-n -j4 --target placement_repair_plan_test && ./build-n/placement_repair_plan_test'",
+                  "commit": "ef1e91e2155f1171621a55585d50de1232b22c30",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261123-052058-5b15a2",
+                  "level": "light",
+                  "seconds": 38.7,
+                  "state": "done",
+                  "what": "placement fix F1-F3: repair plan test, 3000 seeds + new cases"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "ec33513764f7783adb5d57f6a99dd2c82be45856",
+          "reviewed": "ae70ff95f8908be6a18f28af5ca35401eed44109",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [
         "group-heal"
       ],
@@ -22116,7 +22688,7 @@
       ],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "tasks": {
         "repair": {
           "base": "debadea4dcd9f9cef03c8463a52d79b78126ec5f",
@@ -22168,7 +22740,7 @@
         }
       },
       "title": "The root authority places and repairs groups",
-      "updated": "2026-11-21T21:37:29",
+      "updated": "2026-11-23T05:44:28",
       "worktree": "../strata-wt/xapiand/placement"
     },
     "placement-locality-sim": {
@@ -25668,6 +26240,18 @@
           "unverified": [
             "split: no job"
           ]
+        },
+        {
+          "at": "2026-11-23T00:04:55",
+          "commit": "ae5798e3de2186426b09f0965234ac7f701caecd",
+          "evidence": [],
+          "final": true,
+          "reason": "recorded after the fact: merged into master by hand earlier (campaign check reports it); recorded now",
+          "recorded": "2026-11-23T05:20:09",
+          "tested": "ae5798e3de2186426b09f0965234ac7f701caecd",
+          "unverified": [
+            "split: no job"
+          ]
         }
       ],
       "lenses": [],
@@ -25678,10 +26262,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "schema.cc split along its responsibilities",
-      "updated": "2026-11-23T01:13:53",
-      "worktree": "../Xapiand-wt/xapiand/schema-split"
+      "updated": "2026-11-23T05:20:22",
+      "worktree": ""
     },
     "script-method": {
       "accepted": {},
@@ -29615,17 +30199,66 @@
         "CMakeLists.txt",
         "docs/dev/test-layout.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-23T06:00:00",
+          "ci": {
+            "commit": "eb9f09ee2a0608687418e83052b82ef75bf223d0",
+            "runs": [
+              45166114291
+            ]
+          },
+          "commit": "d6accaa2c2f9066ecde6fb2e1b0ea5a299da4b62",
+          "criteria": {
+            "A1": "261123-033232-0950af, 261123-033232-950aca",
+            "A2": "261123-033232-950aca (the split check), 261123-033232-0950af, 261123-033232-950aca",
+            "A3": "261123-033233-5dd25e",
+            "A4": "docs/dev/test-layout.md",
+            "A5": "CI green at eb9f09ee2a06",
+            "A6": "261123-033233-2cb9f7",
+            "A7": "lead, 2026-11-21: read the split; four test programs split by topic into TUs with support headers, each piece opens with what it holds"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "eb9f09ee2a0608687418e83052b82ef75bf223d0",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-033232-0950af",
+              "level": "light",
+              "seconds": 1324.1,
+              "state": "done",
+              "what": "split-xapiand-tests check suite at eb9f09ee2a06"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base master tests",
+              "commit": "eb9f09ee2a0608687418e83052b82ef75bf223d0",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-033232-950aca",
+              "level": "light",
+              "seconds": 4.6,
+              "state": "done",
+              "what": "split-xapiand-tests check split at eb9f09ee2a06"
+            }
+          ],
+          "final": true,
+          "from": "5d15b70737084026e5bce959654fe458d3ccc82a",
+          "reason": "",
+          "tested": "16f48637a8bfaff43e18195bc86560067f295973"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Xapiand's free large tests split where it helps maintenance, same test names",
-      "updated": "2026-11-21T12:05:38",
-      "worktree": "../Xapiand-wt/xapiand/split-xapiand-tests"
+      "updated": "2026-11-23T06:01:11",
+      "worktree": ""
     },
     "stash-claim-hint-d64": {
       "accepted": {},
@@ -34013,6 +34646,136 @@
           "review": "14ef80da59d6559afe676978a951defa30640cf4",
           "reviewed": "",
           "verdict": "CHANGES"
+        },
+        "durability": {
+          "at": "2026-11-23T04:09:17",
+          "base": "7131ed4480b14dacbb975ca9de06a4c43881cff2",
+          "blobs": {
+            "CMakeLists.txt": "100644:b798f28bfed3f83ed7413eff757961653c271b48",
+            "bench/kv/kv_strata.hh": "100644:26b8c2ac44febc58b6c2ec1a8bc89c37e376687f",
+            "bench/kv/kvdriver.hh": "100644:48170df8cb9b606475e8be1d4311c111a53834cf",
+            "bench/kv/probes/rocksdb-parity/checkpoint-floor.cc": "100644:96c07d30f4c99e3575b148cda0b10998c668f643",
+            "bench/kv/probes/rocksdb-parity/checkpoint-floor.sh": "100755:417e21274a99f781e2cbf5fe9bd45da92f7f6fd9",
+            "bench/kv/probes/rocksdb-parity/cohort.py": "100644:5c3163d604c528533a9bedf4fe411ea4a05e9597",
+            "bench/kv/probes/rocksdb-parity/d1_ladder_model.py": "100755:3972c2f5eafb68bb11a065c385b8742125c254dd",
+            "bench/kv/probes/rocksdb-parity/d4_covers_model.py": "100755:4a3d3df8a86cc5dbb8b8e0d2f4359dce36719556",
+            "bench/kv/probes/rocksdb-parity/d4_install_order_model.py": "100755:0ad6ee18c80cdd8cc431fe39d3010ddad41904be",
+            "bench/kv/probes/rocksdb-parity/d6_wake_model.py": "100755:3b9064972c0b0b473f9bee183bc6548807f8b198",
+            "bench/kv/probes/rocksdb-parity/d7_model.py": "100644:a6cb9cb3a64ed8e9b93a44f7deec0bc736c773b1",
+            "bench/kv/probes/rocksdb-parity/devbarrier.c": "100644:b53c58f4c8d4d1ab137cb4d36ee5334eda2867b0",
+            "bench/kv/probes/rocksdb-parity/handoff.cc": "100644:59490bf5f98229422f63bd63af6e0fe8e9d7b80b",
+            "bench/kv/probes/rocksdb-parity/nosync.c": "100644:606f0b90a4ca93f9cffcab6653d5daf10260b03e",
+            "bench/kv/probes/rocksdb-parity/probe-a.sh": "100755:09b509107738898d8e144ac26a13f482c998392a",
+            "bench/kv/probes/rocksdb-parity/probe-b.sh": "100755:f1d837e646cfed7e2c12e78d9d82340c115ac27c",
+            "bench/kv/probes/rocksdb-parity/probe-c.sh": "100755:93f069c6f14b0d4d42455cb45c32b1743f79d595",
+            "bench/kv/probes/rocksdb-parity/probe-d.sh": "100755:42d0becc47ee1e61606f67bf98c3ac7cb245c3d6",
+            "bench/kv/probes/rocksdb-parity/probe-e.sh": "100755:10b12a3d2d94791aa3b6e3600643b5d97c4ef1d3",
+            "bench/kv/probes/rocksdb-parity/probe-f.sh": "100755:eb4fc10e772555c68b58b4adbb48a20a5c8a8d87",
+            "bench/kv/probes/rocksdb-parity/rehome.cc": "100644:74ee2bc0719ce750dfe6e9a9f3d1b5e5c8d34fb1",
+            "bench/kv/probes/rocksdb-parity/wbytes.c": "100644:f2808b8c51961dd2b4774577d8df664418fc3bb1",
+            "docs/design/rocksdb-parity.md": "100644:ac8393c0f2893bc60432181f97ee3b7fcfef847e",
+            "docs/mechanisms/large-transactions.md": "100644:c8ebb1b9b16cb3e0d356526f97ecdc616e0e9249",
+            "fuzz/corpus/command/chunk.bin": "100644:dbebf35b5829fa8973abe64054bf8958bc3d3d07",
+            "fuzz/fuzz_command.cc": "100644:eb1a71d6e378b33120f263e08ee36a8efefaf216",
+            "include/strata/core/command.hh": "100644:143ab0501ec8553c6485d6b4cae5bbeda7a2d109",
+            "include/strata/core/index.hh": "100644:352a6107168dcac96c66274831958764aaf6b69b",
+            "include/strata/core/merge_policy.hh": "100644:e8bb9b59b45fc313d0ae70ca547d919b27d2d4f1",
+            "include/strata/core/turn_seal.hh": "100644:276d9492ef6331415b4621b1b3fcf94f219ff7ff",
+            "test/fixtures/command/chunk.bin": "100644:dbebf35b5829fa8973abe64054bf8958bc3d3d07",
+            "test/kv_strata_batch_test.cc": "100644:8c91b826943e4f1877889221134b9cf53691edcc",
+            "test/merge_policy_test.cc": "100644:d4ecda9cb553f2f7278f912cfdc0680432f8da5f",
+            "test/standalone_turn_log_test.cc": "100644:031a992fe80582e4ce479de6fa836adefcadb41b",
+            "test/test_barrier_cohort.cc": "100644:dad9b6144f0bb61117bd993761c6ae73d59df2f7",
+            "test/test_checkpoint_window.cc": "100644:551e8731e6a46d9853f50ae30782d612f7788d2e",
+            "test/test_large_tx.cc": "100644:bbf579910d9c6a9502915facedb80c82196538b4",
+            "test/test_reopen_damaged.cc": "100644:41fd994214b518ded23088afc2066af27773052b",
+            "test/test_reopen_loops.cc": "100644:cfb2318b03c41dd847c4bfec51dc236ea4affc6d",
+            "test/test_ryw.cc": "100644:979632b7642136fdc5e270a9f0c52f835fbab86f"
+          },
+          "by": "review",
+          "commit": "f5f6b7dceeac4bddd28bab74c34ffc0356b1e4c2",
+          "criteria": "8f631ec112931fb7",
+          "diffs": {
+            "": "337c1c59a6bf310b",
+            "CMakeLists.txt": "459f87b11ffd6b5f",
+            "bench/kv/kv_strata.hh": "496e4337bd1d3946",
+            "bench/kv/kvdriver.hh": "42c34ec1c8ef8dba",
+            "bench/kv/probes/rocksdb-parity/checkpoint-floor.cc": "309b4e0bbedb5c7b",
+            "bench/kv/probes/rocksdb-parity/checkpoint-floor.sh": "b34c7eb60cbfa823",
+            "bench/kv/probes/rocksdb-parity/cohort.py": "938b5965cf8437e0",
+            "bench/kv/probes/rocksdb-parity/d1_ladder_model.py": "f5eed463cf025464",
+            "bench/kv/probes/rocksdb-parity/d4_covers_model.py": "fbb88264adcaae93",
+            "bench/kv/probes/rocksdb-parity/d4_install_order_model.py": "24dc414965af2ff8",
+            "bench/kv/probes/rocksdb-parity/d6_wake_model.py": "2e7bc87826a114b6",
+            "bench/kv/probes/rocksdb-parity/d7_model.py": "fa1390973bb6b806",
+            "bench/kv/probes/rocksdb-parity/devbarrier.c": "a9b79adbebb4ee36",
+            "bench/kv/probes/rocksdb-parity/handoff.cc": "bdff2ba27125cdb7",
+            "bench/kv/probes/rocksdb-parity/nosync.c": "26520312ba9feb6b",
+            "bench/kv/probes/rocksdb-parity/probe-a.sh": "ef344c14859a1862",
+            "bench/kv/probes/rocksdb-parity/probe-b.sh": "186b45382f7eb492",
+            "bench/kv/probes/rocksdb-parity/probe-c.sh": "80dcce608875816b",
+            "bench/kv/probes/rocksdb-parity/probe-d.sh": "a129b38ffb020fb8",
+            "bench/kv/probes/rocksdb-parity/probe-e.sh": "ac93121196631773",
+            "bench/kv/probes/rocksdb-parity/probe-f.sh": "b9e2a0303d39a709",
+            "bench/kv/probes/rocksdb-parity/rehome.cc": "c7912bc983b49d56",
+            "bench/kv/probes/rocksdb-parity/wbytes.c": "535e3ccc90ea207e",
+            "docs/design/rocksdb-parity.md": "1e83b3fa8c99c85a",
+            "docs/mechanisms/large-transactions.md": "c8159f4b51dc05d3",
+            "fuzz/fuzz_command.cc": "abb283f027d82281",
+            "include/strata/core/command.hh": "032a663ff21919de",
+            "include/strata/core/index.hh": "c90244b766f60ba9",
+            "include/strata/core/merge_policy.hh": "474846110e0303f6",
+            "include/strata/core/turn_seal.hh": "8f98b37c53882d4f",
+            "test/kv_strata_batch_test.cc": "42095bd6d95f411e",
+            "test/merge_policy_test.cc": "3b967ab30ea61915",
+            "test/standalone_turn_log_test.cc": "27ccc51277599aff",
+            "test/test_barrier_cohort.cc": "3c5b359447cd018d",
+            "test/test_checkpoint_window.cc": "8d0f8e2e20d98fd0",
+            "test/test_large_tx.cc": "b7cd89bbfb075d01",
+            "test/test_reopen_damaged.cc": "699af848f4684a35",
+            "test/test_reopen_loops.cc": "76984199524ddd24",
+            "test/test_ryw.cc": "dcb65e3a01837f06"
+          },
+          "findings": {
+            "D1": {
+              "jobs": [
+                {
+                  "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                  "commit": "f5f6b7dceeac4bddd28bab74c34ffc0356b1e4c2",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261123-002245-d6ced9",
+                  "level": "light",
+                  "seconds": 1799.0,
+                  "state": "done",
+                  "what": "turn-log-parity check build-test at f5f6b7dceeac"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "D2": {
+              "jobs": [
+                {
+                  "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                  "commit": "f5f6b7dceeac4bddd28bab74c34ffc0356b1e4c2",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261123-002245-d6ced9",
+                  "level": "light",
+                  "seconds": 1799.0,
+                  "state": "done",
+                  "what": "turn-log-parity check build-test at f5f6b7dceeac"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "bf33ef131d7e6e179a4a2a6c18b9e9f169f831a9",
+          "reviewed": "5953ed4635dda209c95d1b189836a0b51446f752",
+          "verdict": "CHANGES"
         }
       },
       "after": [
@@ -34221,7 +34984,7 @@
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-22T21:18:48",
+      "updated": "2026-11-23T04:09:17",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
@@ -34418,7 +35181,94 @@
       "worktree": "../journal-wt/xapiand/turn-seal"
     },
     "uinteger-restructure": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-23T05:24:05",
+          "base": "8a6fe9030aababbb03b1206fd2bf023f31d67645",
+          "blobs": {
+            "AGENTS.md": "100644:10ed634dc7227acb27021743e26929e16a237f3c",
+            "ARCHITECTURE.md": "100644:e9e7696140429c3d7e8182fd455c4586a6edfada",
+            "CHANGELOG.md": "100644:4f6ed1b1fa6e6dd5c2408c2ecff759260dec8c57",
+            "README.md": "100644:0647bfba92a497238fd3dce4981c6c5507d94e52",
+            "bench/ab.sh": "100755:b22d488a6500751c05ba75500f77541b64516f44",
+            "bench/common.sh": "100644:6747da6e790f06255788b811014aa1be72f0fc75",
+            "docs/BENCHMARKING.md": "100644:9c5a0860355c221aa97e0473cf04f3d242563e5d",
+            "docs/MUTATION.md": "100644:2483bb3474816a43da8fd3ed5221a5b46d74c12a",
+            "docs/source-layout.md": "100644:cb78c2ade8d5c25e437e2fce9a1316a931f6ff27",
+            "tools/mutants/divq.txt": "100644:e5a74e73171da92f7f16d236bf4464fe54cce936",
+            "tools/mutants/kernels.txt": "100644:e1837fe340b3e599ecbbdb0d78ca1eb0521cd153",
+            "tools/mutants/newton.txt": "100644:ce1330f3a810f061f0108ce961a36b1f369f4e72",
+            "tools/mutants/ntt.txt": "100644:e0b7e07bd9774588b545743ed9e3731ac1cff7e0",
+            "tools/mutants/repr.txt": "100644:2dd14b4c45f5826d437eb550c2da266811613870",
+            "tools/mutants/toom.txt": "100644:d5ed92157215309e505ffbe0251d029485006f3d",
+            "tools/mutants/toom4.txt": "100644:f1d4a11d9d9f16e93647516580396efbc3fc5b74",
+            "tools/mutate.py": "100755:6b6ff631902cd9a5060226b7f9424133d9711ef0",
+            "uinteger_t.hh": "100644:87a488f59b70ca1243111fc409da52dc61662732",
+            "uinteger_t/arithmetic.hh": "100644:62926878284ff27834f1cbd9faef6b1cf6628b2b",
+            "uinteger_t/bitwise.hh": "100644:33f4f7e3b29cd920193af9270fbea125c6aba115",
+            "uinteger_t/container.hh": "100644:d45e66473a5ec87d2e508b8713fa6fa31fca4b38",
+            "uinteger_t/digits.hh": "100644:8dc233287efd1cae4a2c09e0d4d5f1ef9103ea41",
+            "uinteger_t/div_recursive.hh": "100644:7be9945566ea82270035aaa6d9d65be1ee0e0c19",
+            "uinteger_t/div_schoolbook.hh": "100644:30bfb83847a0089040732d59544d05642bb6c65d",
+            "uinteger_t/kernels.hh": "100644:4e81fa0a58cecaab2004c426e6c6ec8020d5329a",
+            "uinteger_t/mul.hh": "100644:f423ef54cd9afcc39dc349f42bed96d822802df5",
+            "uinteger_t/mul_toom.hh": "100644:4fac9f2b8c947670f5963ea57eaed31e17b4df31",
+            "uinteger_t/ntt_mul.hh": "100644:bbbf7729aa340ab80044fc4e605b822448946012",
+            "uinteger_t/ntt_transform.hh": "100644:02df6582e150b2870e0ca6e6ba70388d08a9cc8c",
+            "uinteger_t/operators.hh": "100644:3df6f7b101e6834b0834c2b6cdd9df7a939b1707",
+            "uinteger_t/radix_decode.hh": "100644:7b837b615d5e9281af2cb7b56185381a2891b34c",
+            "uinteger_t/radix_encode.hh": "100644:26288dd8c946f9be0897070dc72323f30e532c8e",
+            "uinteger_t/radix_tables.hh": "100644:0bc6e89d200f87bc189472bef3cdc488f71cb184",
+            "uinteger_t/radix_tree.hh": "100644:4d42b055d984e51c85a3b240fd6c5a0a8d95bc00",
+            "uinteger_t/word.hh": "100644:d3c9c689151c6dd938289f4bd18cb5fd53f3e785"
+          },
+          "by": "review",
+          "commit": "5fedce240dc1bf362bb9237febca63e10119ba51",
+          "criteria": "36fad1753793fce2",
+          "diffs": {
+            "AGENTS.md": "b05084b928c1a364",
+            "ARCHITECTURE.md": "77652499ce9a65b5",
+            "CHANGELOG.md": "bd6db9a6eebf6489",
+            "README.md": "777f0adb0a396125",
+            "bench/ab.sh": "7e25c76befe8c9c5",
+            "bench/common.sh": "89f86a1477a406cb",
+            "docs/BENCHMARKING.md": "6609aff73422a559",
+            "docs/MUTATION.md": "a90719dbe7625fb6",
+            "docs/source-layout.md": "9d737224bc365f42",
+            "tools/mutants/divq.txt": "ecf8d08651349462",
+            "tools/mutants/kernels.txt": "c833cf30a307c86c",
+            "tools/mutants/newton.txt": "df43025e4756debb",
+            "tools/mutants/ntt.txt": "3a45a6ff7f0bd6bf",
+            "tools/mutants/repr.txt": "b449dc64b41f10ba",
+            "tools/mutants/toom.txt": "dc827cc54725aedd",
+            "tools/mutants/toom4.txt": "e364adcce2e174f2",
+            "tools/mutate.py": "1412c8470a4885cc",
+            "uinteger_t.hh": "40b994b9bb29dd94",
+            "uinteger_t/arithmetic.hh": "28950972a11a16ef",
+            "uinteger_t/bitwise.hh": "1e8d40173935fd37",
+            "uinteger_t/container.hh": "f78e6ae37f892dda",
+            "uinteger_t/digits.hh": "ddd62d6359de0324",
+            "uinteger_t/div_recursive.hh": "b480dc4f4d1da082",
+            "uinteger_t/div_schoolbook.hh": "0a2322592c2b131c",
+            "uinteger_t/kernels.hh": "c25ec27da54e83e7",
+            "uinteger_t/mul.hh": "54c266cd940c9d0e",
+            "uinteger_t/mul_toom.hh": "a4d0848214023fbc",
+            "uinteger_t/ntt_mul.hh": "57062faa1716bdb3",
+            "uinteger_t/ntt_transform.hh": "b2ef0d5319bb77d1",
+            "uinteger_t/operators.hh": "c131d5ee8b6ca908",
+            "uinteger_t/radix_decode.hh": "495a3b1e245c67a5",
+            "uinteger_t/radix_encode.hh": "e6249a6409fcea6f",
+            "uinteger_t/radix_tables.hh": "c89792b15af676e3",
+            "uinteger_t/radix_tree.hh": "c71355633f4407d5",
+            "uinteger_t/word.hh": "23fc74f227275762"
+          },
+          "findings": {},
+          "note": "",
+          "review": "227bdeb3e82b07671444679beaacdc83fc51877a",
+          "reviewed": "5fedce240dc1bf362bb9237febca63e10119ba51",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "split-check-members"
       ],
@@ -34468,18 +35318,67 @@
         }
       ],
       "journal": "../Xapiand-wt/xapiand/uinteger-restructure",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-23T06:03:46",
+          "ci": {
+            "commit": "5fedce240dc1bf362bb9237febca63e10119ba51",
+            "runs": [
+              45143195932
+            ]
+          },
+          "commit": "5fedce240dc1bf362bb9237febca63e10119ba51",
+          "criteria": {
+            "A1": "261123-005918-1ec261 (the build-test check), 261123-032417-a8012a; fails without: 261123-005720-a21e01, 261123-032421-5ecc9a",
+            "A2": "261123-005919-29dc48 (the members check), 261123-005918-1ec261, 261123-005919-29dc48; fails without: 261123-032451-e05f05",
+            "A3": "261123-032414-71300f",
+            "A4": "261123-005923-69c83b",
+            "A5": "261123-005922-940970",
+            "A6": "`docs/source-layout.md`, `README.md`, `ARCHITECTURE.md`, `CHANGELOG.md` at the head",
+            "A7": "the lead reads the family map above"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "5fedce240dc1bf362bb9237febca63e10119ba51",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-005918-1ec261",
+              "level": "light",
+              "seconds": 172.9,
+              "state": "done",
+              "what": "uinteger-restructure check build-test at 5fedce240dc1"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --members --base master uinteger_t.hh uinteger_t",
+              "commit": "5fedce240dc1bf362bb9237febca63e10119ba51",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-005919-29dc48",
+              "level": "light",
+              "seconds": 4.4,
+              "state": "done",
+              "what": "uinteger-restructure check members at 5fedce240dc1"
+            }
+          ],
+          "final": true,
+          "from": "8a6fe9030aababbb03b1206fd2bf023f31d67645",
+          "reason": "",
+          "tested": "5fedce240dc1bf362bb9237febca63e10119ba51"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../uinteger_t",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "uinteger_t: the algorithms leave the 5,709-line class body, one header per family",
-      "updated": "2026-11-21T22:28:22",
+      "updated": "2026-11-23T06:03:51",
       "worktree": "../uinteger_t-wt/xapiand/uinteger-restructure"
     },
     "unpin-after-kick": {

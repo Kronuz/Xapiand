@@ -80,9 +80,8 @@ Dependencies are fetched automatically at configure time via CMake `FetchContent
 below).
 
 ```sh
-mkdir build && cd build
-cmake ..
-make
+cmake -G Ninja -S . -B build
+cmake --build build
 ```
 
 Notable CMake options (all default on unless noted):

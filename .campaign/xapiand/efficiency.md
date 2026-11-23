@@ -960,3 +960,37 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - turn-log-parity: every rerun at f5f6b7dc green (ASan, TSan, A2-A4, A6, fuzz 20 CPU-min, full A3 crash sweep); its D2 probe's two refusing cases are the predicted torn-tail limit, filed as hunt G1 for the journal owner.
 - uinteger-restructure: fnsizes differs in 3 of 97 binaries (test helper inlining only); GCC fix proven (noinline errors gone; a pre-existing NDEBUG unused variable in test.cc remains). Evidence pass launched (Sonnet high).
 - Host: load 48 on 16 CPUs, light slots 90% used, 45 queued, 279 GiB free. Quota 11% weekly at 1.75%/h.
+
+### 2026-11-23 12h (hourly)
+
+- Landed: require-once Xapiand:a0ee6c5, open-files-floor Xapiand:68dea47, journal-group-delete journal:d8453f6 (durability APPROVE, no blocking finding; 5 notes to hunt).
+- Accepted: group-heal durability at strata:a1e786f4 (F1, F2 via suite 1cfc1e; all 7 mutants at the fix killed), turn-log-parity durability at strata:f5f6b7dc (D1, D2 via suite d6ced9), consensus-request-install correctness re-accepted at consensus:59ae07f (main merge, fix-scope).
+- consensus-request-install CI red only on rpc_host_fetch, pre-existing on consensus main (heartbeat gaps 1.4-4.7 s, whole-runner stall); Detent took it as consensus-rpc-fetch-lag.
+- journal-replaces-wal: restore task merged by git (Xapiand:1d6ba2c) after three by-design-failing probe reruns blocked task merge (tool gap sent to campaign-v3); steps c and d launched (Opus high).
+- Lead errors: told the owner 3 of 97 uinteger_t binaries differ in fnsizes; it is 95 (campaign job log shows only the tail; full log at jobs/<id>/a1/log). Reran non-evidence probes at a task head, which blocked its merge.
+- Agent runs: uinteger evidence pass (Sonnet high, 142k), consensus CI (Opus high, 149k), placement CI (Opus high, 131k), journal-group-delete review (Opus high, 162k), group-heal fixes (Opus high, 216k).
+- Host: load 366 on 16 CPUs (Detent's four-way reader soak), light slots 61% used, 45 queued, 285 GiB free. Quota 12% weekly at 1.6%/h.
+
+## 2026-11-23 13h
+
+- Quota: weekly 14% (1.73%/h window average; projected exhaustion ~49 h, before the 2026-11-30 reset). Owner told.
+- Finished agents: group-heal evidence pass (Sonnet, 92k: found A3 and A5 unbuilt, two tasks started); main-branch probe explorer (Opus, 89k: proved first-commit-crash, 40 of 90 cuts refused at strata:00eb018d); journal-replaces-wal c/d1 (Opus, 320k); sim-rows (Opus, 290k, uncompiled; its mutant script points at a missing binary, 4 of 4 mutant jobs FileNotFoundError, not kills); repair (Opus, 302k, uncompiled, first compile queued e451c4).
+- New quest: first-commit-crash (high, durability), A2 fails-without proven (9bf051), fix passes the sweep (ad76e7).
+- Lead errors: told the owner group-heal waited only on CI and consensus while A3/A5 tasks were unbuilt; caught by the evidence pass.
+- Environment: github.com unreachable from the host and its VMs from ~13:00 UTC (connect refused in ms, other hosts fine); pushes, CI reads and VM dependency fetches fail.
+
+## 2026-11-23 14h
+
+- Quota: weekly 14% (1.68%/h window average).
+- Finished agents: first-commit-crash fix (Opus, 208k: ordering fix; 0 of 117 first-commit cuts fail against 49 of 90 refused at main; one mutant killed); journal-replaces-wal d2-d4 (Opus, 369k: all written, none compiled; it cancelled two unrun job sets before the lead asked for one set); placement correctness review (Opus, 202k: CHANGES, F1 repair stall and F2 learner pile-up, both proven by probe and surviving mutant).
+- Recorded schema-split's hand landing at Xapiand:ae5798e3 (no split job ever ran: recorded, not verified).
+- Host: load 7 (Detent's soak ended), light slots 59% used last hour, 21 jobs cancelled and 7 skipped of 84.
+- GitHub still unreachable from the host: no pushes, CI reads or landings since ~13:00 UTC.
+
+## 2026-11-23 15h
+
+- Landed: split-xapiand-tests (Xapiand:d6accaa2, plain land after agent-campaign:bd54f12 fixed msg-28), uinteger-restructure (uinteger_t:5fedce24) and its README fix (uinteger_t:a179822).
+- Accepted: placement correctness at strata:ef1e91e2 (F1-F3 fixed, 5 of 5 mutants killed, reviewer probes pass: pile-up max 2 per node from 5); uinteger-restructure correctness (APPROVE, Opus 160k); first-commit-crash durability at strata:4955a679 (APPROVE plus a 40k scoped re-check).
+- Finished agents: placement fixes (Opus, 194k); sim-rows round 2 (Opus, 193k: the 5 failing rows were row bugs, rows cost 1.1 s); repair round 2 (Opus, 224k: two failures were test bugs, plus F3 and the make_pin footer check).
+- GitHub outage on the host ~13:00-15:00 UTC: all branches pushed when it returned; 3 jobs rerun.
+- Quota: weekly 16% (1.72%/h). Host: load 63 (129 over 15 min), 52 jobs queued.
