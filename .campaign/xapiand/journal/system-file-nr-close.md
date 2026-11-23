@@ -1,41 +1,34 @@
 # system-file-nr-close: journal
 
-State: working
+State: waiting on jobs 261122-212046-713a5b (build-test at system:b2a874f), and CI at system:b2a874f and at the mutant system:f1ff9be
 Quest: .campaign/xapiand/quests/system-file-nr-close.md (the lead's; never edit it)
-
-Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
-status` reads State and the first step under Next. State is one of: working, waiting on jobs <ids>,
-ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+The lead, 2026-11-23. system:b2a874f adds `read_file_nr`, which reads a NUL-terminated line from
+/proc/sys/fs/file-nr and closes the descriptor on every path. Both system-wide readers use it.
+test/test.cc's `test_system_wide_readers_close` checks the open-descriptor count around each call.
+The mutant system:f1ff9be (branch quest/xapiand/system-file-nr-close-mutant) drops the `io::close`.
+Its Linux CI must fail that check; macOS and FreeBSD read sysctl, so they pass it.
 
 ## Next
 
-1. <step>
+1. Read CI at b2a874f (green everywhere) and at f1ff9be (Linux jobs fail `test_system_wide_readers_close`). Cite both runs under A2.
+2. Land, delete the mutant branch, then bump Xapiand's system pin (CMakeLists.txt:633) for open-files-floor.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), name every job you examined, failures included (`campaign brief` lists failed
-jobs no journal names), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | 261122-212046-713a5b: build-test at b2a874f (macOS; the check runs, and the sysctl paths hold no descriptor) |
+| A2 | CI at b2a874f; failing Linux run at the mutant f1ff9be: to cite |
+
+Found by open-files-floor's contributor: Xapiand run 44966941683 at Xapiand:4a07d2e, where "start at the exact minimum" counted 3 open descriptors and the function 5.
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
-
-## Rulings I made
-
-<Decisions inside the quest's scope, so the reviewer can check them.>
+Linux no longer leaks two descriptors per call pair, and nothing changes elsewhere.
