@@ -14606,6 +14606,8 @@
     "hunt-faultfs-at-mark-clear": {
       "accepted": {},
       "after": [],
+      "base": "42cc324032aca53668451f9a175f1620da9e6f6f",
+      "branch": "quest/xapiand/hunt-faultfs-at-mark-clear",
       "checks": [
         {
           "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -14627,6 +14629,7 @@
         "test/faultfs_test.cc",
         "docs/**"
       ],
+      "journal": "../Xapiand-wt/xapiand/hunt-faultfs-at-mark-clear",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -14634,9 +14637,10 @@
       "provides": [],
       "repo": "../faultlab",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "faultfs clears a removed ordering point's at_mark record",
-      "updated": "2026-11-23T13:22:23"
+      "updated": "2026-11-23T13:23:01",
+      "worktree": "../faultlab-wt/xapiand/hunt-faultfs-at-mark-clear"
     },
     "hunt-faultlab-at-mark": {
       "accepted": {},
