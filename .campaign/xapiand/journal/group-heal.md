@@ -1,6 +1,6 @@
 # group-heal: journal
 
-State: waiting on jobs 261122-232034-115dd4 (probe 2: is the leader's chore running pin_for; queued since 22:17)
+State: waiting on jobs 261122-233446-0db8ef 261122-233447-8f77df 261122-233448-dbb028 261122-233450-9eadac 261122-233451-5deea4 261122-233453-a90f1a 261122-233454-c2dad3 261122-233456-304143 261122-233457-f536b6 261122-233459-717011 261122-233500-d9e958 261122-233502-188ebb 261122-233503-19dc69 (and CI at strata:75b5ac9b)
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,22 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Install stall fixed at strata:75b5ac9b (pushed with cc2d0b3f). Probe 2 (261122-232034-115dd4,
+gap3/heal3-chore.out) decided it: the leader's chore runs pin_for every flight ("pin_for:
+pinned 13 ... (flights 1)", 500 times), but after the learner's "fetch 4<-3 13/pin: none".
+consensus sends the image as the flight starts; the pin is made on the leader's chore; in a
+settle tick the network and the fetch drain before any chore, so the fetch always wins, and the
+pin went with its flight's end, so the next flight raced again. Not a consensus cause. Fix: one
+pin per bundle, kept while its bundle is the latest; a publish or activation queues the release
+of superseded pins (release_superseded; ENOSPC stalls, cc2d0b3f's rule). The next flight finds
+the pin. Mutant pin-per-flight restores the release at the flight's end; release_short_of_space
+now fills the disk after a superseding checkpoint. Jobs at 75b5ac9b: plain suite 0db8ef (A1, A2:
+install_gap 3/5, grow_and_heal 3/5, seeds, release_short_of_space), install_test 8f77df (rerun of
+12c599), mutants release-fences dbb028, pin-per-flight 9eadac, install-silent 5deea4, install
+mutants a90f1a c2dad3 304143 f536b6 717011 d9e958 188ebb 19dc69. Nothing built locally: the jobs
+are the first compile.
+
 
 Round 3 (2026-11-22, this session). Probe 261122-215230-313ac4 read: every failing flight in
 install_gap(3) and grow_and_heal(3) stops at the learner's pin fetch ("fetch 2<-1 3/pin: none",
@@ -69,19 +85,12 @@ voters_test.cc world edit carried into world.hh at that merge).
 
 ## Next
 
-1. Read probe 2 (261122-232034-115dd4; its log, .scratch/group-heal/{gap3,heal3}-chore.out in the
-   strata worktree): does the leader's chore run pin_for (a "pin_for: pinned" line, or "chore ran
-   ...notice_work" lines), or is it refused (kick refused: stalled/hold/installing) or stuck
-   behind an item returning more (2) or stall (3)? Fix that cause in group.hh with a test that
-   fails without it (install_gap(3) and grow_and_heal(3) fail today; add a mutant if the fix is
-   a guard).
-2. At the new head: install_suite.sh (A1, A2), `install_suite.sh build-heal '^group_install$'`
-   (rerun of 261121-225628-12c599), install mutants, install-silent, release-fences
-   (`mutants.py BUILD release-fences --target=group_voters_test 0`); push for CI.
-3. witness: merge the quest head into quest/xapiand/group-heal--witness (voters_test's world is
-   world.hh there: carry 74da850c's `uploads` counter and cc2d0b3f's leave_behind and
+1. Read the jobs above and CI at strata:75b5ac9b; a compile error or a failing case is fixed at
+   the next commit. Paste `campaign brief`'s evidence table.
+2. witness: merge the quest head into quest/xapiand/group-heal--witness (voters_test's world is
+   world.hh there: carry 74da850c's `uploads` counter, cc2d0b3f/75b5ac9b's leave_behind and
    release_short_of_space), rerun its three jobs.
-4. repair: ruled (lead, 2026-11-23, quest Decisions): option (c), through consensus-request-install; built after that quest lands. sim-rows (order 3) after repair and witness.
+3. repair: ruled (lead, 2026-11-23, quest Decisions): option (c), through consensus-request-install; built after that quest lands. sim-rows (order 3) after repair and witness.
 
 ## Blocked on
 
@@ -128,3 +137,10 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 ## Rulings I made
 
 <Decisions inside the quest's scope, so the reviewer can check them.>
+
+- Install pins live per bundle until superseded (75b5ac9b), not per flight: the latest bundle's
+  pin keeps its generation and the set's retired files one checkpoint longer. A learner-side
+  retry of the pin fetch was the alternative; it needs a timer on the learner and still loses
+  when the leader's chore is behind, so the cached pin is the one mechanism.
+- A pin release short of space stalls the chore (as an apply does) rather than fencing or
+  deferring (cc2d0b3f).
