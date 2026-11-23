@@ -33,7 +33,7 @@ jobs no journal names), and answer each message by its id (msg-N).
 |---|---|
 | A1 | 261123-102259-f52610 (build-test at uinteger_t:88e41ad) |
 | A2 | 261123-102259-7b84f2 (members at uinteger_t:88e41ad): 0 errors; its 3 warnings are the first-line comments of digits.hh, radix_decode.hh and radix_encode.hh, rewritten to name what each holds now (lead, 2026-11-23) |
-| A3 | uinteger_t/docs/source-layout.md: radix_encode.hh row names `_digits_radix`, `_digits_append`; digits.hh row names `_store_be`, `_store_bytes`; radix_decode.hh row is parsing only |
+| A3 | `docs/source-layout.md`: radix_encode.hh row names `_digits_radix`, `_digits_append`; digits.hh row names `_store_be`, `_store_bytes`; radix_decode.hh row is parsing only |
 | A4 | [manual] the lead (2026-11-23) read uinteger_t:88e41ad: radix_decode.hh holds only input (byte loads, Horner decoder); _digits_append and _digits_radix sit with the encoder they call; _store_be and _store_bytes sit with their one caller, the raw-bytes form in digits.hh. Each header is one family; agreed. |
 
 ## Result
