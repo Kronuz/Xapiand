@@ -144,8 +144,7 @@ release; you rarely need to change them for a normal build.
 | `LTO` | `ON` | Link-Time Optimization |
 | `TLS` | `ON` | HTTPS for the REST API (`--tls-cert`, `--tls-key`); needs OpenSSL 3 |
 | `LUA` | `ON` | The Lua scripting engine (`_script`) |
-| `DATABASE_WAL` | `ON` | Database write-ahead log (WAL) |
-| `DATA_STORAGE` | `ON` | Data storage volumes |
+| `DATA_STORAGE` | `ON` | Stored blobs, in volumes of each shard's group |
 | `UUID_ENCODED` | `ON` | Allow the encoded (base59) UUID representation (`--uuid`) |
 | `UUID_GUID` | `OFF` | Allow the GUID UUID representation (`--uuid`) |
 | `UUID_URN` | `OFF` | Allow the URN UUID representation (`--uuid`) |

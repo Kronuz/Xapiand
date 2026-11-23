@@ -29,10 +29,6 @@ case $mutant in
 		mutate src/database/shard.cc \
 			'		raise_id_high(numeric_id(key));  // an explicit numeric id advances the counter past it' \
 			'		(void)0;' ;;
-	no-replay)     # the log's replay does not advance the counter
-		mutate src/database/shard.cc \
-			'		entry_.raise_id_high(id);  // a write the last commit missed advances the counter again' \
-			'		(void)id;' ;;
 	no-stride)     # a shard issues the next id whatever bucket it is in
 		mutate src/database/handler.cc \
 			'		if (bucket_shard(static_cast<std::size_t>((id - 1) % ID_BUCKETS), n_shards) == shard_num) {' \

@@ -893,7 +893,7 @@ void fenced_recovers(bool through_reopen) {
 	auto d = make("Qd", "after the recovery");
 	CHECK_EQ(engine::sync_wait(next->add(d, plain)).version, 1u);
 	engine::sync_wait(next->commit(engine::Transaction::none));
-	CHECK_EQ(engine::sync_wait(next->find_key("Qb")), 0u);  // what the fenced index held is gone (the WAL replays it on a node)
+	CHECK_EQ(engine::sync_wait(next->find_key("Qb")), 0u);  // what the fenced index held is gone (the journal applies it again on a node)
 	CHECK_EQ(engine::sync_wait(next->stats()).doc_count, 2u);
 	CHECK_EQ(engine::sync_wait(reader.shard->stats()).doc_count, 2u);
 	next.reset();
@@ -945,7 +945,7 @@ void fenced_writer_notified() {
 	std::filesystem::remove_all(path);
 }
 
-// A scripted log on the strata engine: each write keeps the line the WAL would hold.
+// A scripted log on the strata engine: each write keeps the line a log of versioned writes would hold.
 struct Logged {
 	enum { put, erase } type;
 	engine::docid did;
@@ -984,7 +984,7 @@ std::string shard_state(engine::Shard& shard) {
 	return state + "last=" + std::to_string(last);
 }
 
-// What the WAL does with a line: a replace by id from the document, an erase that tolerates a document that is already gone.
+// What a replay does with a line: a replace by id from the document, an erase that tolerates a document that is already gone.
 void replay_line(engine::Shard& shard, const Logged& line) {
 	engine::WriteArgs plain;
 	if (line.type == Logged::put) {

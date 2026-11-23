@@ -174,7 +174,7 @@ for delay in 0.5 1.0 1.5; do
 		fails=$((fails+1)); kill -9 "$PID" 2>/dev/null
 	fi
 	PID=""
-	# Restart on the same data: the write was committed by the shutdown or replayed from the WAL.
+	# Restart on the same data: the write was committed by the shutdown or applied from the journal.
 	"$BIN" --port "$PORT" --name gsdnode -D "$RUNDIR/n" >"$RUNDIR/node2.log" 2>&1 &
 	PID=$!
 	for _ in $(seq 60); do curl -s --max-time 3 -o /dev/null "localhost:$PORT/" 2>/dev/null && break; sleep 0.5; done

@@ -60,7 +60,6 @@ from cluster import Cluster, Node, Response, View, request
 ITEMS = ("membership", "read", "search", "aggregations", "failover", "replay", "history")
 AGG_DOCS = 40
 REPLAY_DOCS = 40
-WAL_ERRORS = ("WAL ERROR", "StorageCorruptWAL", "WAL revision mismatch")
 
 
 class Item:
@@ -373,14 +372,6 @@ class Checklist:
                 total == REPLAY_DOCS, f"{node.name} serves {REPLAY_DOCS} documents after the replay (got {total})"
             )
             item.check(found, f"{node.name} reads the replayed r{last}")
-        errors = sum(
-            line.count(pattern)
-            for node in nodes
-            if node.log.exists()
-            for line in node.log.read_text(errors="replace").splitlines()
-            for pattern in WAL_ERRORS
-        )
-        item.check(errors == 0, f"no WAL error in any node log ({errors})")
 
     def history(self, item: Item) -> None:
         self.recorder.file.flush()

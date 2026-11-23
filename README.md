@@ -47,7 +47,7 @@ A single C++20 binary that gives you, out of the box:
 - **Geospatial** indexing and queries via a Hierarchical Triangular Mesh (HTM): points, circles, polygons, and collections become numeric range queries on the sphere.
 - **Range and numeric** queries through order-preserving ("sortable") value encoding.
 - **Aggregations** in the Elasticsearch style (buckets + metrics), computed per shard and merged across shards.
-- **Durable storage**: a Haystack-inspired append-only volume format with an optional write-ahead log.
+- **Durable storage**: every shard is a replication group whose journal holds each write before it is answered.
 
 The design goal throughout is to keep the moving pieces few and the defaults
 sane: one binary does something useful immediately.
@@ -89,8 +89,7 @@ Notable CMake options (all default on unless noted):
 | Option | Default | What it does |
 |---|---|---|
 | `TLS` | ON | HTTPS for the REST API; needs OpenSSL 3. |
-| `DATABASE_WAL` | ON | Per-shard write-ahead log. |
-| `DATA_STORAGE` | ON | Haystack-style document storage volumes. |
+| `DATA_STORAGE` | ON | Stored blobs, in volumes of each shard's group. |
 | `TRACEBACKS` | OFF (ON in Debug) | Pretty backtraces + cross-thread stack dumps. |
 | `ASSERTS` | OFF (ON in Debug) | Internal assertions. |
 | `TRACKED_MEM` | OFF | Allocator that attributes memory to call sites. |

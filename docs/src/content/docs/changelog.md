@@ -21,8 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   series per HTTP loop and the control loop, from a probe that wakes every 1 ms while the loop serves requests
   and 10 times a second when idle. `XAPIAND_LAG_PROBE=0` starts the node without the probes.
 - **A stored blob past 16 MiB uploads in a stream**: a `PUT` of a `stored` document (any content type that is not JSON, YAML
-  or MsgPack) with a `Content-Length` over the 16 MiB buffered-body cap is written to the data storage as it arrives, in O(chunk)
-  memory, and the document is indexed once the blob is durable. The blob is stored uncompressed; past 4 GiB it answers `413`,
+  or MsgPack) with a `Content-Length` over the 16 MiB buffered-body cap streams into its shard's group as it arrives, in O(chunk)
+  memory, and the document is indexed as the upload's last entry. The blob is stored uncompressed; past 4 GiB it answers `413`,
   and a `POST` without an id in the URL answers `400`.
 
 ### Changed
@@ -281,6 +281,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `char[PATH_MAX + 1]` buffer in its log message and left it unterminated for a path of `PATH_MAX` bytes or more.
 
 ### Removed
+- **The write-ahead log.** Every shard is a replication group of one voter, and its journal is the only durability path:
+  a write is answered once the journal holds it, so a crash loses no acknowledged write, and a commit is the group's
+  checkpoint. The WAL goes with its writer and fsync threads, `--writers` and `--wal-writer-cache-size` (unknown
+  arguments now), the `WAL` method and `:wal` command, the `DATABASE_WAL` build option, and the `xapiand_wal_errors`
+  and `xapiand_fsync_*` metrics. A data directory written by an earlier build is not converted: reindex or restore it.
 - **`--committers`, `--fsynchers` and `--http-servers`.** The commit threads are gone (autocommits are tasks on the control loop), the fsync pool is sized from `--processors`
   (half of them, at least 1, at most 10), and the node runs one HTTP loop per processor: `--processors N` sets both (it was capped at 10 loops, now it is not).
   The `num_committers` key of the root `GET /` statistics and the `xapiand_http_clients_*`, `xapiand_committers_capacity` and `xapiand_committers_pool_size` gauges of `:metrics` are gone.

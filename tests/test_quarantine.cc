@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-// quarantine_files (the fs library) moves a damaged WAL aside, and logs when it cannot make the directory.
+// quarantine_files (the fs library) moves a damaged file aside, and logs when it cannot make the directory.
 // The log call takes the template as a string: a char[PATH_MAX + 1] array formats as all 1025 bytes, which
 // Apple's libc++ aborts on in vformat_to (__stack_chk_fail), and a path of PATH_MAX bytes or more leaves such
 // an array unterminated.
@@ -58,17 +58,17 @@ fsys::path scratch(const char* name) {
 	return dir;
 }
 
-void test_a_damaged_wal_is_moved_aside() {
+void test_a_damaged_file_is_moved_aside() {
 	auto dir = scratch("quarantine_ok") / "db";
 	fsys::create_directories(dir);
-	touch(dir / "wal.0");
+	touch(dir / "log.0");
 	touch(dir / "keep.sx");
-	quarantine_files(dir.string(), {"wal.*"});
+	quarantine_files(dir.string(), {"log.*"});
 	CHECK(fsys::exists(dir / "keep.sx"));
-	CHECK(!fsys::exists(dir / "wal.0"));
+	CHECK(!fsys::exists(dir / "log.0"));
 	size_t aside = 0;
 	for (const auto& entry : fsys::directory_iterator(dir)) {
-		aside += entry.is_directory() && fsys::exists(entry.path() / "wal.0");
+		aside += entry.is_directory() && fsys::exists(entry.path() / "log.0");
 	}
 	CHECK_EQ(aside, 1u);
 	fsys::remove_all(dir.parent_path());
@@ -80,11 +80,11 @@ void test_a_directory_that_cannot_be_made_is_logged_not_fatal() {
 	}
 	auto dir = scratch("quarantine_denied") / "db";
 	fsys::create_directories(dir);
-	touch(dir / "wal.0");
+	touch(dir / "log.0");
 	fsys::permissions(dir, fsys::perms::owner_read | fsys::perms::owner_exec);
-	quarantine_files(dir.string(), {"wal.*"});   // mkdtemp fails with EACCES and the failure is logged
+	quarantine_files(dir.string(), {"log.*"});   // mkdtemp fails with EACCES and the failure is logged
 	fsys::permissions(dir, fsys::perms::owner_all);
-	CHECK(fsys::exists(dir / "wal.0"));          // nothing moved
+	CHECK(fsys::exists(dir / "log.0"));          // nothing moved
 	fsys::remove_all(dir.parent_path());
 }
 
@@ -108,7 +108,7 @@ void test_the_suite_leaves_no_directories() {
 }  // namespace
 
 TEST_MAIN(
-	test_a_damaged_wal_is_moved_aside,
+	test_a_damaged_file_is_moved_aside,
 	test_a_directory_that_cannot_be_made_is_logged_not_fatal,
 	test_a_path_past_path_max_is_logged_not_fatal,
 	test_the_suite_leaves_no_directories

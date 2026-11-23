@@ -58,7 +58,6 @@ public:
 	prometheus::Family<prometheus::Summary>& xapiand_http_requests_summary;
 
 	// server info
-	prometheus::Counter& xapiand_wal_errors;
 	prometheus::Gauge& xapiand_uptime;
 	prometheus::Gauge& xapiand_running;
 	prometheus::Gauge& xapiand_info;
@@ -72,12 +71,6 @@ public:
 	// autocommit tasks (on the control loop): the watches running and the indexes waiting for a commit
 	prometheus::Gauge& xapiand_committers_running;
 	prometheus::Gauge& xapiand_committers_queue_size;
-
-	// fsync threads:
-	prometheus::Gauge& xapiand_fsync_running;
-	prometheus::Gauge& xapiand_fsync_queue_size;
-	prometheus::Gauge& xapiand_fsync_capacity;
-	prometheus::Gauge& xapiand_fsync_pool_size;
 
 	// connections:
 	prometheus::Gauge& xapiand_http_current_connections;

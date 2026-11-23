@@ -224,8 +224,7 @@ e2e:end -->
 - `-P`, `--pidfile` saves the process ID in a file.
 - `--uid` and `--gid` set the user and the group the node runs as. A node started
   as root needs `--uid`.
-- `--processors` sets how many processors the node uses (all by default). It runs one HTTP loop per processor,
-  and sizes the fsync threads (half the processors, at least 1 and at most 10).
+- `--processors` sets how many processors the node uses (all by default). It runs one HTTP loop per processor.
 
 ## Identifiers
 
@@ -282,7 +281,6 @@ untrusted clients cannot reach.
   `--schema-versions-size` the most versions of schema it keeps in its cache (100).
 - `--scripts-cache-size` is the cache size for compiled scripts (100).
 - `--resolver-cache-size` is the cache size for resolved index paths (100).
-- `--wal-writer-cache-size` is the cache size of the write-ahead log writers (100).
 
 ## Searching many indexes
 
@@ -316,12 +314,6 @@ the document is in (its document count, its term frequencies), as Elasticsearch 
 same in a search of one index and in a search of a thousand, and the hits, their order, their weights, the totals and
 the aggregations do not depend on the batch size. The `xapiand_search_pinned_indexes_peak` metric reports the most
 indexes searches have held open at once.
-
-## Write-Ahead Log
-
-- `--writers` sets the number of WAL writer threads (half the processors, at least 1 and at most 10).
-- `--wal-writer-cache-size` sets the size of the writers' cache (100). Both tune the
-  [WAL](/Xapiand/reference-guide/wal) writer pool.
 
 ## Dump and Restore
 
@@ -374,17 +366,15 @@ in the environment starts the node without them.
 2. **The rest, at most 35 s in all.** In this order, each step starting when the one before it has ended:
    1. The HTTP service stops: it stops accepting, a read ends at its next checkpoint, an admitted write is let finish (one that waits for its index's turn answers `503` after 30 s), the connections of what is left are cut after a grace of 15 s (a write that finishes after that applies, but its client is not answered), and the loops stop one grace later.
    2. The autocommits that were waiting are dropped; closing an index commits what it has pending.
-   3. Every index closes.
-   4. The write-ahead logs flush.
-   5. The fsync threads finish.
+   3. Every index checkpoints its group and closes.
 
-What is still running when the 35 s end (steps 1 to 3 share them) is logged and abandoned: the requests in flight per loop, and the indexes whose turn or references are held. The node then flushes the
-write-ahead logs and exits. Without abandoned work the status is 0; with it the status is 75 (`EX_TEMPFAIL`) and the log lists what was abandoned. An index that cannot close within the 35 s (for example on a hung
-disk) counts, whether or not a request is in flight: the node logs `Shutdown abandoned the indexes that are still in use` and exits 75. The next start replays the log. After a stop, a write answered with a 2xx
-is in the log; one that was not answered was never promised. A crash is different: a write is answered when its log line is queued, not when it is synced, so a crash can lose writes answered since the last commit.
+What is still running when the 35 s end is logged and abandoned: the requests in flight per loop, and the indexes whose turn or references are held. The node then
+exits. Without abandoned work the status is 0; with it the status is 75 (`EX_TEMPFAIL`) and the log lists what was abandoned. An index that cannot close within the 35 s (for example on a hung
+disk) counts, whether or not a request is in flight: the node logs `Shutdown abandoned the indexes that are still in use` and exits 75. The next start applies what the journal holds past each
+index's last checkpoint. A write answered with a 2xx is in the journal, after a stop or a crash alike; one that was not answered was never promised.
 
-A second `SIGINT` or `SIGTERM` during the second wait ends it at once: the node logs what is unfinished, flushes the logs and exits 75. The longest stop is therefore the first wait plus 35 s, plus the
-flush of the logs; set a supervisor's stop timeout above that (for example 120 s). A node that cannot set itself up (a port that is taken) logs why and exits with status 70.
+A second `SIGINT` or `SIGTERM` during the second wait ends it at once: the node logs what is unfinished and exits 75. The longest stop is therefore the first wait plus 35 s; set a supervisor's
+stop timeout above that (for example 120 s). A node that cannot set itself up (a port that is taken) logs why and exits with status 70.
 
 ## HTTPS
 
@@ -425,6 +415,7 @@ thread counts went away with the pools they sized.
   `--replication-servers`, `--discoverers` and `--database-stall-time`.
 - Threads: `--committers`, `--fsynchers`, `--http-servers`, `--http-clients`,
   `--bulk-preparers` and `--bulk-indexers`. Use `--processors`.
+- The write-ahead log's: `--writers` and `--wal-writer-cache-size`. Every shard's group journal replaces the log.
 - `--max-database-readers`: an index is opened once and shared by every request.
 
 ## Build-Conditional Options

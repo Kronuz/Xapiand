@@ -23,16 +23,16 @@
 #
 # On the strata engine:
 #   A. PUT N documents without a commit, kill -9 before the autocommit, restart, "poke" every shard (a write opens a
-#      shard writable and replays its WAL; replay is lazy), then list the document set.
+#      shard, whose group applies what its journal holds past the last checkpoint), then list the document set.
 #   B. A writer PUTs documents one after another (acknowledgement times logged); kill -9 CUT seconds in; restart, poke, list the set.
 #   C. The engine's own check (index::check: the digest of every file, plus the field table) runs on every shard
 #      after each kill -9 and after the restart, through tests/strata_check_tool.cc (CHECK_TOOL).
 # Compared: A's set equals the input (N ids, every `n` right). B's set holds every write
-# acknowledged more than GRACE seconds before the kill (the async WAL may lose the last moments), nothing that was not
+# acknowledged more than GRACE seconds before the kill (0 by default: the journal holds a write before it is answered), nothing that was not
 # written, every document intact (the cut point differs per run). Exit 0 = all checks passed.
 #   D. (--reactors N, default 2) N writers on N HTTP reactors put sequences into ONE one-shard index; kill -9; restart; poke; list. Every write
 #      acknowledged more than GRACE seconds before the kill is present, and what each writer recovered is a prefix of what it sent:
-#      the WAL's order is the apply order across reactors (phase 7c D5, C6).
+#      the journal's order is the apply order across reactors (phase 7c D5, C6).
 # Usage: BIN=build/bin/xapiand harness/engine_crash_check.sh [--reactors N]
 set -u
 REACTORS=2
@@ -72,7 +72,7 @@ poke() {  # a write to every shard, then delete the pokes
 	local i
 	for i in $(seq 0 39); do curl -s -m15 -o /dev/null -XPUT "localhost:$PORT/$1/poke$i" -H 'Content-Type: application/json' -d '{"poke":true}'; done
 	for i in $(seq 0 39); do curl -s -m15 -o /dev/null -XDELETE "localhost:$PORT/$1/poke$i"; done
-	curl -s -m60 -o /dev/null -XPOST "localhost:$PORT/$1/:commit"   # replayed writes show in a search after a commit
+	curl -s -m60 -o /dev/null -XPOST "localhost:$PORT/$1/:commit"   # recovered writes show in a search after a commit
 }
 list_set() {  # list_set INDEX OUT: "_id n" lines, sorted, of every document (pages of 1000)
 	python3 -I - "$PORT" "$1" "$2" <<'PY'
@@ -104,7 +104,7 @@ check_digest() {  # check_digest INDEX LABEL: the strata engine's check (every f
 }
 
 for ENG in strata; do
-	echo "== [crash $ENG] A: $NDOCS PUTs without commit, kill -9, restart, replay =="
+	echo "== [crash $ENG] A: $NDOCS PUTs without commit, kill -9, restart, recover =="
 	start_node "$ENG" "$ENG.A1.log" || { fail "$ENG startup"; continue; }
 	for i in $(seq 1 "$NDOCS"); do
 		curl -s -m5 -o /dev/null -XPUT "localhost:$PORT/$IDX/$i" -H 'Content-Type: application/json' -d "{\"n\":$i,\"txt\":\"doc number $i\"}"
@@ -118,7 +118,6 @@ for ENG in strata; do
 	seq 1 "$NDOCS" | awk '{print $1" "$1}' | sort > "$RUNDIR/A_input"
 	sort "$RUNDIR/A_$ENG" > "$RUNDIR/A_$ENG.s"
 	cmp -s "$RUNDIR/A_input" "$RUNDIR/A_$ENG.s" && pass "$ENG: recovered set = input ($(wc -l < "$RUNDIR/A_$ENG.s" | tr -d ' ') documents, every n right)" || fail "$ENG: recovered $(wc -l < "$RUNDIR/A_$ENG.s" | tr -d ' ') of $NDOCS, diff: $(diff "$RUNDIR/A_input" "$RUNDIR/A_$ENG.s" | head -4 | tr '\n' ';')"
-	grep -q "Read and execute operations WAL" "$RUNDIR/$ENG.A2.log" && pass "$ENG: the restart logged a WAL replay" || fail "$ENG: no WAL replay logged"
 	crash
 	[ "$ENG" != strata ] || check_digest "$IDX" "$ENG after the restart and a second kill (A)"
 	echo "== [crash $ENG] B: a writer PUTs documents one after another, kill -9 ${CUT:-4}s in =="
@@ -149,7 +148,7 @@ PY
 	list_set bulk "$RUNDIR/B_$ENG"
 	nb=$(wc -l < "$RUNDIR/B_$ENG" | tr -d ' ')
 	na=$(wc -l < "$RUNDIR/acked_$ENG" | tr -d ' ')
-	read -r bad dup lost late <<<"$(python3 -I - "$RUNDIR/B_$ENG" "$RUNDIR/acked_$ENG" "$killed" "${GRACE:-2}" <<'PY'
+	read -r bad dup lost late <<<"$(python3 -I - "$RUNDIR/B_$ENG" "$RUNDIR/acked_$ENG" "$killed" "${GRACE:-0}" <<'PY'
 import sys
 lines = open(sys.argv[1]).read().splitlines()
 raw = open(sys.argv[1] + '.raw').read().splitlines()
@@ -162,11 +161,11 @@ acked = [(int(a), float(t)) for a, t in (l.split() for l in open(sys.argv[2]))]
 killed, grace = float(sys.argv[3]), float(sys.argv[4])
 have = set(ids)
 lost = sum(1 for i, t in acked if t <= killed - grace and i not in have)       # acknowledged long before the kill, missing
-late = sum(1 for i, t in acked if t > killed - grace and i not in have)        # inside the async-WAL window, missing
+late = sum(1 for i, t in acked if t > killed - grace and i not in have)        # inside the grace window, missing
 print(bad, len(ids) - len(have), lost, late)
 PY
 )"
-	[ "$bad" = 0 ] && [ "$dup" = 0 ] && [ "$lost" = 0 ] && [ "$nb" -le $((na + 1)) ] && pass "$ENG: $na writes acknowledged, $nb recovered; none acknowledged more than ${GRACE:-2}s before the kill is missing ($late newer ones missing), all intact, none duplicated" || fail "$ENG: B acknowledged $na, recovered $nb, $bad wrong, $dup duplicated, $lost old acknowledged writes missing"
+	[ "$bad" = 0 ] && [ "$dup" = 0 ] && [ "$lost" = 0 ] && [ "$nb" -le $((na + 1)) ] && pass "$ENG: $na writes acknowledged, $nb recovered; none acknowledged more than ${GRACE:-0}s before the kill is missing ($late newer ones missing), all intact, none duplicated" || fail "$ENG: B acknowledged $na, recovered $nb, $bad wrong, $dup duplicated, $lost old acknowledged writes missing"
 	crash
 	[ "$ENG" != strata ] || check_digest bulk "$ENG after the restart and a second kill (B)"
 
@@ -202,7 +201,7 @@ PY
 	start_node "$ENG" "$ENG.D2.log" || { fail "$ENG restart D"; continue; }
 	poke multi
 	list_set multi "$RUNDIR/D_$ENG"
-	read -r bad dup lost gaps total <<<"$(python3 -I - "$RUNDIR/D_$ENG" "$RUNDIR" "$killed" "${GRACE:-2}" "$REACTORS" <<'PY'
+	read -r bad dup lost gaps total <<<"$(python3 -I - "$RUNDIR/D_$ENG" "$RUNDIR" "$killed" "${GRACE:-0}" "$REACTORS" <<'PY'
 import sys, re
 lines = open(sys.argv[1]).read().splitlines()
 raw = open(sys.argv[1] + '.raw').read().splitlines()
@@ -228,7 +227,7 @@ for w in range(1, n + 1):
 print(bad, dup, lost, gaps, len(rows))
 PY
 )"
-	[ "$bad" = 0 ] && [ "$dup" = 0 ] && [ "$lost" = 0 ] && [ "$gaps" = 0 ] && [ "$total" -gt 0 ] && pass "$ENG: $REACTORS writers, $total documents recovered; none acknowledged more than ${GRACE:-2}s before the kill is missing, each writer's set is a prefix of its sequence (WAL order = apply order)" || fail "$ENG: D recovered $total, $bad wrong, $dup duplicated, $lost old acknowledged writes missing, $gaps gaps below a writer's highest id"
+	[ "$bad" = 0 ] && [ "$dup" = 0 ] && [ "$lost" = 0 ] && [ "$gaps" = 0 ] && [ "$total" -gt 0 ] && pass "$ENG: $REACTORS writers, $total documents recovered; none acknowledged more than ${GRACE:-0}s before the kill is missing, each writer's set is a prefix of its sequence (log order = apply order)" || fail "$ENG: D recovered $total, $bad wrong, $dup duplicated, $lost old acknowledged writes missing, $gaps gaps below a writer's highest id"
 	crash
 	[ "$ENG" != strata ] || check_digest multi "$ENG after the restart and a second kill (D)"
 done
