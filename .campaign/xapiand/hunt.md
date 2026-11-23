@@ -455,3 +455,8 @@ quest fixes them (2 of 5 on 11-20).
 - F2 (docs) `README.md:33` ("One header, no dependencies.") and `docs/TESTING.md:3` still describe one header. Fix right after landing.
 - F4 (note) A5 proves nothing about dependencies between family headers (each includes the umbrella); step 2 must not cite it.
 - F5 (note) the A3 allowlist matches by symbol name, so it would not catch a later body change in a listed symbol.
+
+## first-commit-crash durability review notes (APPROVE at strata:606a1d62)
+
+- F2 (nit, pre-existing on main) a first rollover retried after ENOSPC uses generation 2; a crash during the retry leaves a lone `manifest-2.tmp`, which reopens as `corrupt_index`. `create()` on main does the same.
+- Once first-commit-crash lands with its install() guard (review F1), group-heal's caller guard in include/strata/group/install.hh is redundant: remove it (one mechanism, in the core).
