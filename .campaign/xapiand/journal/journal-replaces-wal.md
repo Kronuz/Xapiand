@@ -1,9 +1,20 @@
 # journal-replaces-wal: journal
 
-State: waiting on jobs 261123-042848-b46902 261123-042851-e13216 261123-042854-5886cb (A9, at e2f2bc9cf), 261123-043412-42a61c (step c, at 089de4ba9), 261123-044042-0153c6 261123-044046-3e5477 (step d1, at ffd0f8dd9) and CI at ffd0f8dd9; steps c and d1 written blind (no local build), next d2-d4
+State: session 4 building d3 (RESTORE through the batcher); waiting on jobs 261123-050021-b8aa54 (d2 tests at ed1ded9c6), its mutants 261123-050038-1a30ae 261123-050040-16f615, A2 261123-050050-bdf384 261123-050052-ea96fe; A9 261123-042848-b46902 261123-042851-e13216 261123-042854-5886cb and step c 261123-043412-42a61c still queued
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
+
+Session 4 (2026-11-23): the six jobs of session 3 were still queued (18 ahead), so the code stays unbuilt; d2's job
+at head builds c, d1 and d2 together (it superseded d1's own job and mutant, resubmitted at d2).
+
+1. Xapiand:4a117e647: the journal at `.xapiand/journal` (the lead's ruling, Blocked on 1 answered).
+2. Xapiand:ed1ded9c6 (d2): no data storage with a group; `stage_blobs` compresses new stored blobs at prepare into
+   CommandBlobs with placeholders at volume 0 (codec and size), `place_stored` sets them at apply; uploads stream
+   as chunk entries (`upload_stored` through `next_chunked_id`/`propose_upload`), the document is the upload's
+   final, proposed once (`ChunkedUpload::finished`), aborted on any failure before it; a read opens
+   `app.vol-N` through the slot's directory (`read_stored`). `landed` refuses an accepted verdict with no docid
+   (a final whose upload was retired). Test: test_pool `test_stored_blobs_survive_a_kill`.
 
 Session 3 (2026-11-23): merged origin/master (Xapiand:f1944bc00, clean); strata pinned at main 00eb018d (group-catalog,
 D169 (a)); chunks and restore tasks were merged by the lead (restore's three failed probes are by design, not evidence).
