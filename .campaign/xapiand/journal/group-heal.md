@@ -1,6 +1,6 @@
 # group-heal: journal
 
-State: waiting on jobs 261123-092858-a41353 261123-092900-8f83e5 261123-092916-b40b0c 261123-092932-b51e5e 261123-092935-acb4e2 261123-092939-49bd41 261123-092942-94c61e 261123-092946-4f156c 261123-092949-ccaf0c 261123-092953-100baf 261123-092957-937377 261123-093000-4d8dfd 261123-093004-aca03e 261123-093008-e20bce (F7 refusal fix at strata:c76c68f9, pushed)
+State: waiting on jobs 261123-115259-ccf2c8 261123-115301-3839f5 261123-115303-42b792 261123-115305-fdca6d 261123-115307-1cf54a 261123-115309-f3b6ea (settle fix at strata:870ac9f5, pushed)
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,33 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Settle fix (2026-11-23), after sim rows 261123-092900-8f83e5 at c76c68f9 failed
+simulation_group_corruption, file seed 3 ("the cluster settles": node 2 at applied 34, term 6;
+nodes 1 and 3 at 35, term 7). Probes (unversioned, .scratch/group-heal/probe2: traced group
+answers, consensus core receives and ticks, driver-loop ends): 261123-104515-c0102d,
+261123-105909-ff62ab, 261123-114429-9415d8. Read: node 1 is the damaged follower and
+reinstalls at 32 from node 2 (term 6 leader); from then node 2 neither receives nor sends
+(no core of the three hears it, it hears nobody), while its core ticks at term 6, not busy, its
+driver loop alive. Cause, in the test harness: sim::poll_upload isolates the leader when a cut
+upload's first chunk is acknowledged, and finish()'s run_until (fault-free steps) polls the
+upload, so node 2 was isolated as the reinstall ended; world::settle boots nodes that are down
+but kept `isolated`, so the settle ran with node 2 cut off. finish() healed again after the
+drain for the same cause, not after run_until. Not product code, and it predates c76c68f9 (the
+row never ran before: afeea5 was skipped). Fix strata:870ac9f5: settle clears `isolated` as it
+boots the nodes; finish()'s second heal is gone. Test voters_test `settle_heals(3)` (the leader
+isolated, the others elect and commit a write, settle must bring it back); mutant
+`settle-keeps-isolation` (mutants.py, voters) restores the old settle.
+
+Jobs at 870ac9f5 (no --after): sim rows 115259-ccf2c8 (A3, A5); suite `^group_`
+115301-3839f5 (A1-A4); fails-without settle-keeps-isolation 115303-42b792 (A5), sim
+marker-kept 115305-fdca6d (A5; e20bce at c76c68f9 cancelled, the row was red), install
+install-damage-escapes 115307-1cf54a (A3; also killed at c76c68f9 by aca03e); reviewer probes
+115309-f3b6ea. At c76c68f9 (lead, 2026-11-23): suite a41353 passes; mutants b51e5e, acb4e2,
+49bd41, 94c61e, 4f156c, ccaf0c, 100baf, 937377, 4d8dfd, aca03e killed. Reviewer probes
+b40b0c: B1 and B3 healed in 4 of 4 runs; B4 exit 1 only because it counts strata names, which
+sit under `iq.` (its log lists iq.manifest-1 and iq.seg-1.sx kept after the reopen): F9 is
+proved by the suite's `lone` case, not by B4.
 
 F7 refusal fix (2026-11-23), after suite 261123-091118-f25b39 at e256792b failed repair `rot`
 (seeds 1, 2: the source never damaged, reason empty; the learner never installed). Cause, in
@@ -272,8 +299,8 @@ voters_test.cc world edit carried into world.hh at that merge).
 
 ## Next
 
-1. Read the jobs at c76c68f9 (State). A red case: fix in the next commit with its job. Then CI
-   at c76c68f9 (asan, tsan, build-test).
+1. Read the jobs at 870ac9f5 (State). A red case: fix in the next commit with its job. Then CI
+   at 870ac9f5 (asan, tsan, build-test).
 2. Evidence table from `campaign brief`; ready for the lead's durability re-review.
 
 ## Blocked on
@@ -341,6 +368,9 @@ and what it leaves open. Results and how it works go in the docs of the reposito
   rpc_timeout, so at most one CRC pass of the pin per retry). Asking consensus to report a failed
   validation as Rejected was the alternative: a consensus change for a cost the ruling above
   already accepts.
+- Settle (870ac9f5): a world settle heals isolation as it heals crashes (it boots every node),
+  so no fault-free stretch can leave a fault in force into a settle; the alternative, keeping a
+  cut upload from isolating outside fault steps, would change the faults rows' coverage.
 - F8: one hand-off mechanism, no host view, applied_past kept only for the stall hand-off (D3).
 - F9: set-aside names go at adopt once unmarked (every recovery scans the directory once for
   them); a name already set aside keeps its first copy.
