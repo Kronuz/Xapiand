@@ -1,6 +1,6 @@
 # journal-replaces-wal--restore: journal
 
-State: investigating the restamp mutant's survival; probe 261122-211622-716e2b (queued)
+State: waiting on jobs 261122-211622-716e2b (probe: landing vs prepared version and stored _version with the restamp disabled); the restamp mutant 261121-203232-74304e survived, fix pending the probe
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
