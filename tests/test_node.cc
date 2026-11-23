@@ -41,6 +41,7 @@
 #include <cstring>
 #include <filesystem>
 #include <functional>
+#include <future>
 #include <limits>
 #include <map>
 #include <memory>
@@ -3202,6 +3203,120 @@ static void test_the_admission_peaks_rise_under_load() {
 	CHECK_GE(metric("xapiand_scheduler_demoted_peak"), 1.0);
 }
 
+// ---- the levels (docs/design/cluster-release.md D4) ----
+
+// An index of one shard holding a document, committed by its autocommit and refreshed, so nothing holds its turn and a
+// read takes none: the pin of its shard.
+static IndexPin levels_index(const std::string& name) {
+	create_index(name, 1);
+	CHECK_EQ(call("PUT", "/" + name + "/seed?commit", R"({"n":"seed"})").status, 204);
+	auto pin = pin_index(*manager()->database_pool, endpoints_of(name)[0].path, WRITE);
+	CHECK(eventually([&] { return !pin->is_modified(); }, 10s));
+	CHECK(pin.entry().group() != nullptr);
+	CHECK_FALSE(pin.entry().engine().dirty());
+	return pin;
+}
+
+// Holds the chore that applies the index's entries: a placed write stays unapplied until release().
+static std::unique_ptr<SchedulerHold> hold_apply(IndexPin& pin) {
+	auto hold = std::make_unique<SchedulerHold>(manager()->database_pool->groups()->chore(pin.entry().group()->group.id()));
+	CHECK(eventually([&] { return hold->entered(); }));
+	return hold;
+}
+
+static std::future<Reply> call_async(const std::string& method, const std::string& path, const std::string& body = "") {
+	return std::async(std::launch::async, [=] { return call(method, path, body); });
+}
+
+static bool answered(std::future<Reply>& reply, std::chrono::milliseconds within) {
+	return reply.wait_for(within) == std::future_status::ready;
+}
+
+// ack=quorum, the default, answers once the write applied: while its apply is held, the PUT waits, and its answer
+// then carries the verdict (204).
+static void test_ack_quorum_answers_once_applied() {
+	Watchdog watchdog("ack=quorum answers once applied", 60s);
+	auto pin = levels_index("ack_quorum");
+	auto hold = hold_apply(pin);
+	auto put = call_async("PUT", "/ack_quorum/a", R"({"n":"a"})");
+	CHECK_FALSE(answered(put, 500ms));   // placed, not applied
+	hold->release();
+	CHECK(answered(put, 10s));
+	CHECK_EQ(put.get().status, 204);
+	CHECK_EQ(text_of(call("GET", "/ack_quorum/a"), "n"), "a");
+}
+
+// ack=none answers 202 once the write is placed in the log, before it applies, with no version. A read=prefix read
+// then serves the last refresh, which misses it; a read=linearizable read waits for the apply and sees it.
+static void test_ack_none_answers_at_placement_and_linearizable_reads_wait_for_it() {
+	Watchdog watchdog("ack=none answers at placement", 60s);
+	auto pin = levels_index("ack_none");
+	auto hold = hold_apply(pin);
+	auto put = call_async("PUT", "/ack_none/a?ack=none&echo", R"({"n":"a"})");
+	CHECK(answered(put, 10s));   // placed while its apply is held
+	const auto placed = put.get();
+	CHECK_EQ(placed.status, 202);
+	CHECK_EQ(version_of(placed), -1);   // no version before it applies
+	CHECK_EQ(call("GET", "/ack_none/a?read=prefix").status, 404);
+	auto linearizable = call_async("GET", "/ack_none/a?read=linearizable");
+	CHECK_FALSE(answered(linearizable, 500ms));   // waits for the apply
+	hold->release();
+	CHECK(answered(linearizable, 10s));
+	const auto read = linearizable.get();
+	CHECK_EQ(read.status, 200);
+	CHECK_EQ(text_of(read, "n"), "a");
+	CHECK_EQ(version_of(call("GET", "/ack_none/a")), 1);
+	CHECK_EQ(call("PUT", "/ack_none/b?ack=none", R"({"n":"b"})").status, 202);
+	CHECK_EQ(version_of(call("PUT", "/ack_none/b?echo", R"({"n":"b2"})")), 2);   // prepared after b applied
+}
+
+// refresh=true refreshes before the answer (the shard is left clean), and so does ?commit, which means
+// ack=quorum&refresh=true; refresh=false leaves the refresh to the next read. refresh=wait_for answers once every
+// read sees the write: at ack=none it waits for the apply. Levels the node does not know answer 400.
+static void test_refresh_levels_and_commit() {
+	Watchdog watchdog("the refresh levels and ?commit", 60s);
+	auto pin = levels_index("refresh_levels");
+	const auto& engine = pin.entry().engine();
+	CHECK_EQ(call("PUT", "/refresh_levels/a?refresh=true", R"({"n":"a"})").status, 204);
+	CHECK_FALSE(engine.dirty());
+	CHECK_EQ(call("PUT", "/refresh_levels/b", R"({"n":"b"})").status, 204);
+	CHECK(engine.dirty());   // applied, and refreshed only by the next read
+	CHECK_EQ(text_of(call("GET", "/refresh_levels/b"), "n"), "b");
+	CHECK_FALSE(engine.dirty());
+	CHECK_EQ(call("PUT", "/refresh_levels/c?commit", R"({"n":"c"})").status, 204);
+	CHECK_FALSE(engine.dirty());
+	{
+		auto hold = hold_apply(pin);
+		auto put = call_async("PUT", "/refresh_levels/d?ack=none&refresh=wait_for", R"({"n":"d"})");
+		CHECK_FALSE(answered(put, 500ms));   // placed, waiting for its apply
+		hold->release();
+		CHECK(answered(put, 10s));
+		CHECK_EQ(put.get().status, 202);
+	}
+	CHECK_EQ(text_of(call("GET", "/refresh_levels/d?read=prefix"), "n"), "d");
+	for (const char* query : {"?ack=all", "?refresh=soon", "?commit&ack=none", "?commit&refresh=wait_for", "?commit&refresh=false"}) {
+		CHECK_EQ(call("PUT", std::string("/refresh_levels/e") + query, R"({"n":"e"})").status, 400);
+	}
+	CHECK_EQ(call("GET", "/refresh_levels/a?read=leader").status, 400);
+}
+
+// A RESTORE at ack=none answers 202 with each object accepted and no version; its writes then read back.
+static void test_a_restore_at_ack_none_reports_no_versions() {
+	Watchdog watchdog("a RESTORE at ack=none", 60s);
+	create_index("restore_none", 1);
+	const auto reply = call("RESTORE", "/restore_none/?ack=none&echo", R"({"_id":"r1","n":"1"})" "\n" R"({"_id":"r2","n":"2"})" "\n", "application/x-ndjson");
+	CHECK_EQ(reply.status, 202);
+	const auto items = field_of(reply, "items");
+	CHECK(items.is_array());
+	CHECK_EQ(items.size(), 2u);
+	for (const auto& item : items) {
+		CHECK(item.find("_id") != item.end());   // accepted, not an error
+		CHECK_EQ(item.size(), 1u);               // and no _version
+	}
+	CHECK_EQ(text_of(call("GET", "/restore_none/r2?read=linearizable"), "n"), "2");
+	CHECK_EQ(version_of(call("GET", "/restore_none/r1")), 1);
+}
+
 // HEAD answers with the status and headers a GET would, and no body (RFC 9110 9.3.2), a miss included; OPTIONS lists
 // the verbs the node routes, and none it does not (STORE).
 static void test_head_has_no_body_and_options_lists_the_routed_verbs() {
@@ -3834,6 +3949,10 @@ int main(int argc, char** argv) {
 		{"test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted", test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted},
 		{"test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled", test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled},
 		{"test_the_admission_peaks_rise_under_load", test_the_admission_peaks_rise_under_load},
+		{"test_ack_quorum_answers_once_applied", test_ack_quorum_answers_once_applied},
+		{"test_ack_none_answers_at_placement_and_linearizable_reads_wait_for_it", test_ack_none_answers_at_placement_and_linearizable_reads_wait_for_it},
+		{"test_refresh_levels_and_commit", test_refresh_levels_and_commit},
+		{"test_a_restore_at_ack_none_reports_no_versions", test_a_restore_at_ack_none_reports_no_versions},
 		{"test_head_has_no_body_and_options_lists_the_routed_verbs", test_head_has_no_body_and_options_lists_the_routed_verbs},
 		{"test_a_new_index_gets_the_replicas_asked_below_and_above_the_default", test_a_new_index_gets_the_replicas_asked_below_and_above_the_default},
 		{"test_a_node_over_the_cap_answers_a_wildcard", test_a_node_over_the_cap_answers_a_wildcard},
