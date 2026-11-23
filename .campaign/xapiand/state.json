@@ -28801,18 +28801,67 @@
         "AGENTS.md",
         "ARCHITECTURE.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-datetime",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-23T08:23:55",
+          "ci": {
+            "commit": "2afe1565af2adc1474c731001f9e6ec31786c57e",
+            "runs": [
+              45116922213
+            ]
+          },
+          "commit": "2afe1565af2adc1474c731001f9e6ec31786c57e",
+          "criteria": {
+            "A1": "261122-211644-7ddf11 (the build-test check), 261122-211644-7ddf11",
+            "A2": "261123-082246-764d28 (the split check)",
+            "A3": "261122-211653-463c36",
+            "A4": "docs/source-layout.md (5b07a01): a row per new file, each .cc/.h's first line states what it holds, test/diff_test.cc kept whole with reasons",
+            "A5": "CI green at 2afe1565af2a",
+            "A6": "261122-211657-6b0995",
+            "A7": "the lead's read"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "2afe1565af2adc1474c731001f9e6ec31786c57e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261122-211644-7ddf11",
+              "level": "light",
+              "seconds": 89.1,
+              "state": "done",
+              "what": "split-datetime check build-test at 2afe1565af2a"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main . test",
+              "commit": "2afe1565af2adc1474c731001f9e6ec31786c57e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-082246-764d28",
+              "level": "light",
+              "seconds": 1.4,
+              "state": "done",
+              "what": "split-datetime check split at 2afe1565af2a"
+            }
+          ],
+          "final": true,
+          "from": "b11299dfc9975abfaecbdd96c53770e9c0a56a8f",
+          "reason": "",
+          "tested": "2afe1565af2adc1474c731001f9e6ec31786c57e"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../datetime",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "datetime's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:29:42",
-      "worktree": "../datetime-wt/xapiand/split-datetime"
+      "updated": "2026-11-23T08:23:58",
+      "worktree": ""
     },
     "split-docset": {
       "accepted": {},
