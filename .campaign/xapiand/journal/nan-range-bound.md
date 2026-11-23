@@ -1,6 +1,6 @@
 # nan-range-bound: journal
 
-State: waiting on jobs 261122-213206-6de57d 261122-213213-6018a2 261122-213223-ea3b17 261122-213233-e1b2f5; blocked on lead: date-query field naming (see Blocked on)
+State: waiting on jobs 261122-213854-e735ba 261122-213855-92654e 261122-213857-459669 261122-213907-f43f09 261122-213854-8ab1db
 Quest: .campaign/xapiand/quests/nan-range-bound.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,57 +9,50 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Fix and test committed (Xapiand:c7c964a16); jobs queued: A1 at head 261122-213206-6de57d,
-fails-without at the test-only commit 93919edb5 (main's src) 261122-213223-ea3b17, float mutant
-78d6c4b6b (ref mutant/nan-range-bound-float) 261122-213213-6018a2, suite 261122-213233-e1b2f5.
+Code round done at Xapiand:ca144f228 (pushed). Jobs queued, ids below.
 
 ## Next
 
-1. Read the jobs' logs: the fails-without log must show a complete build and
-   `test_range_aggregation_nan_bound` failing on f and d only; the mutant likewise.
-2. On the lead's answer to the date-query item below: name the field there too and add the `d`
-   checks to `test_query_range_nan_bound`.
+1. Read each log: a complete build, then for the base (1dffb8ab8) both tests failing on f and d
+   (aggregation) and d plus every message (query); the float mutant (56ca1b70f) failing only
+   `test_range_aggregation_nan_bound` on f and d; the query mutant (6a9bd08a4) failing
+   `test_query_range_nan_bound`. Then CI at ca144f228 for A4.
 
 ## Blocked on
 
-lead: a NaN bound in a date field's query `_range` answers 400 "Year is out of range"
-(DatetimeError, caught by catch_http_errors), which names neither the field nor the bound. The
-field name never reaches src/multivalue/range.cc (`MultipleValueRange::getQuery` takes only the
-field spec); it is known in `exact_range` in src/query_dsl.cc, outside the file set. Options:
-1. Widen the file set to src/query_dsl.cc: `exact_range` refuses a NaN bound for every field type
-   before the type's own rule, one place naming field and bound (recommended).
-2. Pass the path into `MultipleValueRange::getQuery` (same call site, still query_dsl.cc).
-3. Accept the date query as it is: already a 400, without the field named.
-Integer, positive and floating queries already answer 400 "Field 'f' expects a value of type
-floating, got nan" (Serialize::exact); no change there.
+Nothing (msg from the lead widened the file set to src/query_dsl.cc,
+src/aggregations/bucket_numeric.h and the two doc pages; done below).
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261122-213206-6de57d (head), 261122-213223-ea3b17 (fails-without at 93919edb5), 261122-213213-6018a2 (float mutant): pending |
-| A2 | 261122-213233-e1b2f5 (suite at c7c964a16): pending |
-| A3 | docs/src/content/docs/reference-guide/search/query-dsl/compound-queries/range-searches.md and .../aggregations/bucket/range-aggregation.md say a NaN bound answers 400 naming the field |
-| A4 | not yet pushed |
+| A1 | 261122-213854-e735ba (test_nan_range + test_engine_query at ca144f228); fails-without 261122-213855-92654e (head's test over main's src, 1dffb8ab8, ref mutant/nan-range-bound-base); float mutant 261122-213857-459669 (56ca1b70f, ref mutant/nan-range-bound-float); query mutant 261122-213907-f43f09 (6a9bd08a4, ref mutant/nan-range-bound-query): pending |
+| A2 | 261122-213854-8ab1db (suite at ca144f228): pending |
+| A3 | range-searches.md and range-aggregation.md under docs/src/content/docs/reference-guide/search/ say a NaN bound answers 400 naming the field and the bound |
+| A4 | pushed at ca144f228; CI not read yet |
+
+Superseded, cancelled: 261122-213206-6de57d, 261122-213210-593d2f, 261122-213213-6018a2,
+261122-213223-ea3b17, 261122-213233-e1b2f5 (all at older code, never ran).
 
 Precheck (lead's note): `grep -rniE 'nan|isnan|quiet_NaN' docs/ tests/` finds no example, doc or
-test relying on NaN matching nothing. The docs already say a NaN bound answers 400
-(docs/mechanisms/value-encoding.md:38, upgrade.md:69, changelog.md:50); tests that touch NaN
+test relying on NaN matching nothing. The docs already said a NaN bound answers 400
+(docs/mechanisms/value-encoding.md:38, upgrade.md:69, changelog.md:50); tests touching NaN
 bounds expect refusal (test_coverage_multivalue_range.cc:269, numeric_range_check.py:405).
 
 ## Result
 
-A NaN `_from`/`_to` in a range aggregation answers 400 "Field 'f' range bound '_from' cannot be
-NaN" on every field type (was: 400 "bounds must be numbers" on integer/positive, silently no
-match on floating/date/datetime/time/timedelta). One check in the bound reader of
-src/aggregations/bucket_numeric.h, before any type's reading. Tests: tests/test_nan_range.cc.
+A NaN `_from`/`_to` answers 400 "Field 'f' range bound '_from' cannot be NaN" on every field
+type, in a query's `_range` and in a range aggregation. Before: aggregations answered "bounds
+must be numbers" on integer/positive and silently matched nothing on floating and date types;
+queries answered Serialize::exact's message on numeric fields and "Year is out of range" on
+dates. Two checks, one per entry point, same message: the bound reader in
+src/aggregations/bucket_numeric.h and `exact_range` in src/query_dsl.cc. Tests:
+tests/test_nan_range.cc (4 field types x 2 bounds x 2 forms, status and message, plus a finite
+bound answering 200).
 
 ## Rulings I made
 
-- The file set names src/aggregations/bucket.h, now only the umbrella include; the range code is
-  in src/aggregations/bucket_numeric.h, which I edited. Likewise the docs glob
-  `docs/src/content/docs/reference/query-dsl*` matches nothing; the reference pages are under
-  reference-guide/search/ (range-searches.md, range-aggregation.md). Lead: widen the set.
-- The aggregation message names the field and the bound name (`_from`/`_to`); the query side keeps
-  Serialize::exact's message, which names the field and the bound value.
-- The mutant skips the NaN check only for floating-point T: the old floating and date behavior.
+- The aggregation and query messages name the field and the bound name (`_from`/`_to`).
+- The float mutant skips the aggregation check only for floating-point T (the old floating and
+  date behavior); the query mutant removes the `exact_range` check.
