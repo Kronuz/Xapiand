@@ -2743,6 +2743,49 @@
         "quest": "detent:consensus-driver-flow"
       },
       "text": "detent:consensus-driver-flow started and changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:install-request, which your group-heal consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T06:52:50",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T06:52:49",
+      "by": "campaign detent",
+      "closed": "noted: turn-log-parity rechecks journal:turn-buffers parity when journal-earlier-turn-loss lands; it does not wait on it",
+      "id": "msg-252",
+      "settles": {
+        "ours": [
+          "turn-log-parity"
+        ],
+        "quest": "detent:journal-earlier-turn-loss"
+      },
+      "text": "detent:journal-earlier-turn-loss started and changes contract journal:turn-buffers, which your turn-log-parity consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T07:30:42",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T07:30:41",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "noted: task-probes and landing priority installed; resubmitting restore's three probes",
+      "id": "msg-253",
+      "notice": "skill landed fce5f0d20ab3d43e9deea3fa1961bef24cf55c35",
+      "text": "campaign skill: 11 commits landed on agent-campaign's main, installed here: agent-campaign:97ea118 Run a landing quest's voided evidence at landing priority; agent-campaign:c298eb2 Type rerun_jobs' minutes and the test's job spec; agent-campaign:bb3ea82 Decide landing priority from gap kinds, not their wording; agent-campaign:089c2be Merge main into quest/campaign-v3/landing-priority; agent-campaign:a4d542e Raise a reused queued submit's priority and say so on stderr; agent-campaign:3cd60ed Merge main into quest/campaign-v3/landing-priority; agent-campaign:fa21275 Merge main into quest/campaign-v3/landing-priority; agent-campaign:36a1c08 Merge main into quest/campaign-v3/landing-priority; agent-campaign:7ecb3ea Read the reuse note on stderr in gate and scenario tests; agent-campaign:4233e0c Merge main into quest/campaign-v3/landing-priority; agent-campaign:fce5f0d Merge main into quest/campaign-v3/landing-priority"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T08:16:42",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T08:16:42",
+      "by": "lead",
+      "closed": "strata-journal-pin pins journal main now (Host::delete_group); formats stay open until release, so it repins after journal-turn-sector-checks lands",
+      "id": "msg-255",
+      "text": "Re msg-260 (strata-journal-pin): journal-earlier-turn-loss changes no API or format (recovery now reports earlier-turn damage it used to miss; landing soon). journal-drop-memory-io removes include/journal/memory_io.h; it lands after consensus-install-test-faultfs. Heads-up: journal-turn-sector-checks (owner D147) changes the on-disk turn log format RFTW0001 -> RFTW0002 with no reader of the old one; it starts once journal-earlier-turn-loss lands. Pin after it if you want the new format, or before and repin."
     }
   ],
   "quests": {
@@ -11428,9 +11471,7 @@
           "verdict": "APPROVE"
         }
       },
-      "after": [
-        "turn-log-parity"
-      ],
+      "after": [],
       "base": "00eb018da75d20715b3e05a2593937a970b40201",
       "branch": "quest/xapiand/first-commit-crash",
       "checks": [
@@ -11447,20 +11488,56 @@
         "test/lifecycle_test.cc",
         "docs/mechanisms/manifest-log-file.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/first-commit-crash",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-23T06:57:36",
+          "ci": {
+            "commit": "4955a679f16083f36f5b4b7b27b35fd96c4dbc4e",
+            "runs": [
+              45189114595
+            ]
+          },
+          "commit": "4955a679f16083f36f5b4b7b27b35fd96c4dbc4e",
+          "criteria": {
+            "A1": "261123-060918-81a036, 261123-053633-726a56",
+            "A2": "261123-053633-726a56; fails without: 261123-045326-9bf051, 261123-050145-4fa570, 261123-053640-93a0e0",
+            "A3": "261123-060918-81a036",
+            "A4": "261123-053633-726a56; fails without: 261123-050148-1c20df, 261123-050150-0c1ced, 261123-050152-1a9db0, 261123-050154-7775a1, 261123-053645-dd3621, 261123-064304-2767bb, 261123-064305-a29217, 261123-064306-dfba67, 261123-064651-131790",
+            "A5": "docs/mechanisms/manifest-log-file.md, \"The first manifest\" and \"Files no manifest names\""
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "4955a679f16083f36f5b4b7b27b35fd96c4dbc4e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-060918-81a036",
+              "level": "light",
+              "seconds": 1781.0,
+              "state": "done",
+              "what": "first-commit-crash check build-test at 4955a679f160"
+            }
+          ],
+          "final": true,
+          "from": "00eb018da75d20715b3e05a2593937a970b40201",
+          "reason": "",
+          "tested": "4955a679f16083f36f5b4b7b27b35fd96c4dbc4e"
+        }
+      ],
       "lenses": [
         "durability"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "A crash in a fresh index's first commit leaves an index that opens",
-      "updated": "2026-11-23T06:10:22",
-      "worktree": "../strata-wt/xapiand/first-commit-crash"
+      "updated": "2026-11-23T06:57:40",
+      "worktree": ""
     },
     "flush-memory": {
       "accepted": {},
@@ -13344,8 +13421,9 @@
             "test/group/sim*",
             "docs/gates/phase-3r.md"
           ],
-          "journal": "../Xapiand-wt/xapiand/group-heal--sim-rows",
-          "worktree": "../strata-wt/xapiand/group-heal--sim-rows"
+          "journal": "",
+          "merged": "a53939071870e483e2af08316faf5f8aa1c12ba3",
+          "worktree": ""
         },
         "witness": {
           "base": "cd2a4a40b996730386c9c3f12ac4084bdd9aba34",
@@ -13364,7 +13442,7 @@
         }
       },
       "title": "Replication groups grow, heal and run in the simulator",
-      "updated": "2026-11-23T04:37:05",
+      "updated": "2026-11-23T08:07:37",
       "worktree": "../strata-wt/xapiand/group-heal"
     },
     "group-install": {
@@ -14765,6 +14843,43 @@
       "title": "Idle index cost landscape",
       "updated": "2026-11-08T15:40:05"
     },
+    "index-delete": {
+      "accepted": {},
+      "after": [
+        "journal-replaces-wal"
+      ],
+      "checks": [
+        {
+          "cmd": "ci:Build + unit + smoke",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/server/search_views.cc",
+        "src/database/shard_group.*",
+        "src/database/pool.*",
+        "tests/test_pool.cc",
+        "tests/test_index_delete*",
+        "docs/src/content/docs/reference-apis/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [
+        "strata-journal-pin"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "Index DELETE closes and deletes the index's group",
+      "updated": "2026-11-23T08:15:36"
+    },
     "index-restructure": {
       "accepted": {},
       "after": [
@@ -15247,7 +15362,7 @@
           "name": "e2e"
         },
         {
-          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand && harness/blob_crash_check.sh build/bin/xapiand",
+          "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src",
           "level": "light",
           "minutes": 60,
           "name": "crash"
@@ -15324,7 +15439,31 @@
         "src/database/command.h",
         "docs/src/content/docs/tests/coverage.md",
         "src/xapiand_scheduler_trace.h",
-        "src/logger_fwd.h"
+        "src/logger_fwd.h",
+        "src/debounce_or_run.h",
+        "tests/test_debounce_or_run.cc",
+        "src/xapiand_stash_trace.h",
+        "config.h.in",
+        "AGENTS.md",
+        "README.md",
+        "docs/src/content/docs/building.md",
+        "docs/src/content/docs/options.md",
+        "docs/src/content/docs/architecture.md",
+        "docs/src/content/docs/changelog.md",
+        "src/log.h",
+        "src/metrics.h",
+        "src/metrics.cc",
+        "harness/strata_write_check.sh",
+        "harness/engine_crash_check.sh",
+        "harness/graceful_shutdown_check.sh",
+        "harness/cluster/checklist.py",
+        "harness/coverage_e2e_server.py",
+        "harness/profile_bulk.sh",
+        "tests/one_id_mutants.sh",
+        "tests/test_engine_strata.cc",
+        "tests/test_engine_replay.cc",
+        "tests/test_quarantine.cc",
+        "tests/test_coverage_database.cc"
       ],
       "history": [
         {
@@ -15436,6 +15575,92 @@
             "gate check build-test changed",
             "gate check e2e changed"
           ]
+        },
+        {
+          "at": "2026-11-23T07:21:48",
+          "checks": [
+            [
+              {
+                "cmd": "ci:Build + unit + smoke",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:Functional E2E (docs)",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand && harness/blob_crash_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 60,
+                "name": "crash"
+              },
+              {
+                "cmd": "ci:AddressSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:ThreadSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "! git grep -n DatabaseWAL -- src",
+                "level": "none",
+                "minutes": 5,
+                "name": "no-wal"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:Build + unit + smoke",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:Functional E2E (docs)",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src",
+                "level": "light",
+                "minutes": 60,
+                "name": "crash"
+              },
+              {
+                "cmd": "ci:AddressSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:ThreadSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "! git grep -n DatabaseWAL -- src",
+                "level": "none",
+                "minutes": 5,
+                "name": "no-wal"
+              }
+            ]
+          ],
+          "reason": "owner 2026-11-23: development builds always configure with -G Ninja (D168); the crash check gains -G Ninja, nothing else changes",
+          "voided": [],
+          "weakened": [
+            "gate check crash changed"
+          ]
         }
       ],
       "landed": [],
@@ -15487,11 +15712,12 @@
             "harness/run_all.sh",
             "docs/src/content/docs/tests/coverage.md"
           ],
-          "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal--restore"
+          "merged": "680174c680fb019a6afa4cfc73769799eb90a213",
+          "worktree": ""
         }
       },
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-21T21:27:24",
+      "updated": "2026-11-23T08:15:15",
       "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal"
     },
     "journal-seal-repeat": {
@@ -24407,9 +24633,56 @@
         "docs/source-layout.md",
         "CMakeLists.txt"
       ],
-      "journal": "../Xapiand-wt/xapiand/queryparser-restructure",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-23T08:22:12",
+          "ci": {
+            "commit": "fc02cb50cacb5198df1fb9024afe17cf335c0ee4",
+            "runs": [
+              45124357782
+            ]
+          },
+          "commit": "fc02cb50cacb5198df1fb9024afe17cf335c0ee4",
+          "criteria": {
+            "A1": "261122-222817-2abf44 (the build-test check); build-test 261122-222817-2abf44 at queryparser:fc02cb5 passed (8/8 tests); CI run 45124357782 on the pushed branch (queued)",
+            "A2": "261123-005505-cd8ac8 (the members check), 261122-222826-4f317e",
+            "A3": "261122-222831-76a27b",
+            "A4": "`docs/source-layout.md` at queryparser:fc02cb5: each header, its lines and its layer",
+            "A5": "[manual] the lead (2026-11-23) read the cut at fc02cb50: parser.hh holds the class (data members, one declaration per member) and its builder; parser_operators.hh the driver and operator recognition (run, step, keywords, op_kind); parser_words.hh words and terms (globs, fuzzy, phrases, n-grams, stop words, make_term); parser_groups.hh grouping and the tree (frames, close_group, combine, join, nary, fold). Each is one layer a maintainer opens alone, 270-446 lines; agreed."
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "fc02cb50cacb5198df1fb9024afe17cf335c0ee4",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261122-222817-2abf44",
+              "level": "light",
+              "seconds": 72.9,
+              "state": "done",
+              "what": "queryparser-restructure check build-test at fc02cb50cacb"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --members --base main .",
+              "commit": "fc02cb50cacb5198df1fb9024afe17cf335c0ee4",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-005505-cd8ac8",
+              "level": "light",
+              "seconds": 2.3,
+              "state": "done",
+              "what": "queryparser-restructure check members at fc02cb50cacb"
+            }
+          ],
+          "final": true,
+          "from": "0fdec0c0184abb51e259765a4137b768429e9400",
+          "reason": "",
+          "tested": "fc02cb50cacb5198df1fb9024afe17cf335c0ee4"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [
         "split-queryparser"
@@ -24417,10 +24690,10 @@
       "provides": [],
       "repo": "../queryparser",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "queryparser: the parser's operator, word and group layers in headers of their own",
-      "updated": "2026-11-22T22:19:59",
-      "worktree": "../queryparser-wt/xapiand/queryparser-restructure"
+      "updated": "2026-11-23T08:22:14",
+      "worktree": ""
     },
     "queue-drain-throughput": {
       "accepted": {
@@ -25928,19 +26201,66 @@
         "harness/bench/bulk_rss_probe.py",
         "docs/perf/bulk-load-rss.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-23T07:50:00",
+          "ci": {
+            "carried": true,
+            "commit": "0fc7485398b5d4fd3574d4a71f2512a105228cc2",
+            "runs": [
+              45166121262
+            ]
+          },
+          "commit": "6bb90251653ca1bfc8617f58685dc575e01491b2",
+          "criteria": {
+            "A1": "261123-072851-e9d3c2, 261123-072850-25717a",
+            "A2": "261123-072851-e9d3c2, 261123-072850-25717a",
+            "A3": "261123-072850-063d9a",
+            "A4": "261121-034148-685f8b (passed at c5b2c0689ce5; 16 merges from main since, none touching its files; ignores docs-only docs/perf/bulk-load-rss.md); fails without: 261121-034201-4acbcc, 261121-034203-69a143",
+            "A5": "261121-034148-685f8b (passed at c5b2c0689ce5; 16 merges from main since, none touching its files; ignores docs-only docs/perf/bulk-load-rss.md)",
+            "A6": "261123-072850-b73b5d",
+            "A7": "`docs/perf/bulk-load-rss.md`: \"With the body streamed, the peak is 344-405 MB, held mostly by strata's write buffer until the RESTORE's one closing\"",
+            "A8": "CI green at 0fc7485398b5 (carried to 84ea9a65a516 across clean merges)"
+          },
+          "evidence": [
+            {
+              "check": "build-test",
+              "ci": "ci:Build + unit + smoke",
+              "commit": "0fc7485398b5d4fd3574d4a71f2512a105228cc2",
+              "state": "done"
+            },
+            {
+              "check": "e2e",
+              "ci": "ci:Functional E2E (docs)",
+              "commit": "0fc7485398b5d4fd3574d4a71f2512a105228cc2",
+              "state": "done"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:AddressSanitizer + UBSan",
+              "commit": "0fc7485398b5d4fd3574d4a71f2512a105228cc2",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "a284c169884b887b137b0159898b943af9c8c040",
+          "reason": "",
+          "tested": "84ea9a65a516f0a5cf7ebc7a47a1b87e72246d67"
+        }
+      ],
       "lenses": [
         "security"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "a whole-database RESTORE streams a top-level MessagePack array element by element",
-      "updated": "2026-11-21T23:56:55",
-      "worktree": "../Xapiand-wt/xapiand/restore-stream"
+      "updated": "2026-11-23T07:50:04",
+      "worktree": ""
     },
     "retention": {
       "accepted": {},
@@ -28481,18 +28801,67 @@
         "AGENTS.md",
         "ARCHITECTURE.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-datetime",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-23T08:23:55",
+          "ci": {
+            "commit": "2afe1565af2adc1474c731001f9e6ec31786c57e",
+            "runs": [
+              45116922213
+            ]
+          },
+          "commit": "2afe1565af2adc1474c731001f9e6ec31786c57e",
+          "criteria": {
+            "A1": "261122-211644-7ddf11 (the build-test check), 261122-211644-7ddf11",
+            "A2": "261123-082246-764d28 (the split check)",
+            "A3": "261122-211653-463c36",
+            "A4": "docs/source-layout.md (5b07a01): a row per new file, each .cc/.h's first line states what it holds, test/diff_test.cc kept whole with reasons",
+            "A5": "CI green at 2afe1565af2a",
+            "A6": "261122-211657-6b0995",
+            "A7": "the lead's read"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "2afe1565af2adc1474c731001f9e6ec31786c57e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261122-211644-7ddf11",
+              "level": "light",
+              "seconds": 89.1,
+              "state": "done",
+              "what": "split-datetime check build-test at 2afe1565af2a"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main . test",
+              "commit": "2afe1565af2adc1474c731001f9e6ec31786c57e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-082246-764d28",
+              "level": "light",
+              "seconds": 1.4,
+              "state": "done",
+              "what": "split-datetime check split at 2afe1565af2a"
+            }
+          ],
+          "final": true,
+          "from": "b11299dfc9975abfaecbdd96c53770e9c0a56a8f",
+          "reason": "",
+          "tested": "2afe1565af2adc1474c731001f9e6ec31786c57e"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../datetime",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "datetime's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:29:42",
-      "worktree": "../datetime-wt/xapiand/split-datetime"
+      "updated": "2026-11-23T08:23:58",
+      "worktree": ""
     },
     "split-docset": {
       "accepted": {},
@@ -31139,6 +31508,44 @@
       "status": "landed",
       "title": "Field-aware strata index",
       "updated": "2026-11-08T13:25:27"
+    },
+    "strata-journal-pin": {
+      "accepted": {},
+      "after": [
+        "turn-log-parity"
+      ],
+      "base": "93d104461a79e17b0b9e43b93965a77d7ab711ed",
+      "branch": "quest/xapiand/strata-journal-pin",
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [
+        "journal"
+      ],
+      "files": [
+        "CMakeLists.txt",
+        "include/strata/group/**",
+        "include/strata/core/journal*",
+        "test/group/**",
+        "sim/**"
+      ],
+      "journal": "../Xapiand-wt/xapiand/strata-journal-pin",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "low",
+      "status": "active",
+      "title": "strata builds against journal main (Host::delete_group)",
+      "updated": "2026-11-23T08:25:35",
+      "worktree": "../strata-wt/xapiand/strata-journal-pin"
     },
     "strata-nospace-position": {
       "accepted": {},
@@ -34823,7 +35230,8 @@
         "fuzz/corpus/command/**",
         "bench/kv/kv_strata.hh",
         "test/kv_strata_batch_test.cc",
-        "docs/mechanisms/large-transactions.md"
+        "docs/mechanisms/large-transactions.md",
+        "docs/design/standalone-turn-log.md"
       ],
       "history": [
         {
@@ -34984,7 +35392,7 @@
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-23T04:09:17",
+      "updated": "2026-11-23T06:57:19",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {

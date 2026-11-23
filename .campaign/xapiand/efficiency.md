@@ -994,3 +994,22 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Finished agents: placement fixes (Opus, 194k); sim-rows round 2 (Opus, 193k: the 5 failing rows were row bugs, rows cost 1.1 s); repair round 2 (Opus, 224k: two failures were test bugs, plus F3 and the make_pin footer check).
 - GitHub outage on the host ~13:00-15:00 UTC: all branches pushed when it returned; 3 jobs rerun.
 - Quota: weekly 16% (1.72%/h). Host: load 63 (129 over 15 min), 52 jobs queued.
+
+## 2026-11-23 16h
+
+- Landed: ninja-only (Xapiand:4050d455), first-commit-crash (strata:4955a679; first-commit cuts 49 of 90 refused at main, 0 at the fix; 5 of 5 mutants killed).
+- Correction (owner): the ninja-only configure guards were the lead's overreach; removed at Xapiand:c579bb60f and strata:93d10446. Ninja stays the rule for our development builds (D168 amended); CI and library users choose their generator.
+- Reordered: first-commit-crash ahead of turn-log-parity, whose A6 waits on 13 open parity tasks.
+- Finished agents: repair round 3 (Opus, 205k: hand-off ping-pong between damaged replicas fixed; cases pass at d457da76); turn-log-parity A5 (Opus medium, 123k: Q3-Q5 recorded closed, main merged, evidence rerun); first-commit-crash re-check (40k, APPROVE).
+- sim-rows: barrier-row aborts were first-commit-crash's bug (all 9 rows pass with it merged); main merged into sim-rows and group-heal.
+- journal-replaces-wal: rerun after the outage failed on strata::faultfs (moved to kronuz::faultlab); lead fix Xapiand:bc757bba9.
+- Quota: weekly 17% (1.65%/h). Host: load 12, 291 GiB free, 56 jobs queued.
+
+## 2026-11-23 17h
+
+- Landed: restore-stream (Xapiand:6bb90251; A6 fuzz 32 CPU-min clean twice), queryparser-restructure (queryparser:fc02cb50; lead read the cut, A5).
+- Merged into group-heal: sim-rows (strata:68a57482). repair: 17 of 17 mutants killed at strata:06bfb2f5 after round 3 (no-ack re-aimed at `refusal`; pin-unchecked-footer kept, reachable when bytes rot after the leader's read); task merge waits on two reruns.
+- New quests: strata-journal-pin (started, Opus medium) and index-delete (planned, after it and journal-replaces-wal): DELETE answers 501 on master today.
+- journal-replaces-wal step e (Opus high, 127k, 205 tool uses): WAL, fsyncher, scheduler, flags, :wal verb and two options deleted; no-wal check passes at c0dc4160; A9 fix 3 test still fails (reopen does not abort an upload left open).
+- turn-log-parity: every rerun green at the merged head; A6 (RocksDB parity) waits on 13 unstarted parity tasks; split proposed to the owner.
+- Quota: weekly 18% (1.59%/h). Host: load 23, 289 GiB free.

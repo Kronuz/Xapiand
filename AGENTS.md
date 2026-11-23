@@ -23,10 +23,12 @@ earlier skill's ledgers, kept as history.
 
 ## Build and test
 
-CMake with Ninja only; never `make`. CI's `.github/workflows/ci.yml` is the reference:
+Development builds use CMake and Ninja: every configure in our docs and scripts passes `-G Ninja`, so
+build trees and the ccache stay consistent. CMake itself accepts any generator, for CI and for users.
+CI's `.github/workflows/ci.yml` is the reference:
 
 ```sh
-cmake -GNinja -B build -DFETCHCONTENT_BASE_DIR="$PWD/.deps" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF
+cmake -G Ninja -B build -DFETCHCONTENT_BASE_DIR="$PWD/.deps" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF
 ninja -C build
 ctest --test-dir build --output-on-failure
 BIN="$PWD/build/bin/xapiand" harness/run_all.sh e2e tls   # docs-as-E2E, needs newman
