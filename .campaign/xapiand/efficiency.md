@@ -926,3 +926,12 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Lead: critical path re-checked at the owner's question (07h): two path tasks sat idle 1-1.5 days with results waiting; both relaunched. Rule: path quests first when filling capacity. Lesson: merge main before long evidence runs (restore-stream reran 5 jobs, 32 CPU-min of fuzz included).
 - Tool findings to campaign-v3: rerun has no priority (msg-31; covered by landing-priority A1).
 - Host: load 57 on 16 CPUs, 280 GiB free, 120 queued, light slots 97% used. Quota 8% weekly at 3.6%/h; the projection says about 25 h left, before the reset.
+
+### 2026-11-23 08h (hourly)
+
+- Landed: none this hour.
+- Found: group-heal's install stall: the leader made the pin on its chore after the learner's fetch, and released it per flight, so every retry lost the same race (500 times); fix strata:75b5ac9b (one pin per latest bundle) with seed 132's ENOSPC release fix (cc2d0b3f), 13 jobs queued. cluster search's job failure was two test bugs (reserved `_` aggregation names; a reference into a freed vector). split-check-members CI: pyrefly 1.4.0 (CI's pin) refuses an untyped empty list that the local 1.3.1 lint passes; lead fix cpp-libraries:50a564c.
+- Confirmed: group-catalog every mutant killed by name (R1 failed-open, R2 attach, R3 bound/sweep/replace, R4, N6 x4); consensus-request-install A2 (21 images for 1) and A4 mutants killed, 30 CPU-min decoder fuzz clean; netlab control fails with sequential sampling (8 s elections vs 6 s timeout).
+- Lead fixes: nan-range-bound's four A1 jobs ran `build/` for binaries in `build/bin/` (exit 127); resubmitted. group-heal probe 2 waited 1h35m at priority 1; resubmitted at 5 (ran at once). consensus-request-install A7's [ci] tag sat at the line end.
+- Agent runs: group-heal stall 257k (Opus high; root cause and fix), consensus-request-install review (running), turn-log-parity resume (running), require-once 88k (Sonnet high).
+- Host: load 45 on 16 CPUs, 277 GiB free, 78 queued, light slots 67% used. Quota 8% weekly at 2.4%/h; the projection says about 38 h left, before the reset.

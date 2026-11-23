@@ -416,4 +416,4 @@ quest fixes them (2 of 5 on 11-20).
   commit pins that generation and nothing releases it until a reopen (a leaked pin holds its
   segments). Found by group-heal's contributor reading the pin path, outside its file set. Needs a
   test that fails the second commit (faultlab) and checks the pin count after the next commit.
-  Durability-adjacent: one fix with that test, normal risk.
+  Durability-adjacent: one fix with that test, normal risk. In include/strata/core/index.hh (pending_pin_ :1936, :5541), held by index-restructure and turn-log-parity: start after both land.
