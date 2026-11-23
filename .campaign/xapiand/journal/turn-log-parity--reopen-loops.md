@@ -24,7 +24,7 @@ Nothing. Row 9's refusal was not needed: no case reached a current-generation lo
 
 | Criterion | Evidence |
 |---|---|
-| A6 (parity row 8, D10 item 2) | 261120-194415-bf027b at strata:a38d4c26 (exit 0: L 1->3 151 cases over 74 mutations, 136 cut inside the open; L 3->2 117 cases over 57 mutations, 106 inside); fails without: 261120-195114-cec936 at the mutant strata:0a2b2883 (branch `mutant/turn-log-parity--reopen-loops`, reopen derives the group from L: exit 1, 146 failures, every one `log_mismatch`, "the index's turn_group names another host or group") |
+| A6 (parity row 8, D10 item 2) | 261123-103822-4dd780 at strata:a38d4c26 (exit 0: L 1->3 151 cases over 74 mutations, 136 cut inside the open; L 3->2 117 cases over 57 mutations, 106 inside); fails without: 261120-195114-cec936 at the mutant strata:0a2b2883 (branch `mutant/turn-log-parity--reopen-loops`, reopen derives the group from L: exit 1, 146 failures, every one `log_mismatch`, "the index's turn_group names another host or group") |
 
 ## Result
 

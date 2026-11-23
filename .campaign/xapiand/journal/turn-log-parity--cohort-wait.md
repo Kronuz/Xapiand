@@ -1,6 +1,6 @@
 # turn-log-parity--cohort-wait: journal
 
-State: waiting on jobs 261120-082443-cbb227 261120-082445-11a61b 261120-082448-f562c7
+State: waiting on jobs 261120-082443-cbb227 261123-103821-e0c376 261120-082448-f562c7
 Quest: .campaign/xapiand/quests/turn-log-parity.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -14,7 +14,7 @@ Committed strata:2f5f1033 (mechanism, test, CMake registration). Mutant strata:0
 
 ## Next
 
-1. Read the jobs: suite 261120-082443-cbb227, test --for A4 261120-082445-11a61b, mutant --for A4
+1. Read the jobs: suite 261120-082443-cbb227, test --for A4 261123-103821-e0c376, mutant --for A4
    --fails-without 261120-082448-f562c7.
 
 ## Blocked on
@@ -29,7 +29,7 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A4 (task 1 part) | test 261120-082445-11a61b; mutant 261120-082448-f562c7 (`--fails-without`); suite 261120-082443-cbb227 |
+| A4 (task 1 part) | test 261123-103821-e0c376; mutant 261120-082448-f562c7 (`--fails-without`); suite 261120-082443-cbb227 |
 
 ## Result
 

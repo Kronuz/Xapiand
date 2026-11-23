@@ -1,6 +1,6 @@
 # turn-log-parity--checkpoint-window: journal
 
-State: waiting on jobs 261121-054157-2f69f9
+State: waiting on jobs 261123-103823-257318
 Quest: .campaign/xapiand/quests/turn-log-parity.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -14,7 +14,7 @@ segment_bytes) and an atomic writer count; an index counts in at its first join 
 checkpoint, out at the checkpoint and at detach; `log_due` is `logged_bytes >= max(floor,
 window / writers)`. `checkpoint_floor_bytes` (default 1 MiB) replaces `checkpoint_log_bytes`.
 Jobs queued (all behind a VM hold until about 23:20):
-- 261120-204250-36020e: D2's test at the real trigger, plus the turn-log tests (ctest -R).
+- 261123-103822-306181: D2's test at the real trigger, plus the turn-log tests (ctest -R).
 - 261120-204252-7f2e9c: the window mutant (strata:5c7222de, `log_due` at `command::max_bytes`), must fail.
 - 261120-204253-47f1cc: the forward-copy mutant rebased (strata:810411b8), must fail.
 - 261120-204255-044c67: the probe at strata:1e42abcd with the default floor, to match the 1 MiB row.
@@ -22,7 +22,7 @@ Jobs queued (all behind a VM hold until about 23:20):
 
 ## Next
 
-1. 261121-054157-2f69f9 (the test at the fix) passes: A6 stands with 261120-204252-7f2e9c as its
+1. 261123-103823-257318 (the test at the fix) passes: A6 stands with 261120-204252-7f2e9c as its
    mutant; the task is ready to merge. If it fails, read its log first.
 2. Fill the floor table from 261121-051304-224e7a and the floor jobs.
 
@@ -38,9 +38,9 @@ ones checkpoints every floor under option 1, every window under option 2.
 
 | Criterion | Evidence |
 |---|---|
-| A6 (D2's test) | 261121-050248-2f7f8d at strata:1e42abcd (was 261120-202804-e233bb at strata:14b476d1: at most 5 segment files (bound 6) over segments 1..41, 24 records forwarded (115 KB) for 39.9 MB of commands, 12 writer checkpoints at a 3 MiB window) |
+| A6 (D2's test) | 261123-103823-5f0671 at strata:1e42abcd (was 261120-202804-e233bb at strata:14b476d1: at most 5 segment files (bound 6) over segments 1..41, 24 records forwarded (115 KB) for 39.9 MB of commands, 12 writer checkpoints at a 3 MiB window) |
 | A6, fails without the forward copy | 261120-204253-47f1cc at strata:810411b8 (`mutant/turn-log-parity--checkpoint-window-forward`, child of the fix, journal's `forward_slice` patched to return nothing), exit 1; earlier 261120-203457-3324d7 at strata:71d3a338 |
-| A6 (D2's test at the fix) | 261121-054157-2f69f9 at strata:1e42abcd; 261120-204250-36020e at strata:1e42abcd with the turn-log tests (ctest, 5 of 5) |
+| A6 (D2's test at the fix) | 261123-103823-257318 at strata:1e42abcd; 261123-103822-306181 at strata:1e42abcd with the turn-log tests (ctest, 5 of 5) |
 | A6, fails without the window | 261120-204252-7f2e9c at strata:5c7222de (`mutant/turn-log-parity--checkpoint-window-window`, child of the fix, `log_due` at `command::max_bytes`): 7 segment files (bound 6), 30.0 MB forwarded for 5.1 MB of commands, 0 writer checkpoints, exit 1 |
 
 Floor table (pending the eight jobs): 10k indexes, 8M puts.

@@ -1,6 +1,6 @@
 # turn-log-parity--ryw: journal
 
-State: waiting on jobs 261121-090430-5cd461 261121-090433-fa1d1f 261121-090436-c180a4 261121-090438-28fbcd
+State: waiting on jobs 261121-090430-5cd461 261121-090433-fa1d1f 261121-090436-c180a4 261123-103824-c55688
 Quest: .campaign/xapiand/quests/turn-log-parity.md (the lead's; never edit it)
 
 ## Doing
@@ -9,7 +9,7 @@ A1's test and its mutants, queued at strata:d16abf5a (branch quest/xapiand/turn-
 
 ## Next
 
-1. Read the four queued jobs (the branch job 261121-090415-53357a passed: held, crash, race with 634 of 6251 reads behind the owner, 0 missed, 0 exposed; t4, served).
+1. Read the four queued jobs (the branch job 261123-103824-1a142a passed: held, crash, race with 634 of 6251 reads behind the owner, 0 missed, 0 exposed; t4, served).
 2. Push the branch; hand to the lead for the task merge.
 
 ## Blocked on
@@ -25,7 +25,7 @@ the design note defaults, as its own Xapiand task.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261121-090415-53357a (test_ryw held, crash, race; standalone t4, served) and 261121-090438-28fbcd (TSan: test_ryw, race x2 more); fails without: 261121-090430-5cd461 (owner-cut-at-v), 261121-090433-fa1d1f (install-before-log-wait), 261121-090436-c180a4 (v-follows-apply) |
+| A1 | 261123-103824-1a142a (test_ryw held, crash, race; standalone t4, served) and 261123-103824-c55688 (TSan: test_ryw, race x2 more); fails without: 261121-090430-5cd461 (owner-cut-at-v), 261121-090433-fa1d1f (install-before-log-wait), 261121-090436-c180a4 (v-follows-apply) |
 
 Mutants (scratch refs in strata, each one commit on strata:d16abf5a):
 

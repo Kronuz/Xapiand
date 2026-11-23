@@ -1,6 +1,6 @@
 # turn-log-parity--tolerant-open: journal
 
-State: waiting on jobs 261121-104705-3d9542 261121-104707-bd7691 261121-104711-fedf27 261121-104713-c37dd2 and CI at strata:a16d117c
+State: waiting on jobs 261121-145607-0e1ac9 261121-104707-bd7691 261121-104711-fedf27 261121-115239-ee5107 and CI at strata:a16d117c
 Quest: .campaign/xapiand/quests/turn-log-parity.md (the lead's; never edit it)
 
 ## Doing
@@ -23,7 +23,7 @@ earlier Blocked on), which carries its own file-set request and reviews.
 
 | Criterion | Evidence |
 |---|---|
-| A2 | 261121-104705-3d9542: `test_tolerant_open` at strata:a16d117c, journal:1e3505a. `--fails-without`: 261121-104707-bd7691 at the strata mutant strata:62f31fc7 (refs/scratch/tolerant-open/opens-every: attach opens every bounded index; fails U and W); 261121-104711-fedf27 at journal:1d773a5 (every named group lost: today's rule; fails C and D). 261121-104713-c37dd2: standalone_turn_log_test against the journal branch |
+| A2 | 261121-145607-0e1ac9: `test_tolerant_open` at strata:a16d117c, journal:1e3505a. `--fails-without`: 261121-104707-bd7691 at the strata mutant strata:62f31fc7 (refs/scratch/tolerant-open/opens-every: attach opens every bounded index; fails U and W); 261121-104711-fedf27 at journal:1d773a5 (every named group lost: today's rule; fails C and D). 261121-115239-ee5107: standalone_turn_log_test against the journal branch |
 
 Local (RelWithDebInfo, quiet light): tolerant open 0 failures.
 

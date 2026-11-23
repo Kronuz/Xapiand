@@ -1,6 +1,6 @@
 # turn-log-parity: journal
 
-State: waiting on jobs 261123-065606-749988 261123-065607-b0f4b3 261123-065607-c56a5b 261123-065607-ace1ac 261123-065607-fa8052 261123-065607-91bf84 261123-065608-01cd83 261123-065608-82ef2d 261123-065608-9a669c 261123-065608-5b0c3f 261123-065609-bb5118 261123-065609-528279 261123-065609-ca2600 261123-065609-934644 261123-065609-05c4fb 261123-065610-38051c 261123-065611-f67fd9 and CI at strata:3a29aa9b
+State: waiting on jobs 261123-065606-749988 261123-065607-b0f4b3 261123-065607-c56a5b 261123-065607-ace1ac 261123-065607-fa8052 261123-132004-4e6fad 261123-132007-eebb45 261123-132013-a6ff01 261123-065608-9a669c 261123-132010-1e093e 261123-132020-d42c76 261123-065609-528279 261123-065609-ca2600 261123-065609-934644 261123-065609-05c4fb 261123-065610-38051c 261123-103754-039064 and CI at strata:3a29aa9b
 Quest: .campaign/xapiand/quests/turn-log-parity.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -16,7 +16,7 @@ Landing-prep pass (2026-11-23), head strata:3a29aa9b, pushed:
 2. A5: strata:3a29aa9b records Q3, Q4 and Q5 closed in `docs/design/standalone-turn-log.md`
    ("Questions for the owner"), each with the mechanism at file:line at 4ca43683, its test and
    its mutant jobs; the Limits entries for Q3 and Q4 follow.
-3. Every passing evidence job reran at 3a29aa9b (State), build-test 261123-065611-f67fd9. The
+3. Every passing evidence job reran at 3a29aa9b (State), build-test 261123-103754-039064. The
    mutants stand at their own commits. At f5f6b7dc all passed (CI 45138024613 green), and the D2
    probe 002234-c8c5d2 opened `first` and `a third in`, refusing the control and last chunk as ruled.
 
@@ -170,11 +170,11 @@ At strata:3a29aa9b (main merged, A5's note), reruns of the f5f6b7dc jobs:
 | Criterion | Evidence |
 |---|---|
 | A1 | 261123-065606-749988, 261123-065607-b0f4b3, 261123-065607-c56a5b, 261123-065607-ace1ac, 261123-065607-fa8052; fails without: 261121-090430-5cd461, 261121-090433-fa1d1f, 261121-090436-c180a4, 261121-151648-9ffb16, 261123-002143-aa5d40 |
-| A2 | 261123-065607-91bf84, 261123-065608-01cd83; fails without: 261121-115241-8bbc79, 261121-145613-34602d, 261121-214545-0d42a7 |
-| A3 | 261123-065608-82ef2d, 261123-065608-9a669c, 261123-065608-5b0c3f, 261123-065609-bb5118; fails without: 261121-104113-4f8cbb, 261121-104116-816fc6, 261121-104119-d0dd11, 261121-110107-c64ff6, 261121-110108-aa171b, 261121-110110-5b9806, 261121-110112-a647c1, 261121-151703-21b6d5 |
+| A2 | 261123-132004-4e6fad, 261123-132007-eebb45; fails without: 261121-115241-8bbc79, 261121-145613-34602d, 261121-214545-0d42a7 |
+| A3 | 261123-132013-a6ff01, 261123-065608-9a669c, 261123-132010-1e093e, 261123-132020-d42c76; fails without: 261121-104113-4f8cbb, 261121-104116-816fc6, 261121-104119-d0dd11, 261121-110107-c64ff6, 261121-110108-aa171b, 261121-110110-5b9806, 261121-110112-a647c1, 261121-151703-21b6d5 |
 | A4 | 261123-065609-528279, 261123-065609-ca2600, 261123-065609-934644; fails without: 261120-082448-f562c7, 261121-101433-65f5c5, 261121-151523-00cd16, 261122-212021-14ab70 |
 | A5 | [artifact] strata:3a29aa9b, `docs/design/standalone-turn-log.md`, "Questions for the owner": Q3, Q4, Q5 closed with mechanisms, file:line, tests and mutants |
-| build-test | 261123-065611-f67fd9 |
+| build-test | 261123-103754-039064 |
 
 Earlier tables, superseded by the one above:
 
@@ -184,7 +184,7 @@ At strata:369cd7ef, from `campaign brief` (each row's jobs rerun at f5f6b7dc, St
 |---|---|
 | A1 | 261122-212012-8171cc, 261122-212012-093945, 261122-212013-5518cc, 261122-212013-14b745; fails without: 261121-090430-5cd461, 261121-090433-fa1d1f, 261121-090436-c180a4, 261121-151648-9ffb16 |
 | A2 | 261122-212014-e16e63, 261122-212014-fe9398; fails without: 261121-115241-8bbc79, 261121-145613-34602d, 261121-214545-0d42a7 |
-| A3 | 261122-212014-af489a; 261123-002232-6b94b8 (fuzz), 261123-002233-c59105 (TSan), 261123-002235-16613d, 261123-002235-947360 pending at f5f6b7dc |
+| A3 | 261122-212014-af489a; 261123-132000-0586f1 (fuzz), 261123-002233-c59105 (TSan), 261123-002235-16613d, 261123-002235-947360 pending at f5f6b7dc |
 | A4 | 261123-002234-e3f49d, 261123-002234-7bb281, 261123-002236-c527d0 pending at f5f6b7dc; fails without: 261122-212021-14ab70 pending at e8699699 |
 | A5 | none yet (design-note task) |
 
@@ -218,11 +218,11 @@ b6a7697: the item is now applicable (not done in the merge pass).
 
 | Item | Evidence |
 |---|---|
-| F8, F10, F9a, A3 torn | probe H, `bench/kv/probes/rocksdb-parity/d4_covers_model.py 11`, job 261120-133243-d4f975 (exit 0, all claims hold): design 117,029 states, 0 lost, torn, `log_lost`, exposed or wrongly refused; record left open 5,547 lost and 1,208 torn; a close taking any checkpoint 328 lost; `covers` = seq − 1 refuses 709 closes and 30,013 leaves that lose nothing; no install wait 20,030 `log_lost` and exposed |
+| F8, F10, F9a, A3 torn | probe H, `bench/kv/probes/rocksdb-parity/d4_covers_model.py 11`, job 261120-192604-6f5291 (exit 0, all claims hold): design 117,029 states, 0 lost, torn, `log_lost`, exposed or wrongly refused; record left open 5,547 lost and 1,208 torn; a close taking any checkpoint 328 lost; `covers` = seq − 1 refuses 709 closes and 30,013 leaves that lose nothing; no install wait 20,030 `log_lost` and exposed |
 | F9 | probe I, `d4_install_order_model.py 12`, job 261120-133244-e59453 (exit 0, all claims hold): design 18,059 states, 0; newer build first 1,916 of 21,427 lost; no wait 10,329 of 36,060 `log_lost` and exposed |
 | F12 | probe J, `d6_wake_model.py 14`, job 261120-133245-22acfd (exit 0, all claims hold): pull 7,981 of 16,144 lost (`WJS`); gate 0 of 4,627, no owner turn paying a commit; owner commits 0 lost, 1,715 owner turns paying one |
 | F13 | probe K, `d1_ladder_model.py`, job 261120-133247-a1f4a0 (exit 0, all claims hold): rooms from `segment_bytes` throw at turn 1; rooms following the spare never throw, admitted to sealed 1 turn, 229 MiB/s at 16 MiB and 1,476 MiB/s at 64 MiB; smallest rung 48 MiB/s; naive step down 5 turns, guarded 1 |
-| F4, N5, F14 A3 stall | probe G, `d7_model.py`, job 261120-133248-df88a3 (exit 0, all ok): rows 1-5 as in round 1; row 6, other writers seal within 2 turns of arrival behind a 4-room transaction, admitted to sealed 0 |
+| F4, N5, F14 A3 stall | probe G, `d7_model.py`, job 261120-192604-94fa59 (exit 0, all ok): rows 1-5 as in round 1; row 6, other writers seal within 2 turns of arrival behind a 4-room transaction, admitted to sealed 0 |
 | Round 1 | F1 probe F 261120-083804-ec1239; N6 probe B2 261120-083211-0cbbce; N1 261120-074846-356a48 |
 
 ## Lead rulings (2026-11-23)
