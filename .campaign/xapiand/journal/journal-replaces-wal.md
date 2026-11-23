@@ -1,6 +1,6 @@
 # journal-replaces-wal: journal
 
-State: waiting on jobs. At Xapiand:91113fb2f (the flush fix; the code they test is unchanged since), all -DASSERTS=ON: test_pool 261123-113325-ab914d, test_node 261123-113327-576cc8, test_loop_yield 261123-113329-ae325b, test_pool under ASan 261123-113332-95fb3d, test_shard_group under ASan 261123-113334-eca738; fails without the flush fix (data.{cc,h} as at a7f0aabd6): 261123-113337-a11289. At Xapiand:ecf684865 (storage library removed): full build, tests on, 261123-113717-eb5101. Still queued from before: 261123-112555-9f402f (test_pool ASan at a22e1537f, before any fix: fails), 261123-101801-e33085 (test_loop_yield pre-fix diagnostic). Next: when they pass and CI at the pushed head is green, the lead submits the crash check and the full job set at that commit, without --after (the d4 checkpoint mutant takes the perl pattern of 261123-101712-4f0aa1).
+State: waiting on jobs. At Xapiand:91113fb2f (the flush fix; the code they test is unchanged since), all -DASSERTS=ON: test_pool 261123-113325-ab914d, test_node 261123-113327-576cc8, test_loop_yield 261123-113329-ae325b, test_pool under ASan 261123-113332-95fb3d, test_shard_group under ASan 261123-113334-eca738; fails without the flush fix (data.{cc,h} as at a7f0aabd6): 261123-113337-a11289. At Xapiand:ecf684865 (storage library removed): full build, tests on, 261123-113717-eb5101. Xapiand:caa9a372e (ARCHITECTURE.md) is docs only. Still queued from before: 261123-112555-9f402f (test_pool ASan at a22e1537f, before any fix: fails), 261123-101801-e33085 (test_loop_yield pre-fix diagnostic). Next: when they pass and CI at the pushed head is green, the lead submits the crash check and the full job set at that commit, without --after (the d4 checkpoint mutant takes the perl pattern of 261123-101712-4f0aa1).
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
@@ -27,6 +27,15 @@ Session 10 (2026-11-23), the lead's step (Blocked on 6 and 7, file set widened t
    search_views) goes; the stored-blob paths it gated always build. README and building.md option rows,
    dependencies.md (row and tree), testing.md's storage paragraph and the zstd comments in CMakeLists stop naming
    it. cmake/ and .github/ name neither. Proof: build job 261123-113717-eb5101.
+4. Xapiand:caa9a372e (lead: ARCHITECTURE.md added to the set; docs only, no job): the storage-engine row and section
+   describe the journal (host threads, prepare/propose, checkpoint as commit, ShardApplication, file-set blobs);
+   the runtime diagram's D2 source and the background-work rule name the group loop and chore threads. Each
+   storage/WAL citation: extraction row re-pointed (Kronuz/storage, done, unused); bug entries dropped: inert
+   footers (storage.h:200-227), fsync barrier (storage.h:863-890), async WAL fsync (wal.cc:67), WAL replay's blob
+   re-push (shard.cc:1242); LZ4-digest entry re-pointed from "WAL lines" to the LZ4 blobs data.cc still reads; gems:
+   format-as-type (storage.h:232) replaced by apply-as-a-function, WAL slot array (wal.h:63) dropped. No WAL,
+   storage.h or fsyncher mention is left; none was a dated record. The stale scheduler/threadpool text stays (lead's
+   separate docs item).
 Observed, not changed: no `Storage<>` is instantiated in src any more (manager.cc and database/utils.cc include
 storage.h for nothing or its magic constants; xapiand_storage_io.h is unused), yet CMakeLists still fetches the
 storage library and has DATA_STORAGE. For the lead: removing it is the WAL removal's tail (Proposed tasks).
@@ -238,7 +247,10 @@ strata: `group-catalog` (item 4), which `core` step c waits on.
    that does is exposed. Recommend: add src/database/data.* and have flush feed() its new bytes at its end (one
    parse), with a unit test that flushes twice under ASan. Until then, nothing in the quest depends on it.
 
-8. (2026-11-23) Outside the file set: ARCHITECTURE.md still describes the storage library and the WAL as current
+9. (2026-11-23) Outside the file set: assets/runtime.svg is rendered from ARCHITECTURE.md's D2 source, which now
+   shows the journal threads; the SVG still shows the WAL writers and fsyncher. Recommend: add it and I re-render
+   (`d2 --theme 0 --pad 20 <source>.d2 assets/runtime.svg`), or the lead's docs item takes it.
+8. (2026-11-23, done in session 10 item 4 after the lead widened the set) Outside the file set: ARCHITECTURE.md still describes the storage library and the WAL as current
    (the Storage engine row and section, `storage.h` citations, the "Haystack-style store" extraction row, three
    storage/WAL bug entries, the format-as-type gem; 17 WAL mentions). It reads as a dated close-read review, but
    its subsystem table and sections are descriptive. Recommend: widen the set and I rewrite the storage-engine row
