@@ -131,16 +131,17 @@ public:
 	// The shard's field table, in id order, as of its last applied write.
 	std::vector<DeclaredField> declared_fields() const;
 
-	// A write the shard's replication group applied to its index (cluster-release D3): raises the verdict's refusal,
-	// checks the id and version prepare predicted, and owes reads a refresh and the index a commit.
+	// A write the shard's replication group applied to its index (cluster-release D3): raises the verdict's refusal
+	// and checks the id and version prepare predicted. The apply marked the shard (applied_by_group).
 	WriteResult landed(const PreparedWrite& prepared, const ::strata::verdict& verdict);
 
-	// The shard's group applied to its index (a write, a replay): reads owe a refresh, the index a commit.
+	// The shard's group applied a command to its index (a write, a replay): reads owe a refresh, the index a commit.
+	// The group's apply calls it on its chore, before the write's answer, whatever level the write was proposed at.
 	void applied_by_group() noexcept;
 
-	// The shard's group committed its index (a checkpoint): nothing is owed a refresh or a commit, and the revision
-	// is the manifest's. Call it on the group's chore.
-	void checkpointed() noexcept;
+	// The shard's group committed its index (a checkpoint): nothing is owed a commit, the revision is the manifest's,
+	// and the view is refreshed past whatever applied since the capture. Call it on the group's chore.
+	void checkpointed();
 
 	// Rethrows the exception being handled, a failure of the shard's group, as an engine error of its kind: a fence
 	// marks the index for replacement. Call only inside a catch block.

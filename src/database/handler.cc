@@ -2099,7 +2099,9 @@ DatabaseHandler::add_document(engine::Document&& doc, bool commit, bool version)
 	lock_shard lk_shard(endpoint, flags, turn_token());
 	co_await lk_shard.pin();
 	auto info = co_await lk_shard->add_document(std::move(doc), commit, version);
-	info.did = (info.did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
+	if (info.did != 0) {   // none before an ack=none write applies
+		info.did = (info.did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
+	}
 	co_return info;
 }
 
@@ -2118,7 +2120,9 @@ DatabaseHandler::replace_document(engine::docid did, engine::Document&& doc, boo
 	lock_shard lk_shard(endpoint, flags, turn_token());
 	co_await lk_shard.pin();
 	auto info = co_await lk_shard->replace_document(shard_did, std::move(doc), commit, version, must_exist, chunked);
-	info.did = did;
+	if (info.did != 0) {   // none before an ack=none write applies
+		info.did = did;
+	}
 	co_return info;
 }
 
@@ -2161,7 +2165,9 @@ DatabaseHandler::replace_document_term(const std::string& term, engine::Document
 	lock_shard lk_shard(endpoint, flags, turn_token());
 	co_await lk_shard.pin();
 	auto info = co_await lk_shard->replace_document_term(term, std::move(doc), commit, version, chunked);
-	info.did = (info.did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
+	if (info.did != 0) {   // none before an ack=none write applies
+		info.did = (info.did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
+	}
 	co_return info;
 }
 
@@ -2847,10 +2853,11 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 			co_return;
 		}
 		put(one.idx, [&](StringPacker& pk) {
-			pk.pack_map(echo ? (comments ? 4 : 2) : 1);
+			const bool applied = info.version != 0;   // an ack=none write answers before it applies: no version or docid
+			pk.pack_map(echo && applied ? (comments ? 4 : 2) : 1);
 			pack_str(pk, ID_FIELD_NAME);
 			pk.pack(msgpack::object(*id));
-			if (echo) {
+			if (echo && applied) {
 				pack_str(pk, VERSION_FIELD_NAME);
 				pk.pack(msgpack::object(info.version));
 				if (comments) {
@@ -3136,7 +3143,9 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 				++_processed;
 				++_prepared;
 				auto info = write.info;
-				info.did = (info.did - 1) * n_shards + w_shard + 1;  // unshard number and shard docid to docid in multi-db
+				if (info.did != 0) {   // none before an ack=none write applies
+					info.did = (info.did - 1) * n_shards + w_shard + 1;  // unshard number and shard docid to docid in multi-db
+				}
 				co_await record(one, write.error, info);
 			}
 			co_await checkpoint();

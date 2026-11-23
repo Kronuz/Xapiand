@@ -125,7 +125,8 @@ public:
 	// The engine of the pinned index; raises `closed` with no pin.
 	engine::Shard& engine();
 
-	// ready(), then a refresh if something was applied since the last one, so the caller reads it.
+	// ready(), then a refresh if something was applied since the last one, so the caller reads it. With
+	// DB_LINEARIZABLE (read=linearizable, D4) the group first applies everything committed before the call.
 	task::task<engine::Shard*> engine_for_read();
 
 	// Where a write places a document: the engine's written reads (the id holding a key term, 0 for none, and the
@@ -151,8 +152,9 @@ public:
 	// final. A write does not treat a stale snapshot as retryable. Called from a catch block.
 	void collect_failure(const engine::Error& error, std::exception_ptr& eptr, size_t& valid, bool writes);
 
-	// What follows a write: its commit when it asked for one, else the debounced autocommit. A commit whose turn
-	// times out leaves the write standing (applied and logged) for the autocommit; the caller is not failed.
+	// What follows a write: its refresh level (DB_REFRESH, DB_REFRESH_WAIT_FOR), then its commit when it asked for
+	// one, else the debounced autocommit. A commit whose turn times out leaves the write standing (logged) for the
+	// autocommit; the caller is not failed.
 	task::task<void> finish_write(bool commit_);
 
 	// Commits what is applied; a commit that covers this caller's writes and is already in flight is joined.

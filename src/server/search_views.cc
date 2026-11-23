@@ -891,12 +891,13 @@ delete_document_view(Request& request)
 
 	request.processing = std::chrono::steady_clock::now();
 
-	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
+	const auto levels = write_levels(request, query_field);
+	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | levels);
 
-	co_await db_handler.delete_document(document_id, query_field.version, query_field.commit);
+	co_await db_handler.delete_document(document_id, query_field.version, false);
 	request.ready = std::chrono::steady_clock::now();
 
-	write_http_response(request, HTTP_STATUS_NO_CONTENT);
+	write_http_response(request, has_db_ack_none(levels) ? HTTP_STATUS_ACCEPTED : HTTP_STATUS_NO_CONTENT);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Deletion took {}", strings::from_delta(took));
@@ -934,14 +935,14 @@ private:
 // Indexes a document whose blob is the request's body, streamed as chunk entries of its shard's group a chunk at a
 // time (D12): no turn is held while the body arrives.
 static task::task<DocumentInfo>
-index_streamed_blob(Request& request, DatabaseHandler& db_handler, const MsgPack& document_id, engine::rev version, const ct_type_t& ct_type, bool commit)
+index_streamed_blob(Request& request, DatabaseHandler& db_handler, const MsgPack& document_id, engine::rev version, const ct_type_t& ct_type)
 {
 	if (request.content_length > STORED_UPLOAD_LIMIT) {
 		THROW(PayloadTooLarge, "A stored blob has a size limit of {}", strings::from_bytes(STORED_UPLOAD_LIMIT));
 	}
 	RequestChunks body(request);
 	auto blob = co_await db_handler.upload_stored(document_id, request.content_length, body);
-	co_return co_await db_handler.index_uploaded(document_id, version, ct_type, blob, commit);
+	co_return co_await db_handler.index_uploaded(document_id, version, ct_type, blob, false);
 }
 
 
@@ -967,15 +968,17 @@ write_document_view(Request& request)
 
 	request.processing = std::chrono::steady_clock::now();
 
-	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
+	const auto levels = write_levels(request, query_field);
+	const bool placed = has_db_ack_none(levels);   // answered before it applies: no version or docid
+	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | levels);
 	task::budget script_budget(REQUEST_SLICE, {}, REQUEST_LIGHT_SLICES);   // a script yields its reactor between slices; an admitted write is not cancelled
 	db_handler.budget = &script_budget;
 	db_handler.method = method_name(request.method);
 	bool stored = is_stored_type(request.ct_type);
 	auto ct_type = request.ct_type.empty() ? mime_type(selector) : request.ct_type;
 	auto indexed = streamed
-		? co_await index_streamed_blob(request, db_handler, document_id, query_field.version, ct_type, query_field.commit)
-		: co_await db_handler.index(document_id, query_field.version, stored, decoded_body, query_field.commit, ct_type);
+		? co_await index_streamed_blob(request, db_handler, document_id, query_field.version, ct_type)
+		: co_await db_handler.index(document_id, query_field.version, stored, decoded_body, false, ct_type);
 
 	request.ready = std::chrono::steady_clock::now();
 
@@ -1002,22 +1005,24 @@ write_document_view(Request& request)
 			}
 		}
 
-		response_obj[VERSION_FIELD_NAME] = info.version;
+		if (!placed) {
+			response_obj[VERSION_FIELD_NAME] = info.version;
 
-		if (request.comments) {
-			response_obj[RESPONSE_xDOCID] = info.did;
+			if (request.comments) {
+				response_obj[RESPONSE_xDOCID] = info.did;
 
-			size_t n_shards = request.endpoints.size();
-			size_t shard_num = (info.did - 1) % n_shards;
-			response_obj[RESPONSE_xSHARD] = shard_num + 1;
-			// response_obj[RESPONSE_xENDPOINT] = request.endpoints[shard_num].to_string();
+				size_t n_shards = request.endpoints.size();
+				size_t shard_num = (info.did - 1) % n_shards;
+				response_obj[RESPONSE_xSHARD] = shard_num + 1;
+				// response_obj[RESPONSE_xENDPOINT] = request.endpoints[shard_num].to_string();
+			}
 		}
 
 		if (!selector.empty()) {
 			response_obj = response_obj.select(selector);
 		}
 
-		write_http_response(request, HTTP_STATUS_OK, response_obj, location);
+		write_http_response(request, placed ? HTTP_STATUS_ACCEPTED : HTTP_STATUS_OK, response_obj, location);
 	} else {
 		if (document_id.empty()) {
 			auto it = response_obj.find(ID_FIELD_NAME);
@@ -1029,7 +1034,7 @@ write_document_view(Request& request)
 			}
 		}
 
-		write_http_response(request, document_id.empty() ? HTTP_STATUS_CREATED : HTTP_STATUS_NO_CONTENT, MsgPack(), location);
+		write_http_response(request, placed ? HTTP_STATUS_ACCEPTED : document_id.empty() ? HTTP_STATUS_CREATED : HTTP_STATUS_NO_CONTENT, MsgPack(), location);
 	}
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
@@ -1065,21 +1070,23 @@ update_document_view(Request& request)
 
 	std::string operation;
 	DocumentInfo indexed;
-	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
+	const auto levels = write_levels(request, query_field);
+	const bool placed = has_db_ack_none(levels);   // answered before it applies: no version or docid
+	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | levels);
 	task::budget script_budget(REQUEST_SLICE, {}, REQUEST_LIGHT_SLICES);   // a script yields its reactor between slices; an admitted write is not cancelled
 	db_handler.budget = &script_budget;
 	db_handler.method = method_name(request.method);
 	if (request.method == HTTP_PATCH) {
 		operation = "patch";
-		indexed = co_await db_handler.patch(document_id, query_field.version, false, decoded_body, query_field.commit);
+		indexed = co_await db_handler.patch(document_id, query_field.version, false, decoded_body, false);
 	} else if (request.method == HTTP_UPSERT) {
 		operation = "update";
 		bool stored = !request.ct_type.empty() && request.ct_type != json_type && request.ct_type != x_json_type && request.ct_type != yaml_type && request.ct_type != x_yaml_type && request.ct_type != msgpack_type && request.ct_type != x_msgpack_type;
-		indexed = co_await db_handler.update(document_id, query_field.version, stored, true, decoded_body, query_field.commit, request.ct_type.empty() ? mime_type(selector) : request.ct_type);
+		indexed = co_await db_handler.update(document_id, query_field.version, stored, true, decoded_body, false, request.ct_type.empty() ? mime_type(selector) : request.ct_type);
 	} else {
 		operation = "update";
 		bool stored = !request.ct_type.empty() && request.ct_type != json_type && request.ct_type != x_json_type && request.ct_type != yaml_type && request.ct_type != x_yaml_type && request.ct_type != msgpack_type && request.ct_type != x_msgpack_type;
-		indexed = co_await db_handler.update(document_id, query_field.version, stored, false, decoded_body, query_field.commit, request.ct_type.empty() ? mime_type(selector) : request.ct_type);
+		indexed = co_await db_handler.update(document_id, query_field.version, stored, false, decoded_body, false, request.ct_type.empty() ? mime_type(selector) : request.ct_type);
 	}
 
 	request.ready = std::chrono::steady_clock::now();
@@ -1094,24 +1101,26 @@ update_document_view(Request& request)
 			response_obj[ID_FIELD_NAME] = co_await db_handler.unserialize_term_id(info.term);
 		}
 
-		response_obj[VERSION_FIELD_NAME] = info.version;
+		if (!placed) {
+			response_obj[VERSION_FIELD_NAME] = info.version;
 
-		if (request.comments) {
-			response_obj[RESPONSE_xDOCID] = info.did;
+			if (request.comments) {
+				response_obj[RESPONSE_xDOCID] = info.did;
 
-			size_t n_shards = request.endpoints.size();
-			size_t shard_num = (info.did - 1) % n_shards;
-			response_obj[RESPONSE_xSHARD] = shard_num + 1;
-			// response_obj[RESPONSE_xENDPOINT] = request.endpoints[shard_num].to_string();
+				size_t n_shards = request.endpoints.size();
+				size_t shard_num = (info.did - 1) % n_shards;
+				response_obj[RESPONSE_xSHARD] = shard_num + 1;
+				// response_obj[RESPONSE_xENDPOINT] = request.endpoints[shard_num].to_string();
+			}
 		}
 
 		if (!selector.empty()) {
 			response_obj = response_obj.select(selector);
 		}
 
-		write_http_response(request, HTTP_STATUS_OK, response_obj);
+		write_http_response(request, placed ? HTTP_STATUS_ACCEPTED : HTTP_STATUS_OK, response_obj);
 	} else {
-		write_http_response(request, HTTP_STATUS_NO_CONTENT);
+		write_http_response(request, placed ? HTTP_STATUS_ACCEPTED : HTTP_STATUS_NO_CONTENT);
 	}
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
@@ -1144,7 +1153,7 @@ retrieve_metadata_view(Request& request)
 
 	DatabaseHandler db_handler;
 	if (query_field.primary) {
-		db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE);
+		db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE | DB_LINEARIZABLE);
 	} else {
 		db_handler.reset(request.endpoints, DB_OPEN);
 	}
@@ -1208,7 +1217,7 @@ write_metadata_view(Request& request)
 
 	DatabaseHandler db_handler;
 	if (query_field.primary) {
-		db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE);
+		db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE | DB_LINEARIZABLE);
 	} else {
 		db_handler.reset(request.endpoints, DB_OPEN);
 	}
@@ -1286,7 +1295,7 @@ info_view(Request& request)
 
 	DatabaseHandler db_handler;
 	if (query_field.primary) {
-		db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE);
+		db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE | DB_LINEARIZABLE);
 	} else {
 		db_handler.reset(request.endpoints, DB_OPEN);
 	}
@@ -1363,7 +1372,7 @@ retrieve_database(Request& request, const query_field_t& query_field, std::strin
 	{
 		DatabaseHandler db_handler;
 		if (query_field.writable || query_field.primary) {
-			db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE);
+			db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE | (query_field.primary ? DB_LINEARIZABLE : 0));
 		} else {
 			db_handler.reset(request.endpoints, DB_OPEN);
 		}
@@ -1381,7 +1390,7 @@ retrieve_database(Request& request, const query_field_t& query_field, std::strin
 
 	DatabaseHandler db_handler;
 	if (query_field.writable || query_field.primary) {
-		db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE);
+		db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE | (query_field.primary ? DB_LINEARIZABLE : 0));
 	} else {
 		db_handler.reset(request.endpoints, DB_OPEN);
 	}
@@ -1700,6 +1709,7 @@ restore_database_view(Request& request)
 	request.parse_chores = &chores;
 
 	std::optional<DocIndexer> indexer;
+	int levels = 0;
 	std::exception_ptr error;
 	try {
 		auto open_indexer = [&](MsgPack& obj) -> task::task<void> {
@@ -1710,7 +1720,10 @@ restore_database_view(Request& request)
 
 			request.processing = std::chrono::steady_clock::now();
 
-			indexer.emplace(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, request.echo, request.comments, query_field, chores, &*request.budget);
+			// The ack level goes to every write; the refresh levels ask nothing more of the closing commit, the
+			// group's checkpoint, which refreshes before the answer.
+			levels = write_levels(request, query_field);
+			indexer.emplace(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_RESTORE | DB_DISABLE_AUTOCOMMIT | (levels & DB_ACK_NONE), request.echo, request.comments, query_field, chores, &*request.budget);
 		};
 
 		if (request.mode == Request::Mode::STREAM_MSGPACK || request.mode == Request::Mode::STREAM_NDJSON) {
@@ -1770,7 +1783,7 @@ restore_database_view(Request& request)
 				response_obj[RESPONSE_TOOK] = took / 1e9;
 			}
 
-			write_http_response(request, HTTP_STATUS_OK, response_obj);
+			write_http_response(request, has_db_ack_none(levels) ? HTTP_STATUS_ACCEPTED : HTTP_STATUS_OK, response_obj);
 
 			L_TIME("Restore took {}", strings::from_delta(took));
 
@@ -1851,7 +1864,7 @@ retrieve_document_view(Request& request)
 	// Open database
 	DatabaseHandler db_handler;
 	if (query_field.primary) {
-		db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE);
+		db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE | DB_LINEARIZABLE);
 	} else {
 		db_handler.reset(request.endpoints, DB_OPEN);
 	}
@@ -1967,7 +1980,7 @@ search_view(Request& request)
 			throw engine::Error(engine::errc::not_found, "No index matches the pattern");   // answered as a search that found nothing
 		}
 		if (query_field.primary) {
-			db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE);
+			db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE | DB_LINEARIZABLE);
 		} else {
 			db_handler.reset(request.endpoints, DB_OPEN);
 		}
@@ -2120,7 +2133,7 @@ count_view(Request& request)
 			throw engine::Error(engine::errc::not_found, "No index matches the pattern");   // answered as a search that found nothing
 		}
 		if (query_field.primary) {
-			db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE);
+			db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE | DB_LINEARIZABLE);
 		} else {
 			db_handler.reset(request.endpoints, DB_OPEN);
 		}
@@ -2350,6 +2363,46 @@ expand_paths(Request& request, bool patterns)
 }
 
 
+// A write's levels (docs/design/cluster-release.md D4) as flags of its use of the index: `ack` (quorum, the default,
+// or none), `refresh` (false, the default, wait_for, or true, which a bare `refresh` means), and `?commit`, which means
+// ack=quorum&refresh=true and refuses any other level beside it.
+static int
+write_levels(Request& request, const query_field_t& query_field)
+{
+	int flags = 0;
+	bool refresh_false = false;
+	request.query_parser.rewind();
+	if (request.query_parser.next("ack") != -1) {
+		const auto ack = request.query_parser.get();
+		if (ack == "none") {
+			flags |= DB_ACK_NONE;
+		} else if (ack != "quorum") {
+			THROW(ClientError, "ack is quorum or none, not {}", repr(ack));
+		}
+	}
+	request.query_parser.rewind();
+	if (request.query_parser.next("refresh") != -1) {
+		const auto refresh = request.query_parser.len != 0u ? request.query_parser.get() : std::string_view("true");
+		if (refresh == "true") {
+			flags |= DB_REFRESH;
+		} else if (refresh == "wait_for") {
+			flags |= DB_REFRESH_WAIT_FOR;
+		} else if (refresh == "false") {
+			refresh_false = true;
+		} else {
+			THROW(ClientError, "refresh is false, wait_for or true, not {}", repr(refresh));
+		}
+	}
+	if (query_field.commit) {
+		if ((flags & (DB_ACK_NONE | DB_REFRESH_WAIT_FOR)) != 0 || refresh_false) {
+			THROW(ClientError, "?commit means ack=quorum&refresh=true");
+		}
+		flags |= DB_REFRESH;
+	}
+	return flags;
+}
+
+
 static query_field_t
 query_field_maker(Request& request, int flags)
 {
@@ -2383,6 +2436,7 @@ query_field_maker(Request& request, int flags)
 	}
 
 	if ((flags & QUERY_FIELD_VOLATILE) != 0) {
+		// read=linearizable (D4), or master's ?volatile, which means it: the read sees every write committed before it.
 		request.query_parser.rewind();
 		if (request.query_parser.next("volatile") != -1) {
 			query_field.primary = true;
@@ -2390,6 +2444,18 @@ query_field_maker(Request& request, int flags)
 				try {
 					query_field.primary = Serialize::boolean(request.query_parser.get()) == "t";
 				} catch (const Exception&) { }
+			}
+		}
+
+		request.query_parser.rewind();
+		if (request.query_parser.next("read") != -1) {
+			const auto read = request.query_parser.get();
+			if (read == "linearizable") {
+				query_field.primary = true;
+			} else if (read == "prefix") {
+				query_field.primary = false;
+			} else {
+				THROW(ClientError, "read is prefix or linearizable, not {}", repr(read));
 			}
 		}
 	}

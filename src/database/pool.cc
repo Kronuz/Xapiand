@@ -358,7 +358,21 @@ ShardEndpoint::take_turn(int flags, task::cancel_token cancel)
 		assert(*held == 0 && "a task holds one index's turn at most");
 		++*held;
 	}
-	co_return Turn(std::move(guard), held, index_);
+	Turn taken(std::move(guard), held, index_);
+	if (unapplied_) {
+		co_await caught_up();   // what this holder prepares or reads includes the last ack=none write
+		unapplied_ = false;
+	}
+	co_return taken;
+}
+
+
+task::task<void>
+ShardEndpoint::caught_up()
+{
+	if (group_) {
+		co_await ::caught_up(*group_);
+	}
 }
 
 

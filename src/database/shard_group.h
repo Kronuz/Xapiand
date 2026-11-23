@@ -127,6 +127,10 @@ public:
 	std::string encode(const state& s) const;
 	state decode(std::string_view bytes) const;
 
+	// Called on the group's chore once a command applied, before its answer: the shard's reads owe a refresh
+	// (engine::strata::Shard::applied_by_group), whatever level the command was proposed at.
+	std::function<void()> applied;
+
 private:
 	// The command an entry applies, its staged bytes read by its effects (they read the file set; the
 	// transaction, which follows them at the same entry, cannot).
@@ -224,6 +228,10 @@ struct ShardGroup {
 // Proposes `entry` on the group's loop from any scheduler and answers on the caller's: handler.h's ProposeEntry. A
 // closing group raises errc::not_available.
 task::task<strata::group::answer> propose_entry(ShardGroup& shard_group, std::string entry, strata::group::ack level);
+
+// Awaits, from any scheduler and on the caller's, until the group applied everything committed when it was called: a
+// linearizable read's barrier (D4), and what a write prepared after an `ack=none` write waits for (D3).
+task::task<void> caught_up(ShardGroup& shard_group);
 
 // This leader's next chunked-command id (D12), drawn on the loop from the term it sees now.
 task::task<std::uint64_t> next_chunked_id(ShardGroup& shard_group);

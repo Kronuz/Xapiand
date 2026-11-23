@@ -223,8 +223,14 @@ class ShardEndpoint : public Endpoint
 	// order (cluster-release D3) and acknowledged at quorum, or applied on the engine when the index has no group.
 	// Through the group, the document's stored blobs travel in its command (D3), and `upload`, if any, is the
 	// chunked upload whose final entry the write is (D12). With `batched`, the prepared write is left there for a
-	// RESTORE's batch command (D17) and nothing is proposed; the result is prepare's prediction.
-	task::task<engine::WriteResult> write_document(engine::Shard& eng, engine::WriteOp op, engine::docid did, std::string key, engine::Document* doc, engine::WriteArgs args, ChunkedUpload* upload = nullptr, CommandWrite* batched = nullptr);
+	// RESTORE's batch command (D17) and nothing is proposed; the result is prepare's prediction. `at_placement`
+	// (ack=none, D4) answers once the command is placed in the log, before it applies: the result is the key alone,
+	// with no docid or version, and the next holder of the turn waits for the apply (take_turn).
+	task::task<engine::WriteResult> write_document(engine::Shard& eng, engine::WriteOp op, engine::docid did, std::string key, engine::Document* doc, engine::WriteArgs args, ChunkedUpload* upload = nullptr, CommandWrite* batched = nullptr, bool at_placement = false);
+
+	// A write answered at its placement (ack=none) has not applied yet: whoever takes the turn next waits until the
+	// group applied it, so a prepare or a written read sees it. Under the turn.
+	bool unapplied_ = false;
 
 public:
 	ShardEndpoint(DatabasePool& database_pool, std::string_view path);
@@ -243,7 +249,12 @@ public:
 
 	// The index's turn, under the caller's pin: awaits the turn with a deadline of DB_TIMEOUT and answers
 	// engine::errc::busy when it does not come, or task::cancelled when `cancel` (the request's token) is requested first.
+	// A write left unapplied by the last holder (ack=none) applies before the turn is answered.
 	task::task<Turn> take_turn(int flags, task::cancel_token cancel = {});
+
+	// Awaits until the index's group applied everything committed before the call (cluster-release D4: a
+	// linearizable read's barrier, an ack=none write's apply); nothing without a group.
+	task::task<void> caught_up();
 
 	// Awaits a refresh when something was applied since the last one, so a read sees it (a turn and a
 	// query chore); nothing otherwise.
@@ -313,11 +324,12 @@ private:
 
 	// The operations of a write, which run under the index's turn on the engine. A write is proposed through the
 	// group (or applied without one) and counted here.
-	task::task<engine::WriteResult> do_add(engine::Shard& eng, engine::Document&& doc, bool version_);
-	task::task<engine::WriteResult> do_replace(engine::Shard& eng, engine::docid shard_did, engine::Document&& doc, bool version_, bool must_exist = false, ChunkedUpload* upload = nullptr);
-	task::task<engine::WriteResult> do_replace_term(engine::Shard& eng, const std::string& term, engine::Document&& doc, bool version_, ChunkedUpload* upload = nullptr, CommandWrite* batched = nullptr);
-	task::task<void> do_delete(engine::Shard& eng, engine::docid shard_did, std::optional<engine::rev> expected_ = std::nullopt);
-	task::task<void> do_delete_term(engine::Shard& eng, const std::string& term, std::optional<engine::rev> expected_ = std::nullopt);
+	// `at_placement` is write_document's (ack=none).
+	task::task<engine::WriteResult> do_add(engine::Shard& eng, engine::Document&& doc, bool version_, bool at_placement = false);
+	task::task<engine::WriteResult> do_replace(engine::Shard& eng, engine::docid shard_did, engine::Document&& doc, bool version_, bool must_exist = false, ChunkedUpload* upload = nullptr, bool at_placement = false);
+	task::task<engine::WriteResult> do_replace_term(engine::Shard& eng, const std::string& term, engine::Document&& doc, bool version_, ChunkedUpload* upload = nullptr, CommandWrite* batched = nullptr, bool at_placement = false);
+	task::task<void> do_delete(engine::Shard& eng, engine::docid shard_did, std::optional<engine::rev> expected_ = std::nullopt, bool at_placement = false);
+	task::task<void> do_delete_term(engine::Shard& eng, const std::string& term, std::optional<engine::rev> expected_ = std::nullopt, bool at_placement = false);
 	task::task<void> do_set_metadata(engine::Shard& eng, const std::string& key, const std::string& value);
 	task::task<void> do_add_spelling(engine::Shard& eng, const std::string& word, engine::termcount freqinc);
 	task::task<engine::termcount> do_remove_spelling(engine::Shard& eng, const std::string& word, engine::termcount freqdec);

@@ -437,6 +437,9 @@ ShardApplication::advance(state& s, const strata::group::entry& e)
 		if (r.id != 0) {
 			s.open.erase(r.id);
 		}
+		if (applied) {
+			applied();
+		}
 	}
 	std::erase_if(s.open, [&](const auto& open) { return chunked_term(open.first) < e.term; });
 	if (chunk) {
@@ -746,6 +749,26 @@ propose_entry(ShardGroup& shard_group, std::string entry, strata::group::ack lev
 		std::rethrow_exception(error);
 	}
 	co_return std::move(*out);
+}
+
+
+task::task<void>
+caught_up(ShardGroup& shard_group)
+{
+	const auto home = task::current();
+	co_await task::schedule_on{shard_group.group.owner().scheduler()};
+	std::exception_ptr error;
+	try {
+		co_await shard_group.group.read_applied([](prospect::index&) { return true; });
+	} catch (const kronuz::consensus::closed&) {
+		error = std::make_exception_ptr(engine::Error(engine::errc::not_available, "The shard's group is closing"));
+	} catch (...) {
+		error = std::current_exception();
+	}
+	co_await task::schedule_on{home};
+	if (error) {
+		std::rethrow_exception(error);
+	}
 }
 
 

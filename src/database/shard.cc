@@ -256,6 +256,7 @@ ShardEndpoint::open_blocking(kronuz::journal::IO& directory, prospect::index& in
 	// The group last: it recovers on the index as the open left it (D169), and its failed open fails this one.
 	if (auto* groups = database_pool.groups()) {
 		group_ = std::make_unique<ShardGroup>(*groups, directory, index);
+		group_->app.applied = [eng = &dynamic_cast<engine::strata::Shard&>(*engine_)] { eng->applied_by_group(); };
 		group_->group.open_blocking();
 		// What the log committed before the open is applied before anything is served, and reads see it; the id
 		// counter is the log's.
@@ -271,7 +272,6 @@ ShardEndpoint::open_blocking(kronuz::journal::IO& directory, prospect::index& in
 		});
 		// The ready point (A9): the chunked commands this term's earlier proposers left open are aborted.
 		group_->abort_open(left_open);
-		dynamic_cast<engine::strata::Shard&>(*engine_).applied_by_group();
 		if (!high.empty()) {
 			id_high_ = std::max(id_high_, MsgPack::unserialize(high).u64());
 		}
@@ -491,27 +491,34 @@ ShardEndpoint::do_commit(engine::Shard& eng)
 
 namespace {
 
-// A command through the shard's group at quorum (D3), chunked past the entry limit (D12) with an id of the term the
-// loop sees now; each entry proposed on the group's loop, the answer on the caller's scheduler.
+// A write's level (D4): `quorum` answers once this replica applied it, with its verdict; `none` once it is placed.
+strata::group::ack
+ack_of(bool at_placement) noexcept
+{
+	return at_placement ? strata::group::ack::none : strata::group::ack::quorum;
+}
+
+// A command through the shard's group (D3), chunked past the entry limit (D12) with an id of the term the loop sees
+// now; each entry proposed on the group's loop, the answer on the caller's scheduler.
 task::task<strata::group::answer>
-propose(ShardGroup& shard_group, const Command& command)
+propose(ShardGroup& shard_group, const Command& command, strata::group::ack level = strata::group::ack::quorum)
 {
 	const auto id = co_await next_chunked_id(shard_group);
 	const auto entries = group_proposer(shard_group);
-	co_return co_await propose_command(entries, command, id, strata::group::ack::quorum);
+	co_return co_await propose_command(entries, command, id, level);
 }
 
 // An upload's final entry (D12): the command of the document that names its blob, proposed once. A second raises
 // errc::not_available: the first ended the upload's id whatever it applied.
 task::task<strata::group::answer>
-propose_upload_command(ShardGroup& shard_group, ChunkedUpload& upload, const Command& command)
+propose_upload_command(ShardGroup& shard_group, ChunkedUpload& upload, const Command& command, strata::group::ack level)
 {
 	if (upload.finished()) {
 		throw engine::Error(engine::errc::not_available, "The blob's upload ended: send it again");
 	}
 	upload.finish();
 	const auto entries = group_proposer(shard_group);
-	co_return co_await propose_upload_final(entries, upload, command, strata::group::ack::quorum);
+	co_return co_await propose_upload_final(entries, upload, command, level);
 }
 
 // What the proposer of a write hears once its replica applied it: the verdict's refusal, or the result prepare
@@ -601,7 +608,7 @@ stage_blobs(engine::Document& doc, const ChunkedUpload* upload, std::string& uns
 
 
 task::task<engine::WriteResult>
-ShardEndpoint::write_document(engine::Shard& eng, engine::WriteOp op, engine::docid did, std::string key, engine::Document* doc, engine::WriteArgs args, ChunkedUpload* upload, CommandWrite* batched)
+ShardEndpoint::write_document(engine::Shard& eng, engine::WriteOp op, engine::docid did, std::string key, engine::Document* doc, engine::WriteArgs args, ChunkedUpload* upload, CommandWrite* batched, bool at_placement)
 {
 	if (group_ == nullptr) {
 		if (upload != nullptr || batched != nullptr || (doc != nullptr && names_stored(*doc))) {
@@ -627,10 +634,16 @@ ShardEndpoint::write_document(engine::Shard& eng, engine::WriteOp op, engine::do
 		if (high > id_high_logged_) {
 			command.writes.push_back(id_high_write(high));
 		}
-		const auto answer = upload != nullptr ? co_await propose_upload_command(*group_, *upload, command) : co_await propose(*group_, command);
-		auto result = landed(eng, prepared, answer);
+		const auto level = ack_of(at_placement);
+		const auto answer = upload != nullptr ? co_await propose_upload_command(*group_, *upload, command, level) : co_await propose(*group_, command, level);
 		id_high_logged_ = std::max(id_high_logged_, high);
-		co_return result;
+		if (at_placement) {
+			unapplied_ = true;   // the turn's next holder waits for its apply
+			engine::WriteResult placed;
+			placed.term = prepared.result.term;   // no docid or version: its verdict is not known yet
+			co_return placed;
+		}
+		co_return landed(eng, prepared, answer);
 	} catch (...) {
 		failed = std::current_exception();
 	}
@@ -642,7 +655,7 @@ ShardEndpoint::write_document(engine::Shard& eng, engine::WriteOp op, engine::do
 
 
 task::task<engine::WriteResult>
-ShardEndpoint::do_add(engine::Shard& eng, engine::Document&& doc, bool version_)
+ShardEndpoint::do_add(engine::Shard& eng, engine::Document&& doc, bool version_, bool at_placement)
 {
 	L_CALL("ShardEndpoint::do_add(<doc>, {})", version_);
 
@@ -658,7 +671,7 @@ ShardEndpoint::do_add(engine::Shard& eng, engine::Document&& doc, bool version_)
 
 	engine::WriteResult info;
 	try {
-		info = co_await write_document(eng, engine::WriteOp::add, 0, std::string(), &doc, std::move(args));
+		info = co_await write_document(eng, engine::WriteOp::add, 0, std::string(), &doc, std::move(args), nullptr, nullptr, at_placement);
 	} catch (const engine::Error& error) {
 		note_failure(error);
 		throw;
@@ -670,7 +683,7 @@ ShardEndpoint::do_add(engine::Shard& eng, engine::Document&& doc, bool version_)
 
 
 task::task<engine::WriteResult>
-ShardEndpoint::do_replace(engine::Shard& eng, engine::docid shard_did, engine::Document&& doc, bool version_, bool must_exist, ChunkedUpload* upload)
+ShardEndpoint::do_replace(engine::Shard& eng, engine::docid shard_did, engine::Document&& doc, bool version_, bool must_exist, ChunkedUpload* upload, bool at_placement)
 {
 	L_CALL("ShardEndpoint::do_replace({}, <doc>, {})", shard_did, version_);
 
@@ -689,7 +702,7 @@ ShardEndpoint::do_replace(engine::Shard& eng, engine::docid shard_did, engine::D
 	}
 
 	try {
-		info = co_await write_document(eng, engine::WriteOp::replace, shard_did, std::string(), &doc, std::move(args), upload);
+		info = co_await write_document(eng, engine::WriteOp::replace, shard_did, std::string(), &doc, std::move(args), upload, nullptr, at_placement);
 	} catch (const engine::Error& error) {
 		note_failure(error);
 		throw;
@@ -701,7 +714,7 @@ ShardEndpoint::do_replace(engine::Shard& eng, engine::docid shard_did, engine::D
 
 
 task::task<engine::WriteResult>
-ShardEndpoint::do_replace_term(engine::Shard& eng, const std::string& term, engine::Document&& doc, bool version_, ChunkedUpload* upload, CommandWrite* batched)
+ShardEndpoint::do_replace_term(engine::Shard& eng, const std::string& term, engine::Document&& doc, bool version_, ChunkedUpload* upload, CommandWrite* batched, bool at_placement)
 {
 	L_CALL("ShardEndpoint::do_replace_term({}, <doc>, {})", repr(term), version_);
 
@@ -739,7 +752,7 @@ ShardEndpoint::do_replace_term(engine::Shard& eng, const std::string& term, engi
 	info.term = key;
 	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result); };
 	try {
-		info = co_await write_document(eng, engine::WriteOp::replace_key, 0, key, &doc, std::move(args), upload, batched);
+		info = co_await write_document(eng, engine::WriteOp::replace_key, 0, key, &doc, std::move(args), upload, batched, at_placement);
 	} catch (const engine::Error& error) {
 		note_failure(error);
 		throw;
@@ -754,7 +767,7 @@ ShardEndpoint::do_replace_term(engine::Shard& eng, const std::string& term, engi
 
 
 task::task<void>
-ShardEndpoint::do_delete(engine::Shard& eng, engine::docid shard_did, std::optional<engine::rev> expected_)
+ShardEndpoint::do_delete(engine::Shard& eng, engine::docid shard_did, std::optional<engine::rev> expected_, bool at_placement)
 {
 	L_CALL("ShardEndpoint::do_delete({})", shard_did);
 
@@ -763,7 +776,7 @@ ShardEndpoint::do_delete(engine::Shard& eng, engine::docid shard_did, std::optio
 	try {
 		engine::WriteArgs args;
 		args.expected_version = expected_;
-		co_await write_document(eng, engine::WriteOp::erase, shard_did, std::string(), nullptr, std::move(args));
+		co_await write_document(eng, engine::WriteOp::erase, shard_did, std::string(), nullptr, std::move(args), nullptr, nullptr, at_placement);
 	} catch (const engine::Error& error) {
 		note_failure(error);
 		throw;
@@ -774,7 +787,7 @@ ShardEndpoint::do_delete(engine::Shard& eng, engine::docid shard_did, std::optio
 
 
 task::task<void>
-ShardEndpoint::do_delete_term(engine::Shard& eng, const std::string& term, std::optional<engine::rev> expected_)
+ShardEndpoint::do_delete_term(engine::Shard& eng, const std::string& term, std::optional<engine::rev> expected_, bool at_placement)
 {
 	L_CALL("ShardEndpoint::do_delete_term({})", repr(term));
 
@@ -783,7 +796,7 @@ ShardEndpoint::do_delete_term(engine::Shard& eng, const std::string& term, std::
 	try {
 		engine::WriteArgs args;
 		args.expected_version = expected_;
-		co_await write_document(eng, engine::WriteOp::erase_key, 0, term, nullptr, std::move(args));
+		co_await write_document(eng, engine::WriteOp::erase_key, 0, term, nullptr, std::move(args), nullptr, nullptr, at_placement);
 	} catch (const engine::Error& error) {
 		note_failure(error);
 		throw;
@@ -955,6 +968,9 @@ task::task<engine::Shard*>
 Shard::engine_for_read()
 {
 	co_await ready();
+	if (has_db_linearizable(flags)) {
+		co_await endpoint().caught_up();   // read=linearizable (D4): every write committed before the read is applied
+	}
 	co_await endpoint().fresh(flags, cancel);
 	co_return &endpoint().engine();
 }
@@ -1063,8 +1079,9 @@ Shard::apply_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std:
 
 // apply_slice() through the index's group (D17): in the turn, a chore prepares the slice's writes, each an
 // unconditional replace by key, into RestoreBatcher's commands of as many writes as fit one log entry; each command
-// is then proposed at quorum, in input order, and its verdict assigns its writes' docids and versions. The chore also
-// encodes each command's entry: the loop only proposes it.
+// is then proposed in input order at the use's level, and at quorum its verdict assigns its writes' docids and
+// versions; at ack=none it answers once placed, with neither. The chore also encodes each command's entry: the loop
+// only proposes it.
 task::task<void>
 Shard::restore_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std::size_t& at, std::chrono::nanoseconds slice, std::unordered_set<std::string>& missed_terms)
 {
@@ -1134,12 +1151,21 @@ Shard::restore_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, st
 		}
 	});
 	auto& eng = entry.engine();
+	const bool at_placement = has_db_ack_none(flags);
+	const auto level = ack_of(at_placement);
 	for (auto& batch : batches) {
 		std::exception_ptr failed;
 		try {
-			auto proposing = batch.entry.empty() ? propose(*entry.group(), batch.command)
-				: propose_entry(*entry.group(), std::move(batch.entry), strata::group::ack::quorum);
+			auto proposing = batch.entry.empty() ? propose(*entry.group(), batch.command, level)
+				: propose_entry(*entry.group(), std::move(batch.entry), level);
 			const auto answer = co_await std::move(proposing);
+			if (at_placement) {
+				entry.unapplied_ = true;
+				for (const auto position : batch.writes) {
+					writes[position].info = engine::WriteResult{0, 0, std::move(writes[position].info.term)};
+				}
+				continue;
+			}
 			landed(eng, engine::PreparedWrite{}, answer);   // a refusal raises for the whole batch
 			const auto results = restore_results(batch.command, *answer.applied);
 			for (std::size_t i = 0; i < batch.writes.size(); ++i) {
@@ -1160,7 +1186,12 @@ Shard::restore_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, st
 		Command command;
 		command.writes.push_back(id_high_write(high));
 		try {
-			landed(eng, engine::PreparedWrite{}, co_await propose(*entry.group(), command));
+			const auto answer = co_await propose(*entry.group(), command, level);
+			if (at_placement) {
+				entry.unapplied_ = true;
+			} else {
+				landed(eng, engine::PreparedWrite{}, answer);
+			}
 			entry.id_high_logged_ = std::max(entry.id_high_logged_, high);
 		} catch (...) {
 			L_EXC("The id counter of a RESTORE's slice was not logged");
@@ -1254,13 +1285,24 @@ schedule_autocommit(const Shard& shard)
 }
 
 
-// What follows a write: its commit when it asked for one, else the debounced autocommit. The write is applied
-// and logged by now. A commit whose turn times out (busy) does not fail the write, which a client would retry
-// (and an add without an id would then duplicate): the write stands, the autocommit commits it, and the
-// client is told it succeeded.
+// What follows a write: its refresh level (D4), then its commit when it asked for one, else the debounced
+// autocommit. The write is logged by now, and applied unless it was answered at placement (ack=none): refresh=true
+// and refresh=wait_for wait for that apply. A read refreshes a shard its writes left dirty first (Q-F27 (a)), so
+// on the leader's replica a write is visible to every read once applied: wait_for asks no more, and refresh=true
+// refreshes now, so no read pays it. A commit whose turn times out (busy) does not fail the write, which a
+// client would retry (and an add without an id would then duplicate): the write stands, the autocommit commits it,
+// and the client is told it succeeded.
 task::task<void>
 Shard::finish_write(bool commit_)
 {
+	if (has_db_refresh(flags) || has_db_refresh_wait_for(flags)) {
+		if (has_db_ack_none(flags)) {
+			co_await endpoint().caught_up();
+		}
+		if (has_db_refresh(flags)) {
+			co_await endpoint().fresh(flags, cancel);
+		}
+	}
 	if (!commit_) {
 		schedule_autocommit(*this);
 		co_return;
@@ -1288,7 +1330,7 @@ Shard::delete_document(engine::docid shard_did, bool commit_, std::optional<engi
 	{
 		auto turn = co_await endpoint().take_turn(flags, cancel);
 		auto* eng = &endpoint().engine();
-		co_await endpoint().do_delete(*eng, shard_did, expected_);
+		co_await endpoint().do_delete(*eng, shard_did, expected_, has_db_ack_none(flags));
 	}
 	co_await finish_write(commit_);
 }
@@ -1305,7 +1347,7 @@ Shard::delete_document_term(const std::string& term, bool commit_, std::optional
 	{
 		auto turn = co_await endpoint().take_turn(flags, cancel);
 		auto* eng = &endpoint().engine();
-		co_await endpoint().do_delete_term(*eng, term, expected_);
+		co_await endpoint().do_delete_term(*eng, term, expected_, has_db_ack_none(flags));
 	}
 	co_await finish_write(commit_);
 }
@@ -1323,7 +1365,7 @@ Shard::add_document(engine::Document&& doc, bool commit_, bool version_)
 	{
 		auto turn = co_await endpoint().take_turn(flags, cancel);
 		auto* eng = &endpoint().engine();
-		info = co_await endpoint().do_add(*eng, std::move(doc), version_);
+		info = co_await endpoint().do_add(*eng, std::move(doc), version_, has_db_ack_none(flags));
 	}
 	co_await finish_write(commit_);
 	co_return info;
@@ -1342,7 +1384,7 @@ Shard::replace_document(engine::docid shard_did, engine::Document&& doc, bool co
 	{
 		auto turn = co_await endpoint().take_turn(flags, cancel);
 		auto* eng = &endpoint().engine();
-		info = co_await endpoint().do_replace(*eng, shard_did, std::move(doc), version_, must_exist, upload);
+		info = co_await endpoint().do_replace(*eng, shard_did, std::move(doc), version_, must_exist, upload, has_db_ack_none(flags));
 	}
 	co_await finish_write(commit_);
 	co_return info;
@@ -1361,7 +1403,7 @@ Shard::replace_document_term(const std::string& term, engine::Document&& doc, bo
 	{
 		auto turn = co_await endpoint().take_turn(flags, cancel);
 		auto* eng = &endpoint().engine();
-		info = co_await endpoint().do_replace_term(*eng, term, std::move(doc), version_, upload);
+		info = co_await endpoint().do_replace_term(*eng, term, std::move(doc), version_, upload, nullptr, has_db_ack_none(flags));
 	}
 	co_await finish_write(commit_);
 	co_return info;
@@ -1422,7 +1464,7 @@ Shard::set_metadata(const std::string& key, const std::string& value, bool commi
 	{
 		auto turn = co_await endpoint().take_turn(flags, cancel);
 		auto* eng = &endpoint().engine();
-		co_await endpoint().do_set_metadata(*eng, key, value);
+		co_await endpoint().do_set_metadata(*eng, key, value);   // a schema's or a setting's: at quorum, whatever the write's level
 	}
 	co_await finish_write(commit_);
 }

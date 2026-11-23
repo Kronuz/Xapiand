@@ -206,7 +206,7 @@ struct Core {
 	std::atomic<bool> fenced{false};  // the index refused to go on after an I/O error
 	std::atomic<bool> retiring{false};  // the index is being replaced or closed: its readers are let go of
 	std::atomic<bool> dirty{false};  // applied since the last refresh: reads need a refresh first
-	bool pending = false;      // applied since the last commit
+	std::atomic<bool> pending{false};  // applied since the last commit (a group's apply marks it on its chore)
 	bool transaction = false;
 	std::atomic<bool> closed{false};  // Shard::close released the index on purpose
 	std::atomic<std::uint64_t> epoch{0};  // bumped whenever the index is replaced: writes it held are gone
@@ -301,10 +301,15 @@ struct Core {
 		adopt_index();
 	}
 
+	// Cleared before the refresh: a group's apply on its chore that lands after it marks the Core again.
 	void refresh() {
-		if (dirty) {
-			index->refresh();
-			dirty = false;
+		if (dirty.exchange(false)) {
+			try {
+				index->refresh();
+			} catch (...) {
+				dirty = true;
+				throw;
+			}
 			note();
 		}
 	}
@@ -318,13 +323,18 @@ struct Core {
 	}
 
 	void commit() {
-		if (pending) {
-			crash_point("commit.before");
-			index->refresh();  // the segment is on disk and the manifest does not name it
-			crash_point("commit.flushed");
-			index->commit();
-			crash_point("commit.after");
-			pending = dirty = false;
+		if (pending.exchange(false)) {
+			dirty = false;   // cleared first, as refresh() does
+			try {
+				crash_point("commit.before");
+				index->refresh();  // the segment is on disk and the manifest does not name it
+				crash_point("commit.flushed");
+				index->commit();
+				crash_point("commit.after");
+			} catch (...) {
+				pending = dirty = true;
+				throw;
+			}
 			note();
 		}
 	}
@@ -1060,7 +1070,6 @@ Shard::landed(const PreparedWrite& prepared, const ::strata::verdict& verdict)
 			// Its entry applied no transaction: a chunked command whose upload or staging was retired first.
 			throw Error(errc::not_available, "The write was not applied: retry it");
 		}
-		applied_by_group();
 		return assigned(verdict, prepared);
 	} catch (...) {
 		rethrow_translated(handle_->core);
@@ -1078,11 +1087,11 @@ Shard::applied_by_group() noexcept
 
 
 void
-Shard::checkpointed() noexcept
+Shard::checkpointed()
 {
 	auto& core = *handle_->core;
 	core.pending = false;
-	core.dirty = false;
+	core.refresh();   // what applied after the checkpoint's capture, if anything
 	core.note();
 }
 
@@ -1485,9 +1494,8 @@ Shard::reclaim()
 		auto& core = *handle_->core;
 		co_await chores_->run(ChoreClass::merge, [&core, this] {
 			core.check(*handle_);
-			if (core.index->merges_pending() > 0 || core.dirty) {
+			if (core.dirty.exchange(false) || core.index->merges_pending() > 0) {
 				core.index->refresh();  // publishes the merges that finished
-				core.dirty = false;
 			}
 			core.index->reclaim();
 			core.note();
