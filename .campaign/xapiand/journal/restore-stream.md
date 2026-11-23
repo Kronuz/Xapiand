@@ -21,12 +21,12 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261122-224739-fa8737, 261122-224739-6c55b6 |
-| A2 | 261122-224739-fa8737, 261122-224739-6c55b6, 261121-202758-fe2fcf |
-| A3 | 261121-202756-ca0d1d |
+| A1 | 261123-072851-e9d3c2, 261123-072850-25717a |
+| A2 | 261123-072851-e9d3c2, 261123-072850-25717a, 261122-224740-377142 |
+| A3 | 261123-072850-063d9a |
 | A4 | 261121-034148-685f8b (passed at c5b2c0689ce5; 5 merges from main since, none touching its files; ignores docs-only docs/perf/bulk-load-rss.md); fails without: 261121-034201-4acbcc, 261121-034203-69a143 |
 | A5 | 261121-034148-685f8b (passed at c5b2c0689ce5; 5 merges from main since, none touching its files; ignores docs-only docs/perf/bulk-load-rss.md) |
-| A6 | 261121-202756-2c7fb6 |
+| A6 | 261123-072850-b73b5d |
 | A7 | `docs/perf/bulk-load-rss.md`: "With the body streamed, the peak is 344-405 MB, held mostly by strata's write buffer until the RESTORE's one closing" |
 | A8 | CI green at e3265faf5147 (run 44949695201); no longer waits on lua-method-flake |
 
