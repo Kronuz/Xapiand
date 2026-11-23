@@ -1,6 +1,6 @@
 # split-check-members: journal
 
-State: waiting on jobs 261122-215902-0c1bd1 261122-215902-19e3c9
+State: waiting on jobs 261122-222307-d0b7b3 261122-222308-070251
 Quest: .campaign/xapiand/quests/split-check-members.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -17,13 +17,15 @@ for the class; the non-template `wide.hh` has no template header. Fix: blank tem
 before matching (`without_template_headers`), as `units()` already skips them for nested classes.
 That failed job is the run without the fix.
 
+Test 261122-215902-0c1bd1 at 2df69e8 then passed 73 of 74: `test_a_definition_left_in_the_class_too_fails`
+expected "the class changed"; the tool reports the more specific "the declaration left in the
+class differs: ~store() {". Fixed in the test (cpp-libraries:b671456), pushed.
+
 ## Next
 
-1. Read test 261122-215902-0c1bd1 and lint 261122-215902-19e3c9 at 2df69e8 (queued), and CI's
-   `python` job at 2df69e8 (`gh run list -R Kronuz/cpp-libraries --commit 2df69e8...`).
-2. A6: lint 261122-215902-19e3c9 is tagged A6 too (status lists it); CI tools run 45121217833
-   at 2df69e8 (queued) for [ci].
-3. Ready for review.
+1. Read test 261122-222307-d0b7b3 and lint 261122-222308-070251 at cpp-libraries:b671456, and
+   CI's tools run there (`gh run list -R Kronuz/cpp-libraries --commit b671456...`).
+2. Ready for review.
 
 ## Blocked on
 
@@ -33,12 +35,12 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | test 261122-215902-0c1bd1 (queued; 261122-212041-81ad6c failed before the fix): `OutlineTest`, `MembersTest` |
-| A2 | test 261122-215902-0c1bd1 (queued; 261122-212041-81ad6c failed before the fix): `MutatedMoveTest`, one test per mutation |
-| A3 | test 261122-215902-0c1bd1 (queued; 261122-212041-81ad6c failed before the fix): every existing test unchanged; `--members` is opt-in |
+| A1 | test 261122-222307-d0b7b3 (queued; 261122-212041-81ad6c failed before the find_class fix): `OutlineTest`, `MembersTest` |
+| A2 | test 261122-222307-d0b7b3 (queued; 261122-212041-81ad6c failed before the find_class fix): `MutatedMoveTest`, one test per mutation |
+| A3 | test 261122-222307-d0b7b3 (queued; 261122-212041-81ad6c failed before the find_class fix): every existing test unchanged; `--members` is opt-in |
 | A4 | `docs/SPLITTING.md` "Restructuring a large class" and "What `tools/split_check.py` checks"; `tools/README.md` (cpp-libraries:237350a) |
-| A5 | test 261122-215902-0c1bd1 (queued; 261122-212041-81ad6c failed before the fix): `OutlineTest` (outline.py output passes `--members`; compiles before and after) |
-| A6 | lint 261122-215902-19e3c9 (queued); CI tools run 45121217833 at cpp-libraries:2df69e8 (queued) |
+| A5 | test 261122-222307-d0b7b3 (queued; 261122-212041-81ad6c failed before the find_class fix): `OutlineTest` (outline.py output passes `--members`; compiles before and after) |
+| A6 | lint 261122-222308-070251 (queued, tagged A6); CI tools run at cpp-libraries:b671456 |
 
 Real heads (not criteria; the lead needs them before those quests use the check), as
 `campaign job submit --quest split-check-members --repo <repo> --commit <head> --level none
@@ -86,6 +88,10 @@ in `tools/test_split_check.py`: 7 outline (A5; 2 compile with `c++ -std=c++20 -W
 mutations (A2), 1 command line. Docs: `docs/SPLITTING.md`, `tools/README.md`.
 
 ## Rulings I made
+
+- msg (lead, 2026-11-22, the 73-of-74 failure): SPLITTING.md and tools/README.md fix only the
+  shape (`member C::f (base file:line)` and the line that differs), not the wording, so the
+  specific message stays and the test now expects it.
 
 - `tools/outline.py` is outside the quest's file set, though A5 names it; I created it there. Its
   tests live in `tools/test_split_check.py` (in the set), so the `test` check runs them. Lead:
