@@ -11341,7 +11341,30 @@
       "updated": "2026-11-08T15:39:37"
     },
     "first-commit-crash": {
-      "accepted": {},
+      "accepted": {
+        "durability": {
+          "at": "2026-11-23T05:35:35",
+          "base": "00eb018da75d20715b3e05a2593937a970b40201",
+          "blobs": {
+            "docs/mechanisms/manifest-log-file.md": "100644:c0b15ab330640348731c7d7bc384fdf10248568e",
+            "include/strata/core/index.hh": "100644:42fee16d1b99a26a4c8f02e2306775739a00757e",
+            "test/lifecycle_test.cc": "100644:82d52736d36702705194ee9f84d99f652dc08ad7"
+          },
+          "by": "review",
+          "commit": "606a1d62d592c492bcd1ef0ee392fedad1e5458b",
+          "criteria": "a7698271d5f05884",
+          "diffs": {
+            "docs/mechanisms/manifest-log-file.md": "a4508ed1703dc0a5",
+            "include/strata/core/index.hh": "471e46ddaa738ee2",
+            "test/lifecycle_test.cc": "91a7fadd70dd27d5"
+          },
+          "findings": {},
+          "note": "",
+          "review": "13bab82b50d380390fb3ec6a788c95affbc5e815",
+          "reviewed": "606a1d62d592c492bcd1ef0ee392fedad1e5458b",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "turn-log-parity"
       ],
@@ -11373,7 +11396,7 @@
       "risk": "high",
       "status": "review",
       "title": "A crash in a fresh index's first commit leaves an index that opens",
-      "updated": "2026-11-23T05:26:50",
+      "updated": "2026-11-23T05:35:35",
       "worktree": "../strata-wt/xapiand/first-commit-crash"
     },
     "flush-memory": {
