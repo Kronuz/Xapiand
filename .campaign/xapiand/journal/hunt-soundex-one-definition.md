@@ -1,6 +1,6 @@
 # hunt-soundex-one-definition: journal
 
-State: waiting on jobs 261123-133452-ec36ac (A2), 261123-133456-ff4d3e (A1)
+State: waiting on jobs at soundex:dd922dc (lead applied the docs patch there; A1 build-test and A2 diff_languages resubmitted), then CI.
 Quest: .campaign/xapiand/quests/hunt-soundex-one-definition.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
