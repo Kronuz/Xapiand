@@ -1,6 +1,6 @@
 # group-heal review: durability
 
-Commit: strata:908b58c0d2ee3512744c68be8a083daea72715ec
+Commit: strata:bea1f5687823bdcb6a35d51750bff6f233945b09
 Verdict: CHANGES
 Date: 2026-11-23
 
@@ -8,108 +8,126 @@ APPROVE: lands as is, at this commit's code, with no blocking finding. CHANGES: 
 blocking finding's fix and its test pass the suite at the fixed commit; with only nits, an APPROVE.
 REJECT: the approach is wrong; the quest is re-planned.
 
-Lens: durability, carrying correctness for the install bytes and the binding. Consensus at
-8780e44 (the jobs' ref).
+Lens: durability, carrying correctness for repair. This is a re-review of what changed since the
+accepted durability review at strata:a1e786f4: `git diff a1e786f4 bea1f568 -- include sim test
+CMakeLists.txt` (task repair: repair.hh, group.hh, install.hh, test/group/repair_*; task sim-rows:
+sim/**, test/group/sim_*). The first round's review was at strata:908b58c0 (F1-F6 below keep
+their ids). Consensus at 59ae07f (the repair jobs' ref).
 
 ## Evidence I relied on
 
-- Install level, at 75b5ac9b (install.hh has changed by 3 lines since then, release_pins's
-  deferred-index return; install_test.cc is unchanged): install_test 261123-005922-93c9ac passed
-  (values, retry, held, damaged, threads, crash at every mutating operation from the stage through
-  the activating recovery). Its mutants were killed: marker-before-sync 261123-005951-972f5c,
-  write-past-failure 261123-005942-72e95b, skip-file-set e11cfa, keep-unchecked a51a18,
-  holder-unordered 6cfb33, no-resume d1a515, serve-past-length 4adb58, pin-names-unchecked 9f5825.
-  This is enough for install.hh's own crash claim.
-- At the head 908b58c0: suite 261123-021413-a25890 passed (catalog, install, voters,
-  witness, footprint). Mutants release-fences 261123-021416-01f061, pin-per-flight
-  261123-021418-f94527, install-silent 261123-021420-2fb770 and close-skips-install-tasks
-  261123-021423-f55c10 were killed (exit 1).
-- Witness before the merge, at e4828884: witness 261123-014646-0ebc24 passed, and
-  witness-holds-range 261123-014651-e0f143 and witness-refuses-image 261123-014655-73ffe0 were
-  killed. witness.hh and witness_test.cc did not change in the merge.
-- Not yet run at the head (queued when I wrote this): witness 711463, its mutants 94e042 and
-  dfeb44, and CI. I relied on none of them.
+- Repair at 06bfb2f5 (task tip; the merge into bea1f568 changes only CMakeLists.txt and docs
+  around it): group_repair and group_repair_eager 261123-080614-8b99ae and 261123-082123-99f90f
+  passed (segment, manifest, file at open; apply; read; refusal; staged; leader; source unread and
+  at rest; deposed; the four crash sweeps). The whole group suite at d457da76 code
+  (261123-082124-87d11c) passed. Mutants killed at d457da76 (261123-0631xx-0632xx: open-rethrows,
+  unmarked, quarantine-first, set-damage-fences, waiters-unanswered, apply-damage-fences,
+  read-damage-passes, activate-unchecked, marker-kept, leader-keeps, no-retry, reason-kept,
+  handoff-any, stage-caught-up, needed-kept) and at 06bfb2f5 (no-ack 261123-080623-cab898,
+  pin-unchecked-footer 261123-080626-53f862). Enough for the cases they name; the reruns at
+  bea1f568 (261123-0835xx) were queued and I relied on none.
+- The first round's fixes (F1, F2) at a1e786f4: suite 261123-025745-1cfc1e and the reviewer's
+  probes rerun (261123-025733-6d601b, 261123-025741-994ce2), mutants release-at-open and
+  install-onto-deferred killed (both before main's install() guard merged; see risk 5).
 
 ## What I checked myself
 
-Probes live in `.scratch/xapiand/review-group-heal-durability/` (probes.inc is inserted into
-voters_test.cc in an exported copy of 908b58c0; `run.sh build`, then `run.sh run R1c R1d R1h R2 R3`).
+Probes live in `.scratch/xapiand/review-group-heal-durability/` (`run2.sh probes B1 B3 B4`
+inserts `probes2.inc` into an exported repair_test.cc; `run2.sh guard` removes install.hh's caller
+guard; both need `CONSENSUS_DIR`, a consensus 59ae07f checkout). Probe jobs 261123-084426-3eb719
+(B1, B3, B4; exit 1 because B1-rested, B3-off and B4 fail their checks) and 261123-084430-3b9e96
+(guard; exit 0).
 
-- R2, reopen on a full disk (job 261123-022652-f2e3bc): a leader that served an install keeps the
-  latest bundle's pin in strata's manifest (1 pin). It restarts with its directory's disk full,
-  and the open fails with "faultfs write: No space left on device". The control arm, the same
-  leader with no pin, opens on the same full disk. The difference is recover()'s
-  `release_pins`, which commits strata (group.hh:1085, install.hh:306-309). Before this quest,
-  recover committed nothing. Finding F1.
-- R3, pins across a leader change (job 261123-022652-f2e3bc): after an install the leader holds 1
-  pin. The leader is deposed and every node checkpoints twice more, and then every node's manifest
-  holds 0 pins, with digests equal to the replay. No pin leaks across leader changes or
-  checkpoints. consensus sends SnapshotReleased(LeadershipLost) for each flight on step-down
-  (core.h:648, :778), so `flights` empties.
-- R1 is a power cut on the learner at every mutation from its rejoin through the settled install
-  (job 261123-023620-b636fa, install_gap's world at 3 voters, seed 55). On the host disk (the
-  consensus journal), all 28 crash points (k 0-27) settle, with equal digests and no staging name
-  left. On the directory disk, 31 of 38 points settle. At k 17-23, the reboot throws
-  `corrupt_index: no manifest log` from the host's `open_index`. The control cuts the same
-  replica's power while it is still cut off, before any install, and it reopens and settles
-  (R1c). Finding F2.
-- The ENOSPC release path (cc2d0b3f): `release_superseded` stalls and keeps the pin, and
-  release-fences was killed at the head. `release_pins_held` at close swallows every error and
-  leaves the pin for the next recover. Under a full disk, that recover is where F1 bites.
-- The lazily created install state (82ea744c): `trim_sources` frees it only when `needed` and
-  `pins` are both empty. `needed` is erased only on Installed or CaughtUp (group.hh:461-466).
-  Finding F3.
-- Release while a learner still fetches: a pin goes only when its bundle is superseded and no
-  flight holds it. A learner still staging after its flight was released fails its next fetch
-  with not-found and answers validation_failed, with its staged bytes kept and no marker. It never
-  reads other bytes: segment ids and manifest generations are never reused, a set name is never
-  written again (the replica fences on that), and every file is checked by CRC32C.
-- Learner pins after an install: strata's install drops the learner's pins (`drop_pins_`), and a
-  later `release` of a dropped generation is `std::erase` of an absent value (index.hh:5405),
-  which is harmless.
-- Risk 3, the changed expectation: this is correct protocol behavior. A removed member never
-  learns the commit of its own removal: core.h:468-471 replicates to the committed membership
-  until the removal commits, and core.h:1305-1316 then drops the peer. grow_and_heal and the
-  witness join now retire the leaving voter only after a leader other than it holds a membership
-  without it (world.hh:607). They then settle without it and check every survivor's membership and
-  digests. The test is stronger than before: the remaining members commit and settle without the
-  removed voter. Nothing is masked. Finding F5 is an optional assertion.
-- Risk 4, the merge: the close waits for install tasks (`tasks_` in idle_awaiter and drain,
-  group.hh:618-627, :760-763). close_mid_install exercises this, and its mutant f55c10 was killed.
-  activate_image skips its answer once the group is torn down, and a reopen finishes the
-  activation through adopt's resume, because consensus persisted the install before
-  ActivateImage. release_pins_held runs after `driver().close`, so no notice can pin after it.
-  Notices queued before it run first. `release_pins` returns on a deferred index (no manifest).
-  `serve` counts itself before it checks `closed_` under mu_, so the teardown's wait cannot miss a
-  serve that took a pin (Finding F4 covers its notify and its missing test).
-- Risk 5, the witness: witness.hh acknowledges ranges without applying them and pins nothing. It
-  answers `validated` for an image while it joins: consensus keeps the bundle as its log's base,
-  and the witness stores none of the files. The brief says "never accepts an image", but A4 does
-  not ask for that, and the witness-refuses-image mutant shows the join needs it. witness_test's
-  loss case power-cuts each of the three members at three seeds, and carry covers the witness
-  leading only to hand off. Evidence at e4828884 (above). The merge did not touch either file.
+- Risk 1, body damage behind a valid footer. make_pin computes each segment's CRC32C from the
+  source's current bytes (install.hh:326) and checks only its footer (check_footer). So rot in a
+  section body passes the pin, the transfer and the learner's staged CRC check. It is caught by
+  the learner's `ix.install`, which loads the source whole (`verify_all`). Probe B1 flips one byte
+  in the middle of the leader's segment while the leader runs, after it mapped the segment. It
+  then damages a follower's manifest. The learner never repairs: after 200,000 steps it is still
+  damaged with 0 installs, its directory's mutation count is frozen at 123, the source is not
+  damaged, and commit stays at 31 (seeds 1 and 2). From the code, the corrupt_segment escapes
+  from the activation's chore item. drain() answers damage with `step::more` (group.hh:840).
+  Install items are never refused while damaged (group.hh:817), so the activation reruns and
+  never answers consensus. Nothing tells the source. When the source was rebooted first ("unread"),
+  its pin's checkpoint maps the segment and meets the damage, the source is marked damaged and
+  hands off, and the cluster heals (B1 unread, both seeds). Bytes that rot after the pin fail the
+  learner's stage CRC, and the stage is retried from the same pin until the next bundle. That pin
+  is then B1's case. Finding F7.
+- Risk 2, the hand-off. With the test world's host view (`applied_past`), two damaged replicas
+  hand to the sound one: B3 "view on" moves leadership 1 -> 3 and both heal (seeds 1, 2). No
+  production host sets `applied_past` (grep: only test/group/world.hh:245; neither sim/, the
+  catalog nor Xapiand set it). Without it, hand_leadership_away takes the first voter that is not
+  the leader (group.hh:1572). B3 "view off": node 1 hands to node 2 and node 2 hands back to node 1,
+  125 leadership changes in 200,000 steps (`1 0 2 0 1 0 2 ...`). Neither ever reaches the sound
+  node 3, and neither heals. Every leader is damaged, so propose throws replica_damaged and the
+  group takes no write. This is round 3's ping-pong, still present on the path every host uses.
+  The leadership test the brief asks for exists: `leader` (repair_test.cc:449) transfers
+  leadership onto a damaged replica and checks it hands off and repairs, but only with the host
+  view. While it leads, a damaged replica serves nothing: read_applied, propose, serve and
+  pin_for all check `damaged_`, and prefix readers gate on `readable()`, which enter_damaged
+  closes. Finding F8.
+- Risk 3, `bounded`. group.hh:252 recovers only `stored` and `closed`, and sends everything else
+  to `driver.create`. Today's journal pin (9e11713) has no `bounded`. On journal main, `bounded`
+  reaches `Journal::create_shared` -> `Host::create_group`, which throws logic_error when the status
+  is not `none` (journal main host.h:521-522). The open fails and the group fences locally. A
+  bounded replica therefore never rejoins with a hole that consensus treats as complete. It does
+  not rejoin at all: `lost`, which exists today, takes the same branch. journal main's own
+  recover loses a bounded group and throws Corruption (journal.h:595-597), because a consensus
+  Store holds a group only through its latest checkpoint record. The right answer for strata::group
+  is "lost: rejoin under a new id" (a replace), not create. Under today's pin this cannot arise.
+  It belongs to strata-journal-pin, whose device row will meet it if a non-prefix cut yields
+  `bounded`. Finding F10, not blocking here.
+- Risk 4, crash at each step. The marker goes first (mark_damaged: tmp, sync, rename, directory
+  sync). Activation checks the staged files, `ix.install` runs, set files are replaced, the
+  directory is synced, and only then does clear_damaged run (install.hh:575-605). recovery's
+  `resume` repeats a complete activation. The four crash sweeps (manifest and file, directory and
+  host disk, 91 and 85 mutations) assert "damaged exactly while marked" and "never unfenced over
+  damaged bytes" at every cut, and passed at 06bfb2f5. A crash mid-quarantine reopens through
+  open_index again (still damage, marker present). After the copy and before the ack, consensus
+  persisted the image before ActivateImage and resume finishes. A crash after the install but
+  before the sweep repeats an idempotent activation. That is enough for the marker protocol. The
+  sweep does not cover segment-class damage or B1's path, which F7 covers.
+- Risk 5, the install guard. Removing install.hh:589 (`if (!log_holding(dir)) ix.commit();`)
+  leaves strata's own guard (`if (!m_.generation) commit_empty()`, index.hh:1964). Job
+  261123-084430-3b9e96 passes without the guard: install `deferred` (760 runs over 75 operations),
+  voters' `deferred_learner_crash` (42 power cuts over 41 mutations), and repair's manifest crash
+  sweeps on the directory and host disks (92 and 33 cuts), which cross quarantine's deferred
+  index. For an index built by open_index, "no manifest log on disk" and "generation 0" are the
+  same state, so the caller guard closes no extra case. It is redundant, and the
+  install-onto-deferred mutants now survive. Finding F11.
+- B4, a lone voter (D7's short group) whose manifest log is damaged. On reopen, open_index marks it
+  and `quarantine_strata` deletes every strata name (repair.hh:93): 2 strata names before, 2
+  after the damage, 0 after the reopen. The replica stays damaged forever, because there is no
+  replica to reinstall from. Before this quest the open failed and the bytes stayed. The same
+  deletion happens on every replica when damage is correlated (a strata bug that writes a bad
+  manifest or segment on every node), and nothing is left to install. Finding F9.
+- Sim rows: `simulation_group_corruption` still exits 77 (skipped) at bea1f568
+  (sim/CMakeLists.txt:58-60, test/group/sim_test.cc:1050). Its skip text says it waits for task
+  repair, which has merged. Finding F12.
 
 ## Findings
 
 | ID | Blocking | Kind | Finding | Evidence | Fix |
 |---|---|---|---|---|---|
-| F1 | yes | defect | A replica that holds an install pin cannot open on a full disk. recover() calls `release_pins`, which commits strata, so the ENOSPC fails the open. Every leader that served an install keeps its latest bundle's pin by design (75b5ac9b), so the case is common, and a fenced close or crash with a full disk always reaches it. The same replica with no pin opens. This contradicts the quest's own ruling (cc2d0b3f): a release short of space stalls and never fences. | Probe job 261123-022652-f2e3bc (R2: control opens, pin held fails with "No space left on device"); group.hh:1085, install.hh:306-309 | Do not fail the open on a release short of space. Keep the pins and release them from a chore notice that stalls on ENOSPC, as release_superseded does. Test: R2's case in voters_test (a leader holding a pin, restarted on a full disk, opens; once space is freed and resume() runs, the pin is released and the cluster settles). |
-| F2 | yes | defect | A crash during the activation of a learner whose strata index is still deferred leaves a replica that cannot open: neither the old replica nor the installed one. `ix.install` writes its segment copies (`seg-1.sx`) and then `manifest-1.tmp`, before any manifest log exists. After a crash in that window, strata's open finds strata names and no log, so it is not `uncreated`, and it throws `corrupt_index` (index.hh:5828-5830). `open_index` catches only `index_not_created` (group.hh:193-199), so the group is never built, and resume(), which would finish the activation from the complete stage (`ip` and `is.*` are still there), never runs. A fresh learner, the grow and replace path, always installs onto a deferred index. At k=17 the directory is the same before and after the cut, so a plain process crash at that point fails the same way. install_test's crash case does not reach this because its learner is always `create`d and checkpointed (install_test.cc:84-86, :398-403), never deferred. | Probe job 261123-023620-b636fa (R1d: k 17-23 throw; listing at k=17: `ia.vol-0 ip is.manifest-1 is.seg-1.sx seg-1.sx(0)`, at k=23 also `manifest-1.tmp`); control R1c settles | Make the deferred index's old state a committed one before it installs (for example, commit the deferred index at the start of activation, so a crash opens the old empty generation and resume() finishes). Alternatively, strata's install on a deferred index could write its copies so that a crash leaves an `uncreated` directory. Tests: install_test's crash case with the learner's index deferred, and R1d's group-level sweep (a power cut at every directory mutation of a fresh learner's install: every point reopens and settles). |
-| F3 | no | defect | `installs_needed()` and the lazily made install state outlive the leadership. `needed` is erased only on Installed or CaughtUp, so a leader that loses its leadership (or whose peer is Removed) mid-flight names the peer forever as a follower and never frees `sources_`. That idle group then gives back the 88 B that 82ea744c saved. | group.hh:461-466; consensus core.h:648 sends LeadershipLost per flight | Erase the peer on LeadershipLost, Removed, Fenced and Stale too (keep it on TimedOut, Rejected and Unavailable, which consensus retries). Then trim. A test: depose the leader mid-flight in install_gap and check `installs_needed()` is empty on every node once settled. |
-| F4 | no | gap | serve's guard against the teardown (`serving_`) has no test off the loop thread. The ruling "TSan in CI covers the threads" has nothing to cover: world.hh:288 calls serve on the loop, and install_test's `threads` case calls install.hh's serve, not group::serve. Also, serve_scope calls notify_all after its decrement (group.hh, serve_scope). A teardown that sees 0 may return, and the host may destroy the group before notify_all runs on that freed atomic. In practice it is a futex wake on a stale address, which is harmless, but it is still undefined behavior. | group.hh serve(), serve_scope, tear_down; world.hh:288 | Decrement and notify under mu_ with a condition variable, or keep the counter outside the group. Add a test that calls serve from a second thread across close() (TSan). |
-| F5 | no | nit | grow_and_heal and witness join retire the removed voter without checking what it holds. | voters_test.cc:650-651, witness_test.cc:187-188 | Optional: before retiring it, assert that the leaving voter applied the removal index minus one and that its applied log is a prefix of the others'. |
-| F6 | no | nit | `release_pins` at recover releases every pin in the borrowed index's manifest. Install is the only pinner today (I grepped strata and Xapiand), but the index is the catalog's (D169), so a future pinner (backup, cold tier) would lose its pins at every group open. | install.hh:306-309 | Document that the group owns every strata pin on its index, or record the install's generations so only those are released. |
+| F1 | no | defect | Closed. A held pin no longer fails the open on a full disk: recovery queues the release, which stalls on ENOSPC. | reopen_short_of_space; mutant release-at-open killed (round 1 jobs above) | - |
+| F2 | no | defect | Closed. A deferred learner's activation crash reopens: the activation commits first. strata's own install() guard now does it too (F11). | install `deferred`, voters `deferred_learner_crash` (passed again in 261123-084430-3b9e96) | - |
+| F3 | no | defect | Closed. `needed` maps a peer to its flight's transfer, and every release of that flight erases it. | test `deposed`; mutant needed-kept killed 261123-063248-279216 | - |
+| F4 | no | gap | Open, unchanged. serve_scope still calls notify_all after its decrement (group.hh:1356-1358), and nothing calls group::serve off the loop thread. Already in hunt.md. | group.hh:458, :1353-1358 | As in round 1. |
+| F5 | no | nit | Open, unchanged (in hunt.md). | voters_test, witness_test | As in round 1. |
+| F6 | no | nit | Open, unchanged: recovery treats every pin in the borrowed index's manifest as the group's (`held_pins`). | install.hh:349 | As in round 1. |
+| F7 | yes | defect | A source segment whose body rotted behind a valid footer is never repaired from, and the learner wedges. make_pin's CRC32C is taken from the rotted bytes, so the stage and its check pass, and the learner's `ix.install` throws corrupt_segment. drain() keeps an install item that throws damage (`step::more`) and never refuses install items, so the activation reruns and never answers consensus. The source is never told and stays leader with the damage. The quest's ruling "caught only at the learner's activation, which fences that learner" is not what happens. | Probe B1 rested, job 261123-084426-3eb719: learner damaged with 0 installs after 200k steps, dirmut frozen, source undamaged, commit stuck (seeds 1, 2); group.hh:817, :840; install.hh:326 | (a) The source checks what it ships: make_pin verifies each pinned segment whole (strata's verify path, or `load_segment(..., whole=true)`) before taking its CRC, and a failure is its damage, as the footer's already is. This costs one read per segment per bundle, which the CRC pass already pays. (b) In any case, an install item that throws damage must end its item: answer `activated` damaged (as a staged-file failure does) or `activation_failed`, never `step::more`. Test: B1's rested case in repair_test (rotted body behind a valid footer on the running leader; the learner reinstalls and the source repairs), and a mutant that drops (a). |
+| F8 | yes | defect | Two damaged replicas pass leadership between them forever on every production host. Without `applied_past`, which no host sets (not the catalog, Xapiand or sim/), hand_leadership_away picks the membership's first other voter. Two damaged voters pick each other and never reach the sound one. The group then takes no writes, since every leader is damaged. Round 3 fixed this only for hosts with a view, which only test/group/world.hh has. | Probe B3 view off, job 261123-084426-3eb719: 125 leadership changes `1 0 2 0 1 0 2 ...`, never node 3, neither heals (seeds 1, 2); view on heals (1 -> 3). group.hh:1564-1576 | Without a view, rotate: each hand-off picks the next voter after the previous target, so the sound one is reached within one rotation. Or make the view mandatory for a group with repair (the catalog and Xapiand then set it). Test: B3 with `world(..., false)` (two damaged, the damaged one leading, no host view): both heal. |
+| F9 | yes | defect | open_index deletes a damaged index outright (`quarantine_strata` removes every strata name) before any replacement exists. On a lone voter (D7), or when every replica holds the damage (a correlated bug), there is no source, so the group's only bytes are gone and the replica stays damaged forever. Before this quest the open failed and the bytes stayed. | Probe B4, job 261123-084426-3eb719: strata names 2 -> 0 at reopen, damaged after 50k steps; repair.hh:85-94, group.hh:200-205 | Set the bytes aside instead of deleting them: rename each strata name under a quarantine prefix that parse_name ignores, and remove them in the activation's sweep after clear_damaged, so they go only once a verified image replaced them. Install admission then needs room for both; a full disk stalls the repair rather than losing data. Test: B4 (lone voter, damaged manifest: the bytes remain after reopen, under the quarantine names), and the crash sweeps extended to see the set-aside names gone after the repair. |
+| F10 | no | gap | Under journal main, a `bounded` (or `lost`) group goes to `driver.create`, which throws logic_error. That is safe: no hole is taken for complete. But the replica can never rejoin, and the right path is lose and replace. It cannot arise at today's pin (9e11713 has no `bounded`). | group.hh:252; journal main host.h:521-522, journal.h:595-597, docs/mechanisms/lost-bound.md | For strata-journal-pin: treat `bounded` like `lost` explicitly (Host::lose, then refuse the open with a typed error the placement layer answers with a replace). Test there: the device row at a cut that yields `bounded`. |
+| F11 | no | nit | install.hh:589's caller guard is redundant with strata's install() guard (index.hh:1964). Removing it, the deferred, voters and repair crash cases all pass. Its two install-onto-deferred mutants now survive, so they prove nothing. | Job 261123-084430-3b9e96 (exit 0) | Remove the line and both install-onto-deferred mutants. The deferred tests then guard strata's own guard. |
+| F12 | yes | gap | A3's simulator half and A5's "corruption of every file class" are unbuilt: `simulation_group_corruption` still skips with 77, although task repair has merged. | sim/CMakeLists.txt:58-60; sim_test.cc:1050-1052; docs/gates/phase-3r.md:36 | Build the row (segment, manifest and set damage under the simulator's faults, checker green), and run its mutant as `--fails-without`. |
 
 ## Not run
 
-- TSan or ASan: nothing under a sanitizer. CI's linux-asan-ubsan and linux-tsan at 908b58c0 were
-  still running.
-- witness and its mutants at 908b58c0: queued, not relied on (the e4828884 runs stand for the
-  unchanged files).
-- A process crash (kill without power loss) sweep at the group level. R1 uses power loss only, and
-  install_test's crash case covers both at the install.hh level.
-- A3 (repair), A5 (simulator rows) and the simulator port: not in this review's risks.
-- Unsynced-tail and bit-rot damage to staged `ia.` files between the stage and the activation:
-  activate moves them in without a CRC32C check, and that belongs to A3's fencing.
-- The serve-after-destroy contract on the host side (the catalog's fetch routing stopping before it
-  destroys a group).
+- Sanitizers: nothing under TSan or ASan. CI at bea1f568 had not run (the branch was not pushed).
+- The repair reruns at bea1f568 (261123-0835xx): queued when I wrote this, and I relied on the
+  06bfb2f5 and d457da76 runs.
+- B1 with a set file or manifest log rotted behind the source's own checks: only segment bodies.
+- Whether F7's wedged activation also blocks close(): I did not close the learner in B1.
+- Five-voter repair, and repair during a membership change.
+- F10 against a built journal main: reasoned from journal main's source, not run.
