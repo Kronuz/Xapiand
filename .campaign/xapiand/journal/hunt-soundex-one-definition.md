@@ -26,7 +26,7 @@ Nothing. (Doc fixes in AGENTS.md, ARCHITECTURE.md, CHANGELOG.md need a file-set 
 |---|---|
 | A1 | build-test job 261123-133456-ff4d3e passed at 1699e58 (reused at the docs-only commits after it) |
 | A2 | job 261123-133739-8d9dd0 passed at dd922dc: test/diff_languages.cc, French/German/Spanish new vs frozen old headers, every string of up to 3 tokens (about 1.7M for French) plus 300k random per language |
-| A3 | `docs/TABLES.md`: "has no `__StaticInit` and holds the" (the Measured table there: `__StaticInit` 12,272 B to 0 B, object total 22,136 B to 0 B; lead, ba10f53) |
+| A3 | `docs/TABLES.md`: "12,272 B" (lead, ba10f53: the Measured table, before and after sizes of a TU that only includes the headers) |
 | A4 | CI at ba10f53 |
 
 ## Result
