@@ -1056,6 +1056,10 @@ Shard::landed(const PreparedWrite& prepared, const ::strata::verdict& verdict)
 		if (verdict.result != ::strata::verdict::accepted) {
 			reject(verdict);
 		}
+		if (writes_document(prepared.op) && verdict.docids.empty()) {
+			// Its entry applied no transaction: a chunked command whose upload or staging was retired first.
+			throw Error(errc::not_available, "The write was not applied: retry it");
+		}
 		applied_by_group();
 		return assigned(verdict, prepared);
 	} catch (...) {

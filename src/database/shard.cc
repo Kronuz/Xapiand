@@ -530,8 +530,9 @@ ShardEndpoint::open_blocking(kronuz::journal::IO& directory, prospect::index& in
 	}
 
 #ifdef XAPIAND_DATA_STORAGE
-	writable_storage = std::make_unique<DataStorage>(path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS_MODE | STORAGE_SYNC_MODE);
-	{
+	// An index with a group keeps its blobs in the group's file set (D3, D16), not in a data storage.
+	if (database_pool.groups() == nullptr) {
+		writable_storage = std::make_unique<DataStorage>(path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS_MODE | STORAGE_SYNC_MODE);
 		// The shared writer continues in the newest volume on disk; uploads and rollovers take the numbers above it.
 		unsigned long long newest = 0;
 		try {
@@ -774,36 +775,27 @@ ShardEndpoint::do_commit(engine::Shard& eng, engine::Chores& chores_, int flags,
 
 namespace {
 
-// A command through the shard's group at quorum (D3), chunked past the entry limit (D12): proposed on the group's
-// loop, answered on the caller's scheduler. A chunked command's id is drawn from the term the loop sees now.
+// A command through the shard's group at quorum (D3), chunked past the entry limit (D12) with an id of the term the
+// loop sees now; each entry proposed on the group's loop, the answer on the caller's scheduler.
 task::task<strata::group::answer>
 propose(ShardGroup& shard_group, const Command& command)
 {
-	auto& group = shard_group.group;
-	const auto home = task::current();
-	co_await task::schedule_on{group.owner().scheduler()};
-	std::exception_ptr error;
-	std::optional<strata::group::answer> out;
-	try {
-		const auto state = group.owner().driver().state(group.id());
-		if (!state) {
-			throw engine::Error(engine::errc::not_available, "The shard's group is not open");
-		}
-		if (!shard_group.ids || shard_group.ids->term() != state->term) {
-			shard_group.ids.emplace(state->term, std::max(state->committed, state->applied));
-		}
-		const ProposeEntry entries = [&group](std::string entry, strata::group::ack level) { return group.propose(std::move(entry), level); };
-		out.emplace(co_await propose_command(entries, command, shard_group.ids->next(), strata::group::ack::quorum));
-	} catch (const kronuz::consensus::closed&) {
-		error = std::make_exception_ptr(engine::Error(engine::errc::not_available, "The shard's group is closing"));
-	} catch (...) {
-		error = std::current_exception();
+	const auto id = co_await next_chunked_id(shard_group);
+	const auto entries = group_proposer(shard_group);
+	co_return co_await propose_command(entries, command, id, strata::group::ack::quorum);
+}
+
+// An upload's final entry (D12): the command of the document that names its blob, proposed once. A second raises
+// errc::not_available: the first ended the upload's id whatever it applied.
+task::task<strata::group::answer>
+propose_upload_command(ShardGroup& shard_group, ChunkedUpload& upload, const Command& command)
+{
+	if (upload.finished()) {
+		throw engine::Error(engine::errc::not_available, "The blob's upload ended: send it again");
 	}
-	co_await task::schedule_on{home};
-	if (error) {
-		std::rethrow_exception(error);
-	}
-	co_return std::move(*out);
+	upload.finish();
+	const auto entries = group_proposer(shard_group);
+	co_return co_await propose_upload_final(entries, upload, command, strata::group::ack::quorum);
 }
 
 // What the proposer of a write hears once its replica applied it: the verdict's refusal, or the result prepare
@@ -817,19 +809,87 @@ landed(engine::Shard& eng, const engine::PreparedWrite& prepared, const strata::
 	return dynamic_cast<engine::strata::Shard&>(eng).landed(prepared, *answer.applied);
 }
 
+bool
+is_stored(const Locator& locator) noexcept
+{
+	return locator.type == Locator::Type::stored || locator.type == Locator::Type::lz4_compressed_stored || locator.type == Locator::Type::zstd_compressed_stored;
+}
+
+// A document's new stored blobs as its command's records (D3): each compressed here, at prepare, so every voter
+// writes the same bytes, and its locator left a placeholder at volume 0 of the record's codec and size, which apply
+// places. A placeholder already at volume 0 is `upload`'s: its record is the upload stream. `unstaged` keeps the
+// data as it was when the document changed, for the caller's retry.
+std::vector<CommandBlob>
+stage_blobs(engine::Document& doc, const ChunkedUpload* upload, std::string& unstaged)
+{
+	std::vector<CommandBlob> blobs;
+	auto bytes = doc.get_data();
+	if (bytes.empty()) {
+		return blobs;
+	}
+	std::vector<StoredPlace> places;
+	{
+		const Data data{std::string(bytes)};
+		for (const auto& locator : data) {
+			if (!is_stored(locator)) {
+				continue;
+			}
+			auto ct_type = locator.ct_type.to_string();
+			if (!locator.raw.empty()) {
+				Locator packed{locator.ct_type};
+				packed.type = Locator::Type::zstd_compressed_stored;
+				packed.data(locator.data());
+				auto& blob = blobs.emplace_back();
+				blob.ct_type = ct_type;
+				blob.record.bytes = std::string(packed.raw);
+				places.push_back({std::move(ct_type), static_cast<std::uint8_t>(packed.type), 0, 0, blob.record.bytes.size()});
+			} else if (locator.volume == 0) {
+				if (upload == nullptr) {
+					throw engine::Error(engine::errc::invalid, "A stored blob names no record");
+				}
+				blobs.push_back({std::move(ct_type), upload->record()});
+			}
+		}
+	}
+	if (!places.empty()) {
+		unstaged = bytes;
+		doc.set_data(place_stored(std::move(bytes), places));
+	}
+	return blobs;
+}
+
 }  // namespace
 
 
 task::task<engine::WriteResult>
-ShardEndpoint::write_document(engine::Shard& eng, engine::WriteOp op, engine::docid did, std::string key, engine::Document* doc, engine::WriteArgs args)
+ShardEndpoint::write_document(engine::Shard& eng, engine::WriteOp op, engine::docid did, std::string key, engine::Document* doc, engine::WriteArgs args, ChunkedUpload* upload)
 {
-	const auto prepared = co_await eng.prepare(op, did, key, doc, std::move(args));
 	if (group_ == nullptr) {
+		if (upload != nullptr) {
+			throw engine::Error(engine::errc::invalid, "A chunked upload needs the index's group");
+		}
+		const auto prepared = co_await eng.prepare(op, did, key, doc, std::move(args));
 		co_return co_await eng.apply(prepared, doc);
 	}
-	Command command;
-	command.writes.push_back(command_write(prepared, doc));
-	co_return landed(eng, prepared, co_await propose(*group_, command));
+	std::string unstaged;
+	std::exception_ptr failed;
+	try {
+		auto blobs = doc != nullptr ? stage_blobs(*doc, upload, unstaged) : std::vector<CommandBlob>();
+		const auto prepared = co_await eng.prepare(op, did, key, doc, std::move(args));
+		Command command;
+		command.writes.push_back(command_write(prepared, doc));
+		command.writes.back().blobs = std::move(blobs);
+		if (upload != nullptr) {
+			co_return landed(eng, prepared, co_await propose_upload_command(*group_, *upload, command));
+		}
+		co_return landed(eng, prepared, co_await propose(*group_, command));
+	} catch (...) {
+		failed = std::current_exception();
+	}
+	if (!unstaged.empty()) {
+		doc->set_data(std::move(unstaged));   // a retry stages the blobs again
+	}
+	std::rethrow_exception(failed);
 }
 
 
@@ -889,7 +949,7 @@ ShardEndpoint::do_add(engine::Shard& eng, engine::Chores& chores_, int flags, en
 
 
 task::task<engine::WriteResult>
-ShardEndpoint::do_replace(engine::Shard& eng, engine::Chores& chores_, int flags, engine::docid shard_did, engine::Document&& doc, [[maybe_unused]] bool wal_, bool version_, bool must_exist)
+ShardEndpoint::do_replace(engine::Shard& eng, engine::Chores& chores_, int flags, engine::docid shard_did, engine::Document&& doc, [[maybe_unused]] bool wal_, bool version_, bool must_exist, ChunkedUpload* upload)
 {
 	L_CALL("ShardEndpoint::do_replace({}, <doc>, {})", shard_did, wal_);
 
@@ -917,7 +977,7 @@ ShardEndpoint::do_replace(engine::Shard& eng, engine::Chores& chores_, int flags
 	}
 
 	try {
-		info = co_await write_document(eng, engine::WriteOp::replace, shard_did, std::string(), &doc, std::move(args));
+		info = co_await write_document(eng, engine::WriteOp::replace, shard_did, std::string(), &doc, std::move(args), upload);
 	} catch (const engine::Error& error) {
 		note_failure(error);
 #ifdef XAPIAND_DATA_STORAGE
@@ -952,7 +1012,7 @@ ShardEndpoint::do_replace(engine::Shard& eng, engine::Chores& chores_, int flags
 
 
 task::task<engine::WriteResult>
-ShardEndpoint::do_replace_term(engine::Shard& eng, engine::Chores& chores_, int flags, const std::string& term, engine::Document&& doc, [[maybe_unused]] bool wal_, bool version_)
+ShardEndpoint::do_replace_term(engine::Shard& eng, engine::Chores& chores_, int flags, const std::string& term, engine::Document&& doc, [[maybe_unused]] bool wal_, bool version_, ChunkedUpload* upload)
 {
 	L_CALL("ShardEndpoint::do_replace_term({}, <doc>, {}, {})", repr(term), wal_, version_);
 
@@ -999,7 +1059,7 @@ ShardEndpoint::do_replace_term(engine::Shard& eng, engine::Chores& chores_, int 
 	info.term = key;
 	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result); };
 	try {
-		info = co_await write_document(eng, engine::WriteOp::replace_key, 0, key, &doc, std::move(args));
+		info = co_await write_document(eng, engine::WriteOp::replace_key, 0, key, &doc, std::move(args), upload);
 	} catch (const engine::Error& error) {
 		note_failure(error);
 		throw;
@@ -1244,8 +1304,8 @@ ShardEndpoint::storage_push_blobs_blocking(std::string&& doc_data)
 task::task<std::pair<std::string, std::string>>
 ShardEndpoint::storage_push_blobs(engine::Chores& chores_, std::string doc_data)
 {
-	if (doc_data.empty()) {
-		co_return std::pair<std::string, std::string>();
+	if (doc_data.empty() || !writable_storage) {
+		co_return std::pair<std::string, std::string>();   // none, or the group's command carries them
 	}
 	std::pair<std::string, std::string> pushed;
 	co_await chores_.run(engine::ChoreClass::flush, [&] { pushed = storage_push_blobs_blocking(std::move(doc_data)); });
@@ -1395,6 +1455,12 @@ ShardEndpoint::storage_read_blocking(const Locator& locator)
 {
 	assert(locator.type == Locator::Type::stored || locator.type == Locator::Type::lz4_compressed_stored || locator.type == Locator::Type::zstd_compressed_stored);
 	assert(locator.volume != -1);
+
+	if (group_) {
+		// The record apply wrote in the group's file set, as the data storage's reader answers it.
+		auto blob = read_stored(*group_->directory, static_cast<std::uint8_t>(locator.type), static_cast<std::uint64_t>(locator.volume), locator.offset, locator.size);
+		return serialize_strings({ locator.ct_type.to_string(), blob });
+	}
 
 	DataStorage reader(path, this, STORAGE_OPEN);
 	reader.open(strings::format(DATA_STORAGE_PATH "{}", locator.volume));
@@ -1778,7 +1844,7 @@ Shard::add_document(engine::Document&& doc, bool commit_, bool wal_, bool versio
 
 
 task::task<engine::WriteResult>
-Shard::replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_, bool wal_, bool version_, bool must_exist)
+Shard::replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_, bool wal_, bool version_, bool must_exist, ChunkedUpload* upload)
 {
 	L_CALL("Shard::replace_document({}, <doc>, {}, {})", shard_did, commit_, wal_);
 
@@ -1790,7 +1856,7 @@ Shard::replace_document(engine::docid shard_did, engine::Document&& doc, bool co
 		auto turn = co_await endpoint().take_turn(flags, cancel);
 		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
 		auto* eng = &endpoint().engine();
-		info = co_await endpoint().do_replace(*eng, *endpoint().chores, flags, shard_did, std::move(doc), wal_, version_, must_exist);
+		info = co_await endpoint().do_replace(*eng, *endpoint().chores, flags, shard_did, std::move(doc), wal_, version_, must_exist, upload);
 	}
 	co_await finish_write(commit_, wal_);
 	co_return info;
@@ -1798,7 +1864,7 @@ Shard::replace_document(engine::docid shard_did, engine::Document&& doc, bool co
 
 
 task::task<engine::WriteResult>
-Shard::replace_document_term(const std::string& term, engine::Document&& doc, bool commit_, bool wal_, bool version_)
+Shard::replace_document_term(const std::string& term, engine::Document&& doc, bool commit_, bool wal_, bool version_, ChunkedUpload* upload)
 {
 	L_CALL("Shard::replace_document_term({}, <doc>, {}, {}, {})", repr(term), commit_, wal_, version_);
 
@@ -1810,10 +1876,17 @@ Shard::replace_document_term(const std::string& term, engine::Document&& doc, bo
 		auto turn = co_await endpoint().take_turn(flags, cancel);
 		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
 		auto* eng = &endpoint().engine();
-		info = co_await endpoint().do_replace_term(*eng, *endpoint().chores, flags, term, std::move(doc), wal_, version_);
+		info = co_await endpoint().do_replace_term(*eng, *endpoint().chores, flags, term, std::move(doc), wal_, version_, upload);
 	}
 	co_await finish_write(commit_, wal_);
 	co_return info;
+}
+
+
+ShardGroup*
+Shard::group() const
+{
+	return endpoint().group();
 }
 
 

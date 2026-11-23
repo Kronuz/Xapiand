@@ -29,7 +29,7 @@
 #   --mutant truncation   build with strata's file_set recovery skipping D16's truncation first; the check must fail
 #                         (exit 0 then means the mutant survived: exit 1).
 #
-# Usage: harness/blob_crash_check.sh [--build DIR] [--mutant truncation]
+# Usage: harness/blob_crash_check.sh [--build DIR | DIR/bin/xapiand] [--mutant truncation]
 # BUILD (default build): a configured build of this checkout (-DBUILD_TESTS=ON), with its fetched sources under
 # FETCHCONTENT_BASE_DIR. GROUP_CHUNK_STRIDE=N checks every Nth crash point only.
 set -u
@@ -40,7 +40,8 @@ while [ $# -gt 0 ]; do
 	case "$1" in
 		--build) BUILD="$2"; shift 2 ;;
 		--mutant) MUTANT="$2"; shift 2 ;;
-		*) echo "usage: $0 [--build DIR] [--mutant truncation]"; exit 2 ;;
+		*/bin/xapiand) BUILD="$(cd "$(dirname "$1")/.." && pwd)"; shift ;;   # the crash check names the binary
+		*) echo "usage: $0 [--build DIR | DIR/bin/xapiand] [--mutant truncation]"; exit 2 ;;
 	esac
 done
 TARGET=xapiand_test_group_chunk_group

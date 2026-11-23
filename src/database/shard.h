@@ -171,8 +171,12 @@ public:
 	task::task<void> delete_document_term(const std::string& term, bool commit_ = false, bool wal_ = true, std::optional<engine::rev> expected_ = std::nullopt);
 
 	task::task<engine::WriteResult> add_document(engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
-	task::task<engine::WriteResult> replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true, bool must_exist = false);
-	task::task<engine::WriteResult> replace_document_term(const std::string& term, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
+	// `upload`, if any, is the chunked upload whose final entry the write is (D12).
+	task::task<engine::WriteResult> replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true, bool must_exist = false, ChunkedUpload* upload = nullptr);
+	task::task<engine::WriteResult> replace_document_term(const std::string& term, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true, ChunkedUpload* upload = nullptr);
+
+	// The index's replication group, or null when the pool has no journal.
+	ShardGroup* group() const;
 
 	// A RESTORE's writes to this shard (docs/perf/x7-loop-stalls.md, fix (c)): in one turn, a chore of `chores`
 	// applies writes[at, ...) in input order for about `slice`, with the engine's chores inline, and leaves `at` where

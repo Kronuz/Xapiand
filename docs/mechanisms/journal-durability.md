@@ -1,6 +1,6 @@
-> Status: in progress (quest journal-replaces-wal). Built: the prepared write, the command codec and the
-> group's application. Pending: the group on the catalog slot's index (D169, strata quest group-catalog),
-> ShardEndpoint's writes through `propose`, the checkpoint cadence, and the WAL's deletion.
+> Status: in progress (quest journal-replaces-wal). Built: the prepared write, the command codec, the group's
+> application, each index's group in its catalog slot, and the writes and blobs through it. Pending: RESTORE
+> through the batcher, the commit as the checkpoint, and the WAL's deletion.
 > Design: `docs/design/cluster-release.md` D2, D3, D12, D16, D17; strata `docs/mechanisms/replication-group.md`.
 
 # Journal durability (how it works)
@@ -89,7 +89,15 @@ thread. Each index the catalog opens is a lone voter (D2) whose group borrows th
    the entry limit with an id of the term the loop sees; the answer's verdict is the write's result, checked
    against what prepare predicted (`engine::strata::Shard::landed`). A metadata write is a `set_metadata`
    command. An index with a group writes no WAL line and replays no WAL.
-4. **Close.** Every catalog close runs `close_payload` before the index's close: the group checkpoints until
+4. **Blobs.** An index with a group has no data storage: its blobs are records in the group's file set. At
+   prepare, `stage_blobs` compresses each new stored blob (zstd, kept only when smaller) into its write's
+   `CommandBlob` and leaves the document's locator a placeholder at volume 0 with the record's codec
+   (`stored` or `zstd_compressed_stored`) and size; apply places it (`place_stored`), so a locator is a function
+   of the log. A blob too big to buffer streams as an upload (`upload_stored`): its chunk entries at `none` into a
+   volume of its own, then the document as the upload's final entry, proposed once; a failure before it proposes
+   the upload's abort. A read opens the record's volume through the slot's directory (`read_stored`): a document
+   names only records its entry wrote before it was visible.
+5. **Close.** Every catalog close runs `close_payload` before the index's close: the group checkpoints until
    its bundle covers what it committed, and the process keeps its closed record, so a reopen resumes its term
    with no election. The catalog's commit hook and a request's commit stay plain strata commits.
 
@@ -102,7 +110,8 @@ thread. Each index the catalog opens is a lone voter (D2) whose group borrows th
 - `tests/test_pool.cc` (`test_an_index_is_a_lone_voter_group`): the open opens the index's group, the shutdown
   leaves it closed in the journal's table, and a second process recovers it under the same id.
   `test_an_acknowledged_write_survives_a_kill`: a write acknowledged with no WAL, no commit and no close is read
-  back after `kill -9` by the next process.
+  back after `kill -9` by the next process. `test_stored_blobs_survive_a_kill`: stored blobs, compressed and
+  not, and an upload's blob read back byte-equal after `kill -9` with no commit and no close.
 - `tests/test_shard_group.cc`: offsets from the state and idempotent effects, rotation in log order, a chunked
   command applied at its final entry, an upload into its own volume, a higher term retiring open commands,
   entries outside their id's term applying nothing, an abort retiring its upload's volume, and the state's

@@ -40,6 +40,7 @@
 #include "prospect/index.hh"       // for prospect::index, prospect::transaction
 #include "completion/seam.h"      // for kronuz::journal::InlineCompletion
 #include "journal/host.h"          // for kronuz::journal::Host
+#include "strata/group/answer.hh"  // for strata::group::answer, strata::group::ack
 #include "strata/group/group.hh"   // for strata::group::group, strata::group::loop
 #include "task.hh"                 // for task::blocking_scheduler, task::cancel_source
 
@@ -87,6 +88,28 @@ CommandWrite command_write(const engine::PreparedWrite& prepared, engine::Docume
 
 std::string volume_name(std::uint64_t volume);
 std::string staging_name(std::uint64_t id);
+
+// A stored blob's locator in a document's data, by content type: its record's codec (Locator::Type::stored, or
+// zstd_compressed_stored as prepare compressed it), volume, offset and size. Prepare leaves volume 0, which apply
+// replaces with the record's place (contract xapiand:volume-file-set).
+struct StoredPlace {
+	std::string ct_type;
+	std::uint8_t type = 0;   // a Locator::Type
+	std::uint64_t volume = 0;
+	std::uint64_t offset = 0;
+	std::uint64_t size = 0;
+};
+
+// The document data `bytes` with each place's stored locator set; an empty `bytes` stays empty.
+std::string place_stored(std::string bytes, const std::vector<StoredPlace>& places);
+
+// The codec of `ct_type`'s locator in the document data `bytes` (Locator::Type::stored when it has none).
+std::uint8_t stored_type(std::string_view bytes, std::string_view ct_type);
+
+// A stored blob read back from its record in volume `volume` of the group's file set: the record as apply wrote it,
+// decompressed per the locator's codec. The file is read through `directory`, off the group's chore: a document names
+// only records its entry wrote before the document was visible.
+std::string read_stored(kronuz::journal::IO& directory, std::uint8_t type, std::uint64_t volume, std::uint64_t offset, std::uint64_t size);
 
 class ShardApplication {
 public:
@@ -176,6 +199,7 @@ private:
 struct ShardGroup {
 	ShardApplication app;
 	ShardGroups::group_type group;
+	kronuz::journal::IO* directory;   // the slot's, where the file set lives; blobs are read through it
 	std::optional<ChunkedIds> ids;   // this leader's chunked-command ids, on the loop
 
 	ShardGroup(ShardGroups& groups, kronuz::journal::IO& directory, prospect::index& index);
@@ -184,3 +208,10 @@ struct ShardGroup {
 	// it was called: a linearizable read's barrier (D4).
 	void catch_up();
 };
+
+// Proposes `entry` on the group's loop from any scheduler and answers on the caller's: handler.h's ProposeEntry. A
+// closing group raises errc::not_available.
+task::task<strata::group::answer> propose_entry(ShardGroup& shard_group, std::string entry, strata::group::ack level);
+
+// This leader's next chunked-command id (D12), drawn on the loop from the term it sees now.
+task::task<std::uint64_t> next_chunked_id(ShardGroup& shard_group);

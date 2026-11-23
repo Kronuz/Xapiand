@@ -65,6 +65,8 @@ class Schema;
 class SchemasLRU;
 struct ct_type_t;
 struct query_field_t;
+class ChunkedUpload;
+struct ShardGroup;
 
 namespace strata::group {
 struct answer;
@@ -174,7 +176,15 @@ private:
 
 	task::task<std::tuple<std::string, engine::Document, MsgPack>> prepare(const MsgPack& document_id, engine::rev document_ver, const MsgPack& obj, Data& data, size_t idx = 0);
 
-	task::task<DocumentInfo> index(engine::docid did, const MsgPack& document_id, engine::rev document_ver, const MsgPack& obj, Data& data, bool commit);
+public:
+	struct UploadedBlob;
+
+private:
+	// `upload`, if any, is the streamed blob the document names (index_uploaded).
+	task::task<DocumentInfo> index(engine::docid did, const MsgPack& document_id, engine::rev document_ver, const MsgPack& obj, Data& data, bool commit, const UploadedBlob* upload = nullptr);
+
+	// index_uploaded() of a blob streamed through the shard's group: the document is the upload's final entry.
+	task::task<DocumentInfo> index_uploaded_through_group(const MsgPack& document_id, engine::rev document_ver, const ct_type_t& ct_type, const UploadedBlob& blob, bool commit);
 
 	// The docid holding the term, read in the shard its id routes to (id_shard) and, on a miss, in the others, from
 	// the published views or (written) as the writes left them.
@@ -229,12 +239,14 @@ public:
 		virtual task::task<bool> next(std::string& chunk) = 0;
 	};
 
-	// Where a streamed blob lies in the data storage of its shard.
+	// Where a streamed blob lies in the data storage of its shard, or, through the shard's group, the chunked command
+	// whose chunks hold it (D12): its final entry is the document's write, or its abort.
 	struct UploadedBlob {
 		ssize_t volume = -1;
 		size_t offset = 0;
 		size_t size = 0;
-		size_t shard = 0;   // the shard whose storage holds it
+		size_t shard = 0;   // the shard whose storage or group holds it
+		std::shared_ptr<ChunkedUpload> upload;
 	};
 
 	// Streams a blob of `size` bytes from `body` into the data storage of the shard that document `document_id` goes
@@ -298,8 +310,9 @@ public:
 	task::task<void> delete_document_term(const std::string& term, engine::rev document_ver, bool commit = false, bool wal = true);
 
 	task::task<engine::WriteResult> add_document(engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
-	task::task<engine::WriteResult> replace_document(engine::docid did, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true, bool must_exist = false);
-	task::task<engine::WriteResult> replace_document_term(const std::string& term, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
+	// `upload`, if any, is the streamed blob the document names: the document must go to its shard.
+	task::task<engine::WriteResult> replace_document(engine::docid did, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true, bool must_exist = false, const UploadedBlob* upload = nullptr);
+	task::task<engine::WriteResult> replace_document_term(const std::string& term, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true, const UploadedBlob* upload = nullptr);
 
 	task::task<MsgPack> get_document_info(std::string_view document_id, bool raw_data, bool human);
 	task::task<MsgPack> get_database_info();
@@ -322,6 +335,9 @@ public:
 // Proposes one entry to the shard's group at a level and answers what its proposer heard.
 using ProposeEntry = std::function<task::task<strata::group::answer>(std::string entry, strata::group::ack level)>;
 
+// Proposes to `shard_group` from any scheduler (propose_entry); valid while its index is pinned.
+ProposeEntry group_proposer(ShardGroup& shard_group);
+
 // A blob streamed through the group into a volume of its own (D12): its bytes as chunk entries of the upload
 // stream, each entry within `limit`, then the final entry of the command that names it, or its abort.
 class ChunkedUpload {
@@ -330,6 +346,7 @@ class ChunkedUpload {
 	std::size_t limit_;
 	std::uint64_t offset_ = 0;   // the stream's bytes in entries so far
 	std::string pending_;        // the bytes of the next chunk
+	bool finished_ = false;
 
 	std::string chunk(std::size_t n);
 
@@ -360,6 +377,15 @@ public:
 
 	// The final entry of `command`, whose write names record(). Raises errc::invalid past the entry limit.
 	std::string final_entry(const Command& command) const;
+
+	// Whether its final entry or its abort was proposed: its id applies nothing more after that entry.
+	bool finished() const noexcept {
+		return finished_;
+	}
+
+	void finish() noexcept {
+		finished_ = true;
+	}
 };
 
 // The entry that ends chunked command `id` applying nothing: its staging and its upload retire.

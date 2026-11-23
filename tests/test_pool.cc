@@ -595,6 +595,104 @@ void test_an_acknowledged_write_survives_a_kill() {
 	std::filesystem::remove_all(path);
 }
 
+// A request body in pieces of `piece` bytes.
+class Pieces final : public DatabaseHandler::BodyChunks {
+	std::string bytes_;
+	std::size_t piece_;
+	std::size_t at_ = 0;
+
+public:
+	Pieces(std::string bytes, std::size_t piece) : bytes_(std::move(bytes)), piece_(piece) { }
+	task::task<bool> next(std::string& chunk) override {
+		if (at_ == bytes_.size()) {
+			co_return false;
+		}
+		chunk = bytes_.substr(at_, piece_);
+		at_ += chunk.size();
+		co_return true;
+	}
+};
+
+// The stored blob of `ct` in the document `did` names, read back through the shard as a request reads it.
+std::pair<Locator::Type, std::string> stored_blob(Shard& shard, engine::docid did, const std::string& ct) {
+	auto view = engine::sync_wait(shard.get_view(did));
+	const Data data(view->data());
+	for (const auto& locator : data) {
+		if (locator.ct_type.to_string() == ct) {
+			CHECK_GE(locator.volume, 1);   // placed by apply, never the prepare's placeholder
+			const auto stored = engine::sync_wait(shard.storage_get_stored(locator));
+			return {locator.type, std::string(unserialize_string_at(STORED_BLOB, stored))};
+		}
+	}
+	CHECK(false);   // no stored blob of `ct`
+	return {};
+}
+
+// A stored blob travels in its write's command (D3) and an uploaded one in its chunk entries (D12): both read back
+// byte-equal after `kill -9` with no commit and no close, from the journal's replay alone.
+void test_stored_blobs_survive_a_kill() {
+	const auto journal = fresh("journal_blobs");
+	const auto path = fresh("group_blobs");
+	std::string compressible;
+	for (int i = 0; i < 2048; ++i) {
+		compressible += "blob" + std::to_string(i % 7);
+	}
+	std::string small = "a small blob";
+	std::string uploaded;
+	for (int i = 0; i < 300000; ++i) {
+		uploaded.push_back(static_cast<char>((i * 131 + i / 7) & 0xff));
+	}
+	std::fflush(nullptr);
+	const pid_t pid = ::fork();
+	if (pid == 0) {
+		::alarm(60);
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		auto entry = pin(pool, path);
+		Shard shard = use(entry, WRITE);
+		Data data;
+		data.update(ct_type_t("text/plain"), -1, 0, 0, compressible);
+		data.update(ct_type_t("application/x-small"), -1, 0, 0, small);
+		data.flush();
+		auto doc = make("Kstored", "");
+		doc.set_data(data.serialize());
+		engine::sync_wait(shard.replace_document_term("Kstored", std::move(doc)));
+		// An upload: its chunks first, then the document as its final entry.
+		auto* group = shard.group();
+		ChunkedUpload upload(engine::sync_wait(next_chunked_id(*group)), uploaded.size(), 64 * 1024);
+		Pieces body(uploaded, 10000);
+		engine::sync_wait(propose_upload(group_proposer(*group), upload, body));
+		Data placeholder;
+		placeholder.update(ct_type_t("video/mp4"), 0, 0, uploaded.size());
+		placeholder.flush();
+		auto up = make("Kup", "");
+		up.set_data(placeholder.serialize());
+		engine::sync_wait(shard.replace_document_term("Kup", std::move(up), false, true, true, &upload));
+		std::fflush(nullptr);
+		::raise(SIGKILL);   // no commit and no close: only the journal has the writes
+	}
+	int status = 0;
+	::waitpid(pid, &status, 0);
+	CHECK(WIFSIGNALED(status) && WTERMSIG(status) == SIGKILL);
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		auto entry = pin(pool, path);
+		Shard shard = use(entry, WRITE);
+		const auto [text_type, text] = stored_blob(shard, 1, "text/plain");
+		CHECK(text_type == Locator::Type::zstd_compressed_stored);   // compressed at prepare
+		CHECK(text == compressible);
+		const auto [small_type, small_read] = stored_blob(shard, 1, "application/x-small");
+		CHECK(small_type == Locator::Type::stored);
+		CHECK(small_read == small);
+		const auto [up_type, up_read] = stored_blob(shard, 2, "video/mp4");
+		CHECK(up_type == Locator::Type::stored);
+		CHECK(up_read == uploaded);
+	}
+	std::filesystem::remove_all(journal);
+	std::filesystem::remove_all(path);
+}
+
 // A write, a read, and a commit through a Shard.
 void test_smoke() {
 	DatabasePool pool(control_loop(), 8);
@@ -2650,6 +2748,7 @@ int main(int argc, char** argv) {
 		{"test_the_sweep_erases_a_missing_index_negative_entries", test_the_sweep_erases_a_missing_index_negative_entries},
 		{"test_an_index_is_a_lone_voter_group", test_an_index_is_a_lone_voter_group},
 		{"test_an_acknowledged_write_survives_a_kill", test_an_acknowledged_write_survives_a_kill},
+		{"test_stored_blobs_survive_a_kill", test_stored_blobs_survive_a_kill},
 	};
 	for (const auto& c : cases) {
 		if (argc > 1 && std::string(c.name).find(argv[1]) == std::string::npos) {

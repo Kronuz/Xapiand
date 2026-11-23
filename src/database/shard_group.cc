@@ -28,6 +28,7 @@
 #include <cstring>                 // for std::memcpy
 #include <filesystem>              // for std::filesystem::create_directories
 #include <random>                  // for std::random_device
+#include <span>                    // for std::span
 #include <stdexcept>               // for std::logic_error
 #include <utility>                 // for std::move
 #include <variant>                 // for std::get_if
@@ -131,6 +132,71 @@ std::string
 staging_name(std::uint64_t id)
 {
 	return "stage-" + std::to_string(id);
+}
+
+
+std::string
+place_stored(std::string bytes, const std::vector<StoredPlace>& places)
+{
+	if (bytes.empty() || places.empty()) {
+		return bytes;
+	}
+	Data data(std::move(bytes));
+	for (const auto& place : places) {
+		data.update(ct_type_t(place.ct_type), static_cast<ssize_t>(place.volume), static_cast<size_t>(place.offset), static_cast<size_t>(place.size));
+	}
+	data.flush();
+	// The locators just set come last, so a codec set in place moves no other locator's bytes.
+	bool typed = false;
+	for (auto& locator : data) {
+		for (const auto& place : places) {
+			const auto type = static_cast<Locator::Type>(place.type);
+			if (type != Locator::Type::stored && locator.ct_type.to_string() == place.ct_type) {
+				locator.type = type;
+				typed = true;
+			}
+		}
+	}
+	if (typed) {
+		data.flush();
+	}
+	return data.serialize();
+}
+
+
+std::uint8_t
+stored_type(std::string_view bytes, std::string_view ct_type)
+{
+	const Data data{std::string(bytes)};
+	for (const auto& locator : data) {
+		if (locator.ct_type.to_string() == ct_type) {
+			return static_cast<std::uint8_t>(locator.type);
+		}
+	}
+	return static_cast<std::uint8_t>(Locator::Type::stored);
+}
+
+
+std::string
+read_stored(kronuz::journal::IO& directory, std::uint8_t type, std::uint64_t volume, std::uint64_t offset, std::uint64_t size)
+{
+	auto file = directory.open_existing_read_only(std::string(strata::group::bundle_detail::prefix) + volume_name(volume));
+	std::string record(static_cast<std::size_t>(size), '\0');
+	for (std::size_t done = 0; done < record.size();) {
+		const auto got = file->read_at(offset + done, std::span<char>(record.data() + done, record.size() - done));
+		if (got == 0) {
+			throw engine::Error(engine::errc::corrupt, "A stored blob's record ends before its locator's size");
+		}
+		done += got;
+	}
+	if (static_cast<Locator::Type>(type) != Locator::Type::zstd_compressed_stored) {
+		return record;
+	}
+	Locator locator{ct_type_t()};
+	locator.type = Locator::Type::zstd_compressed_stored;
+	locator.raw = record;
+	locator.size = record.size();
+	return std::string(locator.data());
 }
 
 
@@ -318,22 +384,29 @@ ShardApplication::transaction(const state& s, const strata::group::entry& e) con
 			}
 		}
 		if (!write.blobs.empty() || stamp) {
-			Data data(doc.get_data());
-			// The blobs' locators, from the placement: a function of the log on every replica.
-			for (std::size_t b = 0; b < write.blobs.size(); ++b) {
-				const auto& blob = write.blobs[b];
-				const auto [volume, offset] = placement.at[w][b];
-				data.update(ct_type_t(blob.ct_type), static_cast<ssize_t>(volume), static_cast<size_t>(offset), static_cast<size_t>(blob.record.size()));
+			auto bytes = doc.get_data();
+			if (!write.blobs.empty()) {
+				// The blobs' locators, from the placement: a function of the log on every replica.
+				std::vector<StoredPlace> places;
+				places.reserve(write.blobs.size());
+				for (std::size_t b = 0; b < write.blobs.size(); ++b) {
+					const auto& blob = write.blobs[b];
+					const auto [volume, offset] = placement.at[w][b];
+					places.push_back({blob.ct_type, stored_type(bytes, blob.ct_type), volume, offset, blob.record.size()});
+				}
+				bytes = place_stored(std::move(bytes), places);
 			}
 			if (stamp) {
+				Data data(std::move(bytes));
 				auto obj = data.get_obj();
 				if (auto it = obj.find(VERSION_FIELD_NAME); it != obj.end()) {
 					it.value() = *stamp;
 					data.set_obj(obj);
 				}
+				data.flush();
+				bytes = data.serialize();
 			}
-			data.flush();
-			doc.set_data(data.serialize());
+			doc.set_data(std::move(bytes));
 		}
 		prepared.result.version = native.version();
 		engine::strata::append_write(t, prepared, &native, index_->fields());
@@ -575,8 +648,52 @@ ShardGroup::catch_up()
 }
 
 
-ShardGroup::ShardGroup(ShardGroups& groups, kronuz::journal::IO& directory, prospect::index& index) :
+ShardGroup::ShardGroup(ShardGroups& groups, kronuz::journal::IO& directory_, prospect::index& index) :
 	app(index),
-	group(groups.loop(), groups.config(index.manifest().uuid), directory, index, app, groups.chore(ShardGroups::group_id(index.manifest().uuid)))
+	group(groups.loop(), groups.config(index.manifest().uuid), directory_, index, app, groups.chore(ShardGroups::group_id(index.manifest().uuid))),
+	directory(&directory_)
 {
+}
+
+
+task::task<strata::group::answer>
+propose_entry(ShardGroup& shard_group, std::string entry, strata::group::ack level)
+{
+	const auto home = task::current();
+	co_await task::schedule_on{shard_group.group.owner().scheduler()};
+	std::exception_ptr error;
+	std::optional<strata::group::answer> out;
+	try {
+		out.emplace(co_await shard_group.group.propose(std::move(entry), level));
+	} catch (const kronuz::consensus::closed&) {
+		error = std::make_exception_ptr(engine::Error(engine::errc::not_available, "The shard's group is closing"));
+	} catch (...) {
+		error = std::current_exception();
+	}
+	co_await task::schedule_on{home};
+	if (error) {
+		std::rethrow_exception(error);
+	}
+	co_return std::move(*out);
+}
+
+
+task::task<std::uint64_t>
+next_chunked_id(ShardGroup& shard_group)
+{
+	const auto home = task::current();
+	auto& group = shard_group.group;
+	co_await task::schedule_on{group.owner().scheduler()};
+	std::uint64_t id = 0;
+	if (const auto state = group.owner().driver().state(group.id())) {
+		if (!shard_group.ids || shard_group.ids->term() != state->term) {
+			shard_group.ids.emplace(state->term, std::max(state->committed, state->applied));
+		}
+		id = shard_group.ids->next();
+	}
+	co_await task::schedule_on{home};
+	if (id == 0) {
+		throw engine::Error(engine::errc::not_available, "The shard's group is not open");
+	}
+	co_return id;
 }

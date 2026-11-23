@@ -45,6 +45,7 @@
 #include "exception_engine.h"                     // for QueryParserError
 #include "database/schemas_lru.h"           // for SchemasLRU
 #include "database/shard.h"                 // for Shard
+#include "database/shard_group.h"           // for ShardGroup, propose_entry, next_chunked_id
 #include "database/utils.h"                 // for split_path_id, UNKNOWN_REVISION, make_msgpack_unpacker
 #include "consensus/driver.h"               // for kronuz::consensus::superseded
 #include "strata/group/answer.hh"           // for strata::group::answer, ack
@@ -552,7 +553,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, engine::rev document_ver, b
 
 
 task::task<DocumentInfo>
-DatabaseHandler::index(engine::docid did, const MsgPack& document_id, engine::rev document_ver, const MsgPack& obj, Data& data, bool commit)
+DatabaseHandler::index(engine::docid did, const MsgPack& document_id, engine::rev document_ver, const MsgPack& obj, Data& data, bool commit, const UploadedBlob* upload)
 {
 	L_CALL("DatabaseHandler::index({}, {}, {}, <data>, {})", repr(document_id.to_string()), document_ver, repr(obj.to_string()), commit);
 
@@ -566,7 +567,7 @@ DatabaseHandler::index(engine::docid did, const MsgPack& document_id, engine::re
 	if (did) {
 		assert(term_id != NEW_NUMERIC_KEY);
 		try {
-			info = co_await replace_document(did, std::move(doc), commit, true, true, true);
+			info = co_await replace_document(did, std::move(doc), commit, true, true, true, upload);
 			placed = true;
 		} catch (const engine::Error& error) {
 			// Erased or moved since the lookup: placed afresh, not put back where it was found.
@@ -574,7 +575,7 @@ DatabaseHandler::index(engine::docid did, const MsgPack& document_id, engine::re
 		}
 	}
 	if (!placed) {
-		info = co_await replace_document_term(term_id, std::move(doc), commit);
+		info = co_await replace_document_term(term_id, std::move(doc), commit, true, true, upload);
 	}
 
 	auto it = data_obj.find(ID_FIELD_NAME);
@@ -659,10 +660,19 @@ DatabaseHandler::upload_stored(const MsgPack& document_id, const ct_type_t& ct_t
 	const auto term_id = co_await get_prefixed_term_id(document_id);
 	const size_t shard_num = id_shard(term_id, endpoints.size());
 
-	// SEAM(journal-replaces-wal core step d): through the shard's group, the body streams as propose_upload() into a
-	// ChunkedUpload and index_uploaded() proposes its document with propose_upload_final(); this storage push goes.
 	lock_shard lk_shard(endpoints[shard_num], flags, turn_token());
 	co_await lk_shard.pin();
+	if (auto* group = lk_shard->group()) {
+		// Through the shard's group (D12): the body streams as chunk entries into a volume of the upload's own, and
+		// index_uploaded() proposes the document as its final entry. A failed stream proposed its abort.
+		UploadedBlob blob;
+		blob.upload = std::make_shared<ChunkedUpload>(co_await next_chunked_id(*group), size);
+		blob.volume = 0;
+		blob.size = size;
+		blob.shard = shard_num;
+		co_await propose_upload(group_proposer(*group), *blob.upload, body);
+		co_return blob;
+	}
 	auto upload = co_await lk_shard->upload_begin(chores, ct_type.to_string(), size);
 	std::exception_ptr error;
 	try {
@@ -705,6 +715,30 @@ DatabaseHandler::index_uploaded(const MsgPack& document_id, engine::rev document
 		THROW(Error, "Database is read-only");
 	}
 
+	if (blob.upload) {
+		// The document is the upload's final entry; one never proposed (a failure before it) is aborted, so its
+		// volume is freed.
+		std::exception_ptr failed;
+		try {
+			co_return co_await index_uploaded_through_group(document_id, document_ver, ct_type, blob, commit);
+		} catch (...) {
+			failed = std::current_exception();
+		}
+		if (!blob.upload->finished()) {
+			blob.upload->finish();
+			try {
+				lock_shard lk_shard(endpoints[blob.shard], flags, turn_token());
+				co_await lk_shard.pin();
+				if (auto* group = lk_shard->group()) {
+					co_await propose_abort(group_proposer(*group), blob.upload->id());
+				}
+			} catch (...) {
+				L_EXC("Unable to abort an upload whose document was not indexed");
+			}
+		}
+		std::rethrow_exception(failed);
+	}
+
 	const auto term_id = has_document_id(document_id) ? co_await get_prefixed_term_id(document_id) : std::string();
 
 	int t = CONFLICT_RETRIES;
@@ -719,7 +753,6 @@ DatabaseHandler::index_uploaded(const MsgPack& document_id, engine::rev document
 					if (!engine::is_missing(error.kind)) { throw; }
 				}
 			}
-			// SEAM(journal-replaces-wal core step d): the write's blob is the ChunkedUpload's record(), in its final entry.
 			data.update(ct_type, blob.volume, blob.offset, blob.size);
 			auto indexed = co_await index(did, document_id, document_ver, MsgPack::MAP(), data, commit);
 			if (const auto n_shards = endpoints.size(); n_shards > 1 && (indexed.first.did - 1) % n_shards != blob.shard) {
@@ -729,6 +762,31 @@ DatabaseHandler::index_uploaded(const MsgPack& document_id, engine::rev document
 			co_return indexed;
 		} catch (const engine::Error& error) {
 			if (error.kind != engine::errc::version_conflict || --t == 0 || document_ver != UNKNOWN_REVISION) { throw; }
+		}
+	}
+}
+
+
+task::task<DocumentInfo>
+DatabaseHandler::index_uploaded_through_group(const MsgPack& document_id, engine::rev document_ver, const ct_type_t& ct_type, const UploadedBlob& blob, bool commit)
+{
+	const auto term_id = co_await get_prefixed_term_id(document_id);
+	int t = CONFLICT_RETRIES;
+	while (true) {
+		try {
+			Data data;
+			engine::docid did = 0;
+			try {
+				did = co_await written_docid_term(term_id);
+			} catch (const engine::Error& error) {
+				if (!engine::is_missing(error.kind)) { throw; }
+			}
+			// A placeholder at volume 0: apply places the record in the upload's volume (ShardApplication).
+			data.update(ct_type, 0, 0, blob.size);
+			co_return co_await index(did, document_id, document_ver, MsgPack::MAP(), data, commit, &blob);
+		} catch (const engine::Error& error) {
+			// A conflict at prepare proposed nothing: the upload is still open for the retry.
+			if (error.kind != engine::errc::version_conflict || --t == 0 || document_ver != UNKNOWN_REVISION || blob.upload->finished()) { throw; }
 		}
 	}
 }
@@ -2090,6 +2148,25 @@ DatabaseHandler::least_used_shard()
 }
 
 
+namespace {
+
+// The chunked upload a write through shard `shard_num` names, if any: its final entry goes to the group whose
+// chunks hold the blob, so a document placed in another shard is refused before anything is proposed.
+ChunkedUpload*
+uploaded_into(const DatabaseHandler::UploadedBlob* upload, size_t shard_num)
+{
+	if (upload == nullptr || !upload->upload) {
+		return nullptr;
+	}
+	if (upload->shard != shard_num) {
+		THROW(ClientError, "The document goes to shard {} but its blob is in shard {}", shard_num, upload->shard);
+	}
+	return upload->upload.get();
+}
+
+}  // namespace
+
+
 task::task<engine::WriteResult>
 DatabaseHandler::add_document(engine::Document&& doc, bool commit, bool wal, bool version)
 {
@@ -2111,7 +2188,7 @@ DatabaseHandler::add_document(engine::Document&& doc, bool commit, bool wal, boo
 
 
 task::task<engine::WriteResult>
-DatabaseHandler::replace_document(engine::docid did, engine::Document&& doc, bool commit, bool wal, bool version, bool must_exist)
+DatabaseHandler::replace_document(engine::docid did, engine::Document&& doc, bool commit, bool wal, bool version, bool must_exist, const UploadedBlob* upload)
 {
 	L_CALL("DatabaseHandler::replace_document({}, <doc>, {}, {})", did, commit, wal);
 
@@ -2119,17 +2196,18 @@ DatabaseHandler::replace_document(engine::docid did, engine::Document&& doc, boo
 	size_t n_shards = endpoints.size();
 	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
 	engine::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
+	auto* chunked = uploaded_into(upload, shard_num);
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags, turn_token());
 	co_await lk_shard.pin();
-	auto info = co_await lk_shard->replace_document(shard_did, std::move(doc), commit, wal, version, must_exist);
+	auto info = co_await lk_shard->replace_document(shard_did, std::move(doc), commit, wal, version, must_exist, chunked);
 	info.did = did;
 	co_return info;
 }
 
 
 task::task<engine::WriteResult>
-DatabaseHandler::replace_document_term(const std::string& term, engine::Document&& doc, bool commit, bool wal, bool version)
+DatabaseHandler::replace_document_term(const std::string& term, engine::Document&& doc, bool commit, bool wal, bool version, const UploadedBlob* upload)
 {
 	L_CALL("DatabaseHandler::replace_document_term({}, <doc>, {}, {})", repr(term), commit, wal);
 
@@ -2150,7 +2228,7 @@ DatabaseHandler::replace_document_term(const std::string& term, engine::Document
 				auto did = co_await written_docid_term(term);
 				if (did != 0u) {
 					// Written in the shard's turn only while it is still there: else it is placed afresh.
-					co_return co_await replace_document(did, std::move(doc), commit, wal, version, true);
+					co_return co_await replace_document(did, std::move(doc), commit, wal, version, true, upload);
 				}
 			} catch (const engine::Error& error) {
 				if (!engine::is_missing(error.kind)) { throw; }
@@ -2161,10 +2239,11 @@ DatabaseHandler::replace_document_term(const std::string& term, engine::Document
 		doc.add_value(DB_SLOT_SHARDS, serialize_length(shard_num) + serialize_length(n_shards) + serialize_length(floor));
 	}
 
+	auto* chunked = uploaded_into(upload, shard_num);
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags, turn_token());
 	co_await lk_shard.pin();
-	auto info = co_await lk_shard->replace_document_term(term, std::move(doc), commit, wal, version);
+	auto info = co_await lk_shard->replace_document_term(term, std::move(doc), commit, wal, version, chunked);
 	info.did = (info.did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
 	co_return info;
 }
@@ -2457,6 +2536,13 @@ propose_final(const ProposeEntry& propose, std::uint64_t id, std::string entry, 
 }
 
 }  // namespace
+
+
+ProposeEntry
+group_proposer(ShardGroup& shard_group)
+{
+	return [&shard_group](std::string entry, strata::group::ack level) { return propose_entry(shard_group, std::move(entry), level); };
+}
 
 
 ChunkedUpload::ChunkedUpload(std::uint64_t id, std::uint64_t size, std::size_t limit)
