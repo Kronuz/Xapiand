@@ -31760,7 +31760,8 @@
         "fuzz/**",
         "docs/**",
         "CHANGELOG.md",
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "README.md"
       ],
       "journal": "../Xapiand-wt/xapiand/stox-no-libc",
       "landed": [],
@@ -31772,7 +31773,7 @@
       "risk": "normal",
       "status": "active",
       "title": "strict-stox parses every double without libc strtod",
-      "updated": "2026-11-23T11:22:13",
+      "updated": "2026-11-23T13:08:26",
       "worktree": "../strict-stox-wt/xapiand/stox-no-libc"
     },
     "strata-engine-callbacks": {
