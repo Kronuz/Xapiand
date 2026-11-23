@@ -11463,20 +11463,56 @@
         "test/lifecycle_test.cc",
         "docs/mechanisms/manifest-log-file.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/first-commit-crash",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-23T06:57:36",
+          "ci": {
+            "commit": "4955a679f16083f36f5b4b7b27b35fd96c4dbc4e",
+            "runs": [
+              45189114595
+            ]
+          },
+          "commit": "4955a679f16083f36f5b4b7b27b35fd96c4dbc4e",
+          "criteria": {
+            "A1": "261123-060918-81a036, 261123-053633-726a56",
+            "A2": "261123-053633-726a56; fails without: 261123-045326-9bf051, 261123-050145-4fa570, 261123-053640-93a0e0",
+            "A3": "261123-060918-81a036",
+            "A4": "261123-053633-726a56; fails without: 261123-050148-1c20df, 261123-050150-0c1ced, 261123-050152-1a9db0, 261123-050154-7775a1, 261123-053645-dd3621, 261123-064304-2767bb, 261123-064305-a29217, 261123-064306-dfba67, 261123-064651-131790",
+            "A5": "docs/mechanisms/manifest-log-file.md, \"The first manifest\" and \"Files no manifest names\""
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "4955a679f16083f36f5b4b7b27b35fd96c4dbc4e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-060918-81a036",
+              "level": "light",
+              "seconds": 1781.0,
+              "state": "done",
+              "what": "first-commit-crash check build-test at 4955a679f160"
+            }
+          ],
+          "final": true,
+          "from": "00eb018da75d20715b3e05a2593937a970b40201",
+          "reason": "",
+          "tested": "4955a679f16083f36f5b4b7b27b35fd96c4dbc4e"
+        }
+      ],
       "lenses": [
         "durability"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "A crash in a fresh index's first commit leaves an index that opens",
-      "updated": "2026-11-23T06:57:17",
-      "worktree": "../strata-wt/xapiand/first-commit-crash"
+      "updated": "2026-11-23T06:57:40",
+      "worktree": ""
     },
     "flush-memory": {
       "accepted": {},
