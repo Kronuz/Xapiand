@@ -1,6 +1,6 @@
 # group-heal--repair: journal
 
-State: waiting on jobs 261123-053709-bfdcc2 (group_repair, group_repair_eager), 261123-053717-611002 (^group_), mutants 261123-053726-0f397b .. 261123-053801-c068cc (13) at strata:1d2c820f; queued behind sim-rows in the shared slot; not pushed (GitHub unreachable), committed locally
+State: waiting on jobs 261123-054412-092302 (group_repair with `source`, group_repair_eager at strata:3eb092f9), 261123-054414-582fec (mutant pin-unchecked-footer), and at strata:1d2c820f 261123-053709-bfdcc2, 261123-053717-611002 (^group_), 13 mutants 261123-053726-0f397b .. 261123-053801-c068cc; not pushed (GitHub unreachable), committed locally
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 ## Doing
@@ -77,9 +77,8 @@ Not yet.
   install ends": after a Rejected or TimedOut no flight exists until consensus starts another,
   and a leader deposed in that gap gets no LeadershipLost for it, so the review's keep-on-retry
   rule would still leak.
-- Open risk for the lead (not fixed here, outside A3's cases): a leader whose unread segment is
-  damaged pins it with the CRC32C of its damaged bytes; the learner's activation then fails in
-  strata's install (`corrupt_segment`) and the learner marks itself damaged and asks again, from
-  the same leader. Recommendation: make_pin checks each segment's footer CRC against the
-  manifest's `footer_crc` (56 bytes each, beside the CRC pass it already makes) and the leader
-  marks itself damaged on a mismatch.
+- Pinned segments (lead's msg, strata:3eb092f9): make_pin checks each segment's footer
+  (checksum, magic, the manifest's `footer_crc`) before listing it; a mismatch makes pin_for call
+  become_damaged (marker, local fence, reinstall; a leader hands off), else fences. Case `source`,
+  mutant `pin-unchecked-footer`. Damage inside a section body with a valid footer is still caught
+  only at the learner's activation (strata's whole-segment check), which fences that learner.
