@@ -1,6 +1,6 @@
 # journal-replaces-wal: journal
 
-State: session 4 building d3 (RESTORE through the batcher); waiting on jobs 261123-050021-b8aa54 (d2 tests at ed1ded9c6), its mutants 261123-050038-1a30ae 261123-050040-16f615, A2 261123-050050-bdf384 261123-050052-ea96fe; A9 261123-042848-b46902 261123-042851-e13216 261123-042854-5886cb and step c 261123-043412-42a61c still queued
+State: waiting on jobs at Xapiand:1fe793170 (d2-d4, A9 fix 3, all unbuilt): suite 261123-050819-f5c45e; mutants (after it) 261123-050834-0ebdb6 (d2) 261123-050837-6d0d4c (d1) 261123-050838-bf4fcb (d3) 261123-050840-53a7cb (d4 checkpoint) 261123-050842-314ab8 (d4 id counter) 261123-050845-292192 (A9 fix 3) 261123-050847-b1ea3d 261123-050849-26aee6 (A9 fixes 1-2); A2 261123-050851-821178 and mutant 261123-050853-8815ef; A5 journal_replay_check 261123-050855-0389cd. Next: read them, fix compile/test failures, then step e
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
@@ -15,6 +15,17 @@ at head builds c, d1 and d2 together (it superseded d1's own job and mutant, res
    final, proposed once (`ChunkedUpload::finished`), aborted on any failure before it; a read opens
    `app.vol-N` through the slot's directory (`read_stored`). `landed` refuses an accepted verdict with no docid
    (a final whose upload was retired). Test: test_pool `test_stored_blobs_survive_a_kill`.
+3. Xapiand:6c44375c5 (d3): apply_slice with a group is `restore_slice`: a chore prepares the slice (do_replace_term
+   leaves a CommandWrite, `batched`), RestoreBatcher packs, each command proposed at quorum in order, verdict ->
+   `restore_results`. apply_slice/SliceWrite stay until e (the no-group path and test_loop_yield's seams use them).
+   Test: `test_a_restore_slice_is_batch_commands`.
+4. Xapiand:1fe793170 (d4, A9 fix 3): a request's commit with a group is `commit_group` (checkpoint on the loop,
+   under the turn); the hook stays a plain strata commit. The id counter rides the write's command as set_metadata
+   (`id_high_logged_`), a RESTORE slice logs it after its batches; open reads it on the chore. Ready point:
+   `catch_up` reads state.open on the chore, `abort_open` proposes aborts. Tests: `test_a_commit_is_the_groups_checkpoint`,
+   `test_the_id_counter_is_in_the_log`, `test_a_reopen_aborts_an_upload_left_open`.
+Job churn: earlier sets (b8aa54, a03d73 and their dependents; session 3's queued c/d1/A9 jobs) were cancelled
+unrun and replaced by the one set at 1fe793170 (lead: one set per head, no resubmitting per push).
 
 Session 3 (2026-11-23): merged origin/master (Xapiand:f1944bc00, clean); strata pinned at main 00eb018d (group-catalog,
 D169 (a)); chunks and restore tasks were merged by the lead (restore's three failed probes are by design, not evidence).
@@ -112,7 +123,9 @@ strata: `group-catalog` (item 4), which `core` step c waits on.
 
 ## Blocked on
 
-1. `.journal` (the journal's directory in the data root) is also a valid index name: index_path::valid accepts a
+Nothing open. (Answered: 1, the journal's directory: `.xapiand/journal`, the lead's ruling 2026-11-23, Xapiand:4a117e647.)
+
+Was 1. `.journal` (the journal's directory in the data root) is also a valid index name: index_path::valid accepts a
    leading dot, so a user index `.journal` would nest under the journal host. Options: (a) refuse creating an
    index whose first segment is `.journal` (a reserved name, documented); (b) name the journal with a byte
    valid() refuses; (c) leave it. Recommend (a); it changes user-visible behavior, so the lead decides. Work goes
@@ -179,4 +192,12 @@ Drafts, applied when the code lands; each names the contract it shapes (format-f
     write left it. One write per index in flight; T11/Q14 decide pipelining.
 14. A9's rf > 1 cases are tested on the replica's application entry by entry (the deposed proposer's chunk
     placed in the new term): apply is a function of entry and state, so it is the sequence every voter applies.
-15. A request's commit and the catalog's commit hook stay bare strata commits (D169) until d4.
+15. A request's commit is the group's checkpoint (d4); the catalog's commit hook stays a bare strata commit (D169).
+16. A stored blob's record in `app.vol-N` is its bytes, zstd-compressed at prepare only when smaller; the locator's
+    type names the codec (`stored` / `zstd_compressed_stored`) and its size is the record's. Uploads are raw.
+    Contract `xapiand:volume-file-set`.
+17. A document bound for another shard than its upload's group is refused before anything is proposed
+    (ClientError), not applied then reported as master did.
+18. RESTORE's commands are proposed one after another, each awaited at quorum; D17's pipelining waits on T12.
+19. The crash check's command passes `build/bin/xapiand`; blob_crash_check.sh accepts it as the build's binary.
+20. The crash check (lead's command) configures without -G Ninja; the lead's to fix.
