@@ -6814,7 +6814,69 @@
       "updated": "2026-11-21T17:35:42"
     },
     "consensus-request-install": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-23T01:53:14",
+          "base": "42a8cde325912df0cd463dabc39af0d15d2f8923",
+          "blobs": {
+            "CMakeLists.txt": "100644:2527398f8c4b10045a4d5efc31ae6304fa1271b2",
+            "docs/DRIVER.md": "100644:c52f8d382ab8e0a1565ae2cb3500565024a38b8e",
+            "docs/mechanisms/install-request.md": "100644:fafcd6e502492e17caa6f867f3e42c1148e88e7a",
+            "fuzz/corpus/decoders/seed-install-request": "100644:25be67ccc98de2db331058dc221751599d4f508d",
+            "fuzz/corpus/decoders/seed-install-request-response": "100644:9734f0444f869831ddccc7af55659798dd3a438d",
+            "fuzz/seed.cc": "100644:9a67cfb00271b94ab349ac83b6d89ad30f8652af",
+            "include/consensus/admission.h": "100644:ca43989facdecc139c60563b16d0ca2d6e2dfd62",
+            "include/consensus/core.h": "100644:7e7b61e5409b479eaa26b4cfe3ea71422f913f61",
+            "include/consensus/driver.h": "100644:eef7f9b8e12c587f1d56bcc191874eb7858b95e7",
+            "include/consensus/transport/codec.h": "100644:22b3b4a5de9a3562996f8dfd11194f42e24d3904",
+            "include/consensus/types.h": "100644:041f19f1facf0ba2f1bc9c228df1a0201823ba17",
+            "include/consensus/worker.h": "100644:c57562c1c73de8e4fc01c4f5a854bd696ce97c99",
+            "test/driver_install_request_test.cc": "100644:a837e2c438389ca26089d29a5091d615c3f02418",
+            "test/transport/codec_test.cc": "100644:b9fbac41b639bc315aaa7322392cfa711c455134"
+          },
+          "by": "review",
+          "commit": "1869826a021041598cf228f7dddfaabd18256631",
+          "criteria": "003ee84105c0bd43",
+          "diffs": {
+            "": "8d8f81e2e0cc1ce9",
+            "CMakeLists.txt": "2632759d74c5f44f",
+            "docs/DRIVER.md": "23928282f881592c",
+            "docs/mechanisms/install-request.md": "4ec34aa00ad28333",
+            "fuzz/seed.cc": "77d9a41bb506cb14",
+            "include/consensus/admission.h": "aa363c439ec8afb4",
+            "include/consensus/core.h": "b7c18975cadf2ac2",
+            "include/consensus/driver.h": "c763d411f0103285",
+            "include/consensus/transport/codec.h": "16df610a5ec7a314",
+            "include/consensus/types.h": "b8d48aef6fa16f04",
+            "include/consensus/worker.h": "3f32e8f89849aa6e",
+            "test/driver_install_request_test.cc": "dac648d56de386cf",
+            "test/transport/codec_test.cc": "04b529e7a18c955e"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "build-m/consensus_driver_install_request_test lost_record",
+                  "commit": "1869826a021041598cf228f7dddfaabd18256631",
+                  "exit": 1,
+                  "host": "kronuz",
+                  "job": "261123-014604-5bfb1e",
+                  "level": "light",
+                  "seconds": 5.6,
+                  "state": "done",
+                  "what": "F1: lost_record with 1443159aae93's core.h must fail"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "0973e4dd486c815a7a4b4620176879e01b15ea45",
+          "reviewed": "1443159aae93fc74d201bd61cf49569098ec9cd2",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [
         "detent:consensus-quiesce-election-stall",
         "detent:consensus-peers-wake"
@@ -6873,7 +6935,7 @@
       "risk": "high",
       "status": "active",
       "title": "consensus: a follower asks its leader for an install; the Driver exposes witness_bound",
-      "updated": "2026-11-21T22:11:25",
+      "updated": "2026-11-23T01:53:14",
       "worktree": "../consensus-wt/xapiand/consensus-request-install"
     },
     "consensus-rpc-lane": {
@@ -12600,11 +12662,46 @@
         "test/group/footprint_test.cc",
         "test/group/mutants.py"
       ],
-      "journal": "../Xapiand-wt/xapiand/group-catalog",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-23T01:16:25",
+          "ci": {
+            "commit": "8bacffe482d82ebff39c3edcbfa0e11a0aeecfff",
+            "runs": [
+              45116136136
+            ]
+          },
+          "commit": "00eb018da75d20715b3e05a2593937a970b40201",
+          "criteria": {
+            "A1": "261122-230337-12f31e; fails without: 261122-211133-7c6764, 261122-211133-b0ca6a, 261122-211134-b909b9, 261122-211135-521cb5, 261122-211136-fdb1c0, 261122-211137-41350c, 261122-211138-b805d6, 261122-211138-6143f3, 261122-211140-2f6a14",
+            "A2": "261122-230337-12f31e; fails without: 261121-103856-a3faa5, 261122-211135-d64b14, 261122-211135-e08c97, 261122-211136-ca0414",
+            "A3": "261122-230337-12f31e, 261122-211116-a8f861 (passed at 8bacffe482d8; only 1 merge from main since, none touching its files); fails without: 261121-103905-bc298a, 261122-211020-f3b814, 261122-211027-87f7a1",
+            "A4": "[artifact] strata `docs/mechanisms/group-catalog.md` (strata:513d959d)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "8bacffe482d82ebff39c3edcbfa0e11a0aeecfff",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261122-211206-187ec0",
+              "level": "light",
+              "seconds": 842.6,
+              "state": "done",
+              "what": "group-catalog check suite at 8bacffe482d8"
+            }
+          ],
+          "final": true,
+          "from": "7131ed4480b14dacbb975ca9de06a4c43881cff2",
+          "reason": "",
+          "tested": "00eb018da75d20715b3e05a2593937a970b40201"
+        }
+      ],
       "lenses": [
         "durability"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [
@@ -12612,10 +12709,10 @@
       ],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "a replication group runs on its catalog slot's index",
-      "updated": "2026-11-22T23:02:44",
-      "worktree": "../strata-wt/xapiand/group-catalog"
+      "updated": "2026-11-23T01:16:36",
+      "worktree": ""
     },
     "group-core": {
       "accepted": {},
@@ -18555,8 +18652,44 @@
         "docs/src/content/docs/reference-guide/search/query-dsl/compound-queries/range-searches.md"
       ],
       "hunt": "query-dsl-fixes review F5",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-23T01:56:05",
+          "ci": {
+            "carried": true,
+            "commit": "ca144f228928ecc32f83713a4fb99e90c5c20ce9",
+            "runs": [
+              45119092920
+            ]
+          },
+          "commit": "4177b724b243e478556472d67871f3b726d20cd3",
+          "criteria": {
+            "A1": "261123-015153-7ae881; fails without: 261123-000920-aac63a, 261123-000923-5c3bde, 261123-000927-324fb3",
+            "A2": "261122-213854-8ab1db (the suite check); 261122-213854-8ab1db (suite at ca144f228): pending",
+            "A3": "range-searches.md and range-aggregation.md under docs/src/content/docs/reference-guide/search/ say a NaN bound answers 400 naming the field and the bound",
+            "A4": "CI green at ca144f228928 (carried to 041422a33483 across clean merges)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "ca144f228928ecc32f83713a4fb99e90c5c20ce9",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261122-213854-8ab1db",
+              "level": "light",
+              "seconds": 1453.5,
+              "state": "done",
+              "what": "nan-range-bound check suite at ca144f228928"
+            }
+          ],
+          "final": true,
+          "from": "76b5b0673787218b92897a17aabb47470efadecd",
+          "reason": "",
+          "tested": "041422a334833242afed001d9a30567ecfa409cf"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [
         "split-xapiand-src"
@@ -18564,10 +18697,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "A NaN range bound is one behavior on every field type",
-      "updated": "2026-11-22T21:37:02",
-      "worktree": "../Xapiand-wt/xapiand/nan-range-bound"
+      "updated": "2026-11-23T01:56:14",
+      "worktree": ""
     },
     "netlab-consensus": {
       "accepted": {},
@@ -25454,7 +25587,20 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-23T01:10:34",
+          "commit": "03560d407499654d924bbadf447689501a14d775",
+          "evidence": [],
+          "final": false,
+          "reason": "recorded after the fact: msg-28: gate job 261122-212030-8090b3 (split) passed at 235f61732c84; ae5798e3 differs from it only by master's merge (data.*, keymaker.*, header-tables.md), none in the split's paths. The land lookup omits the job's outside-script hash (fix check-spec-one, agent-campaign:f50c120, not installed). CI green at ae5798e3; lead read fnsizes: +36,684 B (0.36%), all in named buckets, LZ4/xxHash LTO re-inlining in untouched sources accepted.",
+          "recorded": "2026-11-23T01:13:53",
+          "tested": "03560d407499654d924bbadf447689501a14d775",
+          "unverified": [
+            "split: no job"
+          ]
+        }
+      ],
       "lenses": [],
       "milestone": "",
       "needs": [
@@ -25465,7 +25611,7 @@
       "risk": "low",
       "status": "active",
       "title": "schema.cc split along its responsibilities",
-      "updated": "2026-11-22T21:18:21",
+      "updated": "2026-11-23T01:13:53",
       "worktree": "../Xapiand-wt/xapiand/schema-split"
     },
     "script-method": {
