@@ -243,7 +243,9 @@ void test_oversized_alone_schema_closes_refused() {
 // within one batch lands one version later.
 void test_pipelined_batches_repeat_terms_and_allocate_ids() {
 	Replica r("restore_batch_pipelined");
-	REQUIRE(r.apply(encode_entry(Command{1, {prepared("Ka", 0)}})).result == ::strata::verdict::accepted);
+	// REQUIRE evaluates its condition twice: the entry applies once, outside it.
+	const auto v0 = r.apply(encode_entry(Command{1, {prepared("Ka", 0)}}));
+	REQUIRE(v0.result == ::strata::verdict::accepted);
 	REQUIRE(r.index->find_key("Ka")->second == 1u);
 	// Prepared now: Ka at version 1, Kb and Kc absent.
 	std::vector<CommandWrite> first{prepared("Ka", 1), prepared("Kb", 0)};
@@ -275,8 +277,12 @@ void test_pipelined_batches_repeat_terms_and_allocate_ids() {
 	CHECK_EQ(r2[3].version, 2u);
 	CHECK_EQ(r2[2].term, std::string("Kc"));
 	for (const auto& [key, version] : std::vector<std::pair<std::string, std::uint64_t>>{{"Ka", 3}, {"Kb", 2}, {"Kc", 2}}) {
-		CHECK_EQ(r.index->find_key(key).value_or(std::pair<std::uint64_t, std::uint64_t>{0, 0}).second, version);
-		CHECK_EQ(stored_version(r, key), version);
+		const auto indexed = r.index->find_key(key).value_or(std::pair<std::uint64_t, std::uint64_t>{0, 0}).second;
+		const auto stored = stored_version(r, key);
+		std::printf("%s: index version %llu, stored _version %llu, want %llu\n", key.c_str(), static_cast<unsigned long long>(indexed),
+			static_cast<unsigned long long>(stored), static_cast<unsigned long long>(version));
+		CHECK_EQ(indexed, version);
+		CHECK_EQ(stored, version);
 	}
 	CHECK_EQ(r.index->last_docid(), 3u);
 }
