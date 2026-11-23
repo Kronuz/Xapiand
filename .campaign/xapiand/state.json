@@ -11345,6 +11345,8 @@
       "after": [
         "turn-log-parity"
       ],
+      "base": "00eb018da75d20715b3e05a2593937a970b40201",
+      "branch": "quest/xapiand/first-commit-crash",
       "checks": [
         {
           "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -11359,6 +11361,7 @@
         "test/lifecycle_test.cc",
         "docs/mechanisms/manifest-log-file.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/first-commit-crash",
       "landed": [],
       "lenses": [
         "durability"
@@ -11366,11 +11369,13 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "started by force: a durability fix of a few lines in index.hh's commit/recover path, refused today on 40 of 90 cuts; it lands after turn-log-parity (--after), and index-restructure's moves are tool-made from a committed map, so it regenerates them after this lands",
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "A crash in a fresh index's first commit leaves an index that opens",
-      "updated": "2026-11-23T04:43:33"
+      "updated": "2026-11-23T04:44:42",
+      "worktree": "../strata-wt/xapiand/first-commit-crash"
     },
     "flush-memory": {
       "accepted": {},
