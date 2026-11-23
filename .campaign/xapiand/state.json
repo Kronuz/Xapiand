@@ -15714,7 +15714,9 @@
         "tests/fuzz_strata_document.cc",
         "src/database/data.cc",
         "src/database/data.h",
-        "docs/dev/agent-codebase.md"
+        "docs/dev/agent-codebase.md",
+        "src/database/utils.cc",
+        "ARCHITECTURE.md"
       ],
       "history": [
         {
@@ -15968,7 +15970,7 @@
         }
       },
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-23T11:26:43",
+      "updated": "2026-11-23T11:38:09",
       "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal"
     },
     "journal-seal-repeat": {
