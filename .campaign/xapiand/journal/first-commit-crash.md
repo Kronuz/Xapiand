@@ -1,20 +1,18 @@
 # first-commit-crash: journal
 
-State: working
+State: waiting on jobs 261123-050145-4fa570 261123-050148-1c20df 261123-050150-0c1ced 261123-050152-1a9db0 261123-050154-7775a1 261123-050400-666aa7
 Quest: .campaign/xapiand/quests/first-commit-crash.md (the lead's; never edit it)
 
 ## Doing
 
-Targeted lifecycle_test at the fix (261123-045330-1cff01) and the fails-without at the test-only
-commit (261123-045326-9bf051) are running. Then: fill the doc's cost numbers from their output,
-commit the doc, run the suite (A1, A3) and the mutants (A4).
+Code done at strata:606a1d62. Waiting on A2 (fails-without over main's index.hh), four A4 mutants
+and the suite (A1, A3). Branch not pushed: github.com unreachable from this host (port 443 refused).
 
 ## Next
 
-1. Read both jobs' full logs (~/.scratch/campaign/jobs/<id>/a1/log): FAIL lines at main, the sweep
-   summary lines at the fix (mutations, syncs).
-2. Put the measured cost into docs/mechanisms/manifest-log-file.md "The first manifest"; commit.
-3. `campaign verify first-commit-crash --for A1,A3`; mutants as plain `--quest` jobs (A4).
+1. Read each job's full log (~/.scratch/campaign/jobs/<id>/a1/log): A2 names the refused cut; each
+   mutant fails on the CHECK it targets, after a complete build.
+2. Fill the Evidence table from `campaign brief`; State: ready for review.
 
 ## Blocked on
 
@@ -24,15 +22,22 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | <suite at head, pending> |
-| A2 | 261123-045326-9bf051 (fails-without at strata:c18becbc, test only), pending |
-| A3 | <suite at head, pending> |
-| A4 | <mutants, pending> |
+| A1 | build-test 261123-050400-666aa7 at strata:606a1d62 (pending); targeted lifecycle_test 261123-050143-ad76e7 passed: first commit 13 cuts x 9: 50 not created, 56 empty, 11 committed, 0 failed; first refresh 9 x 9: 50 not created, 31 empty, 0 failed |
+| A2 | 261123-050145-4fa570 (head's test over main's index.hh, pending). Earlier 261123-045326-9bf051 at strata:c18becbc refused 49 first-commit cuts ("no manifest log; seg-1.sx") but its control was buggy (fixed in strata:04dcb24d): superseded |
+| A3 | build-test 261123-050400-666aa7 (pending); ad76e7: second commit 7 x 9: 52 previous, 11 committed, 0 failed; existing create sweep and T1 unchanged and passing |
+| A4 | mutants (pending): no-first-manifest 261123-050148-1c20df, commit-only 261123-050150-0c1ced, applied-early 261123-050152-1a9db0, always-empty 261123-050154-7775a1. Submit script: Xapiand .scratch/xapiand/first-commit-crash/submit.sh |
+| other | 261123-045814-05fc0d failed at strata:89f9f5e1: the logged sweep aborted, a logged index refuses applies before its first commit; sweep and the unreachable attributes carry removed in strata:606a1d62 |
 | A5 | docs/mechanisms/manifest-log-file.md, "The first manifest" and "Files no manifest names" |
 
 ## Result
 
-<pending>
+strata:606a1d62 (from strata:00eb018d): `flush()` rolls over the empty state as generation 1
+before a deferred index's first data file (`commit_empty()`, include/strata/core/index.hh);
+recovery unchanged. Tests in test/lifecycle_test.cc (first commit, first refresh, second-commit
+control, create's one generation). Doc: docs/mechanisms/manifest-log-file.md "The first manifest",
+"Files no manifest names". Open: install() on a deferred index still relies on group's activate()
+committing first; a lone `manifest-2.tmp` (a first rollover retried after ENOSPC, then cut) still
+reads as corrupt, as on main.
 
 ## Rulings I made
 
@@ -46,8 +51,11 @@ Nothing.
   index's first segment before any commit, the same window. Condition: no generation committed and
   documents buffered, so create() and a first commit with nothing buffered still write one
   generation.
-- The empty generation is the state create() commits (UUID, configured, the join's attributes,
-  nothing applied), never the applied scalars, metadata, schema or fields: those would make a cut
-  reopen a partial state.
+- The empty generation is the state create() commits (UUID, configured, nothing applied), never
+  the applied scalars, metadata, schema or fields: those would make a cut reopen a partial state.
+  No join attributes: a logged index refuses applies before its first commit (D7), so its first
+  flush writes nothing and never reaches commit_empty() (05fc0d showed the refusal).
+- Cost, measured in the sweep (ad76e7 vs 9bf051): a deferred first commit of two documents takes 12
+  mutations and 6 syncs, was 9 and 4; once per index. Recorded in the mechanism doc.
 - install()'s deferred path (group-heal's F2) is left to group's activate(), which commits first:
   the lead scoped this to the commit and recover path.
