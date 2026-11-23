@@ -15638,11 +15638,12 @@
             "harness/run_all.sh",
             "docs/src/content/docs/tests/coverage.md"
           ],
-          "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal--restore"
+          "merged": "680174c680fb019a6afa4cfc73769799eb90a213",
+          "worktree": ""
         }
       },
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-23T07:21:48",
+      "updated": "2026-11-23T07:31:10",
       "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal"
     },
     "journal-seal-repeat": {
