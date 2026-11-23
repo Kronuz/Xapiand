@@ -7250,11 +7250,56 @@
         "docs/DRIVER.md",
         "CMakeLists.txt"
       ],
-      "journal": "../Xapiand-wt/xapiand/consensus-request-install",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-23T13:07:24",
+          "ci": {
+            "commit": "6e1122cc691ddcdd3b5e527a1d4ac037cd7add57",
+            "runs": [
+              45240308075
+            ]
+          },
+          "commit": "6e1122cc691ddcdd3b5e527a1d4ac037cd7add57",
+          "criteria": {
+            "A1": "ci:macos-arm64, 261123-103311-7ea0ce (passed at d4201a1ea7e0; only 1 merge from main since, none touching its files)",
+            "A2": "261123-103311-7ea0ce (passed at d4201a1ea7e0; only 1 merge from main since, none touching its files); fails without: 261121-223618-6521b4, 261122-211833-8e72b9, 261123-014604-5bfb1e, 261123-014612-ecc91b",
+            "A3": "ci:macos-arm64, 261123-103311-7ea0ce (passed at d4201a1ea7e0; only 1 merge from main since, none touching its files)",
+            "A4": "261123-103311-7ea0ce (passed at d4201a1ea7e0; only 1 merge from main since, none touching its files); fails without: 261121-223622-85de99, 261122-211833-e92f60, 261123-014617-4a6a56",
+            "A5": "[artifact] docs/mechanisms/install-request.md at consensus:1869826",
+            "A6": "261123-103311-7ea0ce (passed at d4201a1ea7e0; only 1 merge from main since, none touching its files), 261123-103312-b2cbc0 (passed at d4201a1ea7e0; only 1 merge from main since, none touching its files)",
+            "A7": "CI green at 6e1122cc691d"
+          },
+          "evidence": [
+            {
+              "check": "suite",
+              "ci": "ci:macos-arm64",
+              "commit": "6e1122cc691ddcdd3b5e527a1d4ac037cd7add57",
+              "state": "done"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "6e1122cc691ddcdd3b5e527a1d4ac037cd7add57",
+              "state": "done"
+            },
+            {
+              "check": "tsan",
+              "ci": "ci:linux-tsan",
+              "commit": "6e1122cc691ddcdd3b5e527a1d4ac037cd7add57",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "531b655cf337a49e328b470aaa5c5955b3a07262",
+          "reason": "",
+          "tested": "6e1122cc691ddcdd3b5e527a1d4ac037cd7add57"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [
@@ -7262,10 +7307,10 @@
       ],
       "repo": "../consensus",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "consensus: a follower asks its leader for an install; the Driver exposes witness_bound",
-      "updated": "2026-11-23T04:03:55",
-      "worktree": "../consensus-wt/xapiand/consensus-request-install"
+      "updated": "2026-11-23T13:07:46",
+      "worktree": ""
     },
     "consensus-rpc-lane": {
       "accepted": {},
