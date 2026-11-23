@@ -1022,3 +1022,13 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - strata-journal-pin (Opus medium, 120k): pin to journal main builds and passes the suite; found `bounded` handling missing on main; lands after turn-log-parity.
 - Lead mistake: ran agent-campaign's checkout install.sh (bypassed campaign-v3's install gate, 08:45-09:10); restored by campaign-v3, no reruns needed. Prompt written empty once (sed delimiter); 1 wasted launch, ~56k.
 - Quota: weekly 19% (1.54%/h). Host: load 100 (Detent asan at 9 cores), 289 GiB free.
+
+## 2026-11-23 19h
+
+- Landed: agents-md (Xapiand:b56d857c, merge 2e03250e; AGENTS.md 63 lines, Ninja rule reworded).
+- group-heal fix round 2: rot-after-pin failed first (consensus reports a refused copy as Unavailable, not Rejected); fixed at strata:c76c68f9 (Opus high, 126k). 5 of 11 fails-without mutants killed so far; suite queued.
+- journal-replaces-wal: crash check 3/90 red at 0aeec8fc; fix round (Opus high, 223k) at Xapiand:693c91e6: a fenced error left unconverted, stale dirty flags and revision after a group checkpoint, a test pinning the WAL-era chore, and a real deferral bug in restore_slice. Targeted jobs queued. Job churn: ~45 jobs queued then cancelled across three heads (lead told it to submit once at the final head).
+- strata-journal-pin: CI red on every platform: journal main's loop-ownership assert; adopt_loop needed (after turn-log-parity). Local check passed because Release compiles asserts out.
+- New: uinteger-radix-family (Sonnet medium), the only hunt item outside held file sets.
+- Lead could not cancel 5 superseded jobs: `campaign job cancel` denied by the permission classifier.
+- Quota: weekly 21% (1.58%/h). Host: load 11, 286 GiB free.
