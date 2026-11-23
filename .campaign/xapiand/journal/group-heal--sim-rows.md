@@ -1,6 +1,6 @@
 # group-heal--sim-rows: journal
 
-State: waiting on jobs 261123-052839-09443a 261123-052842-596b03
+State: waiting on jobs 261123-053444-c51484 261123-053422-5df6d3 261123-053425-7d40db 261123-053427-f9a12e 261123-053447-2bfa62 261123-053450-58e6b8
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -26,13 +26,23 @@ Round 2 (2026-11-23) at strata:bd994276. Round 1's suite 261123-045257-ebd91a fa
   the answer is held.
 - mutants: FileNotFoundError on build-heal/strata/group_sim_test. Fixed in sim/CMakeLists.txt:
   group_sim_test's RUNTIME_OUTPUT_DIRECTORY is the build root, where mutants.py runs targets.
-Rows: 261123-052839-09443a (--task sim-rows, --for A5).
+Round 2 jobs: rows 261123-052839-09443a at bd994276: faults_3/5, membership_5, growth_1,
+device_3 pass; barriers abort as before; membership_3: `no node applied index 1` (the oracle's
+merged_log reads live members only, and the row retires every founder). Probe 596b03 (barriers on
+the first-commit-crash merge): both pass, so barriers are first-commit-crash and nothing else.
+
+Round 3 at strata:18525c5f: the driver keeps retired members' records in the oracle's log
+(checked for agreement). Jobs: rows c51484 (--task); mutants (plain --quest, --fails-without,
+--for A5) apply-skips-entry 5df6d3, read-skips-probe 7d40db, apply-abandoned-chunk f9a12e, all on
+`faults 3`; probes on the first-commit-crash merge strata:91dd7b54: all rows 2bfa62,
+recovery-as-found on `barriers 3` 58e6b8. (A plain probe with the rows' exact command superseded
+the task's 59a63e: probes now carry a distinct regex argument.)
 
 ## Next
 
-1. Read 09443a and 596b03. faults/membership/growth/device green: submit the four mutants at the
-   task head (plain --quest, --fails-without, --for A5). barriers waits on first-commit-crash's
-   landing; then merge main and rerun.
+1. Read the round 3 jobs: each mutant's log must show a complete build and a named row failing.
+   barriers and recovery-as-found wait on first-commit-crash's landing: then merge main, rerun the
+   rows and that mutant at the head.
 2. Put the suite's seconds per row in docs/gates/phase-3r.md and here.
 3. A3's simulator half (`simulation_group_corruption`, skipped with 77) is enabled by task
    repair's merge.
@@ -55,6 +65,12 @@ Pending the jobs. Files (strata): `test/group/sim_test.cc` (rows), `test/group/s
 `docs/gates/phase-3r.md` (stub: rows, mutants; the gate rows are the lead's).
 
 ## Rulings I made
+
+- Round 2-3: the failing membership, growth and faults rows were driver bugs, not group liveness
+  defects (each traced above); no budget was raised.
+- The oracle's log includes retired members' records (sim_test.cc `merged`), since world.hh's
+  merged_log is outside this task's files and reads live members only.
+- group_sim_test's RUNTIME_OUTPUT_DIRECTORY is the build root, so mutants.py finds it unchanged.
 
 - The target lives in `sim/CMakeLists.txt` under `if(TARGET strata::group)` (the old group-sim
   decision: the simulator's tests are built by sim/; root CMakeLists.txt is not in my file set).
