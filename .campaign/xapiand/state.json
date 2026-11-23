@@ -2638,6 +2638,28 @@
         ]
       },
       "text": "split-xapiand-src landed: unlocks nan-range-bound"
+    },
+    {
+      "announced": {
+        "at": "2026-11-22T21:15:19",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-22T21:15:19",
+      "by": "campaign",
+      "closed": "journal-group-delete started 05:12 with an Opus contributor; nan-range-bound held below",
+      "id": "msg-246",
+      "items": {
+        "journal-group-delete": "frees include/journal/host.h, src/host*, CHANGELOG.md, CMakeLists.txt for journal-group-delete",
+        "nan-range-bound": "nan-range-bound"
+      },
+      "settles": {
+        "start": [
+          "journal-group-delete",
+          "nan-range-bound"
+        ]
+      },
+      "text": "journal-lost-bound landed: unlocks frees include/journal/host.h, src/host*, CHANGELOG.md, CMakeLists.txt for journal-group-delete; nan-range-bound"
     }
   ],
   "quests": {
