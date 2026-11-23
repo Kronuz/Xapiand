@@ -1,31 +1,27 @@
 # journal-group-delete: journal
 
-State: waiting on jobs 261122-215035-c7dbb7 261122-215039-399df3 261122-215043-dca797 261122-215047-9ec120 261122-215050-32f31b 261122-215053-70b4bc 261122-215058-e0f727 261122-215102-3473fb 261122-215107-13499e 261122-215112-7da67f
+State: waiting on jobs 261123-010037-440d3e 261123-010040-e5a982 261123-010043-3e6bf7 261123-010046-03aa5c 261123-010048-467c0f 261123-010051-5f60a2 261123-010054-597440 261123-010057-6b2d97 261123-010100-86e760 261123-010006-f8221d; CI run 45143330663 at journal:d8453f6
 Quest: .campaign/xapiand/quests/journal-group-delete.md (the lead's; never edit it)
 
 ## Doing
 
-Round 1 done at journal:d89528f (pushed; CI runs on the push): `Host::delete_group`, the
-`deleted` table state, the create's floor (one line in journal.h, see R2), `test/host_delete_test.cc`
-(6 cases, one CTest entry each), `docs/mechanisms/host-delete.md`, CHANGELOG 2026-11-22.
-Local Debug run at d89528f, every case 0 failures: reopen_empty 17 checks, stays_deleted 6,
-refused 13, loop_thread 15, crash 290 (both outcomes), crash_finish 1,766. Not evidence; jobs are.
+Round 2 at journal:d8453f6 (pushed): CI run 45120376454 at d89528f failed on linux-x86_64-gcc only,
+reopen_empty "c stays closed with its checkpoint: {c-state:}". Cause, in the test: that check's
+condition read `node.status(c)` and its message called `show(node.recover(c))`; function
+arguments run in no fixed order, GCC built the message first, the recover opened c, and the status
+read open. The recovered state was right. Fix (test only): read c's status, then each recovery,
+before the checks. No other check's message has a side effect on its condition (scanned).
 
-Mutant commits (local refs refs/scratch/journal-group-delete/NAME, each one hunk off d89528f):
-artifacts-first journal:6fe803c (A2, the lead's: artifacts removed before the deleted record),
-open-skips-finish journal:c798eb5 (A2), no-floor journal:90bd31c (A1), commit-drops-deleted
-journal:4e15555 (A1), create-from-one journal:55dce72 (A1, drops the journal.h line). A local check
-of the mutants was stopped before it reported (lead's request); the jobs below replace it.
-
-Shape sent to Detent's lead via the lead: msg-245.
+Jobs: GCC at d89528f fails-without (A1) 440d3e; GCC every case at d8453f6 e5a982; GCC ASan+UBSan
+every case 3e6bf7; Clang reruns A1 03aa5c, A2 467c0f, A3 5f60a2, A7 597440; suite f8221d; the two
+reopen_empty mutants rebuilt on d8453f6 (refs/scratch/journal-group-delete/no-floor-2 journal:5b748cc,
+create-from-one-2 journal:a27dfed) 6b2d97, 86e760. The other mutants' tests are unchanged.
 
 ## Next
 
-1. Read the jobs: A1 c7dbb7, A2 399df3, A3 dca797, A7 9ec120, suite (A4) 7da67f; fails-without
-   32f31b (artifacts-first, crash), 70b4bc (open-skips-finish, crash_finish), e0f727 (no-floor,
-   reopen_empty), 3473fb (commit-drops-deleted, stays_deleted), 13499e (create-from-one,
-   reopen_empty). Each mutant log must show a complete build, then the named case failing.
-2. CI at d89528f (A4 ASan+UBSan and TSan, A6).
+1. Read the jobs above; each mutant log must show a complete build, then the named case failing;
+   440d3e must fail with the "c stays closed" line.
+2. CI run 45143330663 at d8453f6 (A4 asan/tsan, A6).
 3. Then State "ready for review" (durability lens).
 
 ## Blocked on
@@ -36,13 +32,13 @@ Lead: include/journal/journal.h is outside the file set (R2); widen it or rule o
 
 | Criterion | Evidence |
 |---|---|
-| A1 | c7dbb7 (reopen_empty, stays_deleted); fails-without e0f727, 3473fb, 13499e |
-| A2 | 399df3 (crash, crash_finish); fails-without 32f31b (artifacts-first), 70b4bc |
-| A3 | dca797 (refused) |
-| A4 | suite 7da67f; CI asan/tsan at d89528f |
+| A1 | 03aa5c (reopen_empty, stays_deleted), GCC e5a982; fails-without 6b2d97 (no-floor), 3473fb (commit-drops-deleted), 86e760 (create-from-one); GCC order bug at d89528f 440d3e |
+| A2 | 467c0f (crash, crash_finish), GCC e5a982; fails-without 32f31b (artifacts-first), 70b4bc |
+| A3 | 5f60a2 (refused), GCC e5a982 |
+| A4 | suite f8221d; GCC ASan+UBSan 3e6bf7; CI asan/tsan run 45143330663 |
 | A5 | `docs/mechanisms/host-delete.md`, CHANGELOG.md 2026-11-22 |
-| A6 | CI at d89528f |
-| A7 | 9ec120 (loop_thread, owner check compiled in) |
+| A6 | CI run 45143330663 at d8453f6 |
+| A7 | 597440 (loop_thread, owner check compiled in), GCC e5a982 |
 
 ## Result
 
@@ -71,3 +67,5 @@ Lead: include/journal/journal.h is outside the file set (R2); widen it or rule o
 - R5 New state value rather than a magic bump: an older binary rejects it either way (the shard
   reads as damaged); formats are open until release, and lost-bound extended the state byte the
   same way.
+- R6 CI's gcc failure was the test's: a check whose message recovered the group its condition read
+  the status of. Fixed in the test, no code change; the GCC job at d89528f shows it.
