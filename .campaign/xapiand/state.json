@@ -2597,6 +2597,69 @@
         ]
       },
       "text": "split-check-anchor landed: unlocks split-check-members"
+    },
+    {
+      "announced": {
+        "at": "2026-11-22T21:06:54",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-22T21:06:54",
+      "by": "campaign detent",
+      "closed": "Overlap is consensus CMakeLists.txt only: request-install and node-admission add their own mutant test entries there; whichever lands second merges main (mechanical). rpc-lane and snapshot-channel contracts: sanitizer-ci-time changes CI timing (mutants.sh, groups_test), not the contracts' API or bytes.",
+      "id": "msg-245",
+      "settles": {
+        "ours": [
+          "cluster",
+          "consensus-request-install",
+          "group-heal",
+          "node-admission"
+        ],
+        "quest": "detent:consensus-sanitizer-ci-time"
+      },
+      "text": "detent:consensus-sanitizer-ci-time started and may change files your consensus-request-install changes (order them with --after detent:consensus-sanitizer-ci-time, or narrow the files); may change files your node-admission changes (order them with --after detent:consensus-sanitizer-ci-time, or narrow the files); changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-22T01:30:14",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-22T01:30:14",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-244",
+      "items": {
+        "nan-range-bound": "nan-range-bound"
+      },
+      "settles": {
+        "start": [
+          "nan-range-bound"
+        ]
+      },
+      "text": "split-xapiand-src landed: unlocks nan-range-bound"
+    },
+    {
+      "announced": {
+        "at": "2026-11-22T21:15:19",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-22T21:15:19",
+      "by": "campaign",
+      "closed": "journal-group-delete started 05:12 with an Opus contributor; nan-range-bound held below",
+      "id": "msg-246",
+      "items": {
+        "journal-group-delete": "frees include/journal/host.h, src/host*, CHANGELOG.md, CMakeLists.txt for journal-group-delete",
+        "nan-range-bound": "nan-range-bound"
+      },
+      "settles": {
+        "start": [
+          "journal-group-delete",
+          "nan-range-bound"
+        ]
+      },
+      "text": "journal-lost-bound landed: unlocks frees include/journal/host.h, src/host*, CHANGELOG.md, CMakeLists.txt for journal-group-delete; nan-range-bound"
     }
   ],
   "quests": {
@@ -12649,7 +12712,8 @@
     "group-heal": {
       "accepted": {},
       "after": [
-        "detent:consensus-driver-install"
+        "detent:consensus-driver-install",
+        "consensus-request-install"
       ],
       "base": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
       "branch": "quest/xapiand/group-heal",
@@ -12675,7 +12739,8 @@
       ],
       "consumes": [
         "strata:group",
-        "consensus:snapshot-channel"
+        "consensus:snapshot-channel",
+        "consensus:install-request"
       ],
       "files": [
         "include/strata/group/**",
@@ -12752,7 +12817,6 @@
       "provides": [
         "strata:group-install"
       ],
-      "reason": "install task built against detent:consensus-driver-install at consensus:887a88b; CMakeLists.txt's consensus pin moves when that lands",
       "repo": "../strata",
       "risk": "high",
       "status": "active",
@@ -12802,7 +12866,7 @@
         }
       },
       "title": "Replication groups grow, heal and run in the simulator",
-      "updated": "2026-11-21T21:36:54",
+      "updated": "2026-11-22T21:30:11",
       "worktree": "../strata-wt/xapiand/group-heal"
     },
     "group-install": {
@@ -13676,16 +13740,49 @@
         "test/faultfs_test.cc"
       ],
       "journal": "../Xapiand-wt/xapiand/hunt-faultlab-at-mark",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-22T21:04:57",
+          "ci": {
+            "commit": "7f3910c950f08623a94e103975f3db735c029653",
+            "runs": [
+              44999042888
+            ]
+          },
+          "commit": "42cc324032aca53668451f9a175f1620da9e6f6f",
+          "criteria": {
+            "A1": "261121-233632-7ed5f1 (the build-test check), 261121-233632-7ed5f1 (passed at 7f3910c950f0; only 1 merge from main since, none touching its files)",
+            "A2": "261121-233633-0df7d0 (passed at 7f3910c950f0; only 1 merge from main since, none touching its files)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "7f3910c950f08623a94e103975f3db735c029653",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-233632-7ed5f1",
+              "level": "light",
+              "seconds": 46.2,
+              "state": "done",
+              "what": "hunt-faultlab-at-mark check build-test at 7f3910c950f0"
+            }
+          ],
+          "final": true,
+          "from": "a17735df5e9789bcbe8d32daa76ed823ae6e503c",
+          "reason": "",
+          "tested": "42cc324032aca53668451f9a175f1620da9e6f6f"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../faultlab",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "faultlab's suite reaches faultfs's at_mark sync path",
-      "updated": "2026-11-21T20:22:59",
+      "updated": "2026-11-22T21:05:01",
       "worktree": "../faultlab-wt/xapiand/hunt-faultlab-at-mark"
     },
     "hunt-header-tables": {
@@ -13710,17 +13807,53 @@
         "src/phonetic.h",
         "docs/dev/header-tables.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-22T21:43:25",
+          "ci": {
+            "carried": true,
+            "commit": "b6fb2cb4ce655df5285b65d5dfd961bb72e4fc02",
+            "runs": [
+              45002490785
+            ]
+          },
+          "commit": "fc6fcd6459e5fecea41a008100766c5becdec349",
+          "criteria": {
+            "A1": "261122-002109-cfb3da (the suite check), 261122-002109-cfb3da (passed at b6fb2cb4ce65; only 1 merge from main since, none touching its files)",
+            "A2": "261122-002121-a5a538 (passed at b6fb2cb4ce65; only 1 merge from main since, none touching its files)",
+            "A3": "261122-211249-714471",
+            "A4": "docs/dev/header-tables.md"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "ae96a1309eca584d3857d0059b2126a34d59aaf1",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261122-002109-cfb3da",
+              "level": "light",
+              "seconds": 732.2,
+              "state": "done",
+              "what": "hunt-header-tables check suite at ae96a1309eca"
+            }
+          ],
+          "final": true,
+          "from": "dcb4aae9eb9b1d148f381109bab35c704b1c9e7c",
+          "reason": "",
+          "tested": "a0775fc2331bc4bf77566aba27c04cfba454c219"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Header static tables: one copy and one initializer per program",
-      "updated": "2026-11-22T00:18:09",
-      "worktree": "../Xapiand-wt/xapiand/hunt-header-tables"
+      "updated": "2026-11-22T21:43:36",
+      "worktree": ""
     },
     "hunt-lua-fetch": {
       "accepted": {},
@@ -14251,6 +14384,8 @@
         "detent:journal-power-silent-loss",
         "detent:journal-tail-second-sector"
       ],
+      "base": "a3eecb543a39193960ad4e2a0dbb67ef22d46a10",
+      "branch": "quest/xapiand/journal-group-delete",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -14279,8 +14414,10 @@
         "test/host_delete_test.cc",
         "docs/mechanisms/host-delete.md",
         "CHANGELOG.md",
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "include/journal/journal.h"
       ],
+      "journal": "../Xapiand-wt/xapiand/journal-group-delete",
       "landed": [],
       "lenses": [
         "durability"
@@ -14297,33 +14434,34 @@
       ],
       "repo": "../journal",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "a host deletes a left group's journal, so the node can rejoin it",
-      "updated": "2026-11-21T00:05:24"
+      "updated": "2026-11-22T21:52:54",
+      "worktree": "../journal-wt/xapiand/journal-group-delete"
     },
     "journal-lost-bound": {
       "accepted": {
         "durability": {
-          "at": "2026-11-21T17:38:06",
-          "base": "60ab864407fe4eb2ac05fa354f504916ae55c6e6",
+          "at": "2026-11-22T21:14:52",
+          "base": "8b063a1484fffc3e0ba5dbb4a7994c0ed81ed954",
           "blobs": {
-            "CHANGELOG.md": "100644:819893996b7ae48a7359ffe6fe8d517e82f61e43",
-            "CMakeLists.txt": "100644:7689ab33123bb2970a954f4a0ab4dda979341ce2",
+            "CHANGELOG.md": "100644:a3e5b6f11359f56f499bf59e74db7a90bb60044f",
+            "CMakeLists.txt": "100644:8a0e0454547da3b9c2b5b232b63ef040e7df1a04",
             "docs/mechanisms/lost-bound.md": "100644:711f48b8c3afe960fd28b1b73f3ef694036638f3",
-            "docs/mechanisms/turn-log-damage.md": "100644:30bd5940ffdc86df0ca54a9565666af16a198ca8",
+            "docs/mechanisms/turn-log-damage.md": "100644:9b48c750b602339a698a5b48ee50f8c2dcfb944a",
             "include/journal/host.h": "100644:e6b9f13d82614d383d9db0b3523d833abea29911",
             "include/journal/journal.h": "100644:bf1d348edb5e60e06c70ac89f9902bb062f75ad1",
             "include/journal/turn_driver.h": "100644:d927245ff8146dffbb9a0469e362352398d6cb03",
-            "include/journal/turn_log.h": "100644:1eb27b1554e6e88ec328940aa935805c08acf1f8",
+            "include/journal/turn_log.h": "100644:10d7f679dff33396289d9d50373a3eb444ddbb5d",
             "test/host_test.cc": "100644:3435c65bf991bcba37138316f0aff67337f70ebd",
             "test/lost_bound_test.cc": "100644:070a371b3c488eba79e155519e93633cce4b6470",
             "test/placement_test.cc": "100644:ae0d4a20304ec2548672ebdfbeffb33dfa5d3510"
           },
           "by": "review",
-          "commit": "e4b0100350d977171d13a55c3da4d286fa3b75fb",
+          "commit": "a3eecb543a39193960ad4e2a0dbb67ef22d46a10",
           "criteria": "5a5e98579dbeb6e8",
           "diffs": {
-            "CHANGELOG.md": "7cd8d2bcb2b8705d",
+            "CHANGELOG.md": "3c7bf98b33f92a7f",
             "CMakeLists.txt": "30dfaf42ba04f3dd",
             "docs/mechanisms/lost-bound.md": "de9a7806d0582cef",
             "docs/mechanisms/turn-log-damage.md": "1bfc7a8fe4de99c0",
@@ -14339,33 +14477,22 @@
             "F1": {
               "jobs": [
                 {
-                  "cmd": "/Users/kronuz/code/Kronuz/Detent/.scratch/detent/review-journal-lost-bound/run_probe.sh multi_block_gap_probe.cc",
-                  "commit": "e4b0100350d977171d13a55c3da4d286fa3b75fb",
+                  "cmd": "build/journal_lost_bound_test bounds",
+                  "commit": "a3eecb543a39193960ad4e2a0dbb67ef22d46a10",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261121-143537-209eff",
+                  "job": "261121-222032-774530",
                   "level": "light",
-                  "seconds": 52.9,
+                  "seconds": 1.1,
                   "state": "done",
-                  "what": "F1 recheck: the reviewer's multi_block_gap_probe at 80e58b5 (exit 0 = group 1 lost or bounded at 3+) at e4b0100350d9"
-                },
-                {
-                  "cmd": "sh -c 'cd build && ctest -j 4 --output-on-failure'",
-                  "commit": "e4b0100350d977171d13a55c3da4d286fa3b75fb",
-                  "exit": 0,
-                  "host": "kronuz",
-                  "job": "261121-143537-3a98cc",
-                  "level": "light",
-                  "seconds": 50.9,
-                  "state": "done",
-                  "what": "suite: ctest whole at 80e58b5 (merged with turn-buffers) at e4b0100350d9"
+                  "what": "A1: bounds per group with values at a3eecb543a39"
                 }
               ],
               "kind": "defect",
               "reproduced": false
             }
           },
-          "note": "",
+          "note": "lead re-read main 60ab864..8b063a1 (Detent journal-tail-second-sector): damaged_fragment/verifies_in_sector widen what counts as damage; in the merged scan_segment a failing fragment calls gap(true) regardless, so the lost-bound extent covers it and more damage only bounds or loses more groups (conservative). Evidence reran at the merge a3eecb5: 222032-774530, -8cf2ff, -840708 passed.",
           "review": "8713bb99b97eec9c3808de1c10eb48992e67b71f",
           "reviewed": "ebd3038d1ea58146b14b32459c4aa409e5a61a60",
           "verdict": "CHANGES"
@@ -14411,11 +14538,52 @@
         "test/placement_test.cc",
         "docs/mechanisms/turn-log-damage.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/journal-lost-bound",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-22T21:15:14",
+          "ci": {
+            "commit": "a3eecb543a39193960ad4e2a0dbb67ef22d46a10",
+            "runs": [
+              44993258408
+            ]
+          },
+          "commit": "a3eecb543a39193960ad4e2a0dbb67ef22d46a10",
+          "criteria": {
+            "A1": "261121-222032-774530, 261121-222032-8cf2ff, 261121-222033-48e820; fails without: 261121-103024-e1fed8, 261121-105358-5bfdac, 261121-105415-3c8f01, 261121-143022-821a58",
+            "A2": "261121-222032-840708, 261121-222033-475ec7",
+            "A3": "`docs/mechanisms/lost-bound.md` at journal:2a0ff36"
+          },
+          "evidence": [
+            {
+              "check": "build-test",
+              "ci": "ci:macos-arm64",
+              "commit": "a3eecb543a39193960ad4e2a0dbb67ef22d46a10",
+              "state": "done"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "a3eecb543a39193960ad4e2a0dbb67ef22d46a10",
+              "state": "done"
+            },
+            {
+              "check": "tsan",
+              "ci": "ci:linux-tsan",
+              "commit": "a3eecb543a39193960ad4e2a0dbb67ef22d46a10",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "8b063a1484fffc3e0ba5dbb4a7994c0ed81ed954",
+          "reason": "",
+          "tested": "a3eecb543a39193960ad4e2a0dbb67ef22d46a10"
+        }
+      ],
       "lenses": [
         "durability"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [
@@ -14424,10 +14592,10 @@
       "reason": "detent:journal-tail-second-sector landed at journal:8b063a1 (msg-239)",
       "repo": "../journal",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "damage bounds a group's loss instead of losing the group",
-      "updated": "2026-11-21T22:18:07",
-      "worktree": "../journal-wt/xapiand/journal-lost-bound"
+      "updated": "2026-11-22T21:15:18",
+      "worktree": ""
     },
     "journal-replaces-wal": {
       "accepted": {},
@@ -18183,6 +18351,8 @@
     "nan-range-bound": {
       "accepted": {},
       "after": [],
+      "base": "2f8afdba4edbd53146c021cd487a469c14d16bdf",
+      "branch": "quest/xapiand/nan-range-bound",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -18196,9 +18366,12 @@
         "src/multivalue/range.cc",
         "src/multivalue/range.h",
         "src/aggregations/bucket.h",
+        "src/aggregations/bucket_numeric.h",
+        "src/query_dsl.cc",
         "tests/test_coverage_multivalue_range.cc",
         "tests/test_nan_range*",
-        "docs/src/content/docs/reference/query-dsl*"
+        "docs/src/content/docs/reference-guide/search/aggregations/bucket/range-aggregation.md",
+        "docs/src/content/docs/reference-guide/search/query-dsl/compound-queries/range-searches.md"
       ],
       "hunt": "query-dsl-fixes review F5",
       "landed": [],
@@ -18210,9 +18383,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "A NaN range bound is one behavior on every field type",
-      "updated": "2026-11-21T13:23:10"
+      "updated": "2026-11-22T21:37:02",
+      "worktree": "../Xapiand-wt/xapiand/nan-range-bound"
     },
     "netlab-consensus": {
       "accepted": {},
@@ -18545,17 +18719,17 @@
     "node-admission": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-21T11:41:56",
-          "base": "a73c6e37ba4dbc5d63e6b47a45768bb63a2c9565",
+          "at": "2026-11-22T21:16:12",
+          "base": "a068ba067362beaa4b27c4943b95a70fbfb32e18",
           "blobs": {
-            "CHANGELOG.md": "100644:81119cb14770975fcb8d0e509ff7deec485e18e6",
-            "CMakeLists.txt": "100644:58f0d0582e89278e718f1fbad2b0415c5094d92d",
+            "CHANGELOG.md": "100644:d4aa5896ec9b3ceec672cb6e51de1dc1b2371eda",
+            "CMakeLists.txt": "100644:9e1da9980edee637fa7dee53683369a2089836c9",
             "docs/mechanisms/admission.md": "100644:a574b9ac38abc02b48db000e0f25d20e5113256d",
             "docs/mechanisms/host-connection.md": "100644:f9ead8a29ccdab6d5c17beb203a1548bd8fd0785",
             "include/consensus/transport/admission.h": "100644:4d8e08627349051ef142ded131dc91d620b8d8ea",
             "include/consensus/transport/admission_join.h": "100644:a59f126530060db00f43a2e01e7bcc6585c29c04",
             "include/consensus/transport/connection.h": "100644:e1a6f0f9cba5d40564be47e23c38879489d496a2",
-            "include/consensus/transport/host_transport.h": "100644:88ef36617b12c8abb0ff8881cbbb80198c5a0da2",
+            "include/consensus/transport/host_transport.h": "100644:b099a8d1c090f998c169512348e4d42388b3a2ba",
             "include/consensus/transport/links.h": "100644:0e4d82ed0b6169bb87e332fe8ad034eaf50cbd9a",
             "include/consensus/transport/node_pins.h": "100644:94de96550dd0eb1ae20c91bc5a48a54981e45446",
             "test/transport/admission_certificates.cmake": "100644:acd16c3c2093718bcc3bfe584e8ca8de5435968b",
@@ -18565,7 +18739,7 @@
             "test/transport/links_test.cc": "100644:581318a6faa49d54df159a8737d0ce14fc814ee7"
           },
           "by": "review",
-          "commit": "de51801ac96938e2c649d6b3b6744ec0ef064b89",
+          "commit": "42a8cde325912df0cd463dabc39af0d15d2f8923",
           "criteria": "a4b8d0cea601af32",
           "diffs": {
             "CHANGELOG.md": "b387692525ee5c84",
@@ -18589,14 +18763,14 @@
               "jobs": [
                 {
                   "cmd": "ctest --test-dir build -R '^consensus_transport_admission_nodes_epoch_(ca|pins)$' --output-on-failure",
-                  "commit": "de51801ac96938e2c649d6b3b6744ec0ef064b89",
+                  "commit": "42a8cde325912df0cd463dabc39af0d15d2f8923",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261121-113224-8358a1",
+                  "job": "261121-230902-ad199a",
                   "level": "light",
-                  "seconds": 2.9,
+                  "seconds": 1.1,
                   "state": "done",
-                  "what": "F1 epoch cases plain at de51801ac969"
+                  "what": "F1 epoch cases plain at 42a8cde32591"
                 }
               ],
               "kind": "gap",
@@ -18606,14 +18780,14 @@
               "jobs": [
                 {
                   "cmd": "ctest --test-dir build -R '^consensus_transport_admission_nodes_issue$' --output-on-failure",
-                  "commit": "de51801ac96938e2c649d6b3b6744ec0ef064b89",
+                  "commit": "42a8cde325912df0cd463dabc39af0d15d2f8923",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261121-113224-3a60bf",
+                  "job": "261121-230902-b3d90f",
                   "level": "light",
-                  "seconds": 4.0,
+                  "seconds": 2.1,
                   "state": "done",
-                  "what": "F2 issue with impostor plain at de51801ac969"
+                  "what": "F2 issue with impostor plain at 42a8cde32591"
                 }
               ],
               "kind": "gap",
@@ -18623,21 +18797,21 @@
               "jobs": [
                 {
                   "cmd": "ctest --test-dir build -R '^consensus_transport_admission_nodes_save$' --output-on-failure",
-                  "commit": "de51801ac96938e2c649d6b3b6744ec0ef064b89",
+                  "commit": "42a8cde325912df0cd463dabc39af0d15d2f8923",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261121-113225-813081",
+                  "job": "261121-230902-b6c772",
                   "level": "light",
-                  "seconds": 2.7,
+                  "seconds": 2.8,
                   "state": "done",
-                  "what": "F3 save plain at de51801ac969"
+                  "what": "F3 save plain at 42a8cde32591"
                 }
               ],
               "kind": "defect",
               "reproduced": false
             }
           },
-          "note": "",
+          "note": "main a73c6e3..a068ba0 read by the lead: host_transport.h gains transfer helpers only",
           "review": "cb69cfa0914384a632f9d0e221b157666b879fe8",
           "reviewed": "50446f8c835a60326a683fe6014cf63b396c9d85",
           "verdict": "CHANGES"
@@ -18837,7 +19011,7 @@
       "risk": "high",
       "status": "review",
       "title": "consensus admits a node's address and pin into a running transport",
-      "updated": "2026-11-21T17:36:24",
+      "updated": "2026-11-22T21:16:12",
       "worktree": "../consensus-wt/xapiand/node-admission"
     },
     "numeric-range": {
@@ -24990,7 +25164,8 @@
         "src/database/schema.h",
         "src/database/schema/**",
         "docs/dev/schema-layout.md",
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "harness/async_allowlist.tsv"
       ],
       "history": [
         {
@@ -25031,7 +25206,7 @@
       "risk": "low",
       "status": "active",
       "title": "schema.cc split along its responsibilities",
-      "updated": "2026-11-21T20:43:18",
+      "updated": "2026-11-22T21:18:21",
       "worktree": "../Xapiand-wt/xapiand/schema-split"
     },
     "script-method": {
@@ -26889,7 +27064,8 @@
         "tools/test_split_check.py",
         "tools/testdata/**",
         "docs/SPLITTING.md",
-        "tools/README.md"
+        "tools/README.md",
+        "tools/outline.py"
       ],
       "journal": "../Xapiand-wt/xapiand/split-check-members",
       "landed": [],
@@ -26903,7 +27079,7 @@
       "risk": "low",
       "status": "active",
       "title": "split_check proves member definitions moved out of a class body; SPLITTING.md restructures giant classes",
-      "updated": "2026-11-22T00:02:01",
+      "updated": "2026-11-22T21:24:50",
       "worktree": "../cpp-libraries-wt/xapiand/split-check-members"
     },
     "split-check-sources": {
@@ -30664,6 +30840,38 @@
       "updated": "2026-11-12T13:16:29",
       "worktree": ""
     },
+    "system-file-nr-close": {
+      "accepted": {},
+      "after": [],
+      "base": "2471c5f26e24e1ef3533d94fa5f34bae9184b015",
+      "branch": "quest/xapiand/system-file-nr-close",
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 15,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "system.cc",
+        "test/test.cc",
+        "CHANGELOG.md"
+      ],
+      "journal": "../Xapiand-wt/xapiand/system-file-nr-close",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../system",
+      "risk": "normal",
+      "status": "active",
+      "title": "Linux file-nr readers close their descriptor",
+      "updated": "2026-11-22T21:19:32",
+      "worktree": "../system-wt/xapiand/system-file-nr-close"
+    },
     "t10-flood-limit": {
       "accepted": {
         "correctness": {
@@ -33342,8 +33550,9 @@
             "test/test_group_commit*",
             "CMakeLists.txt"
           ],
-          "journal": "../Xapiand-wt/xapiand/turn-log-parity--group-commit",
-          "worktree": "../strata-wt/xapiand/turn-log-parity--group-commit"
+          "journal": "",
+          "merged": "6c3d0862b0b82e1ffbd289c72e952e25ff3798ea",
+          "worktree": ""
         },
         "journal-pin": {
           "base": "db214892159e0102e17f5b390e1a37b299546031",
@@ -33433,7 +33642,7 @@
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-21T21:25:48",
+      "updated": "2026-11-22T21:18:48",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {

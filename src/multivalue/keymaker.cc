@@ -32,6 +32,17 @@
 #include "engine/codec.h"                       // for serialize_double, unserialize_double
 
 
+const std::string MAX_CMPVALUE(sortable::max_finite);
+const std::string MIN_CMPVALUE(sortable::min_finite);
+
+const std::string SERIALIZED_ZERO(Serialize::floating(0));
+const std::string SERIALIZED_ONE(Serialize::floating(1));
+const std::string SERIALIZED_M_PI(Serialize::floating(M_PI));
+
+const std::string MAX_STR_CMPVALUE("\xff");
+const std::string MIN_STR_CMPVALUE;
+
+
 namespace {
 
 // Saturating difference and absolute value, so a distance of 2^63 or more
