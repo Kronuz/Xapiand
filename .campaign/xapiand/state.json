@@ -11357,9 +11357,7 @@
       "files": [
         "include/strata/core/index.hh",
         "test/lifecycle_test.cc",
-        "test/first_commit*",
-        "docs/mechanisms/manifest-log.md",
-        "CMakeLists.txt"
+        "docs/mechanisms/manifest-log-file.md"
       ],
       "landed": [],
       "lenses": [
@@ -11372,7 +11370,7 @@
       "risk": "high",
       "status": "planned",
       "title": "A crash in a fresh index's first commit leaves an index that opens",
-      "updated": "2026-11-23T04:41:37"
+      "updated": "2026-11-23T04:43:33"
     },
     "flush-memory": {
       "accepted": {},
