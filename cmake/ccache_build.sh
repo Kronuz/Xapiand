@@ -40,7 +40,7 @@ case "$kind" in
  *) echo "unknown configuration: $kind" >&2; exit 2 ;;
 esac
 unset CCACHE_STATSLOG CCACHE_DEBUG CCACHE_DEBUGDIR
-cmake -S "$src" -B "$build" -DLTO=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+cmake -G Ninja -S "$src" -B "$build" -DLTO=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
  -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache "$@"
 name=$(basename "$build")
 git -C "$src" rev-parse HEAD > "$evidence/$name.commit"

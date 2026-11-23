@@ -65,7 +65,7 @@ skip() {
 
 if [ ! -x "$BIN" ]; then
 	echo "missing binary: $BIN"
-	echo "build it: (cd build && cmake .. && make xapiand -j4)   or set BIN=..."
+	echo "build it: cmake -G Ninja -S . -B build && cmake --build build --target xapiand -j4   or set BIN=..."
 	exit 1
 fi
 echo "== run_all: binary $BIN =="

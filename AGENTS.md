@@ -49,8 +49,11 @@ Entry point is `src/main.cc`; the process is orchestrated by
 
 ## Build & toggles
 
+Development builds use CMake and Ninja: every configure in our docs and scripts passes `-G Ninja`, so
+build trees and the ccache stay consistent. CMake itself accepts any generator, for CI and for users.
+
 ```sh
-mkdir build && cd build && cmake .. && make
+cmake -G Ninja -S . -B build && cmake --build build
 ```
 
 C++20, CMake ≥ 3.12. The feature toggles matter when reproducing behavior:

@@ -441,3 +441,25 @@ quest fixes them (2 of 5 on 11-20).
 - N3 (nit) Each create of a new id now reads its shard file twice: once in `status()` and again in `load()`. This matters for the many-indexes workload. 
 - N4 (gap) Deleted entries are never dropped, at 45 bytes each in the shard. Ids that are never reused grow the table without bound. This is documented in Limits. 
 - N5 (gap) This predates the quest: any Host open needs 16 KiB free, so a host on a full disk cannot open whether or not a delete ran. 
+
+## placement correctness review follow-ups (review at strata:ae70ff95)
+
+- F4 (gap): A2's scan is proven only over an in-memory test source; no scan source over the root's real index exists yet. Owner: placement's next quest or cluster.
+- F5 (owner decision): a drain with no free node shrinks shards below rf instead of waiting (documented, D7). Options in the review file.
+- F6 (gap): "a new root voter installs the root's records" is tested only as log catch-up; install waits on group-heal's binding. Recheck once group-heal lands.
+- F7 (test nit): the test driver collects group reports before the root read, so a step finishing during the read can be planned from the older report.
+
+## uinteger-restructure correctness review follow-ups (APPROVE at uinteger_t:5fedce24)
+
+- F1 (nit) `radix_decode.hh` also holds the output side (`_store_be`, `_store_bytes`, `_digits_append`, `_digits_radix`); move them to `radix_encode.hh` or `digits.hh` so it is one family (a map change, tool-made).
+- F2 (docs) `README.md:33` ("One header, no dependencies.") and `docs/TESTING.md:3` still describe one header. Fix right after landing.
+- F4 (note) A5 proves nothing about dependencies between family headers (each includes the umbrella); step 2 must not cite it.
+- F5 (note) the A3 allowlist matches by symbol name, so it would not catch a later body change in a listed symbol.
+
+## first-commit-crash durability review notes (APPROVE at strata:606a1d62)
+
+- F2 (nit, pre-existing on main) a first rollover retried after ENOSPC uses generation 2; a crash during the retry leaves a lone `manifest-2.tmp`, which reopens as `corrupt_index`. `create()` on main does the same.
+- Once first-commit-crash lands with its install() guard (review F1), group-heal's caller guard in include/strata/group/install.hh is redundant: remove it (one mechanism, in the core).
+- R1 (nit, re-check at strata:4955a679) install()'s guard runs before the source checkpoint check and storage admission, so a failed install leaves a committed empty generation 1 (valid, durable) while install()'s comment says a bad checkpoint "leaves this index as it was". Move the guard to just before the copies, or fix the comment.
+- R2 (test nit) the install sweep checks the installed documents, not the applied position.
+- (group-heal, after first-commit-crash landed at strata:4955a679) install() now takes commit_empty() itself: remove group-heal's redundant caller guard (its F2 fix at strata:a1e786f4) when group-heal next merges main.

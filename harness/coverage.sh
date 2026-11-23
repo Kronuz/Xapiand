@@ -66,7 +66,7 @@ build() {
 		ld="-L$LLVM/lib/c++ -Wl,-rpath,$LLVM/lib/c++"
 		extra+=(-DLIBCPP_LIBRARIES="$LLVM/lib/c++/libc++.dylib" -DLIBCPPABI_LIBRARIES="$LLVM/lib/c++/libc++abi.dylib")
 	fi
-	cmake -S "$ROOT" -B "$BUILD" -DFETCHCONTENT_BASE_DIR="$ROOT/.deps" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF \
+	cmake -G Ninja -S "$ROOT" -B "$BUILD" -DFETCHCONTENT_BASE_DIR="$ROOT/.deps" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF \
 		-DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" "-DCMAKE_C_FLAGS=$flags" "-DCMAKE_CXX_FLAGS=$flags" \
 		"-DCMAKE_EXE_LINKER_FLAGS=$flags $ld" "${extra[@]}" || return 1
 	cmake --build "$BUILD" -j"$JOBS" && cmake --build "$BUILD" -j"$JOBS" --target strata_check && one_runtime

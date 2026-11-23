@@ -13,7 +13,7 @@ port. There is no mocking: a "green" run means the actual server did the
 work. Build first:
 
 ```sh
-(cd build && cmake .. && make xapiand -j4)
+cmake -G Ninja -S . -B build && cmake --build build --target xapiand -j4
 ```
 
 ---
@@ -56,7 +56,7 @@ suite: `boolparser`, `compressor`, `serialize`, `wal`, `query`, `geospatial`,
 `-DBUILD_TESTS=ON`, which needs GoogleTest:
 
 ```sh
-cmake -S . -B build -DBUILD_TESTS=ON      # (GTest must be findable)
+cmake -G Ninja -S . -B build -DBUILD_TESTS=ON      # (GTest must be findable)
 cmake --build build --target check         # builds + runs via ctest
 # or, after building:
 (cd build && ctest --output-on-failure)
@@ -72,7 +72,7 @@ The `SANITIZE_*` CMake options did not instrument the local build; use raw flags
 that name it at a directory of symlinks:
 
 ```sh
-cmake -S . -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF \
+cmake -G Ninja -S . -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF \
   -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \
   -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1" \
   -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -g1" \

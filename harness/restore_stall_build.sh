@@ -19,8 +19,8 @@ fresh() {
 }
 fresh build-rs .
 fresh build-rs-base "$BASE"
-cmake -S . -B build-rs "${FLAGS[@]}" > cfg.log 2>&1 || fail cfg.log
-cmake -S "$BASE" -B build-rs-base "${FLAGS[@]}" > cfg-base.log 2>&1 || fail cfg-base.log
+cmake -G Ninja -S . -B build-rs "${FLAGS[@]}" > cfg.log 2>&1 || fail cfg.log
+cmake -G Ninja -S "$BASE" -B build-rs-base "${FLAGS[@]}" > cfg-base.log 2>&1 || fail cfg-base.log
 git -C "$DEPS/reactor-src" apply --reverse --check "$PATCH" 2> /dev/null || git -C "$DEPS/reactor-src" apply "$PATCH" || exit 2
 cmake --build build-rs -j4 --target xapiand > build.log 2>&1 || fail build.log
 cmake --build build-rs-base -j4 --target xapiand > build-base.log 2>&1 || fail build-base.log

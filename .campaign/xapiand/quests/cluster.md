@@ -77,6 +77,9 @@ and `xapiand:cluster-routes`. Consumes `consensus:rpc-lane`, `strata:group-insta
 `strata:placement-records`, `strata:placement-repair`, `prospect:supplied-stats` and
 `xapiand:command`. The shard RPC rides the transport's one connection per node pair (D9); no second
 listener. `format-freeze` reviews these bytes.
+`strata:placement-repair` carries one more duty for the binding since strata:ef1e91e2 (placement's
+review F3): a new root leader sets `liveness.full_at` past its start, and a node counts as up for a
+new learner only once it is known up after that.
 
 ## Decisions
 

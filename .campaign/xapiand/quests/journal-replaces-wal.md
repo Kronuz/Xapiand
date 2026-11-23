@@ -113,6 +113,10 @@ Provides (bytes, reviewed by `format-freeze`): `xapiand:command` (D3), `xapiand:
   objects were accepted, and the docs of the ack levels say so. Task restore also owns
   `src/database/command.cc` (for `encoded_size`), `harness/run_all.sh` and the tests coverage page,
   where the deleted WAL scripts are still named.
+- Lead, 2026-11-23: the shard groups' journal host lives at `.xapiand/journal` under the data
+  root, inside the dot-leading namespace Xapiand already owns (listing and patterns skip it, and
+  `.xapiand/indexes` and `.xapiand/nodes` are its system indexes), so no user index name is newly
+  reserved. A top-level `.journal` would take a name a user can create today.
 
 ## When done
 
