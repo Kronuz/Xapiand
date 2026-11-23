@@ -1,6 +1,6 @@
 > Status: in progress (quest journal-replaces-wal). Built: the prepared write, the command codec, the group's
-> application, each index's group in its catalog slot, and the writes and blobs through it. Pending: RESTORE
-> through the batcher, the commit as the checkpoint, and the WAL's deletion.
+> application, each index's group in its catalog slot, and the writes, blobs and RESTORE through it. Pending:
+> the commit as the checkpoint, and the WAL's deletion.
 > Design: `docs/design/cluster-release.md` D2, D3, D12, D16, D17; strata `docs/mechanisms/replication-group.md`.
 
 # Journal durability (how it works)
@@ -97,7 +97,12 @@ thread. Each index the catalog opens is a lone voter (D2) whose group borrows th
    volume of its own, then the document as the upload's final entry, proposed once; a failure before it proposes
    the upload's abort. A read opens the record's volume through the slot's directory (`read_stored`): a document
    names only records its entry wrote before it was visible.
-5. **Close.** Every catalog close runs `close_payload` before the index's close: the group checkpoints until
+5. **RESTORE.** `Shard::apply_slice` on an index with a group (`restore_slice`): in the turn, a chore prepares
+   the slice's writes, each an unconditional replace by key (`do_replace_term` leaves its `CommandWrite`, proposing
+   nothing), into `RestoreBatcher`'s commands of as many writes as fit one entry; each command is proposed at
+   `quorum` in input order, and `restore_results` reads its writes' docids and versions from the verdict. A write
+   whose document left its placed shard is missed, as before, and takes the serial path.
+6. **Close.** Every catalog close runs `close_payload` before the index's close: the group checkpoints until
    its bundle covers what it committed, and the process keeps its closed record, so a reopen resumes its term
    with no election. The catalog's commit hook and a request's commit stay plain strata commits.
 
@@ -112,6 +117,8 @@ thread. Each index the catalog opens is a lone voter (D2) whose group borrows th
   `test_an_acknowledged_write_survives_a_kill`: a write acknowledged with no WAL, no commit and no close is read
   back after `kill -9` by the next process. `test_stored_blobs_survive_a_kill`: stored blobs, compressed and
   not, and an upload's blob read back byte-equal after `kill -9` with no commit and no close.
+  `test_a_restore_slice_is_batch_commands`: 200 RESTORE writes take a handful of log entries, and each write's
+  docid and version are its batch verdict's.
 - `tests/test_shard_group.cc`: offsets from the state and idempotent effects, rotation in log order, a chunked
   command applied at its final entry, an upload into its own volume, a higher term retiring open commands,
   entries outside their id's term applying nothing, an abort retiring its upload's volume, and the state's

@@ -45,6 +45,7 @@
 #include <set>
 #include <string>
 #include <thread>
+#include <unordered_set>
 #include <vector>
 
 #include <signal.h>
@@ -688,6 +689,49 @@ void test_stored_blobs_survive_a_kill() {
 		const auto [up_type, up_read] = stored_blob(shard, 2, "video/mp4");
 		CHECK(up_type == Locator::Type::stored);
 		CHECK(up_read == uploaded);
+	}
+	std::filesystem::remove_all(journal);
+	std::filesystem::remove_all(path);
+}
+
+// A RESTORE's slice through the group (D17): its writes go as batch commands, far fewer log entries than writes, and
+// each write's docid and version come from its batch's verdict.
+void test_a_restore_slice_is_batch_commands() {
+	const auto journal = fresh("journal_restore");
+	const auto path = fresh("group_restore");
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		auto entry = pin(pool, path);
+		Shard shard = use(entry, WRITE);
+		engine::sync_wait(shard.ready());
+		auto* group = shard.group();
+		REQUIRE(group != nullptr);
+		constexpr std::size_t N = 200;
+		std::vector<SliceWrite> writes(N);
+		for (std::size_t i = 0; i < N; ++i) {
+			writes[i].idx = i;
+			writes[i].term = "Kr" + std::to_string(i);
+			writes[i].doc = make(writes[i].term, "restored " + std::to_string(i));
+		}
+		const auto before = group->group.applied();
+		std::size_t at = 0;
+		std::unordered_set<std::string> missed;
+		while (at < writes.size()) {
+			engine::sync_wait(shard.apply_slice(engine::inline_chores(), writes, at, std::chrono::seconds(10), missed));
+		}
+		CHECK_LT(group->group.applied() - before, N / 10);   // N writes in a handful of commands
+		std::set<engine::docid> dids;
+		for (std::size_t i = 0; i < N; ++i) {
+			CHECK_FALSE(writes[i].error);
+			CHECK_FALSE(writes[i].missed);
+			CHECK_EQ(writes[i].info.version, 1u);
+			CHECK_EQ(writes[i].info.term, writes[i].term);
+			dids.insert(writes[i].info.did);
+		}
+		CHECK_EQ(dids.size(), N);
+		auto view = engine::sync_wait(shard.get_view(writes[N - 1].info.did));
+		CHECK_EQ(view->data(), "restored " + std::to_string(N - 1));
 	}
 	std::filesystem::remove_all(journal);
 	std::filesystem::remove_all(path);
@@ -2749,6 +2793,7 @@ int main(int argc, char** argv) {
 		{"test_an_index_is_a_lone_voter_group", test_an_index_is_a_lone_voter_group},
 		{"test_an_acknowledged_write_survives_a_kill", test_an_acknowledged_write_survives_a_kill},
 		{"test_stored_blobs_survive_a_kill", test_stored_blobs_survive_a_kill},
+		{"test_a_restore_slice_is_batch_commands", test_a_restore_slice_is_batch_commands},
 	};
 	for (const auto& c : cases) {
 		if (argc > 1 && std::string(c.name).find(argv[1]) == std::string::npos) {

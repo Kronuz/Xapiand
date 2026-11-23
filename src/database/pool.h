@@ -82,6 +82,7 @@ class IndexPin;
 class ShardGroups;
 struct ShardGroup;
 class ChunkedUpload;
+struct CommandWrite;
 
 class WorkPool;
 class WorkGroup;
@@ -259,8 +260,9 @@ class ShardEndpoint : public Endpoint
 	// A document write, under the turn: prepared on the engine, then applied by the group on every voter in log
 	// order (cluster-release D3) and acknowledged at quorum, or applied on the engine when the index has no group.
 	// Through the group, the document's stored blobs travel in its command (D3), and `upload`, if any, is the
-	// chunked upload whose final entry the write is (D12).
-	task::task<engine::WriteResult> write_document(engine::Shard& eng, engine::WriteOp op, engine::docid did, std::string key, engine::Document* doc, engine::WriteArgs args, ChunkedUpload* upload = nullptr);
+	// chunked upload whose final entry the write is (D12). With `batched`, the prepared write is left there for a
+	// RESTORE's batch command (D17) and nothing is proposed; the result is prepare's prediction.
+	task::task<engine::WriteResult> write_document(engine::Shard& eng, engine::WriteOp op, engine::docid did, std::string key, engine::Document* doc, engine::WriteArgs args, ChunkedUpload* upload = nullptr, CommandWrite* batched = nullptr);
 
 public:
 	ShardEndpoint(DatabasePool& database_pool, std::string_view path);
@@ -353,7 +355,7 @@ private:
 	// its log replayed) on the engine and the chores they are given. A write is applied, counted and logged here.
 	task::task<engine::WriteResult> do_add(engine::Shard& eng, engine::Chores& chores, int flags, engine::Document&& doc, bool wal_, bool version_);
 	task::task<engine::WriteResult> do_replace(engine::Shard& eng, engine::Chores& chores, int flags, engine::docid shard_did, engine::Document&& doc, bool wal_, bool version_, bool must_exist = false, ChunkedUpload* upload = nullptr);
-	task::task<engine::WriteResult> do_replace_term(engine::Shard& eng, engine::Chores& chores, int flags, const std::string& term, engine::Document&& doc, bool wal_, bool version_, ChunkedUpload* upload = nullptr);
+	task::task<engine::WriteResult> do_replace_term(engine::Shard& eng, engine::Chores& chores, int flags, const std::string& term, engine::Document&& doc, bool wal_, bool version_, ChunkedUpload* upload = nullptr, CommandWrite* batched = nullptr);
 	task::task<void> do_delete(engine::Shard& eng, int flags, engine::docid shard_did, bool wal_, std::optional<engine::rev> expected_ = std::nullopt);
 	task::task<void> do_delete_term(engine::Shard& eng, int flags, const std::string& term, bool wal_, std::optional<engine::rev> expected_ = std::nullopt);
 	task::task<void> do_set_metadata(engine::Shard& eng, int flags, const std::string& key, const std::string& value, bool wal_);

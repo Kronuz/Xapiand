@@ -185,6 +185,12 @@ public:
 	// across slices): the caller places them afresh, in input order.
 	task::task<void> apply_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std::size_t& at, std::chrono::nanoseconds slice, std::unordered_set<std::string>& missed_terms);
 
+private:
+	// apply_slice() through the index's group: the slice's writes as RESTORE's batch commands (D17).
+	task::task<void> restore_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std::size_t& at, std::chrono::nanoseconds slice, std::unordered_set<std::string>& missed_terms);
+
+public:
+
 	task::task<void> add_spelling(const std::string& word, engine::termcount freqinc, bool commit_ = false, bool wal_ = true);
 	task::task<engine::termcount> remove_spelling(const std::string& word, engine::termcount freqdec, bool commit_ = false, bool wal_ = true);
 

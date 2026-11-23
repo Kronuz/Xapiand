@@ -35,6 +35,7 @@
 #include "database/data.h"        // for Locator
 #include "database/flags.h"       // for readable_flags, DB_*
 #include "database/pool.h"        // for ShardEndpoint
+#include "database/restore_batch.h" // for RestoreBatcher, restore_results
 #include "database/shard_group.h" // for ShardGroup, ShardGroups
 #include "database/handler.h"     // for committer
 #include "database/utils.h"       // for DB_SLOT_VERSION
@@ -862,11 +863,11 @@ stage_blobs(engine::Document& doc, const ChunkedUpload* upload, std::string& uns
 
 
 task::task<engine::WriteResult>
-ShardEndpoint::write_document(engine::Shard& eng, engine::WriteOp op, engine::docid did, std::string key, engine::Document* doc, engine::WriteArgs args, ChunkedUpload* upload)
+ShardEndpoint::write_document(engine::Shard& eng, engine::WriteOp op, engine::docid did, std::string key, engine::Document* doc, engine::WriteArgs args, ChunkedUpload* upload, CommandWrite* batched)
 {
 	if (group_ == nullptr) {
-		if (upload != nullptr) {
-			throw engine::Error(engine::errc::invalid, "A chunked upload needs the index's group");
+		if (upload != nullptr || batched != nullptr) {
+			throw engine::Error(engine::errc::invalid, "A chunked upload or a batch needs the index's group");
 		}
 		const auto prepared = co_await eng.prepare(op, did, key, doc, std::move(args));
 		co_return co_await eng.apply(prepared, doc);
@@ -879,6 +880,10 @@ ShardEndpoint::write_document(engine::Shard& eng, engine::WriteOp op, engine::do
 		Command command;
 		command.writes.push_back(command_write(prepared, doc));
 		command.writes.back().blobs = std::move(blobs);
+		if (batched != nullptr) {
+			*batched = std::move(command.writes.back());
+			co_return prepared.result;
+		}
 		if (upload != nullptr) {
 			co_return landed(eng, prepared, co_await propose_upload_command(*group_, *upload, command));
 		}
@@ -1012,7 +1017,7 @@ ShardEndpoint::do_replace(engine::Shard& eng, engine::Chores& chores_, int flags
 
 
 task::task<engine::WriteResult>
-ShardEndpoint::do_replace_term(engine::Shard& eng, engine::Chores& chores_, int flags, const std::string& term, engine::Document&& doc, [[maybe_unused]] bool wal_, bool version_, ChunkedUpload* upload)
+ShardEndpoint::do_replace_term(engine::Shard& eng, engine::Chores& chores_, int flags, const std::string& term, engine::Document&& doc, [[maybe_unused]] bool wal_, bool version_, ChunkedUpload* upload, CommandWrite* batched)
 {
 	L_CALL("ShardEndpoint::do_replace_term({}, <doc>, {}, {})", repr(term), wal_, version_);
 
@@ -1059,7 +1064,7 @@ ShardEndpoint::do_replace_term(engine::Shard& eng, engine::Chores& chores_, int 
 	info.term = key;
 	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result); };
 	try {
-		info = co_await write_document(eng, engine::WriteOp::replace_key, 0, key, &doc, std::move(args), upload);
+		info = co_await write_document(eng, engine::WriteOp::replace_key, 0, key, &doc, std::move(args), upload, batched);
 	} catch (const engine::Error& error) {
 		note_failure(error);
 		throw;
@@ -1624,6 +1629,12 @@ Shard::apply_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std:
 	assert(is_writable());
 	assert(is_write_active());
 
+	if (endpoint().group() != nullptr) {
+		co_await restore_slice(chores, writes, at, slice, missed_terms);
+		co_await finish_write(false, true);
+		co_return;
+	}
+
 	{
 		auto turn = co_await endpoint().take_turn(flags, cancel);
 		auto& entry = endpoint();
@@ -1676,6 +1687,89 @@ Shard::apply_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std:
 		});
 	}
 	co_await finish_write(false, true);
+}
+
+
+// apply_slice() through the index's group (D17): in the turn, a chore prepares the slice's writes, each an
+// unconditional replace by key, into RestoreBatcher's commands of as many writes as fit one log entry; each command
+// is then proposed at quorum, in input order, and its verdict assigns its writes' docids and versions.
+task::task<void>
+Shard::restore_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std::size_t& at, std::chrono::nanoseconds slice, std::unordered_set<std::string>& missed_terms)
+{
+	auto turn = co_await endpoint().take_turn(flags, cancel);
+	auto& entry = endpoint();
+	entry.last_flags_.store(flags, std::memory_order_relaxed);
+	const int write_flags = flags;
+	struct Batch {
+		Command command;
+		std::vector<std::size_t> writes;   // their positions in `writes`, in the command's order
+	};
+	std::vector<Batch> batches;
+	RestoreBatcher batcher;
+	std::vector<std::size_t> filling;
+	co_await chores.run(engine::ChoreClass::flush, [&] {
+		ShardEndpoint::InlineEngine inline_engine(entry, "a RESTORE's apply slice prepares on a worker in the index's turn");
+		if (DocIndexer::seams.throw_in_slice.exchange(false)) {
+			throw engine::Error(engine::errc::internal, "Test seam: the apply slice throws");
+		}
+		auto& eng = entry.engine();
+		const auto until = std::chrono::steady_clock::now() + slice;
+		const auto first = at;
+		const auto limit = DocIndexer::seams.writes_per_slice.load(std::memory_order_relaxed);   // a test's fixed slice
+		while (at < writes.size()) {
+			const auto position = at++;
+			auto& write = writes[position];
+			if (missed_terms.count(write.term) != 0) {
+				write.missed = true;   // a later write of a term whose document left: in input order, after it
+			} else if (const auto& stale_term = DocIndexer::seams.stale_on_term; !stale_term.empty() && write.term.ends_with(stale_term)) {
+				const engine::Error error(engine::errc::reopen, "Test seam: a write marks the index stale");
+				entry.note_failure(error);
+				write.error = std::make_exception_ptr(error);
+			} else if (write.shard_did != 0 && engine::sync_wait(eng.written_key(write.term)) == 0) {
+				write.missed = true;   // gone since placement: placed afresh by the caller (B1)
+				missed_terms.insert(write.term);
+			} else {
+				try {
+					CommandWrite batched;
+					write.info = engine::sync_wait(entry.do_replace_term(eng, engine::inline_chores(), write_flags, write.term, std::move(write.doc), true, false, nullptr, &batched));
+					if (auto closed = batcher.add(std::move(batched), 0)) {
+						batches.push_back({std::move(*closed), std::exchange(filling, {})});
+					}
+					filling.push_back(position);
+				} catch (...) {
+					write.error = std::current_exception();
+				}
+			}
+			if (write.error && entry.stale_.load(std::memory_order_acquire)) {
+				break;   // the index must be replaced: the later writes reopen it, as one request each would
+			}
+			if (limit != 0 ? at - first >= limit : std::chrono::steady_clock::now() >= until) {
+				break;
+			}
+		}
+	});
+	if (auto closed = batcher.flush()) {
+		batches.push_back({std::move(*closed), std::exchange(filling, {})});
+	}
+	auto& eng = entry.engine();
+	for (auto& batch : batches) {
+		std::exception_ptr failed;
+		try {
+			const auto answer = co_await propose(*entry.group(), batch.command);
+			landed(eng, engine::PreparedWrite{}, answer);   // a refusal raises for the whole batch
+			const auto results = restore_results(batch.command, *answer.applied);
+			for (std::size_t i = 0; i < batch.writes.size(); ++i) {
+				writes[batch.writes[i]].info = results[i];
+			}
+		} catch (...) {
+			failed = std::current_exception();
+		}
+		if (failed) {
+			for (const auto position : batch.writes) {
+				writes[position].error = failed;
+			}
+		}
+	}
 }
 
 
