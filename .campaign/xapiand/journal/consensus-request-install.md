@@ -1,6 +1,6 @@
 # consensus-request-install: journal
 
-State: waiting on jobs 261121-223440-971166 (cases+codec+replay), 261121-223618-6521b4 (A2 mutant), 261121-223622-85de99 (A4 mutant), 261121-223626-0f7cf8 (A6 fuzz); CI suite/asan/tsan at consensus:fc4af4f (pushed).
+State: waiting on jobs 261122-211822-2168f0 (cases+codec+replay), 261122-211833-8e72b9 (A2 mutant), 261122-211833-e92f60 (A4 mutant), 261122-211813-967b3b (A6 fuzz); CI suite/asan/tsan at consensus:1f21967 (pushed).
 Quest: .campaign/xapiand/quests/consensus-request-install.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,13 +9,27 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Bodies, tests and docs at consensus:fc4af4f, pushed; nothing compiled yet except by the jobs
-in State (machine work only through jobs).
+Round 2 at consensus:fbae510, merged with consensus main at consensus:1f21967 (clean merge;
+quiesce-election-stall had not landed yet), pushed. What job 261121-223440-971166 and CI run
+44994448707 (every platform, same failures) showed at consensus:fc4af4f, all test or seed
+bugs, no protocol bug:
+- non_leader, witness_bound: `first<T>(core->step(...))` kept a pointer into the step's
+  temporary batch (TSan heap-use-after-free at lines 565 and 615; bad_variant_access on macOS).
+  Each batch is now a named local; `first(Actions&&)` is deleted so it cannot recur.
+- after_install: expected boundary 3, but the base is the leader's applied index with its
+  no-op (4). It now uses `l->applied.size()`.
+- leader_lost: the next leader was the requester itself (LeaderMustTransfer, reason 8) or the
+  other follower with base 0 (Current, reason 11). The other follower now checkpoints first,
+  and the requester's PreVote/Vote requests are dropped so the other follower leads.
+- consensus_mutant_repair-with-a-delivery-outstanding: tools/mutants.sh seeds Repair's busy
+  line, which fc4af4f had extended with `reinstall_`. The line is back as main has it; the
+  pending-request refusal is its own line.
+- A2 mutant job 261121-223618-6521b4 did kill after_install (21 images), and A4's killed
+  witness_bound, but both are rerun since head failed those cases too.
 
 ## Next
 
-1. Fix what job 261121-223440-971166 shows; then push and run `campaign verify` (suite, asan,
-   tsan on CI), the two mutant jobs and the 30-CPU-minute decoder fuzz.
+1. Read jobs in State and CI at consensus:1f21967; fix what fails; then the correctness review.
 2. Merge consensus main once detent:consensus-quiesce-election-stall and
    detent:consensus-peers-wake land (merge, never rebase). Expect one conflict: Core's
    next_deadline follower line (theirs adds acknowledge_at_, mine install_deadline()); keep both
@@ -157,13 +171,13 @@ the tree compiles. The wider file set is needed before step 3, not for the revie
 
 | Criterion | Evidence |
 |---|---|
-| A1 | job 261121-223440-971166 (lost_state, behind) and the suite check on CI at consensus:fc4af4f |
-| A2 | job 261121-223440-971166 (current, after_install, unrequested); mutant job 261121-223618-6521b4 (`--fails-without`, after_install) |
-| A3 | job 261121-223440-971166 (leader_lost, second_request, non_leader) and the suite check on CI |
-| A4 | job 261121-223440-971166 (witness_bound); mutant job 261121-223622-85de99 (`--fails-without`, witness_bound) |
-| A5 | [artifact] docs/mechanisms/install-request.md at consensus:fc4af4f |
-| A6 | codec round-trip and corpus replay in job 261121-223440-971166; fuzz job 261121-223626-0f7cf8 (30 CPU-min, ASan+UBSan); wire version ruling in the note's Wire section |
-| A7 | CI at consensus:fc4af4f (asan, tsan, every platform) |
+| A1 | job 261122-211822-2168f0 (lost_state, behind) and the suite check on CI at consensus:1f21967 |
+| A2 | job 261122-211822-2168f0 (current, after_install, unrequested); mutant job 261122-211833-8e72b9 (`--fails-without`, after_install) |
+| A3 | job 261122-211822-2168f0 (leader_lost, second_request, non_leader) and the suite check on CI |
+| A4 | job 261122-211822-2168f0 (witness_bound); mutant job 261122-211833-e92f60 (`--fails-without`, witness_bound) |
+| A5 | [artifact] docs/mechanisms/install-request.md at consensus:1f21967 |
+| A6 | codec round-trip and corpus replay in job 261122-211822-2168f0; fuzz job 261122-211813-967b3b (30 CPU-min, ASan+UBSan; at fc4af4f 261121-223626-0f7cf8 passed, 0 crashes); wire version ruling in the note's Wire section |
+| A7 | CI at consensus:1f21967 (asan, tsan, every platform) |
 
 Messages: msg-235 (Detent's ask) is taken as A2's refusal by base. The API goes to Detent for
 review through the lead.
@@ -173,6 +187,11 @@ review through the lead.
 <pending>
 
 ## Rulings I made
+
+- Pre-existing on consensus main, not mine: test/driver_mutants.py `checkpoint-drops-suffix`
+  searches `captured_ = FrozenCheckpoint(...)`, but core.h now has
+  `captured_ = std::make_unique<FrozenCheckpoint>(...)`, so that mutant cannot apply. Outside
+  this file set; for the lead.
 
 - Detent's fixes (msg-235 verdict) are consensus:9ea7c55, header only: Current states the
   per-requester-per-base rule in types.h and driver.h; NotMember maps to InvalidRepair.
