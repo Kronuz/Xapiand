@@ -14725,11 +14725,61 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/journal-group-delete",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-23T04:07:37",
+          "ci": {
+            "commit": "d8453f6b67da28c01266485f0d046ce917d34736",
+            "runs": [
+              45143330663
+            ]
+          },
+          "commit": "d8453f6b67da28c01266485f0d046ce917d34736",
+          "criteria": {
+            "A1": "261123-010046-03aa5c, 261123-010040-e5a982; fails without: 261122-215058-e0f727, 261122-215102-3473fb, 261122-215107-13499e, 261123-010037-440d3e, 261123-010057-6b2d97, 261123-010100-86e760",
+            "A2": "261123-010048-467c0f, 261123-010040-e5a982; fails without: 261122-215050-32f31b, 261122-215053-70b4bc",
+            "A3": "261123-010051-5f60a2, 261123-010040-e5a982",
+            "A4": "261123-010006-f8221d, 261123-010043-3e6bf7",
+            "A5": "`docs/mechanisms/host-delete.md`, CHANGELOG.md 2026-11-22",
+            "A6": "CI green at d8453f6b67da",
+            "A7": "261123-010054-597440, 261123-010040-e5a982"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "d8453f6b67da28c01266485f0d046ce917d34736",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-010322-61cf68",
+              "level": "light",
+              "seconds": 62.1,
+              "state": "done",
+              "what": "journal-group-delete check suite at d8453f6b67da"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "d8453f6b67da28c01266485f0d046ce917d34736",
+              "state": "done"
+            },
+            {
+              "check": "tsan",
+              "ci": "ci:linux-tsan",
+              "commit": "d8453f6b67da28c01266485f0d046ce917d34736",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "a3eecb543a39193960ad4e2a0dbb67ef22d46a10",
+          "reason": "",
+          "tested": "d8453f6b67da28c01266485f0d046ce917d34736"
+        }
+      ],
       "lenses": [
         "durability"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [
         "detent:journal-idle-groups",
@@ -14742,10 +14792,10 @@
       ],
       "repo": "../journal",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "a host deletes a left group's journal, so the node can rejoin it",
-      "updated": "2026-11-23T04:07:07",
-      "worktree": "../journal-wt/xapiand/journal-group-delete"
+      "updated": "2026-11-23T04:07:48",
+      "worktree": ""
     },
     "journal-lost-bound": {
       "accepted": {
