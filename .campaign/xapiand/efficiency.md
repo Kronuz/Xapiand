@@ -978,3 +978,11 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - New quest: first-commit-crash (high, durability), A2 fails-without proven (9bf051), fix passes the sweep (ad76e7).
 - Lead errors: told the owner group-heal waited only on CI and consensus while A3/A5 tasks were unbuilt; caught by the evidence pass.
 - Environment: github.com unreachable from the host and its VMs from ~13:00 UTC (connect refused in ms, other hosts fine); pushes, CI reads and VM dependency fetches fail.
+
+## 2026-11-23 14h
+
+- Quota: weekly 14% (1.68%/h window average).
+- Finished agents: first-commit-crash fix (Opus, 208k: ordering fix; 0 of 117 first-commit cuts fail against 49 of 90 refused at main; one mutant killed); journal-replaces-wal d2-d4 (Opus, 369k: all written, none compiled; it cancelled two unrun job sets before the lead asked for one set); placement correctness review (Opus, 202k: CHANGES, F1 repair stall and F2 learner pile-up, both proven by probe and surviving mutant).
+- Recorded schema-split's hand landing at Xapiand:ae5798e3 (no split job ever ran: recorded, not verified).
+- Host: load 7 (Detent's soak ended), light slots 59% used last hour, 21 jobs cancelled and 7 skipped of 84.
+- GitHub still unreachable from the host: no pushes, CI reads or landings since ~13:00 UTC.
