@@ -1,6 +1,6 @@
 # queryparser-restructure: journal
 
-State: waiting on jobs 261122-222817-2abf44 261122-222826-4f317e 261122-222828-545da4 261122-222831-76a27b
+State: waiting on jobs 261122-222826-4f317e 261122-222828-545da4 261122-222831-76a27b
 Quest: .campaign/xapiand/quests/queryparser-restructure.md (the lead's; never edit it)
 Code: queryparser worktree /Users/kronuz/code/Kronuz/queryparser-wt/xapiand/queryparser-restructure,
 branch quest/xapiand/queryparser-restructure (pushed), base queryparser:0fdec0c (main).
@@ -16,7 +16,7 @@ license step); queryparser:fc02cb5 the layout note. Its evidence jobs are queued
 
 ## Next
 
-1. Read the jobs: build-test 261122-222817-2abf44 (A1), members with the worktree tool
+1. Read the jobs (build-test 261122-222817-2abf44 passed, 8/8): members with the worktree tool
    261122-222826-4f317e (A2), fnsizes base/head in one job 261122-222828-545da4 (A2: explain each
    changed row here, or none), selfcontained 261122-222831-76a27b (A3). CI on the pushed branch
    (A1): `gh run list -R Kronuz/queryparser --commit fc02cb50cacb5198df1fb9024afe17cf335c0ee4`.
@@ -79,7 +79,7 @@ tool's job 261122-222826-4f317e stands for it until then.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261122-222817-2abf44 at queryparser:fc02cb5 (queued); CI on the pushed branch |
+| A1 | build-test 261122-222817-2abf44 at queryparser:fc02cb5 passed (8/8 tests); CI run 45124357782 on the pushed branch (queued) |
 | A2 | members (worktree tool, cpp-libraries:2df69e8) 261122-222826-4f317e (queued); fnsizes Release, base queryparser:0fdec0c and head in one job with one FetchContent tree, library objects and the six test binaries: 261122-222828-545da4 (queued); quest check `members` 261122-222818-a1a04e fails until split-check-members lands |
 | A3 | selfcontained.sh over every header (queryparser.hh, queryparser/*.hh), deps from a configured tree: 261122-222831-76a27b (queued) |
 | A4 | `docs/source-layout.md` at queryparser:fc02cb5: each header, its lines and its layer |
