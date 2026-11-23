@@ -1,9 +1,35 @@
 # journal-replaces-wal: journal
 
-State: waiting on jobs at Xapiand:be7dc926c (docs and comment cleanup): crash 261123-084655-c6bce1, no-wal 261123-084655-137716; e2e is CI-run. Earlier: waiting on jobs at Xapiand:0aeec8fc9 (the blob fix, the WAL text, master merged): build + group/pool tests (A1, A9) 261123-083729-a99731; gate crash 261123-083737-64aa68, no-wal 261123-083737-db63af; A8 261123-083745-3cb0e5; A2 261123-083747-1d9f09; A5 journal_replay_check 261123-083750-58484d; mutants (must fail, after a99731) d1 261123-083804-d59e5e, d2 261123-083807-24881d, d3 261123-083809-5c60e1, d4 checkpoint 261123-083811-52e8f7, d4 id counter 261123-083813-952cdc, A9 fix 3 261123-083815-599a5c, A9 261123-083817-d409c7 261123-083819-91e107, A2 truncation 261123-083820-6a878e. Also 261123-083258-b68856 (an earlier compile check at Xapiand:3d20661bd, redundant). Next: read them; fix compile errors first (a99731 builds with -k 0, so it lists them all). Blocked on 5 (stale WAL text outside the set)
+State: waiting on jobs at Xapiand:693c91e68 (the checkpoint fix), targeted first (lead, 2026-11-23): test_pool 261123-101746-14e86e, test_node 261123-101749-45fe26, test_loop_yield 261123-101751-028fe6; before the fix, test_loop_yield alone at a quiet time 261123-101801-e33085. Kept from earlier: a99731 and d4 mutant 52e8f7 (at 0aeec8fc9; its sed no longer matches commit_group), crash 0b2796 (8081eec9d), c6bce1 (be7dc926c). Next: when the three targeted jobs pass, submit the crash check (`campaign verify`) and the full job set once at that commit, without --after; the d4 checkpoint mutant needs the perl pattern of cancelled 261123-101712-4f0aa1.
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
+
+Session 8 (2026-11-23), fix round on crash check 261123-083737-64aa68 (Xapiand:0aeec8fc9, 3 of 90 failed), Xapiand:693c91e68:
+
+1. test_pool fenced (code): the group's checkpoint threw strata::index_fenced untranslated, so error_kind() let it
+   escape and the endpoint never went stale. commit_group now translates through `engine::strata::Shard::rethrow_failure`
+   (rethrow_translated with the Core: errc::database, Core fenced), as the engine commit did.
+2. test_node dirty (:2255), revision (:2620) and the stop order (child abort: do_commit's `current == prior + 1` at
+   shard.cc:474, node_order.log in the slot) (code): the checkpoint commits the index on the group's chore and the
+   engine's Core kept pending/dirty and its last own revision. `checkpoint(group, at)` now runs `at` on the chore via
+   read_applied after it commits; commit_group passes `Shard::checkpointed()` (nothing owed, note() the manifest) and
+   sets the endpoint's revision.
+3. test_node slow commit (:737) (test): it gated the endpoint's flush chore, where the WAL-era commit ran; the group's
+   checkpoint never uses it, so nothing held the commit. The test now holds the group's chore (SchedulerHold, a
+   post_call that blocks the chore thread), where the checkpoint captures: same claim (the control loop stays free
+   during a 400 ms commit), on the commit's real path. GateChores and A::set_chores/take_chores went with it.
+4. test_loop_yield deferred==3 (code): "0 writes deferred" is deterministic, not load: restore_slice missed a write
+   only when its key was gone, so k7 erased and written again on the same shard (new docid) was replaced by key. B1
+   (and the engine's must_exist replace by docid) misses a document that left its placed docid; the check is now
+   `written_key(term) != shard_did` (strata's replace_key keeps the key's docid, so repeats in a slice still match).
+   Job 261123-101801-e33085 shows the pre-fix result at a quiet time, as the lead asked.
+Job churn: the full set I queued at 693c91e68 (crash 1c2ab1, no-wal 8f25a0, reruns 8bc6da..d7f696, mutants
+c0dc0e..4ba74e, 4f0aa1) was cancelled on the lead's word (targeted jobs first, the set once at the final commit). The
+reruns' supersession had already cancelled 1d9f09 and 58484d at 0aeec8fc9 and the old mutants.
+Observed, not changed: a later call on a group fenced earlier throws strata::group::group_fenced, which
+rethrow_translated maps to errc::internal (not database), so that endpoint would not go stale by it; the first failure
+already marks it stale. For the durability review.
 
 Session 7, round 2: the mechanism notes, testing.md, the three comments say journal; status and audit records keep their wording with wal-replay.md links repointed. The git grep leaves only changelog.md:284 and options.md:418 (they state the log's removal; changelog:70 now says journal).
 
@@ -249,3 +275,7 @@ Drafts, applied when the code lands; each names the contract it shapes (format-f
 23. `harness/engine_crash_check.sh` defaults GRACE to 0: an acknowledged write is in the journal before its answer, so
     none may be missing after kill -9 (D2).
 24. The `\x00` locator metadata read (`GET /index/:<locator>`) is removed with the data storage it read.
+25. A group checkpoint leaves the engine as its own commit did: the Core owes nothing and holds the manifest's revision,
+    set on the group's chore (read_applied after the checkpoint), never from the reactor while the chore may apply.
+26. test_node's slow-commit case holds the group's chore instead of the endpoint's flush chore (the WAL-era commit's
+    path, which no commit takes now); its claim is unchanged.
