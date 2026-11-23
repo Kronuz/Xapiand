@@ -8,7 +8,7 @@ repo=${ANALYSIS_REPO:-$HOME/code/Kronuz/analysis}
 out=${ORACLE_DIR:-$HOME/.scratch/xapiand/cjk-words/oracle-build}
 rm -rf "$out/src"; mkdir -p "$out"
 git -C "$repo" archive --prefix=src/ "$pin" | tar -x -C "$out"
-cmake -S "$out/src" -B "$out/b" -DCMAKE_BUILD_TYPE=Release -DANALYSIS_ICU_TOOLS=ON \
+cmake -G Ninja -S "$out/src" -B "$out/b" -DCMAKE_BUILD_TYPE=Release -DANALYSIS_ICU_TOOLS=ON \
 	-DICU_ROOT="${ICU_ROOT:-/usr/local/opt/icu4c@78}" >/dev/null
 cmake --build "$out/b" --target analysis_icu_compare -j4 >/dev/null
 "$out/b/analysis_icu_compare" corpus "$out"/src/test/corpora/{zh,ja,ko}.txt

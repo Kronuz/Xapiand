@@ -27,7 +27,7 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 BIN=${1:-}
 if [ -z "$BIN" ]; then
 	B=${BUILD:-$ROOT/build-rx}
-	cmake -S "$ROOT" -B "$B" -DFETCHCONTENT_BASE_DIR="$ROOT/.deps" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF >"$B.cmake.log" 2>&1 \
+	cmake -G Ninja -S "$ROOT" -B "$B" -DFETCHCONTENT_BASE_DIR="$ROOT/.deps" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF >"$B.cmake.log" 2>&1 \
 		|| { tail -30 "$B.cmake.log"; exit 3; }
 	cmake --build "$B" -j"${JOBS:-4}" --target xapiand >"$B.build.log" 2>&1 || { grep -m20 -B2 -A8 "error" "$B.build.log"; exit 3; }
 	BIN=$B/bin/xapiand
