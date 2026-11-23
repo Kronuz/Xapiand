@@ -1,6 +1,6 @@
 # journal-replaces-wal: journal
 
-State: waiting on jobs and CI at Xapiand:d322cc9b6 (pushed; master merged). Jobs: fresh configure + full build there 261123-131119-d8ca98; fails without the zstd order (fresh configure at ecf684865) 261123-131122-e573bf. At 91113fb2f (flush fix): test_pool 261123-113325-ab914d passed; queued test_node 576cc8, test_loop_yield ae325b, test_pool ASan 95fb3d, test_shard_group ASan eca738, must-fail a11289. Cancelled unrun: eb5101 (its reused build dir would have masked the clash). Older: 9f402f finished (read its log), e33085 queued. Next: when they pass and CI at the pushed head is green, the lead submits the crash check and the full job set at that commit, without --after (the d4 checkpoint mutant takes the perl pattern of 261123-101712-4f0aa1).
+State: waiting on jobs and CI at Xapiand:d322cc9b6 (pushed; master merged). Jobs: fresh configure + full build there 261123-131119-d8ca98; fails without the zstd order (fresh configure at ecf684865) 261123-131122-e573bf. At 91113fb2f (flush fix): test_pool 261123-113325-ab914d passed; queued test_node 576cc8, test_loop_yield ae325b, test_pool ASan 95fb3d, test_shard_group ASan eca738, must-fail a11289. Cancelled unrun: eb5101 (its reused build dir would have masked the clash). Older: 9f402f passed, so it proves nothing (item 7); e33085 queued. Next: when they pass and CI at the pushed head is green, the lead submits the crash check and the full job set at that commit, without --after (the d4 checkpoint mutant takes the perl pattern of 261123-101712-4f0aa1).
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
@@ -49,6 +49,9 @@ Session 10 (2026-11-23), the lead's step (Blocked on 6 and 7, file set widened t
    Why local jobs missed it: none configured fresh at ecf684865 (eb5101 was still queued), and the slot's reused
    `build` dir caches ZSTD_LIBRARY/ZSTD_INCLUDE_DIR from earlier configures, which hides the fetch; CI configures
    fresh. The new jobs configure in a removed `build-fresh`. Master merged: Xapiand:d322cc9b6 (clean).
+7. 261123-112555-9f402f (test_pool under ASan at a22e1537f, before any fix) passed its test (log: "100% tests passed"):
+   the UAF CI saw does not reproduce in test_pool under macOS ASan, so it is not fails-without evidence. The flush fix's
+   must-fail proof is a11289 (test_shard_group's deterministic views check, which needs no ASan to fail).
 Observed, not changed: strata pins zstd and lz4 so segment bytes match across platforms; in Xapiand the zstd pin is
 defeated by the system zstd (as on master, where the storage library did the same). For the lead and strata before
 replicas compare segment bytes.
