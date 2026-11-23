@@ -931,17 +931,16 @@ private:
 };
 
 
-// Indexes a document whose blob is the request's body, streamed to the data storage in chores of the upload's own
-// group, a chunk at a time (docs/design/phase7c.md D9): no turn is held while the body arrives.
+// Indexes a document whose blob is the request's body, streamed as chunk entries of its shard's group a chunk at a
+// time (D12): no turn is held while the body arrives.
 static task::task<DocumentInfo>
 index_streamed_blob(Request& request, DatabaseHandler& db_handler, const MsgPack& document_id, engine::rev version, const ct_type_t& ct_type, bool commit)
 {
 	if (request.content_length > STORED_UPLOAD_LIMIT) {
 		THROW(PayloadTooLarge, "A stored blob has a size limit of {}", strings::from_bytes(STORED_UPLOAD_LIMIT));
 	}
-	IndexChores chores(XapiandManager::manager(true)->database_pool->work_pool());
 	RequestChunks body(request);
-	auto blob = co_await db_handler.upload_stored(document_id, ct_type, request.content_length, chores, body);
+	auto blob = co_await db_handler.upload_stored(document_id, request.content_length, body);
 	co_return co_await db_handler.index_uploaded(document_id, version, ct_type, blob, commit);
 }
 
@@ -951,7 +950,7 @@ write_document_view(Request& request)
 {
 	L_CALL("write_document_view()");
 
-	// A blob too big to buffer arrives as a stream and is written to the data storage as it comes (D9): the
+	// A blob too big to buffer arrives as a stream and goes to its shard's group as it comes (D12): the
 	// document has no decoded body.
 	const bool streamed = request.http_req != nullptr && request.http_req->body_stream != nullptr;
 	MsgPack streamed_body;
@@ -3210,7 +3209,7 @@ SearchService::wants_body_stream(const http::Request& hreq)
 {
 	const auto method = method_from_string(hreq.method);
 
-	// A blob past the buffered cap streams to the data storage as it arrives (D9): the request needs its length
+	// A blob past the buffered cap streams to its shard's group as it arrives (D12): the request needs its length
 	// up front. Which requests can take a stream is checked once the route is known (handle).
 	if (method == HTTP_PUT || method == HTTP_POST) {
 		const auto length = hreq.header("Content-Length");

@@ -1030,39 +1030,56 @@ void test_owed_flushes_do_not_reorder_writers() {
 	CHECK_EQ(engine::sync_wait(reader.engine_for_read())->doc_count(), static_cast<engine::doccount>(threads_n * per_thread));
 }
 
-// Blob I/O is device work, so it runs as chores: the blob's write is a flush chore (inside the document's turn, before
-// the apply), its commit another, and its read a query chore.
+// A blob travels in its write's command and apply writes it in the group's file set (D3, D16); its read is device
+// work, so it runs as a query chore.
 void test_blob_io_runs_in_chores() {
 	Watchdog watchdog("blob I/O");
+	const auto journal = fresh("journal_blobs");
+	const auto path = fresh("blobs");
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		auto entry = pin(pool, path);
+		auto& counting = count_chores(entry.entry());
+		Shard shard = use(entry, WRITE);
+		engine::sync_wait(shard.ready());
+		Data data;
+		data.update(ct_type_t("application/octet-stream"), -1, 0, 0, std::string("blobbytes"));
+		data.flush();
+		auto doc = make("Kblob", "");
+		doc.set_data(data.serialize());
+		const auto written = engine::sync_wait(shard.add_document(std::move(doc)));
+		auto view = engine::sync_wait(shard.get_view(written.did));
+		Data stored(view->data());
+		const Locator* locator = nullptr;
+		for (const auto& candidate : stored) {
+			if (candidate.volume != -1) {
+				locator = &candidate;
+			}
+		}
+		REQUIRE(locator != nullptr);
+		const auto queries = counting.count(engine::ChoreClass::query);
+		const auto blob = engine::sync_wait(shard.storage_get_stored(*locator));
+		CHECK_GT(counting.count(engine::ChoreClass::query), queries);  // the read was a chore
+		CHECK_TRUE(blob.find("blobbytes") != std::string::npos);
+	}
+	std::filesystem::remove_all(journal);
+	std::filesystem::remove_all(path);
+}
+
+// Without a group an index holds no stored blob: the write is refused before anything is applied.
+void test_a_stored_blob_needs_the_group() {
+	Watchdog watchdog("a stored blob needs the group");
 	DatabasePool pool(control_loop(), 8);
-	auto entry = pin(pool, fresh("blobs"));
-	auto& counting = count_chores(entry.entry());
+	auto entry = pin(pool, fresh("blobs_no_group"));
 	Shard shard = use(entry, WRITE);
-	engine::sync_wait(shard.ready());
 	Data data;
 	data.update(ct_type_t("application/octet-stream"), -1, 0, 0, std::string("blobbytes"));
 	data.flush();
 	auto doc = make("Kblob", "");
 	doc.set_data(data.serialize());
-	const auto flushes = counting.count(engine::ChoreClass::flush);
-	const auto written = engine::sync_wait(shard.add_document(std::move(doc)));
-	CHECK_GT(counting.count(engine::ChoreClass::flush), flushes);  // the blob was pushed in a chore
-	const auto commits = counting.count(engine::ChoreClass::flush);
-	CHECK_TRUE(engine::sync_wait(shard.commit()));
-	CHECK_GE(counting.count(engine::ChoreClass::flush), commits + 2);  // the storage's fsync and the engine's commit
-	auto view = engine::sync_wait(shard.get_view(written.did));
-	Data stored(view->data());
-	const Locator* locator = nullptr;
-	for (const auto& candidate : stored) {
-		if (candidate.volume != -1) {
-			locator = &candidate;
-		}
-	}
-	REQUIRE(locator != nullptr);
-	const auto queries = counting.count(engine::ChoreClass::query);
-	const auto blob = engine::sync_wait(shard.storage_get_stored(*locator));
-	CHECK_GT(counting.count(engine::ChoreClass::query), queries);  // the read was a chore
-	CHECK_TRUE(blob.find("blobbytes") != std::string::npos);
+	CHECK(error_kind([&] { engine::sync_wait(shard.add_document(std::move(doc))); }) == engine::errc::invalid);
+	CHECK_EQ(engine::sync_wait(shard.engine_for_read())->doc_count(), 0u);
 }
 
 
@@ -2710,6 +2727,7 @@ void test_a_reopen_aborts_an_upload_left_open() {
 			Pieces body(std::string(5000, 'u'), 1000);
 			engine::sync_wait(propose_upload(group_proposer(*group), *upload, body));
 			term = chunked_term(upload->id());
+			CHECK_TRUE(engine::sync_wait(shard.commit()));   // the sweep closes only a committed index
 		}
 		CHECK_TRUE(until([&] { return state_of(pool, path) == strata::slot_state::free; }));   // closed, its record kept
 		Shard shard(pin(pool, path), WRITE);
@@ -2743,6 +2761,7 @@ int main(int argc, char** argv) {
 		{"test_a_failed_commit_reaches_only_the_joined_waiters", test_a_failed_commit_reaches_only_the_joined_waiters},
 		{"test_owed_flushes_do_not_reorder_writers", test_owed_flushes_do_not_reorder_writers},
 		{"test_blob_io_runs_in_chores", test_blob_io_runs_in_chores},
+		{"test_a_stored_blob_needs_the_group", test_a_stored_blob_needs_the_group},
 				{"test_a_held_search_delays_no_refresh_or_commit", test_a_held_search_delays_no_refresh_or_commit},
 		{"test_readers_cap", test_readers_cap},
 		{"test_readers_cap_is_per_index", test_readers_cap_is_per_index},

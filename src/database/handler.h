@@ -235,21 +235,19 @@ public:
 		virtual task::task<bool> next(std::string& chunk) = 0;
 	};
 
-	// Where a streamed blob lies in the data storage of its shard, or, through the shard's group, the chunked command
-	// whose chunks hold it (D12): its final entry is the document's write, or its abort.
+	// A streamed blob: the chunked command of its shard's group whose chunks hold it (D12). Its final entry is the
+	// document's write, or its abort.
 	struct UploadedBlob {
-		ssize_t volume = -1;
-		size_t offset = 0;
 		size_t size = 0;
-		size_t shard = 0;   // the shard whose storage or group holds it
+		size_t shard = 0;   // the shard whose group holds it
 		std::shared_ptr<ChunkedUpload> upload;
 	};
 
-	// Streams a blob of `size` bytes from `body` into the data storage of the shard that document `document_id` goes
-	// to, in chores of `chores`. The document is indexed afterwards, with index_uploaded(), in a turn of its own. An
-	// upload that fails, or whose body ends short, leaves nothing behind. Raises ClientError (a 4xx) when the blob
-	// cannot be stored: a size past the limit, or an id that does not name its shard before it is indexed.
-	task::task<UploadedBlob> upload_stored(const MsgPack& document_id, const ct_type_t& ct_type, size_t size, engine::Chores& chores, BodyChunks& body);
+	// Streams a blob of `size` bytes from `body` as chunk entries of the group of the shard that document
+	// `document_id` goes to. The document is indexed afterwards, with index_uploaded(), as the upload's final entry.
+	// An upload that fails, or whose body ends short, is aborted, so its volume is freed. Raises ClientError (a 4xx)
+	// when the blob cannot be stored: no size, or no document id to name its shard before it is indexed.
+	task::task<UploadedBlob> upload_stored(const MsgPack& document_id, size_t size, BodyChunks& body);
 
 	// index() of a `stored` document whose blob upload_stored() wrote.
 	task::task<DocumentInfo> index_uploaded(const MsgPack& document_id, engine::rev document_ver, const ct_type_t& ct_type, const UploadedBlob& blob, bool commit);

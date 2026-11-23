@@ -617,9 +617,9 @@ DatabaseHandler::index(const MsgPack& document_id, engine::rev document_ver, boo
 
 
 task::task<DatabaseHandler::UploadedBlob>
-DatabaseHandler::upload_stored(const MsgPack& document_id, const ct_type_t& ct_type, size_t size, engine::Chores& chores, BodyChunks& body)
+DatabaseHandler::upload_stored(const MsgPack& document_id, size_t size, BodyChunks& body)
 {
-	L_CALL("DatabaseHandler::upload_stored({}, {}/{}, {})", repr(document_id.to_string()), ct_type.first, ct_type.second, size);
+	L_CALL("DatabaseHandler::upload_stored({}, {})", repr(document_id.to_string()), size);
 
 	if (!has_db_writable(flags)) {
 		THROW(Error, "Database is read-only");
@@ -631,53 +631,24 @@ DatabaseHandler::upload_stored(const MsgPack& document_id, const ct_type_t& ct_t
 		THROW(ClientError, "A streamed blob has at least a byte");
 	}
 
-	// The blob goes to the data storage of the shard the document is indexed in, so that shard is known first: the
-	// one its id's bucket names.
+	// The blob goes to the group of the shard the document is indexed in, so that shard is known first: the one its
+	// id's bucket names.
 	const auto term_id = co_await get_prefixed_term_id(document_id);
 	const size_t shard_num = id_shard(term_id, endpoints.size());
 
 	lock_shard lk_shard(endpoints[shard_num], flags, turn_token());
 	co_await lk_shard.pin();
-	if (auto* group = lk_shard->group()) {
-		// Through the shard's group (D12): the body streams as chunk entries into a volume of the upload's own, and
-		// index_uploaded() proposes the document as its final entry. A failed stream proposed its abort.
-		UploadedBlob blob;
-		blob.upload = std::make_shared<ChunkedUpload>(co_await next_chunked_id(*group), size);
-		blob.volume = 0;
-		blob.size = size;
-		blob.shard = shard_num;
-		co_await propose_upload(group_proposer(*group), *blob.upload, body);
-		co_return blob;
+	auto* group = lk_shard->group();
+	if (group == nullptr) {
+		THROW(Error, "The index has no group to upload a blob to");
 	}
-	auto upload = co_await lk_shard->upload_begin(chores, ct_type.to_string(), size);
-	std::exception_ptr error;
-	try {
-		size_t received = 0;
-		std::string chunk;
-		while (co_await body.next(chunk)) {
-			received += chunk.size();
-			if (received > size) {
-				THROW(ClientError, "The blob is longer than its Content-Length");
-			}
-			co_await upload->append(std::move(chunk));
-			chunk = std::string();
-		}
-		if (received != size) {
-			THROW(ClientError, "The blob is shorter than its Content-Length");
-		}
-		co_await upload->end();
-	} catch (...) {
-		error = std::current_exception();
-	}
-	if (error) {
-		co_await upload->abort();
-		std::rethrow_exception(error);
-	}
+	// Through the shard's group (D12): the body streams as chunk entries into a volume of the upload's own, and
+	// index_uploaded() proposes the document as its final entry. A failed stream proposed its abort.
 	UploadedBlob blob;
-	blob.volume = upload->volume();
-	blob.offset = upload->offset();
+	blob.upload = std::make_shared<ChunkedUpload>(co_await next_chunked_id(*group), size);
 	blob.size = size;
 	blob.shard = shard_num;
+	co_await propose_upload(group_proposer(*group), *blob.upload, body);
 	co_return blob;
 }
 
@@ -691,55 +662,27 @@ DatabaseHandler::index_uploaded(const MsgPack& document_id, engine::rev document
 		THROW(Error, "Database is read-only");
 	}
 
-	if (blob.upload) {
-		// The document is the upload's final entry; one never proposed (a failure before it) is aborted, so its
-		// volume is freed.
-		std::exception_ptr failed;
+	// The document is the upload's final entry; one never proposed (a failure before it) is aborted, so its volume is
+	// freed.
+	std::exception_ptr failed;
+	try {
+		co_return co_await index_uploaded_through_group(document_id, document_ver, ct_type, blob, commit);
+	} catch (...) {
+		failed = std::current_exception();
+	}
+	if (!blob.upload->finished()) {
+		blob.upload->finish();
 		try {
-			co_return co_await index_uploaded_through_group(document_id, document_ver, ct_type, blob, commit);
+			lock_shard lk_shard(endpoints[blob.shard], flags, turn_token());
+			co_await lk_shard.pin();
+			if (auto* group = lk_shard->group()) {
+				co_await propose_abort(group_proposer(*group), blob.upload->id());
+			}
 		} catch (...) {
-			failed = std::current_exception();
-		}
-		if (!blob.upload->finished()) {
-			blob.upload->finish();
-			try {
-				lock_shard lk_shard(endpoints[blob.shard], flags, turn_token());
-				co_await lk_shard.pin();
-				if (auto* group = lk_shard->group()) {
-					co_await propose_abort(group_proposer(*group), blob.upload->id());
-				}
-			} catch (...) {
-				L_EXC("Unable to abort an upload whose document was not indexed");
-			}
-		}
-		std::rethrow_exception(failed);
-	}
-
-	const auto term_id = has_document_id(document_id) ? co_await get_prefixed_term_id(document_id) : std::string();
-
-	int t = CONFLICT_RETRIES;
-	while (true) {
-		try {
-			Data data;
-			engine::docid did = 0;
-			if (!term_id.empty()) {
-				try {
-					did = co_await written_docid_term(term_id);
-				} catch (const engine::Error& error) {
-					if (!engine::is_missing(error.kind)) { throw; }
-				}
-			}
-			data.update(ct_type, blob.volume, blob.offset, blob.size);
-			auto indexed = co_await index(did, document_id, document_ver, MsgPack::MAP(), data, commit);
-			if (const auto n_shards = endpoints.size(); n_shards > 1 && (indexed.first.did - 1) % n_shards != blob.shard) {
-				// The blob lies in another shard's storage than the document: the write is applied, so say so.
-				THROW(Error, "The document landed in shard {} but its blob is in shard {}", (indexed.first.did - 1) % n_shards, blob.shard);
-			}
-			co_return indexed;
-		} catch (const engine::Error& error) {
-			if (error.kind != engine::errc::version_conflict || --t == 0 || document_ver != UNKNOWN_REVISION) { throw; }
+			L_EXC("Unable to abort an upload whose document was not indexed");
 		}
 	}
+	std::rethrow_exception(failed);
 }
 
 
@@ -2131,7 +2074,7 @@ namespace {
 ChunkedUpload*
 uploaded_into(const DatabaseHandler::UploadedBlob* upload, size_t shard_num)
 {
-	if (upload == nullptr || !upload->upload) {
+	if (upload == nullptr) {
 		return nullptr;
 	}
 	if (upload->shard != shard_num) {

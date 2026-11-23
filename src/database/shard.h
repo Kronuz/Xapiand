@@ -193,11 +193,8 @@ public:
 	task::task<void> set_metadata(const std::string& key, const std::string& value, bool commit_ = false);
 
 #ifdef XAPIAND_DATA_STORAGE
-	// A blob of the index's data storage: its read is a chore, on a reader of its own.
+	// A stored blob of the index's group: its read is a chore.
 	task::task<std::string> storage_get_stored(const Locator& locator);
-
-	// Begins a streamed upload of a blob into a volume of the index's data storage that nothing else writes.
-	task::task<std::unique_ptr<StoredUpload>> upload_begin(engine::Chores& chores, std::string ct_type, std::uint64_t size);
 #endif /* XAPIAND_DATA_STORAGE */
 
 	std::string to_string() const;

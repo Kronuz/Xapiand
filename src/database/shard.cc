@@ -25,10 +25,8 @@
 
 #include <algorithm>              // for std::move
 #include <cassert>                // for assert
-#include <cmath>                  // for std::floor
 #include <cstdint>                // for std::uint64_t
 #include <optional>                // for std::optional
-#include <unistd.h>                // for unlink
 #include <sys/types.h>            // for uint32_t, uint8_t, ssize_t
 
 #include "at_end.h"               // for at_end::assert_none
@@ -53,7 +51,6 @@
 #include "repr.hh"                // for repr
 #include "reserved/fields.h"      // for ID_FIELD_NAME
 #include "serialize.h"             // for Serialize::floating
-#include "storage.h"              // for STORAGE_BLOCK_SIZE, StorageCorruptVolume...
 #include "xapiand_strings.hh"             // for strings::from_delta, strings::format
 
 #ifdef XAPIAND_RANDOM_ERRORS
@@ -81,9 +78,6 @@
 // #define L_DATABASE_WRAP_BEGIN L_DELAYED_100
 // #undef L_DATABASE_WRAP_END
 // #define L_DATABASE_WRAP_END L_DELAYED_N_UNLOG
-
-
-#define DATA_STORAGE_PATH "docdata."
 
 
 // The version a write requires, as its document asks for it in the version slot.
@@ -122,177 +116,6 @@ finalise_write(engine::Document& doc, engine::WriteResult& info)
 }
 
 
-#define STORAGE_SYNC_MODE STORAGE_FULL_SYNC
-
-// Codec for newly written data-store records. Zstandard gives ~2x LZ4's ratio at
-// LZ4-class write speed (see the storage library's bench). The codec id is stored
-// per record, so existing LZ4 volumes keep reading unchanged; only new writes use
-// this. Switch back to STORAGE_COMPRESS_LZ4 here to change it.
-#define STORAGE_COMPRESS_MODE STORAGE_COMPRESS_ZSTD
-
-
-/*
- *  ____        _        ____  _
- * |  _ \  __ _| |_ __ _/ ___|| |_ ___  _ __ __ _  __ _  ___
- * | | | |/ _` | __/ _` \___ \| __/ _ \| '__/ _` |/ _` |/ _ \
- * | |_| | (_| | || (_| |___) | || (_) | | | (_| | (_| |  __/
- * |____/ \__,_|\__\__,_|____/ \__\___/|_|  \__,_|\__, |\___|
- *                                                |___/
- */
-#ifdef XAPIAND_DATA_STORAGE
-
-// The legacy v1 data-storage header: a single in-place header block. New volumes
-// are written in the crash-safe v2 format below; this type exists only so a v2
-// DataStorage can still READ pre-existing v1 volumes (read-only).
-struct DataHeaderV1 {
-	struct DataHeaderHead {
-		uint32_t magic;
-		uint32_t offset;  // required
-		char uuid[UUID_LENGTH];
-	} head;
-
-	char padding[(STORAGE_BLOCK_SIZE - sizeof(DataHeaderV1::DataHeaderHead)) / sizeof(char)];
-
-	void init(void* param, void* args);
-	void validate(void* param, void* args);
-};
-
-
-// The v2 (dual-meta, crash-safe) data-storage header. It begins with the engine's
-// StorageMetaHead (magic, txnid, high-water, whole-block checksum) -- which is what
-// opts new volumes into the v2 format -- then the shard uuid, padded to a block.
-struct DataHeaderV2 {
-	StorageMetaHead meta;
-	char uuid[UUID_LENGTH];
-	char padding[STORAGE_BLOCK_SIZE - sizeof(StorageMetaHead) - UUID_LENGTH];
-
-	void init(void* param, void* args);
-	void validate(void* param, void* args);
-};
-
-
-#pragma pack(push, 1)
-struct DataBinHeader {
-	uint8_t magic;
-	uint8_t flags;  // required
-	uint32_t size;  // required
-
-	inline void init(void*, void*, uint32_t size_, uint8_t flags_) {
-		magic = STORAGE_BIN_HEADER_MAGIC;
-		size = size_;
-		flags = (0 & ~STORAGE_FLAG_MASK) | flags_;
-	}
-
-	inline void validate(void*, void*) {
-		if (magic != STORAGE_BIN_HEADER_MAGIC) {
-			THROW(StorageCorruptVolume, "Bad document header magic number");
-		}
-		if (flags & STORAGE_FLAG_DELETED) {
-			THROW(StorageNotFound, "Data Storage document deleted");
-		}
-	}
-};
-
-
-struct DataBinFooter {
-	uint32_t checksum;
-	uint8_t magic;
-
-	inline void init(void*, void*, uint32_t checksum_) {
-		magic = STORAGE_BIN_FOOTER_MAGIC;
-		checksum = checksum_;
-	}
-
-	inline void validate(void*, void*, uint32_t checksum_) {
-		if (magic != STORAGE_BIN_FOOTER_MAGIC) {
-			THROW(StorageCorruptVolume, "Bad document footer magic number");
-		}
-		if (checksum != checksum_) {
-			THROW(StorageCorruptVolume, "Bad document checksum");
-		}
-	}
-};
-#pragma pack(pop)
-
-
-class DataStorage : public Storage<DataHeaderV2, DataBinHeader, DataBinFooter, STORAGE_DEFAULT_IO, DataHeaderV1> {
-public:
-	int flags;
-
-	uint32_t volume;
-
-	DataStorage(std::string_view base_path_, void* param_, int flags);
-
-	bool open(std::string_view relative_path);
-};
-
-
-void
-DataHeaderV1::init(void* param, void* /*unused*/)
-{
-	auto shard = static_cast<ShardEndpoint*>(param);
-	assert(shard);
-
-	head.magic = _LEGACY_STORAGE_MAGIC;
-	strncpy(head.uuid, shard->uuid().c_str(), sizeof(head.uuid));
-	head.offset = STORAGE_START_BLOCK_OFFSET;
-}
-
-
-void
-DataHeaderV1::validate(void* param, void* /*unused*/)
-{
-	if (head.magic != _LEGACY_STORAGE_MAGIC) {
-		THROW(StorageCorruptVolume, "Bad data storage header magic number");
-	}
-
-	auto shard = static_cast<ShardEndpoint*>(param);
-	if (UUID(head.uuid) != UUID(shard->uuid())) {
-		THROW(StorageCorruptVolume, "Data storage UUID mismatch");
-	}
-}
-
-
-void
-DataHeaderV2::init(void* param, void* /*unused*/)
-{
-	auto shard = static_cast<ShardEndpoint*>(param);
-	assert(shard);
-
-	// The engine stamps meta (magic/txnid/high-water/checksum); we only carry the
-	// shard uuid so a foreign volume is rejected on open.
-	memset(uuid, 0, sizeof(uuid));
-	strncpy(uuid, shard->uuid().c_str(), sizeof(uuid));
-}
-
-
-void
-DataHeaderV2::validate(void* param, void* /*unused*/)
-{
-	// The engine has already checked the meta magic + whole-block checksum; this
-	// is the shard-domain check.
-	auto shard = static_cast<ShardEndpoint*>(param);
-	if (UUID(uuid) != UUID(shard->uuid())) {
-		THROW(StorageCorruptVolume, "Data storage UUID mismatch");
-	}
-}
-
-
-DataStorage::DataStorage(std::string_view base_path_, void* param_, int flags)
-	: Storage<DataHeaderV2, DataBinHeader, DataBinFooter, STORAGE_DEFAULT_IO, DataHeaderV1>(base_path_, param_),
-	  flags(flags)
-{
-}
-
-
-bool
-DataStorage::open(std::string_view relative_path)
-{
-	return Storage<DataHeaderV2, DataBinHeader, DataBinFooter, STORAGE_DEFAULT_IO, DataHeaderV1>::open(relative_path, flags);
-}
-#endif  // XAPIAND_DATA_STORAGE
-
-
 /*
  *  ____        _        _                    _____           _             _       _
  * |  _ \  __ _| |_ __ _| |__   __ _ ___  ___| ____|_ __   __| |_ __   ___ (_)_ __ | |_
@@ -300,7 +123,7 @@ DataStorage::open(std::string_view relative_path)
  * | |_| | (_| | || (_| | |_) | (_| \__ \  __/ |___| | | | (_| | |_) | (_) | | | | | |_
  * |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|_____|_| |_|\__,_| .__/ \___/|_|_| |_|\__|
  *                                                             |_|
- * the parts that touch the engine, the blob storage and the group
+ * the parts that touch the engine and the group
  */
 
 ShardEndpoint::ShardEndpoint(DatabasePool& database_pool_, std::string_view path_) :
@@ -428,20 +251,6 @@ ShardEndpoint::open_blocking(kronuz::journal::IO& directory, prospect::index& in
 		id_high_moved_ = false;
 	}
 
-#ifdef XAPIAND_DATA_STORAGE
-	// An index with a group keeps its blobs in the group's file set (D3, D16), not in a data storage.
-	if (database_pool.groups() == nullptr) {
-		writable_storage = std::make_unique<DataStorage>(path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS_MODE | STORAGE_SYNC_MODE);
-		// The shared writer continues in the newest volume on disk; uploads and rollovers take the numbers above it.
-		unsigned long long newest = 0;
-		try {
-			newest = writable_storage->get_volumes_range(DATA_STORAGE_PATH).second;
-		} catch (const StorageNotFound&) { }
-		writable_storage->volume = static_cast<uint32_t>(newest);
-		next_volume_.store(newest + 1, std::memory_order_relaxed);
-	}
-#endif  // XAPIAND_DATA_STORAGE
-
 	engine_->use_chores(chores.get());
 
 	// The group last: it recovers on the index as the open left it (D169), and its failed open fails this one.
@@ -529,7 +338,7 @@ ShardEndpoint::commit_blocking()
 		}
 	} unlock{*this, locked};
 	InlineEngine inline_engine(*this, "the catalog's commit chore runs on a worker");
-	engine::sync_wait(do_commit(*engine_, engine::inline_chores()));
+	engine::sync_wait(do_commit(*engine_));
 	committed_ = applied_.load();
 }
 
@@ -587,7 +396,7 @@ ShardEndpoint::commit(int flags, task::cancel_token cancel)
 	std::exception_ptr error;
 	bool changed = false;
 	try {
-		changed = group_ ? co_await commit_group() : co_await do_commit(*engine_, *chores);
+		changed = group_ ? co_await commit_group() : co_await do_commit(*engine_);
 		committed_ = flight->covers;
 	} catch (const engine::Error& exc) {
 		note_failure(exc);
@@ -640,7 +449,7 @@ ShardEndpoint::settle_merges(int flags)
 
 
 task::task<bool>
-ShardEndpoint::do_commit(engine::Shard& eng, engine::Chores& chores_)
+ShardEndpoint::do_commit(engine::Shard& eng)
 {
 	L_CALL("ShardEndpoint::do_commit()");
 
@@ -650,9 +459,6 @@ ShardEndpoint::do_commit(engine::Shard& eng, engine::Chores& chores_)
 
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
-#ifdef XAPIAND_DATA_STORAGE
-	co_await storage_commit(chores_);
-#endif  // XAPIAND_DATA_STORAGE
 	const auto prior_revision = eng.revision();
 	if (id_high_moved_ && !group_) {
 		co_await eng.set_metadata(std::string(ID_HIGH_METADATA), MsgPack(id_high_).serialize());  // durable with its documents
@@ -730,6 +536,18 @@ is_stored(const Locator& locator) noexcept
 	return locator.type == Locator::Type::stored || locator.type == Locator::Type::lz4_compressed_stored || locator.type == Locator::Type::zstd_compressed_stored;
 }
 
+// Whether a document names a stored blob: its record lives in a group's file set, so it needs the index's group.
+bool
+names_stored(const engine::Document& doc)
+{
+	const auto bytes = doc.get_data();
+	if (bytes.empty()) {
+		return false;
+	}
+	const Data data{std::string(bytes)};
+	return std::any_of(data.begin(), data.end(), [](const Locator& locator) { return is_stored(locator); });
+}
+
 // A document's new stored blobs as its command's records (D3): each compressed here, at prepare, so every voter
 // writes the same bytes, and its locator left a placeholder at volume 0 of the record's codec and size, which apply
 // places. A placeholder already at volume 0 is `upload`'s: its record is the upload stream. `unstaged` keeps the
@@ -780,8 +598,8 @@ task::task<engine::WriteResult>
 ShardEndpoint::write_document(engine::Shard& eng, engine::WriteOp op, engine::docid did, std::string key, engine::Document* doc, engine::WriteArgs args, ChunkedUpload* upload, CommandWrite* batched)
 {
 	if (group_ == nullptr) {
-		if (upload != nullptr || batched != nullptr) {
-			throw engine::Error(engine::errc::invalid, "A chunked upload or a batch needs the index's group");
+		if (upload != nullptr || batched != nullptr || (doc != nullptr && names_stored(*doc))) {
+			throw engine::Error(engine::errc::invalid, "A stored blob, a chunked upload or a batch needs the index's group");
 		}
 		const auto prepared = co_await eng.prepare(op, did, key, doc, std::move(args));
 		co_return co_await eng.apply(prepared, doc);
@@ -818,20 +636,11 @@ ShardEndpoint::write_document(engine::Shard& eng, engine::WriteOp op, engine::do
 
 
 task::task<engine::WriteResult>
-ShardEndpoint::do_add(engine::Shard& eng, engine::Chores& chores_, engine::Document&& doc, bool version_)
+ShardEndpoint::do_add(engine::Shard& eng, engine::Document&& doc, bool version_)
 {
 	L_CALL("ShardEndpoint::do_add(<doc>, {})", version_);
 
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
-
-#ifdef XAPIAND_DATA_STORAGE
-	auto pushed = co_await storage_push_blobs(chores_, doc.get_data());
-	if (!pushed.first.empty()) {
-		doc.set_data(pushed.first);
-	}
-#else
-	(void)chores_;
-#endif  // XAPIAND_DATA_STORAGE
 
 	engine::WriteArgs args;
 	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result); };
@@ -855,20 +664,11 @@ ShardEndpoint::do_add(engine::Shard& eng, engine::Chores& chores_, engine::Docum
 
 
 task::task<engine::WriteResult>
-ShardEndpoint::do_replace(engine::Shard& eng, engine::Chores& chores_, engine::docid shard_did, engine::Document&& doc, bool version_, bool must_exist, ChunkedUpload* upload)
+ShardEndpoint::do_replace(engine::Shard& eng, engine::docid shard_did, engine::Document&& doc, bool version_, bool must_exist, ChunkedUpload* upload)
 {
 	L_CALL("ShardEndpoint::do_replace({}, <doc>, {})", shard_did, version_);
 
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
-
-#ifdef XAPIAND_DATA_STORAGE
-	auto pushed = co_await storage_push_blobs(chores_, doc.get_data());
-	if (!pushed.first.empty()) {
-		doc.set_data(pushed.first);
-	}
-#else
-	(void)chores_;
-#endif  // XAPIAND_DATA_STORAGE
 
 	engine::WriteResult info;
 	info.did = shard_did;
@@ -886,11 +686,6 @@ ShardEndpoint::do_replace(engine::Shard& eng, engine::Chores& chores_, engine::d
 		info = co_await write_document(eng, engine::WriteOp::replace, shard_did, std::string(), &doc, std::move(args), upload);
 	} catch (const engine::Error& error) {
 		note_failure(error);
-#ifdef XAPIAND_DATA_STORAGE
-		if (!pushed.second.empty()) {
-			doc.set_data(pushed.second);  // a retry elsewhere pushes the blobs again
-		}
-#endif  // XAPIAND_DATA_STORAGE
 		throw;
 	}
 	applied_.fetch_add(1, std::memory_order_relaxed);
@@ -900,7 +695,7 @@ ShardEndpoint::do_replace(engine::Shard& eng, engine::Chores& chores_, engine::d
 
 
 task::task<engine::WriteResult>
-ShardEndpoint::do_replace_term(engine::Shard& eng, engine::Chores& chores_, const std::string& term, engine::Document&& doc, bool version_, ChunkedUpload* upload, CommandWrite* batched)
+ShardEndpoint::do_replace_term(engine::Shard& eng, const std::string& term, engine::Document&& doc, bool version_, ChunkedUpload* upload, CommandWrite* batched)
 {
 	L_CALL("ShardEndpoint::do_replace_term({}, <doc>, {})", repr(term), version_);
 
@@ -923,15 +718,6 @@ ShardEndpoint::do_replace_term(engine::Shard& eng, engine::Chores& chores_, cons
 		key = issue_id(doc, issued);  // before the blobs' push, whose record the log keeps
 		raise_id_high(issued);  // taken even if the write fails: a retry gets the next one
 	}
-
-#ifdef XAPIAND_DATA_STORAGE
-	auto pushed = co_await storage_push_blobs(chores_, doc.get_data());
-	if (!pushed.first.empty()) {
-		doc.set_data(pushed.first);
-	}
-#else
-	(void)chores_;
-#endif  // XAPIAND_DATA_STORAGE
 
 	engine::WriteArgs args;
 	if (version_) {
@@ -1064,207 +850,9 @@ ShardEndpoint::do_remove_spelling(engine::Shard& eng, const std::string& word, e
 
 
 /*
- * The data storage: blobs written under the turn, read on readers of their own, all in chores.
+ * The blobs: records apply wrote in the group's file set (D16), read in chores.
  */
 #ifdef XAPIAND_DATA_STORAGE
-
-std::pair<std::string, std::string>
-ShardEndpoint::storage_push_blobs_blocking(std::string&& doc_data)
-{
-	L_CALL("ShardEndpoint::storage_push_blobs_blocking()");
-
-	std::pair<std::string, std::string> pushed;
-	if (doc_data.empty()) {
-		return pushed;
-	}
-
-	if (writable_storage) {
-		auto data = Data(std::move(doc_data));
-		for (auto& locator : data) {
-			if (locator.size == 0) {
-				data.erase(locator.ct_type);
-			}
-			if (locator.type == Locator::Type::stored || locator.type == Locator::Type::lz4_compressed_stored || locator.type == Locator::Type::zstd_compressed_stored) {
-				if (!locator.raw.empty()) {
-					uint32_t offset;
-					while (true) {
-						try {
-							if (writable_storage->closed()) {
-								writable_storage->open(strings::format(DATA_STORAGE_PATH "{}", writable_storage->volume));
-							}
-							offset = writable_storage->write(serialize_strings({ locator.ct_type.to_string(), locator.raw }));
-							break;
-						} catch (StorageEOF) {
-							writable_storage->volume = static_cast<uint32_t>(next_volume_.fetch_add(1));
-							writable_storage->open(strings::format(DATA_STORAGE_PATH "{}", writable_storage->volume));
-						} catch (const StorageLegacyReadOnly&) {
-							// The latest volume is a legacy v1 volume (read-only).
-							// Start a fresh v2 volume above it for new writes; the
-							// old v1 volumes stay readable and age out over time.
-							writable_storage->volume = static_cast<uint32_t>(next_volume_.fetch_add(1));
-							writable_storage->open(strings::format(DATA_STORAGE_PATH "{}", writable_storage->volume));
-						}
-					}
-					data.update(locator.ct_type, writable_storage->volume, offset, locator.size);
-				}
-			}
-		}
-		pushed.second = std::move(data.serialize());
-		data.flush();
-		pushed.first = std::move(data.serialize());
-	}
-	return pushed;
-}
-
-
-task::task<std::pair<std::string, std::string>>
-ShardEndpoint::storage_push_blobs(engine::Chores& chores_, std::string doc_data)
-{
-	if (doc_data.empty() || !writable_storage) {
-		co_return std::pair<std::string, std::string>();   // none, or the group's command carries them
-	}
-	std::pair<std::string, std::string> pushed;
-	co_await chores_.run(engine::ChoreClass::flush, [&] { pushed = storage_push_blobs_blocking(std::move(doc_data)); });
-	co_return pushed;
-}
-
-
-task::task<void>
-ShardEndpoint::storage_commit(engine::Chores& chores_)
-{
-	if (writable_storage) {
-		co_await chores_.run(engine::ChoreClass::flush, [this] { writable_storage->commit(); });
-	}
-}
-
-
-// The state of a streamed upload: a storage of its own on a volume nobody else writes, and the record being streamed
-// into it. Every call that touches the device runs in a chore.
-struct StoredUpload::Impl {
-	ShardEndpoint& entry;
-	std::uint64_t volume;
-	std::unique_ptr<DataStorage> storage;
-	std::optional<DataStorage::StreamWriter> writer;
-	std::uint32_t record_offset = 0;
-	bool ended = false;
-	bool aborted = false;
-
-	Impl(ShardEndpoint& entry_, std::uint64_t volume_) : entry(entry_), volume(volume_) { }
-
-	std::string name() const {
-		return strings::format(DATA_STORAGE_PATH "{}", volume);
-	}
-};
-
-
-StoredUpload::StoredUpload(std::unique_ptr<Impl> impl_, engine::Chores& chores_) : impl(std::move(impl_)), chores(chores_) { }
-
-
-StoredUpload::~StoredUpload()
-{
-	// An upload that neither ended nor was aborted leaves a volume behind: say so, a later reclaim collects it.
-	if (impl && !impl->ended && !impl->aborted) {
-		L_WARNING("A streamed upload of {} was dropped without ending or aborting", repr(impl->name()));
-	}
-}
-
-
-ssize_t
-StoredUpload::volume() const noexcept
-{
-	return static_cast<ssize_t>(impl->volume);
-}
-
-
-size_t
-StoredUpload::offset() const noexcept
-{
-	return impl->record_offset;
-}
-
-
-task::task<void>
-StoredUpload::append(std::string chunk)
-{
-	co_await chores.run(engine::ChoreClass::flush, [this, &chunk] { impl->writer->append(chunk); });
-}
-
-
-task::task<void>
-StoredUpload::end()
-{
-	co_await chores.run(engine::ChoreClass::flush, [this] {
-		impl->record_offset = impl->writer->commit();   // the data is synced, then the volume's header publishes the record
-		impl->writer.reset();
-		impl->storage->close();
-	});
-	impl->ended = true;
-}
-
-
-task::task<void>
-StoredUpload::abort() noexcept
-{
-	if (impl->ended || impl->aborted) {
-		co_return;
-	}
-	impl->aborted = true;
-	try {
-		co_await chores.run(engine::ChoreClass::flush, [this] {
-			impl->writer.reset();
-			if (impl->storage) {
-				impl->storage->close();
-			}
-			const auto file = strings::format("{}/{}", impl->entry.path, impl->name());
-			::unlink(file.c_str());
-		});
-	} catch (...) {
-		L_EXC("Unable to remove the volume of an aborted upload");
-	}
-}
-
-
-task::task<std::unique_ptr<StoredUpload>>
-ShardEndpoint::upload_begin(engine::Chores& chores_, std::string ct_type, std::uint64_t size)
-{
-	// The record is the content type, then the blob, as a `stored` record is: the framing is written first and
-	// the blob's bytes follow.
-	static_assert(STORED_UPLOAD_LIMIT + 1024 == DataStorage::stream_max_size, "the upload limit leaves 1 KiB for the framing");
-	std::string head = serialize_string(ct_type) + serialize_length(size);
-	const std::uint64_t record = head.size() + size;
-	if (record > DataStorage::stream_max_size) {
-		THROW(PayloadTooLarge, "A stored blob has a size limit of {}", strings::from_bytes(DataStorage::stream_max_size - head.size()));
-	}
-
-	auto impl = std::make_unique<StoredUpload::Impl>(*this, next_volume_.fetch_add(1));
-	std::exception_ptr error;
-	try {
-		co_await chores_.run(engine::ChoreClass::flush, [&] {
-			if (!writable_storage) {
-				THROW(ClientError, "The index has no data storage to upload a blob to");
-			}
-			impl->storage = std::make_unique<DataStorage>(path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_SYNC_MODE);
-			impl->storage->open(impl->name());
-			impl->writer.emplace(*impl->storage, record);
-			impl->writer->append(head);
-		});
-	} catch (...) {
-		error = std::current_exception();
-	}
-	std::unique_ptr<StoredUpload> upload(new StoredUpload(std::move(impl), chores_));
-	if (error) {
-		co_await upload->abort();
-		try {
-			std::rethrow_exception(error);
-		} catch (const StorageTooLarge&) {
-			THROW(PayloadTooLarge, "A stored blob has a size limit of {}", strings::from_bytes(DataStorage::stream_max_size));
-		} catch (const StorageEOF&) {
-			THROW(PayloadTooLarge, "The blob does not fit a volume of the data storage");
-		}
-	}
-	co_return upload;
-}
-
 
 std::string
 ShardEndpoint::storage_read_blocking(const Locator& locator)
@@ -1272,31 +860,11 @@ ShardEndpoint::storage_read_blocking(const Locator& locator)
 	assert(locator.type == Locator::Type::stored || locator.type == Locator::Type::lz4_compressed_stored || locator.type == Locator::Type::zstd_compressed_stored);
 	assert(locator.volume != -1);
 
-	if (group_) {
-		// The record apply wrote in the group's file set, as the data storage's reader answers it.
-		auto blob = read_stored(*group_->directory, static_cast<std::uint8_t>(locator.type), static_cast<std::uint64_t>(locator.volume), locator.offset, locator.size);
-		return serialize_strings({ locator.ct_type.to_string(), blob });
+	if (!group_) {
+		throw engine::Error(engine::errc::invalid, "A stored blob needs the index's group");
 	}
-
-	DataStorage reader(path, this, STORAGE_OPEN);
-	reader.open(strings::format(DATA_STORAGE_PATH "{}", locator.volume));
-	reader.seek(static_cast<uint32_t>(locator.offset));
-	return reader.read();
-}
-
-
-std::string
-ShardEndpoint::storage_read_blocking(std::string_view key)
-{
-	const char *p = key.data();
-	const char *p_end = p + key.size();
-	++p;  // the lead byte that says it is a locator
-	ssize_t volume = unserialize_length(&p, p_end);
-	size_t offset = unserialize_length(&p, p_end);
-	DataStorage reader(path, this, STORAGE_OPEN);
-	reader.open(strings::format(DATA_STORAGE_PATH "{}", volume));
-	reader.seek(static_cast<uint32_t>(offset));
-	return reader.read();
+	auto blob = read_stored(*group_->directory, static_cast<std::uint8_t>(locator.type), static_cast<std::uint64_t>(locator.volume), locator.offset, locator.size);
+	return serialize_strings({ locator.ct_type.to_string(), blob });
 }
 
 #endif  // XAPIAND_DATA_STORAGE
@@ -1458,7 +1026,7 @@ Shard::apply_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std:
 					write.error = std::make_exception_ptr(error);
 				} else if (write.shard_did != 0) {
 					try {
-						write.info = engine::sync_wait(entry.do_replace(eng, engine::inline_chores(), write.shard_did, std::move(write.doc), false, true));
+						write.info = engine::sync_wait(entry.do_replace(eng, write.shard_did, std::move(write.doc), false, true));
 					} catch (const engine::Error& error) {
 						if (engine::is_missing(error.kind)) {
 							write.missed = true;   // gone since placement: placed afresh by the caller (B1)
@@ -1471,7 +1039,7 @@ Shard::apply_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std:
 					}
 				} else {
 					try {
-						write.info = engine::sync_wait(entry.do_replace_term(eng, engine::inline_chores(), write.term, std::move(write.doc), false));
+						write.info = engine::sync_wait(entry.do_replace_term(eng, write.term, std::move(write.doc), false));
 					} catch (...) {
 						write.error = std::current_exception();
 					}
@@ -1528,7 +1096,7 @@ Shard::restore_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, st
 			} else {
 				try {
 					CommandWrite batched;
-					write.info = engine::sync_wait(entry.do_replace_term(eng, engine::inline_chores(), write.term, std::move(write.doc), false, nullptr, &batched));
+					write.info = engine::sync_wait(entry.do_replace_term(eng, write.term, std::move(write.doc), false, nullptr, &batched));
 					if (auto closed = batcher.add(std::move(batched), 0)) {
 						batches.push_back({std::move(*closed), std::exchange(filling, {})});
 					}
@@ -1736,7 +1304,7 @@ Shard::add_document(engine::Document&& doc, bool commit_, bool version_)
 	{
 		auto turn = co_await endpoint().take_turn(flags, cancel);
 		auto* eng = &endpoint().engine();
-		info = co_await endpoint().do_add(*eng, *endpoint().chores, std::move(doc), version_);
+		info = co_await endpoint().do_add(*eng, std::move(doc), version_);
 	}
 	co_await finish_write(commit_);
 	co_return info;
@@ -1755,7 +1323,7 @@ Shard::replace_document(engine::docid shard_did, engine::Document&& doc, bool co
 	{
 		auto turn = co_await endpoint().take_turn(flags, cancel);
 		auto* eng = &endpoint().engine();
-		info = co_await endpoint().do_replace(*eng, *endpoint().chores, shard_did, std::move(doc), version_, must_exist, upload);
+		info = co_await endpoint().do_replace(*eng, shard_did, std::move(doc), version_, must_exist, upload);
 	}
 	co_await finish_write(commit_);
 	co_return info;
@@ -1774,7 +1342,7 @@ Shard::replace_document_term(const std::string& term, engine::Document&& doc, bo
 	{
 		auto turn = co_await endpoint().take_turn(flags, cancel);
 		auto* eng = &endpoint().engine();
-		info = co_await endpoint().do_replace_term(*eng, *endpoint().chores, term, std::move(doc), version_, upload);
+		info = co_await endpoint().do_replace_term(*eng, term, std::move(doc), version_, upload);
 	}
 	co_await finish_write(commit_);
 	co_return info;
@@ -1885,15 +1453,6 @@ Shard::get_metadata(const std::string& key)
 
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
-#ifdef XAPIAND_DATA_STORAGE
-	if (!key.empty() && key[0] == '\x00') {
-		// The locator of a blob: a read of the data storage, in a chore.
-		co_await ready();
-		co_await endpoint().chores->run(engine::ChoreClass::query, [&] { value = endpoint().storage_read_blocking(std::string_view(key)); });
-		co_return value;
-	}
-#endif  // XAPIAND_DATA_STORAGE
-
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			auto* eng = co_await engine_for_read();
@@ -1946,16 +1505,6 @@ Shard::storage_get_stored(const Locator& locator)
 	co_await ready();
 	co_await endpoint().chores->run(engine::ChoreClass::query, [&] { value = endpoint().storage_read_blocking(locator); });
 	co_return value;
-}
-
-
-task::task<std::unique_ptr<StoredUpload>>
-Shard::upload_begin(engine::Chores& chores, std::string ct_type, std::uint64_t size)
-{
-	L_CALL("Shard::upload_begin()");
-
-	co_await ready();
-	co_return co_await endpoint().upload_begin(chores, std::move(ct_type), size);
 }
 #endif /* XAPIAND_DATA_STORAGE */
 

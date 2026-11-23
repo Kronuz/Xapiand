@@ -74,7 +74,6 @@ constexpr double DB_TIMEOUT = 30.0;
 
 class Shard;
 class Locator;
-class DataStorage;
 class DatabasePool;
 class IndexPin;
 class ShardGroups;
@@ -160,45 +159,14 @@ private:
  *                                                             |_|
  */
 
-// The largest blob a streamed upload stores: a record of the data storage is at most 4 GiB - 1 bytes, framing included.
+// The largest blob a streamed upload stores; past it the request is answered 413.
 inline constexpr std::uint64_t STORED_UPLOAD_LIMIT = 0xFFFFFFFFull - 1024;
-
-// A blob being written to a volume of its own, chunk by chunk (docs/design/phase7c.md D9). Each step is a chore of
-// the group it is given, so the request that streams the body waits for none of them on its reactor. The record is
-// uncompressed and has the framing of any `stored` record (the content type, then the blob), so it reads back like one.
-class StoredUpload {
-public:
-	~StoredUpload();
-	StoredUpload(const StoredUpload&) = delete;
-	StoredUpload& operator=(const StoredUpload&) = delete;
-
-	// Writes a chunk of the blob. The chunks add up to the size the upload was begun with.
-	task::task<void> append(std::string chunk);
-
-	// Ends the record and syncs the volume: the blob is then durable and `locator()` names it.
-	task::task<void> end();
-
-	// Abandons the upload and removes its volume. Awaited on every path that does not end().
-	task::task<void> abort() noexcept;
-
-	// Where the record is, once end() ran.
-	ssize_t volume() const noexcept;
-	size_t offset() const noexcept;
-
-private:
-	friend class ShardEndpoint;
-	struct Impl;
-	StoredUpload(std::unique_ptr<Impl> impl, engine::Chores& chores);
-
-	std::unique_ptr<Impl> impl;
-	engine::Chores& chores;
-};
 
 
 // One index's entry (docs/design/x-pool.md D1): the catalog's payload, built in place by the open (open_payload,
 // which recovers the index's group) and destroyed by the close, before the index. It holds what the catalog does not: the
 // turn, the device chores, the engine shard over the borrowed index, the revision, the commit's flight and the
-// blob storage. It is valid only under a pin.
+// group. It is valid only under a pin.
 class ShardEndpoint : public Endpoint
 {
 	friend Shard;
@@ -233,12 +201,6 @@ class ShardEndpoint : public Endpoint
 	// With a group, the counter as the log holds it: a write that moves it past this carries it in its command.
 	std::uint64_t id_high_logged_ = 0;
 	void raise_id_high(std::uint64_t id) noexcept;
-#ifdef XAPIAND_DATA_STORAGE
-	std::unique_ptr<DataStorage> writable_storage;
-	// The next volume number nobody has: the shared writer's rollover and each streamed upload take theirs from
-	// here, so no volume has two writers (docs/design/phase7c.md D9).
-	std::atomic<std::uint64_t> next_volume_{1};
-#endif /* XAPIAND_DATA_STORAGE */
 
 	// The commit in flight, if any: a write at or below `covers` joins it.
 	struct CommitFlight;
@@ -290,9 +252,9 @@ public:
 	// The engine, for a caller that holds a pin.
 	engine::Shard& engine();
 
-	// Commits what is applied in one turn: the group's checkpoint, or the blob storage and the engine without a
-	// group. A write that a commit already in flight covers joins it. True when a commit made a new revision.
-	// `cancel` ends the wait for the turn (a FLUSH's request).
+	// Commits what is applied in one turn: the group's checkpoint, or the engine's commit without a group. A write
+	// that a commit already in flight covers joins it. True when a commit made a new revision. `cancel` ends the
+	// wait for the turn (a FLUSH's request).
 	task::task<bool> commit(int flags, task::cancel_token cancel = {});
 
 	// In a turn of its own: publishes the merges that finished and syncs their output when nothing else is
@@ -312,7 +274,7 @@ public:
 		return engines_inline_.load(std::memory_order_relaxed);
 	}
 
-	// The engine's uuid; the data storage's volumes carry it.
+	// The engine's uuid; the group's id is its first 8 bytes.
 	std::string uuid() const {
 		std::lock_guard<std::mutex> lk(mtx);
 		return uuid_;
@@ -349,29 +311,21 @@ private:
 	};
 	static inline std::atomic<int> engines_inline_{0};
 
-	// The operations of a write, which run under the index's turn on the engine and the chores they are given. A
-	// write is proposed through the group (or applied without one) and counted here.
-	task::task<engine::WriteResult> do_add(engine::Shard& eng, engine::Chores& chores, engine::Document&& doc, bool version_);
-	task::task<engine::WriteResult> do_replace(engine::Shard& eng, engine::Chores& chores, engine::docid shard_did, engine::Document&& doc, bool version_, bool must_exist = false, ChunkedUpload* upload = nullptr);
-	task::task<engine::WriteResult> do_replace_term(engine::Shard& eng, engine::Chores& chores, const std::string& term, engine::Document&& doc, bool version_, ChunkedUpload* upload = nullptr, CommandWrite* batched = nullptr);
+	// The operations of a write, which run under the index's turn on the engine. A write is proposed through the
+	// group (or applied without one) and counted here.
+	task::task<engine::WriteResult> do_add(engine::Shard& eng, engine::Document&& doc, bool version_);
+	task::task<engine::WriteResult> do_replace(engine::Shard& eng, engine::docid shard_did, engine::Document&& doc, bool version_, bool must_exist = false, ChunkedUpload* upload = nullptr);
+	task::task<engine::WriteResult> do_replace_term(engine::Shard& eng, const std::string& term, engine::Document&& doc, bool version_, ChunkedUpload* upload = nullptr, CommandWrite* batched = nullptr);
 	task::task<void> do_delete(engine::Shard& eng, engine::docid shard_did, std::optional<engine::rev> expected_ = std::nullopt);
 	task::task<void> do_delete_term(engine::Shard& eng, const std::string& term, std::optional<engine::rev> expected_ = std::nullopt);
 	task::task<void> do_set_metadata(engine::Shard& eng, const std::string& key, const std::string& value);
 	task::task<void> do_add_spelling(engine::Shard& eng, const std::string& word, engine::termcount freqinc);
 	task::task<engine::termcount> do_remove_spelling(engine::Shard& eng, const std::string& word, engine::termcount freqdec);
-	task::task<bool> do_commit(engine::Shard& eng, engine::Chores& chores);
+	task::task<bool> do_commit(engine::Shard& eng);
 
 #ifdef XAPIAND_DATA_STORAGE
-	// Blobs of the data storage: the writes run in flush chores under the turn; a read opens a reader of its own.
-	std::pair<std::string, std::string> storage_push_blobs_blocking(std::string&& doc_data);
-	task::task<std::pair<std::string, std::string>> storage_push_blobs(engine::Chores& chores, std::string doc_data);
-	task::task<void> storage_commit(engine::Chores& chores);
-
-	// Begins a streamed upload of a blob of `size` bytes with content type `ct_type` into a volume of its own. Raises
-	// ClientError when the record could not fit a volume (the request's 413).
-	task::task<std::unique_ptr<StoredUpload>> upload_begin(engine::Chores& chores, std::string ct_type, std::uint64_t size);
+	// A stored blob's record in the group's file set (D16), read where apply wrote it. Raises invalid without a group.
 	std::string storage_read_blocking(const Locator& locator);
-	std::string storage_read_blocking(std::string_view key);
 #endif /* XAPIAND_DATA_STORAGE */
 };
 
