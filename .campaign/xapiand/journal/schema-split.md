@@ -1,6 +1,6 @@
 # schema-split: journal
 
-State: waiting on jobs 261122-211513-d04385 261122-211517-3263ba
+State: waiting on jobs 261122-212030-8090b3 (A2) 261122-212033-455700 (A1); CI run 45116992526 at Xapiand:235f61732
 Quest: .campaign/xapiand/quests/schema-split.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,35 +9,27 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Master merged (Xapiand:e9804943f, clean; it touches no schema file). A2 (gate split check, at
-cpp-libraries:fe8491f's anchor pass) and A1 (suite rerun) queued at that head.
+Master merged (Xapiand:e9804943f, clean; touches no schema file). Allowlist row renamed
+(Xapiand:235f61732, the lead's ruling) and pushed; CI 45116992526. A1 and A2 queued at that head
+(the e9804943f pair, 261122-211513-d04385 and 261122-211517-3263ba, cancelled as superseded).
 
 ## Next
 
-1. Read 261122-211513-d04385 (A2, expect 0 errors, 43 warnings as answered below) and
-   261122-211517-3263ba (A1); record.
-2. After the lead's ruling on Blocked on 1: rename the allowlist row, push, read CI.
-3. Diff fnsizes base (261121-200713-a4eb7a, 18002 fns, 10,151,037 B) vs head
-   (261121-204544-b0745e, 18114 fns, 10,187,721 B); classify the +112 functions, +36,684 B.
+1. Read 261122-212030-8090b3 (A2: expect 0 errors, the 43 warnings answered below),
+   261122-212033-455700 (A1) and CI 45116992526; record.
 
 ## Blocked on
 
-1. lead: CI at Xapiand:1d471a960 failed in "Blocking calls on reactor paths (async_check
-   --strict)" (run 44986514175): `harness/async_allowlist.tsv:22` allows `src/database/schema.cc
-   [pool] lock_shard` x2, and both hits moved with Schema::index to `src/database/schema/index.cc`
-   (:155, :219), so the row shrank to 0 and the two hits are unclassified. The fix is one path:
-   `src/database/schema.cc` -> `src/database/schema/index.cc` on that row (rows 72-73, the
-   `adopted_mtx` and `lock() == schema` hits, are still in schema.cc). The file is outside this
-   quest's file set. Options: add `harness/async_allowlist.tsv` to the file set and I commit it
-   (recommended), or the lead commits it on the branch.
-
-Lead's earlier rulings (2026-11-21):
-1. Glob: add `src/database/schema/*.c*` and `*.h*` after the src/database line; CMakeLists.txt is
-   in the file set. Done: Xapiand:8d85af070.
-2. split_check: the anchor pass landed as cpp-libraries:fe8491f; the gate check reruns with it
-   (261122-211513-d04385). At the old checker, 261121-204542-68e0fc had 40 errors, all
-   "moved lines starts/ends inside a function" on repeated `inline void`-style lines; the
-   anchored checker at split-check-anchor gave 0 errors (261121-204551-d364fa).
+Nothing. Lead's rulings:
+1. Glob (2026-11-21): `src/database/schema/*.c*` and `*.h*` in CMakeLists.txt. Done:
+   Xapiand:8d85af070.
+2. split_check (2026-11-21): the anchor pass is cpp-libraries:fe8491f; the gate check reruns with
+   it. The old checker gave 40 errors (261121-204542-68e0fc), all "moved lines starts/ends inside
+   a function" on repeated `inline void` lines; the anchored checker gave 0 (261121-204551-d364fa).
+3. Allowlist (2026-11-22): `harness/async_allowlist.tsv` joins the file set. CI at
+   Xapiand:1d471a960 (run 44986514175) failed async_check --strict: row 22 allowed `schema.cc
+   [pool] lock_shard` x2, and both hits moved with Schema::index to `schema/index.cc` (:155,
+   :219). Done: Xapiand:235f61732 renames the row's path. Rows 72-73 still match schema.cc.
 
 ## Layout at the head
 
@@ -116,21 +108,45 @@ Line ranges are approximate until cut.py's table is final; cut.py is the record.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261122-211517-3263ba (suite at Xapiand:e9804943f); 261121-204605-8fd08d passed 81/81 at Xapiand:8d85af070 |
-| A2 | 261122-211513-d04385 (gate split check at Xapiand:e9804943f) |
+| A1 | 261122-212033-455700 (suite at Xapiand:235f61732); 261121-204605-8fd08d passed 81/81 at Xapiand:8d85af070 |
+| A2 | 261122-212030-8090b3 (gate split check at Xapiand:235f61732) |
 | A3 | docs/dev/schema-layout.md |
 | A4 | lead |
 
 Ended jobs at Xapiand:8d85af070 (the glob head):
 - 261121-204605-8fd08d suite: 81/81 passed
-- 261121-204544-b0745e fnsizes, Release+LTO: 18114 fns, 10,187,721 B (base 261121-200713-a4eb7a
-  at 57496b89a: 18002 fns, 10,151,037 B); not yet classified (Next 3)
+- 261121-204544-b0745e fnsizes, Release+LTO: classified under "fnsizes: base vs split"
 - 261121-204547-0ba7f1 ctest -N: 81 tests, identical at the base and the split
 - 261121-204554-38f339 reserved.h, walk.h, handlers.h, dispatch.h each compile alone
 - 261121-204542-68e0fc split check, old checker: 40 errors (superseded by fe8491f)
 - 261121-204551-d364fa split check, split-check-anchor's checker: 0 errors, 43 warnings
 
 Scripts: ~/.scratch/xapiand/schema-split/{cut.py,fnsz_head.sh,fnsz.sh,selfcontained.sh,ctestn.sh}.
+
+## fnsizes: base vs split (Release+LTO xapiand)
+
+Base 261121-200713-a4eb7a (57496b89a, the merge base): 18,002 symbols, 10,151,037 B. Split
+261121-204544-b0745e (8d85af070, only the split's commits on top): 18,114, 10,187,721 B. Delta
++112 symbols, +36,684 B (0.36%). Compared after normalizing names the split renames
+(`schema_detail::`, `GCC_except_tableN`, LTO `(.N)` suffixes, `__FILE__`-length array
+parameters, `_GLOBAL__sub_I_<file>`); 201 rows differ, every byte in one bucket
+(fndiff.py, fncat.py in the scratch dir):
+
+| Bucket | Symbols | Bytes | Why |
+|---|---|---|---|
+| Static initializers | +16 | +7,488 | each of the 8 new .cc files gets a ~800 B `_GLOBAL__sub_I_` for the header-level statics schema.h and its includes define (schema.cc's own dropped 6,672 -> 848; specification.cc's is 6,576, holding the moved tables); `__cxx_global_var_init` copies follow the same TUs |
+| Header constants | +60 | +2,881 | `static constexpr` reserved-word strings (`RESERVED_TYPE`, `RESERVED_ACC_PREFIX`, `UUID_FIELD_NAME`, ...) from the headers: one copy per TU that reads one, as every header-internal constant |
+| Exception constructors | +16 | +3,040 | `ClientError`/`MissingTypeError`/`Error` templates take `__FILE__` as `char const (&)[N]`; the new file names have new lengths, so a throw site's instantiation differs per file |
+| Exception tables | +16 | +276 | follow the new functions above |
+| LZ4 and xxHash | +1 | +17,992 | inlining moved by the split: LTO's inliner re-decided in lz4.c and xxhash (untouched sources, same pin): `LZ4_decompress_safe_{forceExtDict,withPrefix64k,withSmallPrefix}` now out of line, `LZ4_compress_fast_continue` 8,608 -> 12,768, `XXH64`/`XXH32` C copies replaced by two private `XXH64` copies; plus `dec64table` now a standalone symbol |
+| Schema functions | +1 | +1,040 | inlining moved by the split: `get_slot` (utils.cc) now has an out-of-line copy (736 B) with callers in fields.cc, types.cc and specification.cc; `get_data_field` +1,040, `get_slot_field` -32, `consistency_accuracy` -288 |
+| phf tables | 0 | -1,492 | `_get_*` lookup tables renamed into `schema_detail`; `_get_index_uuid_field`'s and `_get_str_type`'s tables shrink (-1,024, -464): the rest of each old symbol was neighboring data, see last row |
+| Layout shifts | +2 | +5,459 | fnsizes sizes a symbol to the next address, so moved data and padding land on neighbors (the +2: lz4's `inc32table` split from its neighbor, one more `std::__tree` instantiation copy): `typeinfo name for main::$_2` +2,864, `prospect::term_table::column` +2,848 (the gap before it), and +/-16..48 B on ~100 unrelated std/strata symbols |
+
+No schema function body changed size beyond the inlining rows named above, and no inlining on the
+indexing path (`index_item`, the dispatch tables, the walks) changed: those stay in headers. The
+LZ4/xxHash shift is the LTO cost model, not code: it changes no source and has no timing claim
+either way; a compressor A/B would decide it if the lead wants one.
 
 ## Split-check warnings answered (43, with the anchored checker)
 
