@@ -43,6 +43,9 @@
 
 #if defined(__APPLE__)
 #include <mach-o/dyld.h>                          // for _NSGetExecutablePath
+#elif defined(__FreeBSD__)
+#include <sys/types.h>                            // for sysctl's types
+#include <sys/sysctl.h>                           // for sysctl, CTL_KERN, KERN_PROC_PATHNAME
 #endif
 
 #ifdef HAVE_SYS_PRCTL_H
@@ -881,7 +884,13 @@ void restore_documents() {
 			setup();
 			manager = XapiandManager::make();
 			auto endpoint = cli_endpoint(opts.restore_documents);
-			auto sha256 = engine::sync_wait(DatabaseHandler::restore_documents(endpoint, fd));
+			std::string sha256;
+			try {
+				sha256 = engine::sync_wait(DatabaseHandler::restore_documents(endpoint, fd));
+			} catch (const ClientError& exc) {   // the file is not a dump
+				L_CRIT("{}", exc.get_message());
+				throw SystemExit(EX_DATAERR);
+			}
 			L(-LOG_NOTICE, NOTICE_COL, "Restore sha256 = {}", sha256);
 			manager->join();
 			manager.reset();
@@ -947,6 +956,13 @@ static std::string get_executable_path(const char* argv0) {
 #elif defined(__linux__)
 	ssize_t len = ::readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
 	if (len > 0) {
+		buffer[len] = '\0';
+		return buffer;
+	}
+#elif defined(__FreeBSD__)
+	int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1};
+	std::size_t len = sizeof(buffer) - 1;
+	if (::sysctl(mib, 4, buffer, &len, nullptr, 0) == 0 && len > 1) {
 		buffer[len] = '\0';
 		return buffer;
 	}

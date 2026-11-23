@@ -89,7 +89,35 @@ Xapiand adds a few default variables to the running script context:
 |----------------|--------------------------------------------------------------|
 | `_doc`         | Current document.                                            |
 | `_old_doc`     | Old document (in case of updates / deletes).                 |
-| `_method`      | Always the empty string: the node does not fill it in.        |
+| `_method`      | The method of the write, uppercase (see below).               |
+
+`_method` is the request's method: `PUT`, `POST`, `PATCH`, `UPDATE`, `UPSERT`
+or `RESTORE`. A line of a restore, from a `RESTORE` request or from the command
+line's `--restore`, sees `RESTORE`, or the operation its `_op_type` names in
+uppercase (`PATCH`, `UPDATE`, `MERGE`); an `_op_type` of `index` keeps
+`RESTORE`. A write the node makes on its own (the settings of an index, a
+foreign schema it stores) sees the empty string.
+
+```rest
+PUT /twitter/user/Barbara?commit
+
+{
+  "name": "Barbara",
+  "_script": "_doc.written_by = _method"
+}
+```
+
+```rest
+GET /twitter/user/Barbara
+```
+
+<!-- e2e:begin
+```js
+pm.test("the script saw the method of its write", function () {
+  pm.expect(pm.response.json().written_by).to.eql("PUT");
+});
+```
+e2e:end -->
 
 If you need to pass additional values into a script, pass them as named
 parameters instead of hard-coding them. That way the compiled script stays in

@@ -59,6 +59,12 @@ pre-release bytes (D30); `format-freeze` reviews them.
 
 - Needs `group-core`; `after group-heal` (repair uses its learner and membership steps).
 - Nested index paths are core (`twitter` and `twitter/user` distinct).
+- Namespace keys sort in path order (lead, 11-20): a key stores `/` as byte 0 (names hold no
+  NUL), so `twitter` < `twitter/user` < `twitter-a`; a path's subtree is the contiguous range
+  [`P` p `\0`, `P` p `\1`) right after it, and a scan reads each record once. The preferred
+  leader is the node with the fewest leaderships (root's ruling, accepted).
+- Each task registers its tests in `test/placement/<task>.cmake`; `CMakeLists.txt` is the lead's
+  (quest branch 4a42c30c).
 
 ## When done
 

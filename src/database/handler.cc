@@ -453,8 +453,6 @@ task::task<std::unique_ptr<MsgPack>>
 DatabaseHandler::call_script(const MsgPack& object, const std::string& term_id, const Script& script, const Data& data)
 {
 #ifdef XAPIAND_LUA
-	std::string method;  // TODO: Fill vriable "method" to pass to script
-
 	auto doc = std::make_unique<MsgPack>(object);
 
 	MsgPack old_doc;
@@ -1148,6 +1146,15 @@ DatabaseHandler::restore_documents(const Endpoint& endpoint, int fd)
 			while (unpacker.next(result)) {
 				batch.emplace_back(result.get());
 			}
+			for (auto& obj : batch) {   // a dump holds maps (or arrays of them): anything else is not a dump
+				if (obj.is_array()) {
+					for (auto& o : obj) {
+						if (!o.is_map()) THROW(ClientError, "Restore object has an unsupported type: {} (the file is not a dump)", enum_name(o.get_type()));
+					}
+				} else if (!obj.is_map()) {
+					THROW(ClientError, "Restore object has an unsupported type: {} (the file is not a dump)", enum_name(obj.get_type()));
+				}
+			}
 			if (!indexer && !batch.empty()) {
 				// Resolved as RESTORE resolves it: writable, the first object as its settings, which saves the
 				// index's settings and shard records in .xapiand/indexes before its documents are written.
@@ -1195,6 +1202,17 @@ DatabaseHandler::prepare_document(MsgPack& body, size_t seq)
 
 	const auto document_id = document_id_of(body);
 	const auto op_type = take_op_type(body);
+
+	// A line's `_op_type` is the method its script sees ("PATCH"); an `index` line keeps the handler's.
+	struct LineMethod {
+		std::string& slot;
+		std::string saved;
+		~LineMethod() { slot = std::move(saved); }
+	} line_method{method, method};
+	if (op_type != "index") {
+		method = op_type;
+		std::transform(method.begin(), method.end(), method.begin(), [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+	}
 
 	if (op_type == "index") {
 		Data data;
@@ -2407,6 +2425,7 @@ DocIndexer::DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool co
 	db_handler(endpoints, flags)
 {
 	db_handler.budget = budget;
+	db_handler.method = "RESTORE";   // a restore's lines, from a request or the command line
 }
 
 

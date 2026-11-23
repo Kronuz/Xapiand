@@ -26,6 +26,7 @@
 // own; every test uses indexes of its own.
 
 #include "test_harness.h"
+#include "utils_node.h"
 
 #include <algorithm>
 #include <atomic>
@@ -400,29 +401,14 @@ engine::Document make(const std::string& key) {
 	return doc;
 }
 
-// A TCP port the OS has just handed out, so test runs at the same time on one host never share one.
-int free_port() {
-	const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
-	sockaddr_in addr{};
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	socklen_t len = sizeof(addr);
-	if (fd < 0 || ::bind(fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0 || ::getsockname(fd, reinterpret_cast<sockaddr*>(&addr), &len) != 0) {
-		std::fprintf(stderr, "FAIL: no free port\n");
-		std::exit(1);
-	}
-	::close(fd);
-	return ntohs(addr.sin_port);
-}
-
 // The port of the test process's node.
-const int node_port = free_port();
+const test_utils::ReservedPort node_port;
 
 // The node of the test process: a manager whose control loop runs on its own thread, serving on a port of its own,
 // in a data directory of its own.
 class RunningNode {
 public:
-	explicit RunningNode(const std::string& name = "node_test_data", const std::string& port = std::to_string(node_port), bool keep = false) {
+	explicit RunningNode(const std::string& name = "node_test_data", const std::string& port = std::to_string(node_port.port()), bool keep = false) {
 		// What main() installs: a node takes SIGUSR2 to collect the threads' call stacks.
 		::signal(SIGPIPE, SIG_IGN);
 		struct sigaction sa;
@@ -802,26 +788,9 @@ static void test_the_control_loop_is_free_during_a_schema_load() {
 
 // ---- a shutdown that cannot finish a write in its bound ----
 
-// The node reports ready a moment before its listener accepts: connect again for up to 5 s.
-static int connect_to(int port) {
-	for (int attempt = 0; attempt < 100; ++attempt) {
-		const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
-		sockaddr_in addr{};
-		addr.sin_family = AF_INET;
-		addr.sin_port = htons(static_cast<uint16_t>(port));
-		::inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
-		if (::connect(fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == 0) {
-			return fd;
-		}
-		::close(fd);
-		std::this_thread::sleep_for(50ms);
-	}
-	return -1;
-}
-
 // One request on a connection of its own; the whole response (the server closes after it).
 static std::string http_call(int port, const std::string& method, const std::string& path, const std::string& body = "", const std::string& content_type = "application/json") {
-	const int fd = connect_to(port);
+	const int fd = test_utils::connect_to(port);
 	if (fd < 0) {
 		return "";
 	}
@@ -839,7 +808,7 @@ static std::string http_call(int port, const std::string& method, const std::str
 	return response;
 }
 
-static const int abandon_port = free_port();
+static const test_utils::ReservedPort abandon_port;
 static constexpr int acked_writes = 5;
 
 struct AbandonSpec {
@@ -856,7 +825,7 @@ struct AbandonSpec {
 	std::freopen(log_path, "w", stderr);
 	std::setvbuf(stderr, nullptr, _IONBF, 0);   // freopen to a file leaves stderr buffered, and abort() does not flush it
 	Logging::handlers.push_back(std::make_unique<StderrLogger>());
-	RunningNode node("node_abandon_data", std::to_string(abandon_port));
+	RunningNode node("node_abandon_data", std::to_string(abandon_port.port()));
 	if (!node.ready()) {
 		std::_Exit(2);
 	}
@@ -865,7 +834,7 @@ struct AbandonSpec {
 	HoldTurn hold(entry.entry(), WRITE);
 
 	if (spec.request) {
-		const int fd = connect_to(abandon_port);
+		const int fd = test_utils::connect_to(abandon_port.port());
 		if (fd < 0) {
 			std::_Exit(3);
 		}
@@ -879,7 +848,7 @@ struct AbandonSpec {
 
 	// Acknowledged: the answer was a 2xx. The shutdown follows at once, before the autocommit (200 ms) fires.
 	for (int i = 1; spec.acked && i <= acked_writes; ++i) {
-		const auto response = http_call(abandon_port, "PUT", "/acked/" + std::to_string(i), "{\"marker\":\"ack-" + std::to_string(i) + "\"}");
+		const auto response = http_call(abandon_port.port(), "PUT", "/acked/" + std::to_string(i), "{\"marker\":\"ack-" + std::to_string(i) + "\"}");
 		if (response.rfind("HTTP/1.1 2", 0) != 0) {
 			std::_Exit(6);
 		}
@@ -913,20 +882,20 @@ struct AbandonSpec {
 	std::freopen(log_path, "w", stderr);
 	std::setvbuf(stderr, nullptr, _IONBF, 0);   // freopen to a file leaves stderr buffered, and abort() does not flush it
 	Logging::handlers.push_back(std::make_unique<StderrLogger>());
-	RunningNode node("node_abandon_data", std::to_string(abandon_port), true);
+	RunningNode node("node_abandon_data", std::to_string(abandon_port.port()), true);
 	if (!node.ready()) {
 		std::_Exit(2);
 	}
 	int missing = 0;
 	for (int i = 1; !expect_put && i <= acked_writes; ++i) {
-		const auto response = http_call(abandon_port, "GET", "/acked/" + std::to_string(i));
+		const auto response = http_call(abandon_port.port(), "GET", "/acked/" + std::to_string(i));
 		if (response.rfind("HTTP/1.1 200", 0) != 0 || response.find("ack-" + std::to_string(i)) == std::string::npos) {
 			std::fprintf(stderr, "MISSING acknowledged write %d: %s\n", i, response.substr(0, 60).c_str());
 			++missing;
 		}
 	}
 	if (expect_put) {
-		const auto response = http_call(abandon_port, "GET", "/abandon/1");
+		const auto response = http_call(abandon_port.port(), "GET", "/abandon/1");
 		if (response.rfind("HTTP/1.1 200", 0) != 0) {
 			std::fprintf(stderr, "MISSING the write that was waiting at the shutdown: %s\n", response.substr(0, 60).c_str());
 			++missing;
@@ -1098,7 +1067,7 @@ static void test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has
 
 // ---- a write whose client half-closes after its body ----
 
-static const int half_close_port = free_port();
+static const test_utils::ReservedPort half_close_port;
 
 // The child: a PUT that waits for a held turn while its client half-closes (the server reads its EOF, which requests
 // the request's token), then the turn is let go. The write is admitted, so it completes and is answered.
@@ -1108,13 +1077,13 @@ static const int half_close_port = free_port();
 	Logging::handlers.push_back(std::make_unique<StderrLogger>());
 	int code = 0;
 	{
-		RunningNode node("node_half_close_data", std::to_string(half_close_port));
+		RunningNode node("node_half_close_data", std::to_string(half_close_port.port()));
 		if (!node.ready()) {
 			std::_Exit(2);
 		}
 		std::optional<IndexPin> entry(pin_index(*manager()->database_pool, endpoints_of("half_closed")[0].path, WRITE));
 		std::optional<HoldTurn> hold(std::in_place, entry->entry(), WRITE);
-		const int fd = connect_to(half_close_port);
+		const int fd = test_utils::connect_to(half_close_port.port());
 		if (fd < 0) {
 			std::_Exit(3);
 		}
@@ -1151,11 +1120,11 @@ static const int half_close_port = free_port();
 	std::freopen(log_path, "w", stderr);
 	std::setvbuf(stderr, nullptr, _IONBF, 0);
 	Logging::handlers.push_back(std::make_unique<StderrLogger>());
-	RunningNode node("node_half_close_data", std::to_string(half_close_port), true);
+	RunningNode node("node_half_close_data", std::to_string(half_close_port.port()), true);
 	if (!node.ready()) {
 		std::_Exit(2);
 	}
-	const auto response = http_call(half_close_port, "GET", "/half_closed/1");
+	const auto response = http_call(half_close_port.port(), "GET", "/half_closed/1");
 	if (response.rfind("HTTP/1.1 200", 0) != 0 || response.find("half-way") == std::string::npos) {
 		std::fprintf(stderr, "MISSING the half-closed write: %s\n", response.substr(0, 80).c_str());
 		std::_Exit(10);
@@ -1181,7 +1150,7 @@ static void test_a_put_whose_client_half_closes_completes_durably() {
 
 // ---- a commit of a list of indexes whose client half-closes ----
 
-static const int half_close_list_port = free_port();
+static const test_utils::ReservedPort half_close_list_port;
 static constexpr int NO_LOG = WRITE_QUIET | DB_DISABLE_WAL;   // only a commit keeps the write
 
 // The child: a write applied to hcl_kept and not committed, then a half-closed POST /hcl_new,hcl_kept/:commit whose
@@ -1191,7 +1160,7 @@ static constexpr int NO_LOG = WRITE_QUIET | DB_DISABLE_WAL;   // only a commit k
 	std::freopen(log_path, "w", stderr);
 	std::setvbuf(stderr, nullptr, _IONBF, 0);
 	Logging::handlers.push_back(std::make_unique<StderrLogger>());
-	RunningNode node("node_half_close_list_data", std::to_string(half_close_list_port));
+	RunningNode node("node_half_close_list_data", std::to_string(half_close_list_port.port()));
 	if (!node.ready()) {
 		std::_Exit(2);
 	}
@@ -1208,7 +1177,7 @@ static constexpr int NO_LOG = WRITE_QUIET | DB_DISABLE_WAL;   // only a commit k
 	auto& resolver = *manager()->index_settings_resolver;
 	const auto loads = resolver.loads();
 	std::optional<HoldTurn> hold(std::in_place, entry.entry(), WRITE);
-	const int fd = connect_to(half_close_list_port);
+	const int fd = test_utils::connect_to(half_close_list_port.port());
 	if (fd < 0) {
 		std::_Exit(3);
 	}
@@ -1241,7 +1210,7 @@ static constexpr int NO_LOG = WRITE_QUIET | DB_DISABLE_WAL;   // only a commit k
 	std::freopen(log_path, "w", stderr);
 	std::setvbuf(stderr, nullptr, _IONBF, 0);
 	Logging::handlers.push_back(std::make_unique<StderrLogger>());
-	RunningNode node("node_half_close_list_data", std::to_string(half_close_list_port), true);
+	RunningNode node("node_half_close_list_data", std::to_string(half_close_list_port.port()), true);
 	if (!node.ready()) {
 		std::_Exit(2);
 	}
@@ -1272,7 +1241,7 @@ static void test_a_half_closed_commit_of_a_list_commits_durably() {
 
 // ---- a kill during create, and the names after the restart (docs/design/name-index.md, D8) ----
 
-static const int names_crash_port = free_port();
+static const test_utils::ReservedPort names_crash_port;
 static const char* const names_crash_dir = "node_names_crash_data";
 
 // The child: creates indexes one after another, nested and sharded ones among them, until it is killed. The name of
@@ -1281,7 +1250,7 @@ static const char* const names_crash_dir = "node_names_crash_data";
 	std::freopen(log_path, "a", stderr);
 	std::setvbuf(stderr, nullptr, _IONBF, 0);
 	const auto done = std::filesystem::absolute(done_path).string();
-	RunningNode node(names_crash_dir, std::to_string(names_crash_port), true);
+	RunningNode node(names_crash_dir, std::to_string(names_crash_port.port()), true);
 	if (!node.ready()) {
 		std::_Exit(2);
 	}
@@ -1289,8 +1258,8 @@ static const char* const names_crash_dir = "node_names_crash_data";
 		const auto name = "crash/r" + std::to_string(round) + "/t" + std::to_string(i / 3) + (i % 3 == 1 ? "/u" : i % 3 == 2 ? "/s" : "");
 		// Every third one has two shards: its directory holds `.__1` and `.__2`, not `strata`.
 		const auto response = i % 3 == 2
-			? http_call(names_crash_port, "PUT", "/" + name + "/", R"({"_settings":{"number_of_shards":2,"number_of_replicas":0}})")
-			: http_call(names_crash_port, "PUT", "/" + name + "/1", R"({"n":1})");
+			? http_call(names_crash_port.port(), "PUT", "/" + name + "/", R"({"_settings":{"number_of_shards":2,"number_of_replicas":0}})")
+			: http_call(names_crash_port.port(), "PUT", "/" + name + "/1", R"({"n":1})");
 		if (response.rfind("HTTP/1.1 2", 0) == 0) {
 			if (FILE* file = std::fopen(done.c_str(), "a")) {
 				std::fprintf(file, "%s\n", name.c_str());
@@ -1306,7 +1275,7 @@ static const char* const names_crash_dir = "node_names_crash_data";
 	std::freopen(log_path, "w", stderr);
 	std::setvbuf(stderr, nullptr, _IONBF, 0);
 	const auto done = read_file(done_path);
-	RunningNode node(names_crash_dir, std::to_string(names_crash_port), true);
+	RunningNode node(names_crash_dir, std::to_string(names_crash_port.port()), true);
 	if (!node.ready()) {
 		std::_Exit(2);
 	}
@@ -1409,11 +1378,11 @@ static void test_a_registry_that_cannot_close_ends_the_stop_at_the_bound() {
 	std::setvbuf(stderr, nullptr, _IONBF, 0);   // freopen to a file leaves stderr buffered, and abort() does not flush it
 	Logging::handlers.push_back(std::make_unique<StderrLogger>());
 	{
-		RunningNode node("node_order_data", std::to_string(abandon_port));
+		RunningNode node("node_order_data", std::to_string(abandon_port.port()));
 		if (!node.ready()) {
 			std::_Exit(2);
 		}
-		const auto response = http_call(abandon_port, "PUT", "/ordered/1", "{\"a\":\"b\"}");
+		const auto response = http_call(abandon_port.port(), "PUT", "/ordered/1", "{\"a\":\"b\"}");
 		if (response.rfind("HTTP/1.1 2", 0) != 0) {
 			std::_Exit(3);
 		}
@@ -1464,16 +1433,15 @@ static void test_a_second_signal_ends_the_shutdowns_wait() {
 	std::freopen(log_path, "w", stderr);
 	std::setvbuf(stderr, nullptr, _IONBF, 0);   // freopen to a file leaves stderr buffered, and abort() does not flush it
 	Logging::handlers.push_back(std::make_unique<StderrLogger>());
-	const int port = free_port();
-	const int taken = ::socket(AF_INET, SOCK_STREAM, 0);
+	const int taken = ::socket(AF_INET, SOCK_STREAM, 0);   // a listener on a port the OS hands out, without SO_REUSEPORT
 	sockaddr_in addr{};
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(static_cast<std::uint16_t>(port));
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	if (::bind(taken, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0 || ::listen(taken, 8) != 0) {
+	socklen_t len = sizeof(addr);
+	if (::bind(taken, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0 || ::listen(taken, 8) != 0 || ::getsockname(taken, reinterpret_cast<sockaddr*>(&addr), &len) != 0) {
 		std::_Exit(2);
 	}
-	RunningNode node("node_taken_data", std::to_string(port));
+	RunningNode node("node_taken_data", std::to_string(ntohs(addr.sin_port)));
 	if (!eventually([&] { return node.exited(); }, 20s)) {
 		std::_Exit(5);   // still up, serving nothing
 	}
@@ -1828,7 +1796,7 @@ struct Reply {
 };
 
 static Reply call(const std::string& method, const std::string& path, const std::string& body = "", const std::string& content_type = "application/json") {
-	const auto response = http_call(node_port, method, path, body, content_type);
+	const auto response = http_call(node_port.port(), method, path, body, content_type);
 	Reply reply;
 	if (response.size() < 12 || response.rfind("HTTP/1.1 ", 0) != 0) {
 		return reply;
@@ -2380,7 +2348,7 @@ static void test_a_replace_that_must_exist_writes_only_where_the_key_is() {
 	const auto did = engine::sync_wait(use.written_key(x.term));
 	CHECK(did != 0);
 	CHECK(replace(did + 1, true) == engine::errc::doc_not_found);
-	CHECK(replace(did + 1, false) == engine::errc::invalid);   // without it: the key belongs to another document
+	CHECK(replace(did + 1, false) == engine::errc::version_conflict);   // without it: the key belongs to another document, a stale id
 	CHECK(replace(did, true) == std::nullopt);
 	CHECK_EQ(engine::sync_wait(use.written_key(x.term)), did);
 	x.erase(x.off);
@@ -3150,7 +3118,7 @@ static void test_versioned_writers_match_a_sequential_model() {
 
 // A series of the node's /:metrics; -1 when it is not there.
 static double metric(const std::string& name) {
-	const auto text = http_call(node_port, "GET", "/:metrics");
+	const auto text = http_call(node_port.port(), "GET", "/:metrics");
 	std::size_t at = 0;
 	while (at < text.size()) {
 		auto end = text.find('\n', at);
@@ -3183,7 +3151,7 @@ static void client_leaves_a_search(const std::string& index, bool cached) {
 	const auto before = metric("xapiand_http_requests_cancelled");
 	CHECK_GE(before, 0.0);
 	HoldTurn hold(entry.entry(), WRITE_QUIET);
-	const int fd = connect_to(node_port);
+	const int fd = test_utils::connect_to(node_port.port());
 	CHECK_GE(fd, 0);
 	const std::string request = "SEARCH /" + index + "/?volatile HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 2\r\n\r\n{}";
 	::send(fd, request.data(), request.size(), 0);
@@ -3253,19 +3221,19 @@ static void test_the_admission_peaks_rise_under_load() {
 // the verbs the node routes, and none it does not (STORE).
 static void test_head_has_no_body_and_options_lists_the_routed_verbs() {
 	Watchdog watchdog("head has no body and options lists the routed verbs");
-	CHECK(http_call(node_port, "PUT", "/head_idx/1", "{\"a\":\"b\"}").rfind("HTTP/1.1 2", 0) == 0);
+	CHECK(http_call(node_port.port(), "PUT", "/head_idx/1", "{\"a\":\"b\"}").rfind("HTTP/1.1 2", 0) == 0);
 	const auto body_of = [](const std::string& response) {
 		const auto end = response.find("\r\n\r\n");
 		return end == std::string::npos ? std::string("<no head>") : response.substr(end + 4);
 	};
-	const auto miss = http_call(node_port, "HEAD", "/head_idx/2");
+	const auto miss = http_call(node_port.port(), "HEAD", "/head_idx/2");
 	CHECK(miss.rfind("HTTP/1.1 404", 0) == 0);
 	CHECK_EQ(body_of(miss), std::string());
-	const auto hit = http_call(node_port, "HEAD", "/head_idx/1");
+	const auto hit = http_call(node_port.port(), "HEAD", "/head_idx/1");
 	CHECK(hit.rfind("HTTP/1.1 200", 0) == 0);
 	CHECK_EQ(body_of(hit), std::string());
 
-	const auto options = http_call(node_port, "OPTIONS", "/");
+	const auto options = http_call(node_port.port(), "OPTIONS", "/");
 	const auto at = options.find("Allow: ");
 	CHECK(at != std::string::npos);
 	const auto allow = options.substr(at, options.find("\r\n", at) - at);
@@ -3785,6 +3753,16 @@ static void test_a_node_over_the_cap_answers_a_wildcard() {
 	opts.max_search_indexes = saved;
 }
 
+// READY means the listener accepts: the first connection after READY, made once, is not refused. Run first, right
+// after the process's node becomes ready.
+static void test_a_ready_node_accepts_its_first_connection() {
+	const int fd = test_utils::connect_to(node_port.port());
+	CHECK_GE(fd, 0);
+	if (fd >= 0) {
+		::close(fd);
+	}
+}
+
 int main(int argc, char** argv) {
 	const std::string filter = argc > 1 ? argv[1] : "";
 	auto wanted = [&](const char* name) { return filter.empty() || std::string(name).find(filter) != std::string::npos; };
@@ -3828,6 +3806,7 @@ int main(int argc, char** argv) {
 		void (*fn)();
 	};
 	const Case cases[] = {
+		{"test_a_ready_node_accepts_its_first_connection", test_a_ready_node_accepts_its_first_connection},
 		{"test_a_claim_between_flight_end_and_store_is_served_by_the_publication", test_a_claim_between_flight_end_and_store_is_served_by_the_publication},
 		{"test_concurrent_first_uses_of_a_schema_load_it_once", test_concurrent_first_uses_of_a_schema_load_it_once},
 		{"test_a_call_paused_before_claiming_the_foreign_load_loads_nothing", test_a_call_paused_before_claiming_the_foreign_load_loads_nothing},
