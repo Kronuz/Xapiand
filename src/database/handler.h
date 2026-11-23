@@ -311,9 +311,7 @@ public:
 	task::task<MsgPack> get_document_info(std::string_view document_id, bool raw_data, bool human);
 	task::task<MsgPack> get_database_info();
 
-#ifdef XAPIAND_DATA_STORAGE
 	task::task<std::string> storage_get_stored(const Locator& locator, engine::docid did);
-#endif /* XAPIAND_DATA_STORAGE */
 
 	task::task<bool> commit();
 	task::task<void> reopen();

@@ -858,7 +858,6 @@ ShardEndpoint::do_remove_spelling(engine::Shard& eng, const std::string& word, e
 /*
  * The blobs: records apply wrote in the group's file set (D16), read in chores.
  */
-#ifdef XAPIAND_DATA_STORAGE
 
 std::string
 ShardEndpoint::storage_read_blocking(const Locator& locator)
@@ -873,7 +872,6 @@ ShardEndpoint::storage_read_blocking(const Locator& locator)
 	return serialize_strings({ locator.ct_type.to_string(), blob });
 }
 
-#endif  // XAPIAND_DATA_STORAGE
 
 
 /*
@@ -1516,7 +1514,6 @@ Shard::get_metadata_keys()
 }
 
 
-#ifdef XAPIAND_DATA_STORAGE
 task::task<std::string>
 Shard::storage_get_stored(const Locator& locator)
 {
@@ -1527,7 +1524,6 @@ Shard::storage_get_stored(const Locator& locator)
 	co_await endpoint().chores->run(engine::ChoreClass::query, [&] { value = endpoint().storage_read_blocking(locator); });
 	co_return value;
 }
-#endif /* XAPIAND_DATA_STORAGE */
 
 
 std::string

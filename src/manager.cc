@@ -89,7 +89,6 @@
 #include "server/mime_types.h"                   // for preload_mime_types
 #include "shutdown_wait.h"                       // for shutdown_wait::wait
 #include "stopper.h"                             // for preloadStopWords
-#include "storage.h"                             // for Storage
 #include "strict_stox.hh"                        // for strict_stoll
 #include "system.hh"                             // for get_open_files_per_proc, get_max_files_per_proc
 #include "traceback.h"                           // for traceback::{callstacks_snapshot, dump_callstacks}

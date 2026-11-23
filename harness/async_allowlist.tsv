@@ -50,7 +50,6 @@ src/node.cc	mutex	.	allow	5	the node map under _nodes_mtx: lookup and insert, O(
 src/server/mime_types.cc	file	.	allow	2	preload_mime_types reads mime.types at startup, before the listeners open; mime_type reads the loaded table (D1)
 src/stopper.cc	file	.	allow	4	preloadStopWords reads the stop word files (directory scan, is_regular_file, ifstream) at startup, before the listeners open; getStopWords reads the loaded table (D1, D137)
 src/tls.cc	file	.	allow	1	stat of --tls-key while the TLS context is built, before the listeners open
-src/xapiand_storage_io.h	file	.	allow	11	Storage IO policy wrappers; their callers are chores (D9)
 src/xapian_data_guard.h	file	.	allow	3	the walk for Xapian files runs on the main thread at startup, before the listeners open (D1)
 strata/include/strata/core/index.hh	sleep	yield	allow	1	published_position() spins for a writer that stores two words; nothing in Xapiand, strata or prospect calls it (grep): the callers use try_published_position() (D1)
 strata/include/strata/core/index.hh	wait	bool drain\(\)	allow	1	storage admission only: Xapiand sets no storage permit and options::defer_io, so apply answers drain_owed and this site is not reached (D6)

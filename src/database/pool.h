@@ -29,7 +29,7 @@
 // catalog opens, wakes, replaces and closes; a request names an index only through an IndexPin. Nothing in it
 // makes a thread wait for another: a pin is awaited as a task, and a turn is an async mutex with a deadline.
 
-#include "config.h"               // for XAPIAND_DATA_STORAGE
+#include "config.h"
 
 #include <atomic>               // for std::atomic
 #include <chrono>               // for std::chrono, std::chrono::steady_clock
@@ -323,10 +323,8 @@ private:
 	task::task<engine::termcount> do_remove_spelling(engine::Shard& eng, const std::string& word, engine::termcount freqdec);
 	task::task<bool> do_commit(engine::Shard& eng);
 
-#ifdef XAPIAND_DATA_STORAGE
 	// A stored blob's record in the group's file set (D16), read where apply wrote it. Raises invalid without a group.
 	std::string storage_read_blocking(const Locator& locator);
-#endif /* XAPIAND_DATA_STORAGE */
 };
 
 

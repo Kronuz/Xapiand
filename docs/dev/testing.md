@@ -195,11 +195,7 @@ NDOCS=500 harness/journal_replay_check.sh  # more writes
 
 This is the modern, real-architecture equivalent of the retired `oldtests/test_wal.cc`,
 which drove the long-gone 2019 `DatabaseQueue`/`Database` API by hand; here we exercise the
-actual HTTP → journal → crash → open-time-replay path end to end. The storage engine underneath
-(`Kronuz/storage`, the append-only checksummed volume format the journal's blobs use) has its
-own fault-injection suite (torn writes, truncation, bit rot, a corrupt size field, and the
-guarantee that records committed before any damage stay readable) — see that repo's
-`test/test.cc`.
+actual HTTP → journal → crash → open-time-replay path end to end.
 
 Related probes: `graceful_shutdown_check.sh` and `signal_check.sh` (signal handling /
 clean shutdown).

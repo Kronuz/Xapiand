@@ -258,9 +258,6 @@
 #cmakedefine HAVE__BOOL @HAVE__BOOL@
 
 
-/* Enable data storage. */
-#cmakedefine XAPIAND_DATA_STORAGE @XAPIAND_DATA_STORAGE@
-
 /* Enable tracebacks for exceptions. */
 #cmakedefine XAPIAND_TRACEBACKS @XAPIAND_TRACEBACKS@
 

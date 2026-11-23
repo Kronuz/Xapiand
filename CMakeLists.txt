@@ -52,7 +52,6 @@ option(BUILD_TESTS "Build all tests"                                OFF)
 option(DEBUGINFO_EXTERNALIZE "Externalize debug information"        OFF)
 
 option(TLS           "Enable HTTPS for the REST API (needs OpenSSL 3)" ON)
-option(DATA_STORAGE  "Enable data storage"                           ON)
 option(TRACEBACKS    "Enable tracebacks (on by default in Debug)"   OFF)
 option(ASSERTS       "Enable asserts (on by default in Debug)"      OFF)
 option(TRACKED_MEM   "Enable tracked memory allocator"              OFF)
@@ -69,7 +68,7 @@ option(CRASH_POINTS   "Let XAPIAND_STRATA_CRASH=point:n kill the process at a st
 option(ENGINE_CENSUS  "Count the facilities each request uses at the engine seam (XAPIAND_ENGINE_CENSUS=file)" OFF)
 
 
-foreach (opt DATA_STORAGE TRACEBACKS ASSERTS TRACKED_MEM CHECK_IO_FDES LUA UUID_ENCODED UUID_GUID UUID_URN RANDOM_ERRORS CHECK_SIZES LTO)
+foreach (opt TRACEBACKS ASSERTS TRACKED_MEM CHECK_IO_FDES LUA UUID_ENCODED UUID_GUID UUID_URN RANDOM_ERRORS CHECK_SIZES LTO)
 	if (${opt})
 		set ("XAPIAND_${opt}" 1)
 		message(STATUS "Option ${opt} - on")
@@ -565,22 +564,6 @@ include_directories("${logger_SOURCE_DIR}")
 # wired to the library's traceback() (atos file:line) in main.cc.
 add_compile_definitions(TRACEBACK_HOOKS=1)
 
-# storage: the compressed append-only multi-volume blob store, extracted from
-# Xapiand. Header-only Storage<Header, BinHeader, Footer, IO> engine; on-disk
-# format byte-identical, so existing volumes read unchanged. Its deps
-# (compressors, errno-names, strict-stox, stringified) are already on the
-# FetchContent include path above. Two seams are wired to Xapiand by absolute
-# path: STORAGE_IO_HEADER -> xapiand_storage_io.h (routes every storage IO
-# through io.cc + sets the default IO policy), STORAGE_TRACE_HEADER ->
-# xapiand_storage_trace.h (the L_* logger). The data store fsyncs synchronously.
-FetchContent_Declare(storage GIT_REPOSITORY https://github.com/Kronuz/storage.git GIT_TAG 9f14417d24a133ab0b4ab31e452625eceb227afb)
-FetchContent_MakeAvailable(storage)
-include_directories("${storage_SOURCE_DIR}")
-add_compile_definitions(
-	STORAGE_IO_HEADER="xapiand_storage_io.h"
-	STORAGE_TRACE_HEADER="xapiand_storage_trace.h"
-)
-
 # server: RETIRED. This was the generic libev HTTP/TCP server engine (Worker reactor,
 # TCP layer, accept-loop base, BaseClient FSM) extracted from Xapiand. Every consumer
 # has moved onto the std-Asio Kronuz/reactor + Kronuz/http runtime, so the dependency,
@@ -942,15 +925,14 @@ foreach(dep uinteger_t radix_router)
 endforeach ()
 add_compile_definitions(COMPRESSORS_EXCEPTION_HEADER="xapiand_exception.h")
 
-# zstd: the storage library's codec-in-header dispatch references the Zstandard
-# backend (compressor_zstd.{h,cc}), so zstd must be available now even though
-# Xapiand used only deflate + lz4 before. Found from the system (Homebrew on
+# zstd: compressors' Zstandard backend (compressor_zstd.{h,cc}) compresses document
+# data and stored blobs (src/database/data.cc). Found from the system (Homebrew on
 # macOS); its header goes on the include path, compressor_zstd.cc compiles into
 # XAPIAND_OBJ, and libzstd links below.
 find_library(ZSTD_LIBRARY NAMES zstd libzstd)
 find_path(ZSTD_INCLUDE_DIR zstd.h)
 if(NOT (ZSTD_LIBRARY AND ZSTD_INCLUDE_DIR))
-	message(FATAL_ERROR "zstd not found (required by the storage library's codec dispatch); install libzstd")
+	message(FATAL_ERROR "zstd not found (document data and stored blobs are zstd-compressed); install libzstd")
 endif()
 include_directories("${ZSTD_INCLUDE_DIR}")
 
@@ -1200,9 +1182,7 @@ list(APPEND XAPIAND_SRC_LIST "${htm_SOURCE_DIR}/constraint.cc")
 # The Double Metaphone encoder's out-of-line implementation (the string-similarity
 # metrics are header-only; only this encoder ships a .cc).
 list(APPEND XAPIAND_SRC_LIST "${double_metaphone_SOURCE_DIR}/double_metaphone.cc")
-# compressors (deflate + lz4 + zstd), in place of the removed
-# src/compressor_deflate.cc and src/compressor_lz4.cc. zstd was added when the
-# storage library's codec-in-header dispatch started referencing it.
+# compressors (deflate + lz4 + zstd), compiled into XAPIAND_OBJ.
 list(APPEND XAPIAND_SRC_LIST "${compressors_SOURCE_DIR}/compressor_deflate.cc")
 list(APPEND XAPIAND_SRC_LIST "${compressors_SOURCE_DIR}/compressor_lz4.cc")
 list(APPEND XAPIAND_SRC_LIST "${compressors_SOURCE_DIR}/compressor_zstd.cc")

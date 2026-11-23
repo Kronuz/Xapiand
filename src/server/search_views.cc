@@ -1915,14 +1915,12 @@ retrieve_document_view(Request& request)
 		// Locator has content type, return as a blob (an image for instance)
 		auto ct_type = locator.ct_type;
 		request.response_blob = locator.data();
-#ifdef XAPIAND_DATA_STORAGE
 		if (locator.type == Locator::Type::stored || locator.type == Locator::Type::lz4_compressed_stored || locator.type == Locator::Type::zstd_compressed_stored) {
 			if (request.response_blob.empty()) {
 				auto stored = co_await db_handler.storage_get_stored(locator, did);
 				request.response_blob = unserialize_string_at(STORED_BLOB, stored);
 			}
 		}
-#endif
 
 		request.ready = std::chrono::steady_clock::now();
 

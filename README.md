@@ -89,7 +89,6 @@ Notable CMake options (all default on unless noted):
 | Option | Default | What it does |
 |---|---|---|
 | `TLS` | ON | HTTPS for the REST API; needs OpenSSL 3. |
-| `DATA_STORAGE` | ON | Stored blobs, in volumes of each shard's group. |
 | `TRACEBACKS` | OFF (ON in Debug) | Pretty backtraces + cross-thread stack dumps. |
 | `ASSERTS` | OFF (ON in Debug) | Internal assertions. |
 | `TRACKED_MEM` | OFF | Allocator that attributes memory to call sites. |

@@ -52,7 +52,7 @@
 // only, so a replica, a replay and a retry agree: blobs are written at the offsets the state names, never
 // appended, and volume numbers are allocated in log order.
 
-// The bytes past which apply rotates a volume: master's data-storage volume (storage.h, 2^32 8-byte units).
+// The bytes past which apply rotates a volume (32 GiB).
 inline constexpr std::uint64_t VOLUME_BYTES = 32ull << 30;
 
 // What the group keeps beside strata, in its checkpoint bundle (contract xapiand:volume-file-set).

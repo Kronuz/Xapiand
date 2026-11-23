@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "config.h"               // for XAPIAND_DATA_STORAGE
+#include "config.h"
 
 #include <chrono>                 // for std::chrono::nanoseconds
 #include <cstdint>                // for std::uint64_t
@@ -192,10 +192,8 @@ public:
 	task::task<std::string> get_metadata(const std::string& key);
 	task::task<void> set_metadata(const std::string& key, const std::string& value, bool commit_ = false);
 
-#ifdef XAPIAND_DATA_STORAGE
 	// A stored blob of the index's group: its read is a chore.
 	task::task<std::string> storage_get_stored(const Locator& locator);
-#endif /* XAPIAND_DATA_STORAGE */
 
 	std::string to_string() const;
 

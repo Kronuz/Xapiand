@@ -944,14 +944,12 @@ DatabaseHandler::_dump_document(engine::docid did, const Data& data) {
 			case Locator::Type::stored:
 			case Locator::Type::lz4_compressed_stored:
 			case Locator::Type::zstd_compressed_stored: {
-#ifdef XAPIAND_DATA_STORAGE
 				auto stored = co_await storage_get_stored(locator, did);
 				obj[RESERVED_DATA].push_back(MsgPack({
 					{ "_content_type", unserialize_string_at(STORED_CONTENT_TYPE, stored) },
 					{ "_type", "stored" },
 					{ "_blob", unserialize_string_at(STORED_BLOB, stored) },
 				}));
-#endif
 				break;
 			}
 		}
@@ -2317,7 +2315,6 @@ DatabaseHandler::get_database_info()
 }
 
 
-#ifdef XAPIAND_DATA_STORAGE
 task::task<std::string>
 DatabaseHandler::storage_get_stored(const Locator& locator, engine::docid did)
 {
@@ -2331,7 +2328,6 @@ DatabaseHandler::storage_get_stored(const Locator& locator, engine::docid did)
 	co_await lk_shard.pin();
 	co_return co_await lk_shard->storage_get_stored(locator);
 }
-#endif /* XAPIAND_DATA_STORAGE */
 
 
 task::task<bool>
