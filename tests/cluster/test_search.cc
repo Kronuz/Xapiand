@@ -439,7 +439,7 @@ MsgPack every_kind() {
 	const MsgPack all = MsgPack(1000);
 	for (const char* metric : {"_count", "_sum", "_avg", "_min", "_max", "_variance", "_std_deviation", "_median", "_mode", "_stats", "_extended_stats"}) {
 		for (const char* field : {"age", "score"}) {
-			aggs[std::string(metric) + "_" + field] = kind(metric, field);
+			aggs[std::string(metric + 1) + "_" + field] = kind(metric, field);  // a name never starts with '_'
 		}
 	}
 	aggs["values_cat"] = kind("_values", "cat", {{"_limit", all}});
@@ -579,7 +579,8 @@ static void test_expansions() {
 static void test_failover() {
 	const auto schema = make_schema();
 	const auto config = every_kind();
-	const auto& placement = placements()[1];   // 5 nodes, rf 2
+	const auto all = placements();
+	const auto& placement = all[1];   // 5 nodes, rf 2
 	auto world = lay_out(placement, "failover");
 	const auto prepared = engine::prepare(Query::combine(Op::OR, t("w0"), Query::wildcard("f", "ap")));
 	const Shape shape{"top 20", 0, 20};
