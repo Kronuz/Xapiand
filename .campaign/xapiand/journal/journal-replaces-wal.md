@@ -1,9 +1,22 @@
 # journal-replaces-wal: journal
 
-State: waiting on jobs at Xapiand:1fe793170 (d2-d4, A9 fix 3, all unbuilt): suite 261123-050819-f5c45e; mutants (after it) 261123-050834-0ebdb6 (d2) 261123-050837-6d0d4c (d1) 261123-050838-bf4fcb (d3) 261123-050840-53a7cb (d4 checkpoint) 261123-050842-314ab8 (d4 id counter) 261123-050845-292192 (A9 fix 3) 261123-050847-b1ea3d 261123-050849-26aee6 (A9 fixes 1-2); A2 261123-050851-821178 and mutant 261123-050853-8815ef; A5 journal_replay_check 261123-050855-0389cd. Next: read them, fix compile/test failures, then step e
+State: waiting on jobs at Xapiand:c0dc4160d (step e written, unbuilt; master merged): gate crash 261123-081143-316fa1, no-wal 261123-081144-3d7a18; A8 261123-081330-ed4296; A2 261123-081159-ab4ad7; A5 journal_replay_check 261123-081200-c69986; mutants (must fail) d1 261123-081243-e383f2, d2 261123-081247-4b112b, d3 261123-081250-18f9f5, d4 checkpoint 261123-081255-dd8ac5, d4 id counter 261123-081259-55e6bc, A9 fix 3 261123-081303-f25f47, A9 261123-081306-203d46 261123-081310-f81e01, A2 truncation 261123-081314-8fbbb3; and 261123-071825-3847bb at Xapiand:bc757bba9 (still running). Next: read them, fix what they show; Host::delete_group is blocked (Blocked on 2)
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
+
+Session 5 (2026-11-23), step e (A8). 3847bb was still running, so e went first.
+
+1. Xapiand:9068ca7ee: the WAL (wal.*), the fsyncher, the scheduler library (FetchContent block, debouncer, stash,
+   both trace headers, debounce_or_run and its test), DB_DISABLE_WAL, DB_SYNCHRONOUS_WAL, the WAL HTTP verb, the
+   `wal` argument of every write and commit, `--writers` and `--wal-writer-cache-size` (now in
+   removed_options_check.sh), the info keys, the fsync metrics sets and Stops 4-5 are gone. logger_fwd.h keeps
+   only L_NOTHING and the L_EXC stub. test_pool's WAL tests go (the log's order is apply order by construction)
+   or read the journal (FaultyIndexes keeps one; cold pin, fenced, id counter). async allowlist: the WAL rule
+   and rows go, shard_group.cc's blocking sites are classified (CI 45203739416's 8 unclassified hits);
+   `async_check --strict --owed` locally: 0 unclassified. run_all.sh's recovery layer runs journal_replay_check.sh.
+2. Xapiand:c0dc4160d: master merged (no conflicts; strata pin stays 00eb018, which contains master's e3edb426).
+3. Not done: Host::delete_group on index DELETE (Blocked on 2).
 
 Session 4 (2026-11-23): the six jobs of session 3 were still queued (18 ahead), so the code stays unbuilt; d2's job
 at head builds c, d1 and d2 together (it superseded d1's own job and mutant, resubmitted at d2).
@@ -79,8 +92,7 @@ need group-catalog:
    the log (a set_metadata command at issue, or ShardGroupState).
 5. A9 fix 3: after catch_up in open_blocking, the leader proposes abort_entry(id) for each id in state().open; test:
    a close with an upload in flight resumes its term at reopen and the abort retires it.
-6. e: delete the WAL, fsyncher and scheduler (A8), DB_DISABLE_WAL/DB_SYNCHRONOUS_WAL; Host::delete_group on index
-   DELETE; the no-wal check; then the full `crash` check once.
+6. e: written (session 5); Host::delete_group on index DELETE waits on Blocked on 2. Read the step-e jobs (State).
 
 Done (session 2's plan, kept for reference):
 2. c. Build against group-catalog (FETCHCONTENT_SOURCE_DIR_STRATA=/Users/kronuz/code/Kronuz/strata-wt/
@@ -123,7 +135,25 @@ strata: `group-catalog` (item 4), which `core` step c waits on.
 
 ## Blocked on
 
-Nothing open. (Answered: 1, the journal's directory: `.xapiand/journal`, the lead's ruling 2026-11-23, Xapiand:4a117e647.)
+2. Host::delete_group on index DELETE: (a) the index DELETE verb is not built (`delete_database_view` answers 501),
+   so there is no deletion to hang it on; (b) strata's journal pin (9e11713e at strata main, 5bbeedc at Xapiand's
+   e3edb426) predates journal's 131eb2e (Host::delete_group, landed by journal-group-delete at d8453f6). Options:
+   (i) a strata pin bump to journal >= d8453f6 (the lead's `campaign pin`), then this quest builds index DELETE
+   (close the index's group, `Host::delete_group`, remove the directory; a recreate at the same path starts its
+   group empty, tested); (ii) move index DELETE with delete_group to its own quest after the bump, since DELETE is
+   a new user-visible verb. Recommend (ii): this quest's outcome is the WAL's removal, and DELETE is a feature.
+3. File set: step e deleted `src/debounce_or_run.h`, `tests/test_debounce_or_run.cc` and
+   `src/xapiand_stash_trace.h` (outside the set; they used the scheduler library A8 removes). Widen the set to them.
+4. Stale WAL text outside my set (the lead's or a docs quest's): `config.h.in` `#cmakedefine XAPIAND_DATABASE_WAL`;
+   AGENTS.md, README.md, docs/src/content/docs/{building,options,architecture,changelog}.md (DATABASE_WAL,
+   Stops 4-5, fsync threads, the WAL verb); src/log.h `L_DATABASE_WAL`; src/metrics.{h,cc} `xapiand_wal_errors` and
+   the fsync gauges (never set now); harness strata_write_check.sh, engine_crash_check.sh, graceful_shutdown_check.sh,
+   cluster/checklist.py, coverage_e2e_server.py (`PUT :wal` expects a 400), profile_bulk.sh's WAL row;
+   tests/one_id_mutants.sh "no-replay"; WAL comments in test_engine_strata.cc, test_engine_replay.cc,
+   test_quarantine.cc, test_coverage_database.cc. The engine's versioned-document replay (`WriteOp::none`,
+   `PreparedWrite::replayed`) has no WAL caller now; its tests are in test_engine_strata.cc (ruling 6 revised).
+
+Nothing else open. (Answered: 1, the journal's directory: `.xapiand/journal`, the lead's ruling 2026-11-23, Xapiand:4a117e647.)
 
 Was 1. `.journal` (the journal's directory in the data root) is also a valid index name: index_path::valid accepts a
    leading dot, so a user index `.journal` would nest under the journal host. Options: (a) refuse creating an
@@ -173,7 +203,8 @@ Drafts, applied when the code lands; each names the contract it shapes (format-f
 6. `engine::PreparedWrite` (not `Prepared`: engine/search.cc has a `Prepared` query class). Its
    `expected` is always set by prepare for replace and replace_key (the leader's expectation, D3), the
    key's version for erase_key, and none for erase by id (strata checks versions only by key; prepare
-   checks it). `WriteOp::none` and `replayed` exist only for the WAL's replay and go with it (step e).
+   checks it). `WriteOp::none` and `replayed` stay (revised, session 5): they serve any versioned document's replay, and their
+   tests are in test_engine_strata.cc outside my set; removing them is a follow-up (Blocked on 4).
 7. A batch's transaction declares a new field once: a later write of it names the earlier declaration
    (the table keeps the first document's kind, as sequential transactions would).
 8. Volumes rotate past 32 GiB (`VOLUME_BYTES`, master's data-storage volume bound, storage.h); locators keep
@@ -201,3 +232,8 @@ Drafts, applied when the code lands; each names the contract it shapes (format-f
 18. RESTORE's commands are proposed one after another, each awaited at quorum; D17's pipelining waits on T12.
 19. The crash check's command passes `build/bin/xapiand`; blob_crash_check.sh accepts it as the build's binary.
 20. The crash check (lead's command) configures without -G Ninja; the lead's to fix.
+18. Removing the WAL removes its user-visible surface with it (the quest's outcome): the `:wal` HTTP verb, the
+    `wal` info keys and metadata key, `--writers` and `--wal-writer-cache-size` (removed options, unknown arguments).
+19. A pool with no journal (tests, the CLI) is durable only at its commits; no second log replaces the WAL there.
+20. The mutant probes carry `--for` their criterion with `--fails-without`: the tool refuses `--fails-without`
+    with neither `--for` nor `--task`, and the lead's rule forbids `--task` for probes.
