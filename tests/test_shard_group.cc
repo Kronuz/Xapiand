@@ -319,7 +319,7 @@ void test_a_flush_leaves_its_locators_on_its_bytes() {
 	data.update(ct_type_t("a/b"), 0, 0, 37);
 	data.flush();
 	CHECK(views_its_bytes(data));
-	REQUIRE_EQ(data.size(), 3u);
+	REQUIRE_EQ(data.size(), 4u);   // the empty main object a new Data holds, then the three
 	CHECK(data.get(ct_type_t("text/plain"))->data() == "tiny");
 	CHECK(data.get(ct_type_t("image/png"))->data() == big);
 
