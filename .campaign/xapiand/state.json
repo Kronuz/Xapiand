@@ -33479,8 +33479,9 @@
             "test/test_group_commit*",
             "CMakeLists.txt"
           ],
-          "journal": "../Xapiand-wt/xapiand/turn-log-parity--group-commit",
-          "worktree": "../strata-wt/xapiand/turn-log-parity--group-commit"
+          "journal": "",
+          "merged": "6c3d0862b0b82e1ffbd289c72e952e25ff3798ea",
+          "worktree": ""
         },
         "journal-pin": {
           "base": "db214892159e0102e17f5b390e1a37b299546031",
@@ -33570,7 +33571,7 @@
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-21T21:25:48",
+      "updated": "2026-11-22T21:18:48",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
