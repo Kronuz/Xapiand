@@ -19640,8 +19640,42 @@
         "harness/coverage_e2e_main.sh",
         "CMakeLists.txt"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-23T03:30:46",
+          "ci": {
+            "carried": true,
+            "commit": "83a56bcd6f643c4c4bb563ec3ffadce45220d00a",
+            "runs": [
+              45151775419
+            ]
+          },
+          "commit": "68dea47002d81004128c60f3ef769feac943c495",
+          "criteria": {
+            "A1": "261123-015430-f9efd9 (passed at f023cca493c4; only 2 merges from main since, none touching its files); fails without: 261121-163015-5d9da9",
+            "A2": "261123-015429-c5ed0e (the suite check); 261122-225528-2b0953 (the suite check, 80/80 at d9f7622; macOS only)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build-ninja -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build-ninja -j4 && ctest --test-dir build-ninja --output-on-failure",
+              "commit": "f023cca493c4a46eb67d925d061024be7875a8e7",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-015429-c5ed0e",
+              "level": "light",
+              "seconds": 510.3,
+              "state": "done",
+              "what": "open-files-floor check suite at f023cca493c4"
+            }
+          ],
+          "final": true,
+          "from": "cba19363180cd0ce8885a8d16e43d31806fc095c",
+          "reason": "",
+          "tested": "68dea47002d81004128c60f3ef769feac943c495"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [
         "failed-restore-exit"
@@ -19649,10 +19683,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "A start with fewer open files than the full pool needs shrinks the pool and starts",
-      "updated": "2026-11-22T22:54:55",
-      "worktree": "../Xapiand-wt/xapiand/open-files-floor"
+      "updated": "2026-11-23T03:31:00",
+      "worktree": ""
     },
     "open-mix": {
       "accepted": {},
