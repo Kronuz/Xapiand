@@ -1,6 +1,6 @@
 # journal-replaces-wal: journal
 
-State: waiting on jobs and CI at Xapiand:d322cc9b6 (pushed; master merged). Jobs: fresh configure + full build there 261123-131119-d8ca98; fails without the zstd order (fresh configure at ecf684865) 261123-131122-e573bf. At 91113fb2f (flush fix): test_pool 261123-113325-ab914d passed; queued test_node 576cc8, test_loop_yield ae325b, test_pool ASan 95fb3d, test_shard_group ASan eca738, must-fail a11289. Cancelled unrun: eb5101 (its reused build dir would have masked the clash). Older: 9f402f passed, so it proves nothing (item 7); e33085 queued. Next: when they pass and CI at the pushed head is green, the lead submits the crash check and the full job set at that commit, without --after (the d4 checkpoint mutant takes the perl pattern of 261123-101712-4f0aa1).
+State: waiting on jobs and CI at Xapiand:c4d06c80d (pushed). Jobs at c4d06c80d: test_shard_group under ASan 261123-142143-9b5bc3; fails without the flush fix 261123-142149-92c842; test_node rerun 261123-142155-d17a82 (item 9). Attribution must-fail at 09a223a4e: 261123-142137-528ce7. At d322cc9b6: fresh configure + full build 261123-131119-d8ca98; must-fail fresh configure at ecf684865 261123-131122-e573bf. At 91113fb2f: test_pool ab914d and test_loop_yield ae325b passed; test_node 576cc8 failed (item 9); test_pool ASan 95fb3d running. eca738 and a11289 were superseded unrun: at 91113fb2f the count bug (item 8) would have failed the plain one and passed the mutant for the wrong reason. e33085 queued. Next: when they pass and CI at the pushed head is green, the lead submits the crash check and the full job set at that commit, without --after (the d4 checkpoint mutant takes the perl pattern of 261123-101712-4f0aa1).
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
@@ -52,6 +52,16 @@ Session 10 (2026-11-23), the lead's step (Blocked on 6 and 7, file set widened t
 7. 261123-112555-9f402f (test_pool under ASan at a22e1537f, before any fix) passed its test (log: "100% tests passed"):
    the UAF CI saw does not reproduce in test_pool under macOS ASan, so it is not fails-without evidence. The flush fix's
    must-fail proof is a11289 (test_shard_group's deterministic views check, which needs no ASan to fail).
+8. CI at 90f2688fa: test_shard_group fails `REQUIRE_EQ(data.size(), 3u)` (line 322) on all three jobs. Neither the
+   master merge nor the zstd change: my own test from 09a223a4e counted wrong. A new Data holds the empty main object
+   (DATABASE_DATA_MAP), so three updates leave four locators; its first CI run was this one (earlier pushes cancelled
+   CI before tests). Fix Xapiand:c4d06c80d: the count is 4. Attribution: 528ce7 fails at line 322 at 09a223a4e itself.
+   The fix is to the test's expectation, so CI at c4d06c80d is its proof.
+9. test_node 576cc8 at 91113fb2f failed after 530 s: "a node over the cap answers a wildcard: hung (schemas: 192
+   loads, 34 joined, 0 waiting; settings: 148 loads, 6 joined, 0 waiting)", host load ~33; CI's test_node passed at
+   90f2688fa, and the flush fix does not touch the schema/settings load path. Rerun once at c4d06c80d: d17a82. If it
+   passes, the hang was load (the test's own deadline under a host 4x oversubscribed); if it hangs again, it is a bug
+   to chase.
 Observed, not changed: strata pins zstd and lz4 so segment bytes match across platforms; in Xapiand the zstd pin is
 defeated by the system zstd (as on master, where the storage library did the same). For the lead and strata before
 replicas compare segment bytes.
