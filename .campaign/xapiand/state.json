@@ -13192,8 +13192,12 @@
           "base": "a1e786f4a1c08c4f2a0c314ea484b8c2a1e80301",
           "branch": "quest/xapiand/group-heal--repair",
           "files": [
-            "src/group/repair*",
-            "test/group/repair*"
+            "include/strata/group/repair*",
+            "include/strata/group/group.hh",
+            "include/strata/group/install.hh",
+            "test/group/repair*",
+            "CMakeLists.txt",
+            "docs/mechanisms/group-install.md"
           ],
           "journal": "../Xapiand-wt/xapiand/group-heal--repair",
           "worktree": "../strata-wt/xapiand/group-heal--repair"
@@ -13238,7 +13242,7 @@
         }
       },
       "title": "Replication groups grow, heal and run in the simulator",
-      "updated": "2026-11-23T04:37:00",
+      "updated": "2026-11-23T04:37:05",
       "worktree": "../strata-wt/xapiand/group-heal"
     },
     "group-install": {
