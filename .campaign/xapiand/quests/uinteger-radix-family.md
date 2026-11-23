@@ -5,32 +5,35 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+`uinteger_t/radix_decode.hh` holds only parsing (text to number). The output-side members it still
+holds after uinteger-restructure (`_store_be`, `_store_bytes`, `_digits_append`, `_digits_radix`)
+move, unchanged, to the family header they belong with: `radix_encode.hh` for number-to-text, or
+`digits.hh` for the digit buffer, whichever each member serves. Follow-up F1 of uinteger-restructure's
+review (hunt.md).
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 The suite passes: the `build-test` check, a job tagged `--for A1`
+- A2 The move changes no code: the `members` check (`split_check.py`) passes, its warnings answered in
+  the journal, and a job tagged `--for A2`
+- A3 [artifact] `docs/source-layout.md` (or the layout note uinteger-restructure wrote) names each
+  member's new home
+- A4 [manual] The lead reads the diff and agrees each header is one family
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None: `uinteger_t.hh` stays the umbrella; no include a user writes changes.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 2026-11-23: a tool-made move (cpp-libraries `tools/outline.py` map change or a plain cut and
+  paste of whole definitions), one commit. If a member serves both directions, it stays and the
+  journal says why.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+Nothing: one move.
 
 ## Tasks
 
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+None: one contributor (maintenance, economical, medium).
