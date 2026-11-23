@@ -1,6 +1,6 @@
 # journal-replaces-wal: journal
 
-State: waiting on jobs. At Xapiand:91113fb2f (the flush fix; the code they test is unchanged since), all -DASSERTS=ON: test_pool 261123-113325-ab914d, test_node 261123-113327-576cc8, test_loop_yield 261123-113329-ae325b, test_pool under ASan 261123-113332-95fb3d, test_shard_group under ASan 261123-113334-eca738; fails without the flush fix (data.{cc,h} as at a7f0aabd6): 261123-113337-a11289. At Xapiand:ecf684865 (storage library removed): full build, tests on, 261123-113717-eb5101. Xapiand:caa9a372e (ARCHITECTURE.md) and the runtime.svg re-render are docs only. Still queued from before: 261123-112555-9f402f (test_pool ASan at a22e1537f, before any fix: fails), 261123-101801-e33085 (test_loop_yield pre-fix diagnostic). Next: when they pass and CI at the pushed head is green, the lead submits the crash check and the full job set at that commit, without --after (the d4 checkpoint mutant takes the perl pattern of 261123-101712-4f0aa1).
+State: waiting on jobs and CI at Xapiand:d322cc9b6 (pushed; master merged). Jobs: fresh configure + full build there 261123-131119-d8ca98; fails without the zstd order (fresh configure at ecf684865) 261123-131122-e573bf. At 91113fb2f (flush fix): test_pool 261123-113325-ab914d passed; queued test_node 576cc8, test_loop_yield ae325b, test_pool ASan 95fb3d, test_shard_group ASan eca738, must-fail a11289. Cancelled unrun: eb5101 (its reused build dir would have masked the clash). Older: 9f402f finished (read its log), e33085 queued. Next: when they pass and CI at the pushed head is green, the lead submits the crash check and the full job set at that commit, without --after (the d4 checkpoint mutant takes the perl pattern of 261123-101712-4f0aa1).
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
@@ -40,6 +40,18 @@ Session 10 (2026-11-23), the lead's step (Blocked on 6 and 7, file set widened t
    source, which gains three edges (shards propose to the group loop, committed entries to the chore threads, apply
    to the file sets) and the label "journal host"; checked from a PNG render: no WAL writers or fsyncher, nothing
    clipped. Docs only, no job.
+6. CI 45251581577 at 41dcff35d failed at configure (zstd's `uninstall` target clashes with Xapiand's). Cause: the
+   storage library ran FetchContent_MakeAvailable(compressors) early, before strata set COMPRESSORS_ZSTD_PINNED ON,
+   so compressors took the system zstd; with it gone, prospect -> strata processes compressors first, pinned, and
+   compressors adds facebook/zstd's CMake project. Fix Xapiand:6bb073ca9: Xapiand's own zstd find moves before
+   prospect; compressors takes a found ZSTD_LIBRARY/ZSTD_INCLUDE_DIR even when pinned, so one system zstd links, as
+   on master. Not an `if(NOT TARGET uninstall)` guard: that would keep two zstd copies and give `uninstall` to zstd.
+   Why local jobs missed it: none configured fresh at ecf684865 (eb5101 was still queued), and the slot's reused
+   `build` dir caches ZSTD_LIBRARY/ZSTD_INCLUDE_DIR from earlier configures, which hides the fetch; CI configures
+   fresh. The new jobs configure in a removed `build-fresh`. Master merged: Xapiand:d322cc9b6 (clean).
+Observed, not changed: strata pins zstd and lz4 so segment bytes match across platforms; in Xapiand the zstd pin is
+defeated by the system zstd (as on master, where the storage library did the same). For the lead and strata before
+replicas compare segment bytes.
 Observed, not changed: no `Storage<>` is instantiated in src any more (manager.cc and database/utils.cc include
 storage.h for nothing or its magic constants; xapiand_storage_io.h is unused), yet CMakeLists still fetches the
 storage library and has DATA_STORAGE. For the lead: removing it is the WAL removal's tail (Proposed tasks).
