@@ -91,7 +91,7 @@ svc: "HTTP service  -  a reactor pool (N loops); each request a task on its loop
   http: "HTTP\n(http::HttpAsioService)"
 }
 
-wrk: "journal threads (one host per data directory)" {
+wrk: "journal host" {
   style.fill: "#eef2f7"
   loop: "group loop\n(journal and consensus)"
   chore: "two chore threads\n(apply, checkpoint)"
@@ -106,6 +106,9 @@ store: "storage" {
 
 clients -> svc: "accept" {style.stroke-dash: 3}
 svc -> store: "chores on the WorkPool\n(device work)"
+store.dbp -> wrk.loop: "propose"
+wrk.loop -> wrk.chore: "committed entries"
+wrk.chore -> store.vol: "apply"
 main.manager -> svc: "start on READY"
 ```
 -->
