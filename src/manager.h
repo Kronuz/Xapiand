@@ -37,7 +37,6 @@
 
 #include "base_x.hh"                          // for Base62
 #include "database/utils.h"                   // for UNKNOWN_REVISION
-#include "debouncer.h"                        // for Debouncer
 #include "endpoint.h"                         // for Endpoint
 #include "enum.h"                             // for ENUM_CLASS
 #include "length.h"                           // for serialize_length
@@ -54,7 +53,6 @@ class MsgPack;
 namespace http { class HttpAsioService; }
 namespace engine { class AsioHost; }
 class DatabasePool;
-class DatabaseWALWriter;
 class SchemasLRU;
 class IndexResolverLRU;
 namespace control { class Tasks; }
@@ -121,7 +119,6 @@ public:
 
 	std::unique_ptr<SchemasLRU> schemas;
 	std::unique_ptr<DatabasePool> database_pool;
-	std::unique_ptr<DatabaseWALWriter> wal_writer;
 	std::unique_ptr<IndexResolverLRU> index_settings_resolver;
 
 

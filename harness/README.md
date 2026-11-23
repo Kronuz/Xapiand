@@ -82,7 +82,8 @@ Built in step S1 (`docs/design/phase7c.md`, section 5); the pre-7c numbers are i
   classes (D14, T1). `--strict` fails on an unclassified hit; `harness/async_allowlist.tsv` holds
   the rows (a new hit needs a row naming its reason or the decision that removes it).
 - **`removed_options_check.sh BIN`** -- the thread-count options D15 removed (`--committers`, `--fsynchers`,
-  `--http-servers`, `--http-clients`, `--bulk-preparers`, `--bulk-indexers`) are unknown arguments and not in `--help`.
+  `--http-servers`, `--http-clients`, `--bulk-preparers`, `--bulk-indexers`) and the WAL's (`--writers`,
+  `--wal-writer-cache-size`) are unknown arguments and not in `--help`.
 - **`profile_light.sh`** -- CPU per light request by group (offload hop, scheduler, engine, HTTP)
   from `sample` (macOS) or `perf` (Linux), and the hop's wall time from an http `trace/hop` build
   (`-DHTTP_TRACE_HOP`); `--compare PRE POST` is T11. `profile_bulk.sh` samples the same way.

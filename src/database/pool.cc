@@ -500,7 +500,7 @@ struct DatabasePool::Shutdown {
 	std::size_t pending = 0;  // the partitions whose shutdown has not ended
 	bool done = false;
 	bool reported = false;
-	std::vector<std::string> failed;  // the keys whose commit failed: their WAL replays them at the next open
+	std::vector<std::string> failed;  // the keys whose commit failed: their journal replays them at the next open
 };
 
 
@@ -533,7 +533,7 @@ create_index_directory(const std::string& dir, const std::string& path)
 }
 
 // A pin's failure as the engine's error: an absent index is not_found, a closed catalog not_available, and
-// strata's own failures are translated; anything else (the WAL replay's) leaves as it is.
+// strata's own failures are translated; anything else (the group's recovery) leaves as it is.
 [[noreturn]] void
 rethrow_pin_failure(const std::string& path)
 {
@@ -650,7 +650,6 @@ DatabasePool::DatabasePool(engine::AsioHost& timers, size_t database_pool_size, 
 	turn_timeout_(DB_TIMEOUT),
 	buffered_docs_cap_(0),
 	readers_per_index_(readers_per_index),
-	wal_writer_(nullptr),
 	detached_(0)
 {
 	WorkPool::Options options;
@@ -969,7 +968,7 @@ DatabasePool::flush(task::cancel_token cancel)
 			continue;   // closed since the snapshot: its close committed it
 		}
 		try {
-			co_await pinned->commit(DB_OPEN | DB_WRITABLE, true, cancel);
+			co_await pinned->commit(DB_OPEN | DB_WRITABLE, cancel);
 		} catch (const engine::Error& error) {
 			L_WARNING("Flushing {} failed: {}", repr(slot.key), error.description());
 		}
@@ -1002,7 +1001,7 @@ DatabasePool::join(std::chrono::steady_clock::time_point wakeup)
 	}
 	if (!std::exchange(state.reported, true)) {
 		for (const auto& key : state.failed) {
-			L_WARNING("The last commit of {} failed: its WAL replays it at the next open", repr(key));
+			L_WARNING("The last commit of {} failed: its journal replays it at the next open", repr(key));
 		}
 	}
 	return true;

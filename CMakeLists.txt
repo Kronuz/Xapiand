@@ -52,7 +52,6 @@ option(BUILD_TESTS "Build all tests"                                OFF)
 option(DEBUGINFO_EXTERNALIZE "Externalize debug information"        OFF)
 
 option(TLS           "Enable HTTPS for the REST API (needs OpenSSL 3)" ON)
-option(DATABASE_WAL  "Enable database write ahead log (WAL)"         ON)
 option(DATA_STORAGE  "Enable data storage"                           ON)
 option(TRACEBACKS    "Enable tracebacks (on by default in Debug)"   OFF)
 option(ASSERTS       "Enable asserts (on by default in Debug)"      OFF)
@@ -70,7 +69,7 @@ option(CRASH_POINTS   "Let XAPIAND_STRATA_CRASH=point:n kill the process at a st
 option(ENGINE_CENSUS  "Count the facilities each request uses at the engine seam (XAPIAND_ENGINE_CENSUS=file)" OFF)
 
 
-foreach (opt DATABASE_WAL DATA_STORAGE TRACEBACKS ASSERTS TRACKED_MEM CHECK_IO_FDES LUA UUID_ENCODED UUID_GUID UUID_URN RANDOM_ERRORS CHECK_SIZES LTO)
+foreach (opt DATA_STORAGE TRACEBACKS ASSERTS TRACKED_MEM CHECK_IO_FDES LUA UUID_ENCODED UUID_GUID UUID_URN RANDOM_ERRORS CHECK_SIZES LTO)
 	if (${opt})
 		set ("XAPIAND_${opt}" 1)
 		message(STATUS "Option ${opt} - on")
@@ -494,7 +493,7 @@ FetchContent_Declare(sortable     GIT_REPOSITORY https://github.com/Kronuz/sorta
 FetchContent_MakeAvailable(constexpr_phf split lru_cache errno_names base_x located_exception sortable)
 
 # Header-only libs, included by name ("phf.hh", "split.h", "lru.h", "error.hh"
-# +"errnos.h", "stash.h", "uinteger_t.hh", "base_x.hh", "sortable.hh"), so put their source dirs
+# +"errnos.h", "uinteger_t.hh", "base_x.hh", "sortable.hh"), so put their source dirs
 # on the global include path now that the vendored copies are gone.
 include_directories(
 	"${constexpr_phf_SOURCE_DIR}"
@@ -518,7 +517,7 @@ include_directories(
 
 # traceback (headers only, up front). Xapiand's trace adapters inject traceback.h into
 # the extracted libraries: workpool -> xapiand_workpool_trace.h -> traceback.h, and
-# scheduler / logger, which pull thread.hh and work_pool.hh transitively. traceback proper is fetched
+# logger, which pull thread.hh and work_pool.hh transitively. traceback proper is fetched
 # further down (its traceback.cc compiles into XAPIAND_OBJ), but its headers must be on
 # the include path BEFORE those libraries so their collateral targets can find traceback.h
 # in a full `ninja` build (CI builds every fetched target; Xapiand links none of them).
@@ -543,20 +542,9 @@ add_compile_definitions(
 	WORKPOOL_THREAD_NAME_PREFIX="Xapiand:"
 )
 
-# scheduler: the timer-wheel scheduler + debouncer, extracted from Xapiand. It is
-# header-driven (scheduler.h, debouncer.h, callable_traits.hh) and builds on stash
-# + workpool (fetched above). Its random_time helper is provided by Xapiand's
-# own random.cc, so we populate headers only and do NOT compile the library's
-# random.cc. The trace header restores L_SCHEDULER/L_DEBUG_HOOK/L_EXC/L_CALL and
-# the color palette onto Xapiand's log.h + xapiand_colors.h.
-FetchContent_Declare(scheduler GIT_REPOSITORY https://github.com/Kronuz/scheduler.git GIT_TAG d57e8fc051097d84500b4036b85daadd00c00b14)  # track tip
-FetchContent_MakeAvailable(scheduler)
-include_directories("${scheduler_SOURCE_DIR}")
-add_compile_definitions(SCHEDULER_TRACE_HEADER="xapiand_scheduler_trace.h")
-
 # logger: the lock-free, cancellable, deferred logger extracted from Xapiand and
-# modernized (std::source_location, iTerm2, backpressure, pluggable hooks). Built
-# on the scheduler. We populate headers and compile its logger.cc into XAPIAND_OBJ
+# modernized (std::source_location, iTerm2, backpressure, pluggable hooks). We
+# populate headers and compile its logger.cc into XAPIAND_OBJ
 # below; src/logger_fwd.h + log.h + xapiand_colors.h adapt its macro surface, and main.cc
 # wires its config/hooks to opts + traceback at startup. Its logger.h replaces
 # Xapiand's in-tree one (src/logger.h is now a thin shim).
@@ -584,9 +572,7 @@ add_compile_definitions(TRACEBACK_HOOKS=1)
 # FetchContent include path above. Two seams are wired to Xapiand by absolute
 # path: STORAGE_IO_HEADER -> xapiand_storage_io.h (routes every storage IO
 # through io.cc + sets the default IO policy), STORAGE_TRACE_HEADER ->
-# xapiand_storage_trace.h (the L_* logger). The async-fsync hook (the debounced
-# thread pool that used to live in storage.h, now src/xapiand_fsyncher.h) is
-# handed to the WAL at construction; the data store stays on synchronous fsync.
+# xapiand_storage_trace.h (the L_* logger). The data store fsyncs synchronously.
 FetchContent_Declare(storage GIT_REPOSITORY https://github.com/Kronuz/storage.git GIT_TAG 9f14417d24a133ab0b4ab31e452625eceb227afb)
 FetchContent_MakeAvailable(storage)
 include_directories("${storage_SOURCE_DIR}")
@@ -945,9 +931,9 @@ include_directories("${htm_SOURCE_DIR}")
 FetchContent_MakeAvailable(compressors)
 include_directories("${compressors_SOURCE_DIR}")
 
-# Headers of libraries the libraries above fetch at their own pins (scheduler.h includes stash.h, base_x.hh
-# uinteger_t.hh, http_router.h radix_router.h): their source directories go on the include path, undeclared here.
-foreach(dep stash uinteger_t radix_router)
+# Headers of libraries the libraries above fetch at their own pins (base_x.hh includes uinteger_t.hh,
+# http_router.h radix_router.h): their source directories go on the include path, undeclared here.
+foreach(dep uinteger_t radix_router)
 	FetchContent_GetProperties(${dep} SOURCE_DIR ${dep}_SOURCE_DIR POPULATED ${dep}_POPULATED)
 	if (NOT ${dep}_POPULATED)
 		message(FATAL_ERROR "${dep} is not fetched by the libraries that include it")
@@ -968,11 +954,6 @@ if(NOT (ZSTD_LIBRARY AND ZSTD_INCLUDE_DIR))
 endif()
 include_directories("${ZSTD_INCLUDE_DIR}")
 
-# stash traces through injectable hooks (no-op by default). Point it at a small
-# Xapiand trace header that restores the colored, logged output by mapping
-# stash's hooks onto Xapiand's log.h + xapiand_colors.h. Applies only to Xapiand's own
-# targets (defined below), not the fetched libraries.
-add_compile_definitions(STASH_TRACE_HEADER="xapiand_stash_trace.h")
 
 
 ########################################################################
@@ -1895,7 +1876,7 @@ endif ()
 if (BUILD_TESTS)
 		# Pure unit tests (no Xapiand code linked). They use the tiny header-only
 		# harness in tests/test_harness.h -- no GoogleTest, no FetchContent.
-		set(XAPIAND_PURE_TESTS string debounce_or_run range_terms xapian_data_guard)
+		set(XAPIAND_PURE_TESTS string range_terms xapian_data_guard)
 		foreach (VAR_TEST ${XAPIAND_PURE_TESTS})
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}

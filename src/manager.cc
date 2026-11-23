@@ -55,7 +55,6 @@
 #include "database/schemas_lru.h"                // for SchemasLRU
 #include "database/shard_group.h"                // for JOURNAL_DIRECTORY
 #include "database/utils.h"                      // for RESERVED_TYPE, unsharded_path
-#include "database/wal.h"                        // for DatabaseWALWriter
 #include "epoch.hh"                              // for epoch::now
 #include "error.hh"                             // for error:name, error::description
 #include "xapiand_exception.h"                          // for SystemExit, Excep...
@@ -91,7 +90,6 @@
 #include "shutdown_wait.h"                       // for shutdown_wait::wait
 #include "stopper.h"                             // for preloadStopWords
 #include "storage.h"                             // for Storage
-#include "xapiand_fsyncher.h"                    // for fsyncher (moved out of storage.h)
 #include "strict_stox.hh"                        // for strict_stoll
 #include "system.hh"                             // for get_open_files_per_proc, get_max_files_per_proc
 #include "traceback.h"                           // for traceback::{callstacks_snapshot, dump_callstacks}
@@ -283,7 +281,6 @@ XapiandManager::XapiandManager(std::chrono::steady_clock::time_point process_sta
 	  http_clients(0),
 	  schemas(std::make_unique<SchemasLRU>(opts.schema_pool_size, std::chrono::milliseconds(opts.schema_pool_timeout))),
 	  database_pool(std::make_unique<DatabasePool>(_rx->host, opts.database_pool_size, 0, readers_per_index())),
-	  wal_writer(std::make_unique<DatabaseWALWriter>("WL{:02}", opts.num_async_wal_writers)),
 	  index_settings_resolver(std::make_unique<IndexResolverLRU>(opts.resolver_cache_size, std::chrono::milliseconds(opts.resolver_cache_timeout))),
 	  state(State::RESET),
 	  node_name(opts.node_name),
@@ -982,9 +979,6 @@ XapiandManager::make_servers()
 
 	// The idle housekeeping runs as a task on this loop; the autocommit is already waiting for its first write.
 	_rx->housekeeping->start();
-
-	// Start the fsynchers.
-	fsyncher();
 }
 
 
@@ -1155,47 +1149,10 @@ XapiandManager::join()
 		}
 	}
 
-#if XAPIAND_DATABASE_WAL
-
-	////////////////////////////////////////////////////////////////////
-	if (wal_writer) {
-		L(-LOG_NOTICE, NOTICE_COL, "Stop 4: the write-ahead logs");
-		wal_writer->finish();
-
-		L_MANAGER("Waiting for {} WAL writer{}...", wal_writer->running_size(), (wal_writer->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the WAL writers...", "WAL writers finished!");
-		while (!wal_writer->join(500ms)) {
-			int sig = atom_sig;
-			if (sig < 0) {
-				throw SystemExit(-sig);
-			}
-		}
-	}
-
-#endif
-
-
-	////////////////////////////////////////////////////////////////////
-	auto& fsyncher_obj = fsyncher(false);
-	if (fsyncher_obj) {
-		L(-LOG_NOTICE, NOTICE_COL, "Stop 5: the fsync threads");
-		fsyncher_obj->finish();
-
-		L_MANAGER("Waiting for {} async fsync{}...", fsyncher_obj->running_size(), (fsyncher_obj->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the async fsync threads...", "Async fsync threads finished!");
-		while (!fsyncher_obj->join(500ms)) {
-			int sig = atom_sig;
-			if (sig < 0) {
-				throw SystemExit(-sig);
-			}
-		}
-	}
-
 	////////////////////////////////////////////////////////////////////
 	if (abandoned_) {
-		// Threads are still inside requests or index work that did not end, and they use the registry, the log
-		// writers and the service: leave without destroying any of them. What was acknowledged is in the log
-		// writers' files.
+		// Threads are still inside requests or index work that did not end, and they use the registry and the
+		// service: leave without destroying any of them. What was acknowledged is in the journal.
 		L(-LOG_WARNING, WARNING_COL, "Exiting with unfinished writes abandoned (see above).");
 		Logging::finish();
 		Logging::join();
@@ -1209,11 +1166,6 @@ XapiandManager::join()
 	http_service.reset();
 
 	database_pool.reset();
-
-	wal_writer.reset();
-
-
-	fsyncher_obj.reset();
 
 	schemas.reset();
 
@@ -1309,12 +1261,6 @@ XapiandManager::server_metrics_impl()
 	// committers: autocommits are tasks on the control loop, not threads; the queue is the keys waiting.
 	metrics.xapiand_committers_running.Set(static_cast<double>(_rx->autocommits->tasks().running()));
 	metrics.xapiand_committers_queue_size.Set(static_cast<double>(_rx->autocommits->pending()));
-
-	// fsync_threads:
-	metrics.xapiand_fsync_running.Set(fsyncher()->running_size());
-	metrics.xapiand_fsync_queue_size.Set(fsyncher()->size());
-	metrics.xapiand_fsync_pool_size.Set(fsyncher()->threadpool_size());
-	metrics.xapiand_fsync_capacity.Set(fsyncher()->threadpool_capacity());
 
 	metrics.xapiand_http_current_connections.Set(http_clients.load());
 

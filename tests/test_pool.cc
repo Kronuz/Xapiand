@@ -23,7 +23,7 @@
 // The index registry (docs/design/phase7c.md D5, D6, D7): single-flight opens that never block a
 // thread, the turn every operation on an index takes (timers included), a deadline that answers
 // `busy`, the close protocol and a request racing it, one turn per task, a commit that joins the one in
-// flight, the WAL's order across writers, and the engine in host mode behind all of it. Each test opens
+// flight, the groups over the journal, and the engine in host mode behind all of it. Each test opens
 // real indexes in the working directory.
 
 #include "test_harness.h"
@@ -60,7 +60,6 @@
 #include "pool_support.h"
 #include "database/shard.h"
 #include "database/shard_group.h"
-#include "database/wal.h"
 #include "engine/callbacks.h"
 #include "engine/chores.h"
 #include "engine/document.h"
@@ -70,7 +69,6 @@
 #include "engine/search.h"
 #include "engine/sync.h"
 #include "engine/strata/owed.h"
-#include "compressor_lz4.h"
 #include "completion/posix.h"
 #include "journal/host.h"
 #include "length.h"
@@ -158,8 +156,8 @@ engine::errc error_kind(F&& f) {
 	return engine::errc::internal;
 }
 
-// Writes without a WAL or an autocommit (those need a manager): the registry's own behaviour.
-constexpr int WRITE = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL | DB_DISABLE_AUTOCOMMIT;
+// Writes without an autocommit (it needs a manager); without a journal, the registry's own behaviour.
+constexpr int WRITE = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_AUTOCOMMIT;
 
 // A request's pin on the index at `path` (it opens it, and creates it with WRITE's flags).
 IndexPin pin(DatabasePool& pool, const std::string& path, int flags = WRITE) {
@@ -565,7 +563,7 @@ void test_an_index_is_a_lone_voter_group() {
 }
 
 // A write the group acknowledged is durable at its answer (D2): a process killed before any commit or close loses
-// none, and the next process's open replays it from the journal before it serves a read. WRITE has no WAL.
+// none, and the next process's open replays it from the journal before it serves a read.
 void test_an_acknowledged_write_survives_a_kill() {
 	const auto journal = fresh("journal_kill");
 	const auto path = fresh("group_kill");
@@ -668,7 +666,7 @@ void test_stored_blobs_survive_a_kill() {
 		placeholder.flush();
 		auto up = make("Kup", "");
 		up.set_data(placeholder.serialize());
-		engine::sync_wait(shard.replace_document_term("Kup", std::move(up), false, true, true, &upload));
+		engine::sync_wait(shard.replace_document_term("Kup", std::move(up), false, true, &upload));
 		std::fflush(nullptr);
 		::raise(SIGKILL);   // no commit and no close: only the journal has the writes
 	}
@@ -1067,59 +1065,6 @@ void test_blob_io_runs_in_chores() {
 	CHECK_TRUE(blob.find("blobbytes") != std::string::npos);
 }
 
-// The WAL's order is the apply order across writers (C6): the turn covers the apply, the revision update and the WAL
-// enqueue, so lines reach the log in the order the documents were assigned their ids.
-void test_the_wal_order_is_the_apply_order() {
-	Watchdog watchdog("the WAL order", 120s);
-	DatabasePool pool(control_loop(), 8);
-	DatabaseWALWriter writer("WL{:02}", 1);
-	pool.set_wal_writer(&writer);
-	Endpoint endpoint(fresh("walorder"));
-	constexpr int threads_n = 4;
-	constexpr int per_thread = 50;
-	{
-		auto entry = pin(pool, endpoint.path);
-		std::vector<std::thread> threads;
-		for (int t = 0; t < threads_n; ++t) {
-			threads.emplace_back([&, t] {
-				Shard shard = use(entry, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_AUTOCOMMIT);
-				for (int i = 0; i < per_thread; ++i) {
-					engine::sync_wait(shard.add_document(make("K" + std::to_string(t) + "-" + std::to_string(i), "d")));
-				}
-			});
-		}
-		for (auto& thread : threads) {
-			thread.join();
-		}
-	}
-	pool.finish();
-	CHECK_TRUE(pool.join());  // the shutdown's commit writes its line before the writer ends
-	writer.end();  // the queue drains, then the thread ends
-	writer.join(std::chrono::milliseconds(20000));
-	// The log, line by line: the ids of the replaced documents, in the order they reached it.
-	std::vector<engine::docid> logged;
-	DatabaseWAL wal(endpoint.path);
-	for (auto it = wal.begin(); it != wal.end(); ++it) {
-		const std::string line = *it;
-		const char* p = line.data();
-		const char* p_end = p + line.size();
-		(void)unserialize_length(&p, p_end);  // the revision
-		const auto type = static_cast<DatabaseWAL::Type>(unserialize_length(&p, p_end));
-		if (type == DatabaseWAL::Type::REPLACE_DOCUMENT) {
-			const auto data = decompress_lz4(std::string_view(p, p_end - p));
-			const char* q = data.data();
-			logged.push_back(static_cast<engine::docid>(unserialize_length(&q, q + data.size())));
-		}
-	}
-	CHECK_EQ(logged.size(), static_cast<std::size_t>(threads_n * per_thread));
-	for (std::size_t i = 0; i < logged.size(); ++i) {
-		if (logged[i] != i + 1) {
-			CHECK_EQ(logged[i], i + 1);
-			break;
-		}
-	}
-}
-
 
 // A search held for a second delays neither a write, a refresh nor a commit of the index it reads: it holds a view
 // of the index, not a lock (D6). The reads that tasks on the control loop make (the work owed, the revision) do
@@ -1275,7 +1220,7 @@ void test_a_commit_that_times_out_leaves_the_write_standing() {
 	engine::sync_wait(shard.add_document(make("Ka", "a")));
 	{
 		HoldTurn hold(entry.entry(), WRITE);
-		engine::sync_wait(shard.finish_write(true, false));  // the commit's turn does not come: no error
+		engine::sync_wait(shard.finish_write(true));  // the commit's turn does not come: no error
 	}
 	CHECK_TRUE(entry->is_modified());
 	CHECK_TRUE(engine::sync_wait(shard.commit()));
@@ -1922,15 +1867,14 @@ void test_a_repin_after_a_reopen_is_not_a_use() {
 	CHECK_EQ(freq(), used + 1);   // a request's own pin does
 }
 
-// Indexes whose files are on `fs` (faultlab's faultfs), their logs and blobs on the disk at their path, and the log's
-// writer for them: a test can then fail the index's syncs, and see what the log replays.
+// Indexes whose files are on `fs` (faultlab's faultfs), their groups' journal on the disk at `journal`: a test can
+// then fail the index's syncs, and see what the journal replays.
 struct FaultyIndexes {
 	kronuz::faultlab::filesystem& fs;
 	DatabasePool pool{control_loop(), 8};
-	DatabaseWALWriter writer{"WF{:02}", 1};
 
-	explicit FaultyIndexes(kronuz::faultlab::filesystem& fs_) : fs(fs_) {
-		pool.set_wal_writer(&writer);
+	FaultyIndexes(kronuz::faultlab::filesystem& fs_, const std::string& journal) : fs(fs_) {
+		pool.set_journal(journal);
 		pool.set_index_io([this](const std::string& path) -> std::unique_ptr<kronuz::journal::IO> {
 			std::filesystem::create_directories(path);
 			return std::make_unique<kronuz::faultlab::io>(fs);
@@ -1939,29 +1883,28 @@ struct FaultyIndexes {
 	~FaultyIndexes() {
 		pool.finish();
 		(void)pool.join();
-		writer.end();
-		writer.join(std::chrono::milliseconds(20000));
 	}
 };
 
-constexpr int LOGGED = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_SYNCHRONOUS_WAL | DB_DISABLE_AUTOCOMMIT;
+constexpr int LOGGED = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_AUTOCOMMIT;
 
-// A cold key's request pin opens the index and replays its log before the pin is handed (XP2, D6): a shutdown whose
-// commit failed leaves a write in the log only, and the next process's first pin reads it.
+// A cold key's request pin opens the index and replays its journal before the pin is handed (XP2, D6): a shutdown
+// whose checkpoint failed leaves a write in the journal only, and the next process's first pin reads it.
 void test_a_cold_pin_reads_what_the_log_replays() {
 	Watchdog watchdog("a cold pin replays the log", 60s);
 	kronuz::faultlab::filesystem fs;
 	const auto path = fresh("cold_replay");
+	const auto journal = fresh("cold_replay_journal");
 	{
-		FaultyIndexes indexes(fs);
+		FaultyIndexes indexes(fs, journal);
 		Shard shard(pin(indexes.pool, path, LOGGED), LOGGED);
 		engine::sync_wait(shard.add_document(make("Ka", "a")));
 		CHECK_TRUE(engine::sync_wait(shard.commit()));
 		engine::sync_wait(shard.add_document(make("Kb", "b")));   // logged, not committed
-		fs.add_fault({kronuz::faultlab::op::sync});                 // the shutdown's commit fails
+		fs.add_fault({kronuz::faultlab::op::sync});                 // the shutdown's checkpoint fails
 	}
 	fs.clear_faults();
-	FaultyIndexes indexes(fs);
+	FaultyIndexes indexes(fs, journal);
 	Shard shard(pin(indexes.pool, path, DB_OPEN), DB_OPEN);
 	CHECK_EQ(engine::sync_wait(shard.get_view(1))->data(), "a");
 	CHECK_EQ(engine::sync_wait(shard.get_view(2))->data(), "b");
@@ -1970,12 +1913,12 @@ void test_a_cold_pin_reads_what_the_log_replays() {
 
 // A fenced index is replaced by the catalog (XP2, D2, C23): the use whose commit met the fence hands its pin back,
 // the catalog closes the index once no other holder is left, and the next pin opens it again and reads the write
-// the failed commit left in the log.
+// the failed checkpoint left in the journal.
 void test_a_fenced_index_is_replaced_and_replays_its_log() {
 	Watchdog watchdog("a fenced index is replaced", 60s);
 	kronuz::faultlab::filesystem fs;
 	const auto path = fresh("fenced");
-	FaultyIndexes indexes(fs);
+	FaultyIndexes indexes(fs, fresh("fenced_journal"));
 	{
 		Shard shard(pin(indexes.pool, path, LOGGED), LOGGED);
 		engine::sync_wait(shard.add_document(make("Ka", "a")));
@@ -2017,15 +1960,16 @@ std::uint64_t issue(Shard& shard, const std::string& n) {
 }
 
 // The id counter (docs/design/one-id.md): a new numeric id is issued above every numeric id the shard holds or
-// issued. An explicit id advances it, a commit persists it, and a log replayed by the next open raises it past the
-// writes the last commit missed; each document keeps the id it was written with.
+// issued. An explicit id advances it, a commit persists it, and the journal replayed by the next open raises it past
+// the writes the last commit missed; each document keeps the id it was written with.
 void test_the_id_counter_persists_replays_and_advances() {
 	Watchdog watchdog("the id counter persists, replays and advances", 60s);
 	kronuz::faultlab::filesystem fs;
 	const auto path = fresh("id_counter");
+	const auto journal = fresh("id_counter_journal");
 	std::map<std::uint64_t, std::string> written;   // id -> n
 	{
-		FaultyIndexes indexes(fs);
+		FaultyIndexes indexes(fs, journal);
 		Shard shard(pin(indexes.pool, path, LOGGED), LOGGED);
 		written[issue(shard, "a")] = "a";
 		written[issue(shard, "b")] = "b";
@@ -2035,15 +1979,15 @@ void test_the_id_counter_persists_replays_and_advances() {
 		CHECK_TRUE(engine::sync_wait(shard.commit()));
 	}
 	{
-		FaultyIndexes indexes(fs);   // a clean reopen: the counter comes from the commit
+		FaultyIndexes indexes(fs, journal);   // a clean reopen: the counter comes from the commit
 		Shard shard(pin(indexes.pool, path, LOGGED), LOGGED);
 		written[issue(shard, "d")] = "d";
 		written[issue(shard, "e")] = "e";   // logged, not committed
-		fs.add_fault({kronuz::faultlab::op::sync});   // the shutdown's commit fails
+		fs.add_fault({kronuz::faultlab::op::sync});   // the shutdown's checkpoint fails
 	}
 	fs.clear_faults();
 	{
-		FaultyIndexes indexes(fs);   // the log replays d and e, past the committed counter
+		FaultyIndexes indexes(fs, journal);   // the journal replays d and e, past the committed counter
 		Shard shard(pin(indexes.pool, path, LOGGED), LOGGED);
 		written[issue(shard, "f")] = "f";
 		CHECK_TRUE(engine::sync_wait(shard.commit()));
@@ -2085,14 +2029,12 @@ void test_the_turns_end_publishes_a_finished_merge() {
 	CHECK_EQ(index.merges_pending(), 0u);
 }
 
-// The catalog's commit chore with nothing applied writes no WAL line of its own (C25): the log has the commit of the
-// write and nothing for the chore's commits, the shutdown's included.
-void test_the_commit_chore_logs_nothing_when_nothing_was_applied() {
-	Watchdog watchdog("the commit chore logs nothing", 60s);
+// The catalog's commit chore with nothing applied commits nothing of its own (C25): no revision for the chore's
+// commits, the shutdown's included.
+void test_the_commit_chore_commits_nothing_when_nothing_was_applied() {
+	Watchdog watchdog("the commit chore commits nothing", 60s);
 	DatabasePool pool(control_loop(), 8);
-	DatabaseWALWriter writer("WC{:02}", 1);
-	pool.set_wal_writer(&writer);
-	const auto path = fresh("chore_wal");
+	const auto path = fresh("chore_commit");
 	constexpr int flags = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_AUTOCOMMIT;
 	engine::rev revision;
 	{
@@ -2107,21 +2049,9 @@ void test_the_commit_chore_logs_nothing_when_nothing_was_applied() {
 	}
 	pool.finish();
 	CHECK_TRUE(pool.join());
-	writer.end();
-	writer.join(std::chrono::milliseconds(20000));
-	std::size_t commits = 0, replaces = 0;
-	DatabaseWAL wal(path);
-	for (auto it = wal.begin(); it != wal.end(); ++it) {
-		const std::string line = *it;
-		const char* p = line.data();
-		const char* p_end = p + line.size();
-		(void)unserialize_length(&p, p_end);  // the revision
-		const auto type = static_cast<DatabaseWAL::Type>(unserialize_length(&p, p_end));
-		commits += type == DatabaseWAL::Type::COMMIT ? 1 : 0;
-		replaces += type == DatabaseWAL::Type::REPLACE_DOCUMENT ? 1 : 0;
-	}
-	CHECK_EQ(replaces, 1u);
-	CHECK_EQ(commits, 1u);
+	DatabasePool next(control_loop(), 8);
+	Shard shard(pin(next, path, DB_OPEN), DB_OPEN);
+	CHECK_EQ(shard.engine().revision(), revision);   // the shutdown's commit made none either
 }
 
 // The catalog is destroyed only once its shutdown ended (C24): a pin released while the pool's destructor waits is
@@ -2181,7 +2111,7 @@ void test_a_root_destroyed_while_it_waits_for_a_pin_releases_it() {
 		loop.host.spawn([](DatabasePool& pool, std::string path) -> task::task<void> {
 			auto pinned = co_await pool.pin_chore(Endpoint(path));
 			if (pinned) {
-				co_await pinned->commit(DB_OPEN | DB_WRITABLE, true);
+				co_await pinned->commit(DB_OPEN | DB_WRITABLE);
 			}
 		}(pool, path));
 		loop.reactor.io().run_for(std::chrono::microseconds(k * 40));
@@ -2423,8 +2353,6 @@ void test_a_cancelled_flush_stops_waiting_for_a_held_turn() {
 void test_the_autocommit_comes_back_while_a_merge_is_pending() {
 	Watchdog watchdog("the autocommit comes back", 60s);
 	DatabasePool pool(control_loop(), 8);
-	DatabaseWALWriter writer("WR{:02}", 1);   // the autocommit logs its commit
-	pool.set_wal_writer(&writer);
 	auto& gate = A::wrap_executor<GatedExecutor>(pool);
 	gate.hold();
 	Endpoint endpoint(fresh("rearm"));
@@ -2452,16 +2380,12 @@ void test_the_autocommit_comes_back_while_a_merge_is_pending() {
 	}
 	CHECK_EQ(revision_of(shard), committed);   // the merges' sync made no revision
 	CHECK_EQ(engine::sync_wait(shard.get_view(1))->data(), "d");
-	writer.end();
-	writer.join(std::chrono::milliseconds(20000));
 }
 
 // An autocommit whose turn does not come asks to come back (D8), so a busy index's write is not left uncommitted.
 void test_a_busy_autocommit_comes_back() {
 	Watchdog watchdog("a busy autocommit comes back");
 	DatabasePool pool(control_loop(), 8);
-	DatabaseWALWriter writer("WB{:02}", 1);   // the autocommit logs its commit
-	pool.set_wal_writer(&writer);
 	pool.set_turn_timeout(0.1);
 	Endpoint endpoint(fresh("busy_autocommit"));
 	auto entry = pin(pool, endpoint.path);
@@ -2476,8 +2400,6 @@ void test_a_busy_autocommit_comes_back() {
 	CHECK_FALSE(engine::sync_wait(autocommit(pool, endpoint)));
 	CHECK_FALSE(entry->is_modified());
 	CHECK_EQ(revision_of(shard), revision + 1);
-	writer.end();
-	writer.join(std::chrono::milliseconds(20000));
 }
 
 // The sweep is the only idle close (XP3): at 1 kHz it closes an unpinned idle index, and never one a use pins; with
@@ -2517,17 +2439,15 @@ void test_the_sweep_closes_only_an_unpinned_index() {
 	CHECK_TRUE(until([&] { return state_of(pool, held_path) == strata::slot_state::free; }));
 }
 
-// The shutdown commits a write left uncommitted with the entry's commit chore (XP4): its WAL COMMIT line, a revision
-// more, and the write read back by the next pool.
-void test_the_shutdown_commits_and_logs_an_uncommitted_write() {
-	Watchdog watchdog("the shutdown commits and logs", 60s);
-	const auto path = fresh("shutdown_wal");
+// The shutdown commits a write left uncommitted with the entry's commit chore (XP4): a revision more, and the write
+// read back by the next pool.
+void test_the_shutdown_commits_an_uncommitted_write() {
+	Watchdog watchdog("the shutdown commits", 60s);
+	const auto path = fresh("shutdown_commit");
 	constexpr int flags = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_AUTOCOMMIT;
 	engine::rev before;
 	{
 		DatabasePool pool(control_loop(), 8);
-		DatabaseWALWriter writer("WS{:02}", 1);
-		pool.set_wal_writer(&writer);
 		{
 			Shard shard(pin(pool, path, flags), flags);
 			engine::sync_wait(shard.add_document(make("Ka", "a")));
@@ -2537,24 +2457,7 @@ void test_the_shutdown_commits_and_logs_an_uncommitted_write() {
 		pool.finish();
 		CHECK_TRUE(pool.join());
 		CHECK_EQ(one_catalog(pool).stats().shutdown_commits, 1u);
-		writer.end();
-		writer.join(std::chrono::milliseconds(20000));
 	}
-	std::size_t commits = 0, replaces = 0;
-	{
-		DatabaseWAL wal(path);
-		for (auto it = wal.begin(); it != wal.end(); ++it) {
-			const std::string line = *it;
-			const char* p = line.data();
-			const char* p_end = p + line.size();
-			(void)unserialize_length(&p, p_end);  // the revision
-			const auto type = static_cast<DatabaseWAL::Type>(unserialize_length(&p, p_end));
-			commits += type == DatabaseWAL::Type::COMMIT ? 1 : 0;
-			replaces += type == DatabaseWAL::Type::REPLACE_DOCUMENT ? 1 : 0;
-		}
-	}
-	CHECK_EQ(replaces, 1u);
-	CHECK_EQ(commits, 1u);
 	DatabasePool pool(control_loop(), 8);
 	Shard shard(pin(pool, path, DB_OPEN), DB_OPEN);
 	CHECK_EQ(shard.engine().revision(), before + 1);
@@ -2818,7 +2721,7 @@ void test_a_reopen_aborts_an_upload_left_open() {
 		placeholder.flush();
 		auto doc = make("Kup", "");
 		doc.set_data(placeholder.serialize());
-		CHECK(error_kind([&] { engine::sync_wait(shard.replace_document_term("Kup", std::move(doc), false, true, true, &*upload)); }) == engine::errc::not_available);
+		CHECK(error_kind([&] { engine::sync_wait(shard.replace_document_term("Kup", std::move(doc), false, true, &*upload)); }) == engine::errc::not_available);
 	}
 	std::filesystem::remove_all(journal);
 	std::filesystem::remove_all(path);
@@ -2840,8 +2743,7 @@ int main(int argc, char** argv) {
 		{"test_a_failed_commit_reaches_only_the_joined_waiters", test_a_failed_commit_reaches_only_the_joined_waiters},
 		{"test_owed_flushes_do_not_reorder_writers", test_owed_flushes_do_not_reorder_writers},
 		{"test_blob_io_runs_in_chores", test_blob_io_runs_in_chores},
-		{"test_the_wal_order_is_the_apply_order", test_the_wal_order_is_the_apply_order},
-		{"test_a_held_search_delays_no_refresh_or_commit", test_a_held_search_delays_no_refresh_or_commit},
+				{"test_a_held_search_delays_no_refresh_or_commit", test_a_held_search_delays_no_refresh_or_commit},
 		{"test_readers_cap", test_readers_cap},
 		{"test_readers_cap_is_per_index", test_readers_cap_is_per_index},
 		{"test_a_search_over_more_indexes_than_records_is_served", test_a_search_over_more_indexes_than_records_is_served},
@@ -2866,7 +2768,7 @@ int main(int argc, char** argv) {
 		{"test_a_fenced_index_is_replaced_and_replays_its_log", test_a_fenced_index_is_replaced_and_replays_its_log},
 		{"test_the_id_counter_persists_replays_and_advances", test_the_id_counter_persists_replays_and_advances},
 		{"test_the_turns_end_publishes_a_finished_merge", test_the_turns_end_publishes_a_finished_merge},
-		{"test_the_commit_chore_logs_nothing_when_nothing_was_applied", test_the_commit_chore_logs_nothing_when_nothing_was_applied},
+		{"test_the_commit_chore_commits_nothing_when_nothing_was_applied", test_the_commit_chore_commits_nothing_when_nothing_was_applied},
 		{"test_the_pool_waits_for_a_pin_released_during_its_end", test_the_pool_waits_for_a_pin_released_during_its_end},
 		{"test_a_root_destroyed_while_it_waits_for_a_pin_releases_it", test_a_root_destroyed_while_it_waits_for_a_pin_releases_it},
 		{"test_a_delivery_never_posts_to_a_torn_down_scheduler", test_a_delivery_never_posts_to_a_torn_down_scheduler},
@@ -2877,7 +2779,7 @@ int main(int argc, char** argv) {
 		{"test_the_autocommit_comes_back_while_a_merge_is_pending", test_the_autocommit_comes_back_while_a_merge_is_pending},
 		{"test_a_busy_autocommit_comes_back", test_a_busy_autocommit_comes_back},
 		{"test_the_sweep_closes_only_an_unpinned_index", test_the_sweep_closes_only_an_unpinned_index},
-		{"test_the_shutdown_commits_and_logs_an_uncommitted_write", test_the_shutdown_commits_and_logs_an_uncommitted_write},
+		{"test_the_shutdown_commits_an_uncommitted_write", test_the_shutdown_commits_an_uncommitted_write},
 		{"test_the_sweeps_close_syncs_a_merges_output", test_the_sweeps_close_syncs_a_merges_output},
 		{"test_a_write_to_a_demoted_index_applies_after_one_promote", test_a_write_to_a_demoted_index_applies_after_one_promote},
 		{"test_a_third_owed_answer_is_internal", test_a_third_owed_answer_is_internal},

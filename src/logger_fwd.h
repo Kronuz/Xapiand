@@ -27,9 +27,8 @@
 // LogHooks) and the colorless macro surface (L_INFO..L_EMERG, L_*_ONCE, L_EXC,
 // L_DELAYED_*, L_TIMED, L_STACKED, L_PRINT), color resolved from priority by the
 // sink. This header re-adds the few things Xapiand and its dependency libraries
-// expect: the trace no-op stubs the extracted stash/scheduler/threadpool use
-// internally (defined BEFORE <logger.h>, since it pulls in scheduler.h), the
-// color-taking L / L_UNINDENTED / L_STACKED forms, the info-hook bitmask, and a
+// expect: the L_EXC no-op stub workpool traces through (defined BEFORE <logger.h>),
+// the color-taking L / L_UNINDENTED / L_STACKED forms, the info-hook bitmask, and a
 // couple of deferred variants.
 
 #pragma once
@@ -37,30 +36,15 @@
 #include <atomic>            // for std::atomic
 #include <cstdint>           // for uint64_t
 
-// (1) Trace no-op stubs, BEFORE <logger.h>. The extracted scheduler/stash/
-// threadpool trace through these (their xapiand_*_trace.h headers would otherwise
-// recurse into log.h while it is mid-include). Object-like "= L_NOTHING" matches
-// log.h's own stub style, so log.h's later identical redefinitions don't clash.
+// (1) Trace no-op stub, BEFORE <logger.h>, which pulls workpool's thread.hh: its L_EXC
+// trace resolves here (its trace header would otherwise recurse into log.h mid-include).
+// Object-like "= L_NOTHING" matches log.h's own stub style.
 #define L_NOTHING(...)
 #ifndef L_EXC
 #define L_EXC L_NOTHING       // becomes the real async-exception log below (extracted #undefs it)
 #endif
-#ifndef L_DEBUG_HOOK
-#define L_DEBUG_HOOK L_NOTHING
-#endif
-#ifndef L_CALL
-#define L_CALL L_NOTHING
-#endif
-// (L_SCHEDULER / L_STASH are self-guarded and cleaned up by scheduler.h / stash.h.)
 
-// (2) ThreadPolicyType, before <logger.h>. The extracted Logging is a
-// ScheduledTask<..., ThreadPolicyType::logging>, and some entry orders
-// (manager.h -> debouncer.h -> scheduler.h -> trace header -> log.h) reach the
-// Logging class before thread.hh finishes; pulling it here makes the type always
-// available. (The trace stubs above let thread.hh's own trace lines resolve.)
-#include "thread.hh"
-
-// (3) The extracted logger: types + the real colorless L_* macros (it #undefs the
+// (2) The extracted logger: types + the real colorless L_* macros (it #undefs the
 // L_EXC stub above and defines the real one).
 #include <logger.h>
 

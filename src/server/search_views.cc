@@ -23,7 +23,7 @@
 
 #include "search_views.h"
 
-#include "config.h"                         // for XAPIAND_LUA, XAPIAND_DATABASE_WAL
+#include "config.h"                         // for XAPIAND_LUA
 
 #include <cassert>                          // for assert
 #include <charconv>                         // for std::from_chars (indent param)
@@ -182,9 +182,6 @@ static task::task<void> search_view(Request& request);
 static task::task<void> count_view(Request& request);
 static task::task<void> flush_view(Request& request);
 static task::task<void> quit_view(Request& request);
-#if XAPIAND_DATABASE_WAL
-static task::task<void> wal_view(Request& request);
-#endif
 
 
 
@@ -219,8 +216,7 @@ static task::task<void> wal_view(Request& request);
 	OPTION(SEARCH,   "search") \
 	OPTION(UNLOCK,   "unlock") \
 	OPTION(UPDATE,   "update") \
-	OPTION(UPSERT,   "upsert") \
-	OPTION(WAL,      "wal")
+	OPTION(UPSERT,   "upsert")
 
 
 constexpr static auto http_methods = phf::make_phf({
@@ -287,12 +283,7 @@ bool can_preview(const ct_type_t& ct_type) {
 
 
 // The verbs the route table answers, for OPTIONS' Allow header.
-#if XAPIAND_DATABASE_WAL
-#define ALLOWED_WAL ", WAL"
-#else
-#define ALLOWED_WAL ""
-#endif
-static constexpr const char* ALLOWED_METHODS = "GET, POST, PUT, PATCH, UPDATE, UPSERT, DELETE, HEAD, OPTIONS, SEARCH, COUNT, INFO, COMMIT, DUMP, RESTORE, CHECK, FLUSH, QUIT" ALLOWED_WAL;
+static constexpr const char* ALLOWED_METHODS = "GET, POST, PUT, PATCH, UPDATE, UPSERT, DELETE, HEAD, OPTIONS, SEARCH, COUNT, INFO, COMMIT, DUMP, RESTORE, CHECK, FLUSH, QUIT";
 
 
 // Emit a response through the generic HTTP library's ResponseWriter (Leg 2 stage
@@ -580,7 +571,7 @@ route_key(enum http_method method, std::string_view id, std::string_view cmd, bo
 // what prepare()'s hand-rolled method + URL switch collapses into.
 //
 // A verb that ignores the metadata axis (search/count/info/head/commit/dump/restore/
-// check/flush/quit/wal all key only on whether an id is present) registers its no-id
+// check/flush/quit all key only on whether an id is present) registers its no-id
 // view under K_META as well as K_DB, so a stray ":command" folds to the same view the
 // old switch produced -- exact behavioral parity. A (method, kind) pair left
 // unregistered is answered 405, the same status the old switch's fall-through gave.
@@ -630,9 +621,6 @@ search_routes()
 		add("check",   {K_DB, K_META}, &check_database_view);
 		add("flush",   {K_DB, K_META}, &flush_view);
 		add("quit",    {K_DB, K_META}, &quit_view);
-#if XAPIAND_DATABASE_WAL
-		add("wal",     {K_DB, K_META}, &wal_view);
-#endif
 		return r;
 	}();
 	return router;
@@ -800,8 +788,6 @@ node_obj()
 				{ "num_shards", opts.num_shards },
 				{ "num_replicas", opts.num_replicas },
 				{ "num_http_servers", opts.num_http_servers },
-				{ "num_async_wal_writers", opts.num_async_wal_writers },
-				{ "num_fsynchers", opts.num_fsynchers },
 			} },
 		} },
 	});
@@ -1230,7 +1216,7 @@ write_metadata_view(Request& request)
 	assert(!key.empty());
 	key.remove_prefix(1);
 
-	if (key.empty() || key == "schema" || key == "wal" || key == "metrics" || key == ID_HIGH_METADATA) {
+	if (key.empty() || key == "schema" || key == "metrics" || key == ID_HIGH_METADATA) {
 		THROW(ClientError, "Metadata {} is read-only", repr(request.path_parser.get_cmd()));
 	}
 
@@ -1723,7 +1709,7 @@ restore_database_view(Request& request)
 
 			request.processing = std::chrono::steady_clock::now();
 
-			indexer.emplace(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, request.echo, request.comments, query_field, chores, &*request.budget);
+			indexer.emplace(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, request.echo, request.comments, query_field, chores, &*request.budget);
 		};
 
 		if (request.mode == Request::Mode::STREAM_MSGPACK || request.mode == Request::Mode::STREAM_NDJSON) {
@@ -1811,42 +1797,6 @@ restore_database_view(Request& request)
 		std::rethrow_exception(error);
 	}
 }
-
-
-#if XAPIAND_DATABASE_WAL
-static task::task<void>
-wal_view(Request& request)
-{
-	L_CALL("wal_view()");
-
-	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY);
-	if (co_await resolve_index_endpoints(request, query_field) > 1) {
-		THROW(ClientError, "Method can only be used with single indexes");
-	}
-
-	request.processing = std::chrono::steady_clock::now();
-
-	DatabaseHandler db_handler(request.endpoints);
-
-	request.query_parser.rewind();
-	bool unserialized = request.query_parser.next("raw") == -1;
-	auto obj = co_await db_handler.repr_wal(0, std::numeric_limits<engine::rev>::max(), unserialized);
-
-	request.ready = std::chrono::steady_clock::now();
-
-	write_http_response(request, HTTP_STATUS_OK, obj);
-
-	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("WAL took {}", strings::from_delta(took));
-
-	Metrics::metrics()
-		.xapiand_operations_summary
-		.Add({
-			{"operation", "wal"},
-		}, Metrics::summary_quantiles(), std::chrono::minutes(10), 5)
-		.Observe(took / 1e9);
-}
-#endif
 
 
 static task::task<void>

@@ -1,6 +1,7 @@
 > Status: in progress (quest journal-replaces-wal). Built: the prepared write, the command codec, the group's
 > application, each index's group in its catalog slot, the writes, blobs and RESTORE through it, and the commit
-> as the checkpoint. Pending: the WAL's deletion.
+> as the checkpoint. The WAL, its fsync threads and the scheduler library are deleted. Pending: deleting a group
+> with its index (the index DELETE answers 501, and strata's journal pin predates `Host::delete_group`).
 > Design: `docs/design/cluster-release.md` D2, D3, D12, D16, D17; strata `docs/mechanisms/replication-group.md`.
 
 # Journal durability (how it works)
@@ -92,8 +93,8 @@ thread. Each index the catalog opens is a lone voter (D2) whose group borrows th
    the entry limit with an id of the term the loop sees; the answer's verdict is the write's result, checked
    against what prepare predicted (`engine::strata::Shard::landed`). A metadata write is a `set_metadata`
    command. A write that moves the id counter past what the log holds carries it as a `set_metadata` write of
-   its own command, so the counter is durable with the document. An index with a group writes no WAL line and
-   replays no WAL.
+   its own command, so the counter is durable with the document. There is no other log: the WAL is gone, and a
+   pool with no journal (a test's, the CLI's) is durable only at its commits.
 4. **Blobs.** An index with a group has no data storage: its blobs are records in the group's file set. At
    prepare, `stage_blobs` compresses each new stored blob (zstd, kept only when smaller) into its write's
    `CommandBlob` and leaves the document's locator a placeholder at volume 0 with the record's codec
@@ -122,13 +123,15 @@ thread. Each index the catalog opens is a lone voter (D2) whose group borrows th
   refusals over the limit, and corrupt bytes at every prefix refused.
 - `tests/test_pool.cc` (`test_an_index_is_a_lone_voter_group`): the open opens the index's group, the shutdown
   leaves it closed in the journal's table, and a second process recovers it under the same id.
-  `test_an_acknowledged_write_survives_a_kill`: a write acknowledged with no WAL, no commit and no close is read
+  `test_an_acknowledged_write_survives_a_kill`: a write acknowledged with no commit and no close is read
   back after `kill -9` by the next process. `test_stored_blobs_survive_a_kill`: stored blobs, compressed and
   not, and an upload's blob read back byte-equal after `kill -9` with no commit and no close.
   `test_a_restore_slice_is_batch_commands`: 200 RESTORE writes take a handful of log entries, and each write's
   docid and version are its batch verdict's. `test_a_commit_is_the_groups_checkpoint`,
   `test_the_id_counter_is_in_the_log` (issued ids survive `kill -9` with no commit) and
-  `test_a_reopen_aborts_an_upload_left_open` (A9's ready point).
+  `test_a_reopen_aborts_an_upload_left_open` (A9's ready point). `test_a_cold_pin_reads_what_the_log_replays`,
+  `test_a_fenced_index_is_replaced_and_replays_its_log` and `test_the_id_counter_persists_replays_and_advances`:
+  a write whose checkpoint failed on a faulted disk is read back from the journal by the next open.
 - `tests/test_shard_group.cc`: offsets from the state and idempotent effects, rotation in log order, a chunked
   command applied at its final entry, an upload into its own volume, a higher term retiring open commands,
   entries outside their id's term applying nothing, an abort retiring its upload's volume, and the state's

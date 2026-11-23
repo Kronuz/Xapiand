@@ -221,10 +221,6 @@ public:
 
 	void reset(const Endpoints& endpoints_, int flags_ = 0, const std::shared_ptr<std::unordered_set<std::string>>& context_ = nullptr);
 
-#if XAPIAND_DATABASE_WAL
-	task::task<MsgPack> repr_wal(engine::rev start_revision, engine::rev end_revision, bool unserialized);
-#endif
-
 	task::task<MsgPack> check();
 
 	task::task<std::tuple<std::string, engine::Document, MsgPack>> prepare(const MsgPack& document_id, engine::rev document_ver, bool stored, const MsgPack& body, const ct_type_t& ct_type);
@@ -291,8 +287,8 @@ public:
 	task::task<std::vector<std::string>> get_metadata_keys();
 	task::task<std::string> get_metadata(const std::string& key);
 	task::task<std::string> get_metadata(std::string_view key);
-	task::task<void> set_metadata(const std::string& key, const std::string& value, bool commit = false, bool wal = true);
-	task::task<void> set_metadata(std::string_view key, std::string_view value, bool commit = false, bool wal = true);
+	task::task<void> set_metadata(const std::string& key, const std::string& value, bool commit = false);
+	task::task<void> set_metadata(std::string_view key, std::string_view value, bool commit = false);
 
 	// By id the document is a handle: it reads the index when its data is asked for.
 	Document get_document(engine::hitid did);
@@ -305,14 +301,14 @@ public:
 
 	// A delete with a version (not UNKNOWN_REVISION) removes the document only while it has that version, 0 for one
 	// that does not exist; else it raises errc::version_conflict with the current version.
-	task::task<void> delete_document(engine::docid did, engine::rev document_ver, bool commit = false, bool wal = true);
-	task::task<void> delete_document(std::string_view document_id, engine::rev document_ver, bool commit = false, bool wal = true);
-	task::task<void> delete_document_term(const std::string& term, engine::rev document_ver, bool commit = false, bool wal = true);
+	task::task<void> delete_document(engine::docid did, engine::rev document_ver, bool commit = false);
+	task::task<void> delete_document(std::string_view document_id, engine::rev document_ver, bool commit = false);
+	task::task<void> delete_document_term(const std::string& term, engine::rev document_ver, bool commit = false);
 
-	task::task<engine::WriteResult> add_document(engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
+	task::task<engine::WriteResult> add_document(engine::Document&& doc, bool commit = false, bool version = true);
 	// `upload`, if any, is the streamed blob the document names: the document must go to its shard.
-	task::task<engine::WriteResult> replace_document(engine::docid did, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true, bool must_exist = false, const UploadedBlob* upload = nullptr);
-	task::task<engine::WriteResult> replace_document_term(const std::string& term, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true, const UploadedBlob* upload = nullptr);
+	task::task<engine::WriteResult> replace_document(engine::docid did, engine::Document&& doc, bool commit = false, bool version = true, bool must_exist = false, const UploadedBlob* upload = nullptr);
+	task::task<engine::WriteResult> replace_document_term(const std::string& term, engine::Document&& doc, bool commit = false, bool version = true, const UploadedBlob* upload = nullptr);
 
 	task::task<MsgPack> get_document_info(std::string_view document_id, bool raw_data, bool human);
 	task::task<MsgPack> get_database_info();
@@ -321,7 +317,7 @@ public:
 	task::task<std::string> storage_get_stored(const Locator& locator, engine::docid did);
 #endif /* XAPIAND_DATA_STORAGE */
 
-	task::task<bool> commit(bool wal = true);
+	task::task<bool> commit();
 	task::task<void> reopen();
 
 	task::task<MsgPack> unserialize_term_id(std::string_view term_id);

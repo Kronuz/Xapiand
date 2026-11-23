@@ -332,7 +332,7 @@ static void test_uuid_named_indexes_vanilla_partition() {
 // The registry under `--uuid partition`: a pin's index has the key it was pinned by, so a reopen and a flush, which
 // find the index by it, reach the index pinned (cheap-reopen review F1, F2).
 static void test_a_partitioned_uuid_index_is_pinned_by_its_key() {
-	constexpr int WRITE = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL | DB_DISABLE_AUTOCOMMIT;
+	constexpr int WRITE = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_AUTOCOMMIT;
 	const auto root = std::filesystem::current_path() / "uuid_pool_data";
 	std::filesystem::remove_all(root);
 	std::filesystem::create_directories(root);

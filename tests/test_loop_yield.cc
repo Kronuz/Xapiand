@@ -1170,7 +1170,7 @@ static void test_a_restores_results_are_freed_as_one_buffer() {
 	const auto endpoints = engine::sync_wait(XapiandManager::resolve_index_endpoints(Endpoint("results"), true));
 	query_field_t query_field;
 	std::optional<DocIndexer> indexer;
-	indexer.emplace(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, true, true, query_field, engine::inline_chores());
+	indexer.emplace(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, true, true, query_field, engine::inline_chores());
 	std::vector<MsgPack> batch;
 	for (int i = 1; i <= objects; ++i) {
 		batch.push_back(MsgPack({{"_id", "r" + std::to_string(i)}, {"n", i}}));

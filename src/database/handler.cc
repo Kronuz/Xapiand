@@ -49,7 +49,6 @@
 #include "database/utils.h"                 // for split_path_id, UNKNOWN_REVISION, make_msgpack_unpacker
 #include "consensus/driver.h"               // for kronuz::consensus::superseded
 #include "strata/group/answer.hh"           // for strata::group::answer, ack
-#include "database/wal.h"                   // for DatabaseWAL
 #include "stopper.h"                       // for StopWordsMismatchError
 #include "database/wide_search.h"           // for wide_search::pins
 #include "xapiand_exception.h"                      // for ClientError
@@ -401,29 +400,6 @@ DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, const std::share
 }
 
 
-#if XAPIAND_DATABASE_WAL
-task::task<MsgPack>
-DatabaseHandler::repr_wal(engine::rev start_revision, engine::rev end_revision, bool unserialized)
-{
-	L_CALL("DatabaseHandler::repr_wal({}, {})", start_revision, end_revision);
-
-	if (endpoints.size() != 1) {
-		THROW(ClientError, "This operation can only be executed on a single shard");
-	}
-
-	// The log is read in a query chore: the reactor thread never reads the device.
-	IndexChores chores(XapiandManager::manager(true)->database_pool->work_pool());
-	MsgPack result;
-	const auto path = endpoints[0].path;
-	co_await chores.run(engine::ChoreClass::query, [&] {
-		DatabaseWAL wal(path);
-		result = wal.to_string(start_revision, end_revision, unserialized);
-	});
-	co_return result;
-}
-#endif
-
-
 task::task<MsgPack>
 DatabaseHandler::check()
 {
@@ -567,7 +543,7 @@ DatabaseHandler::index(engine::docid did, const MsgPack& document_id, engine::re
 	if (did) {
 		assert(term_id != NEW_NUMERIC_KEY);
 		try {
-			info = co_await replace_document(did, std::move(doc), commit, true, true, true, upload);
+			info = co_await replace_document(did, std::move(doc), commit, true, true, upload);
 			placed = true;
 		} catch (const engine::Error& error) {
 			// Erased or moved since the lookup: placed afresh, not put back where it was found.
@@ -575,7 +551,7 @@ DatabaseHandler::index(engine::docid did, const MsgPack& document_id, engine::re
 		}
 	}
 	if (!placed) {
-		info = co_await replace_document_term(term_id, std::move(doc), commit, true, true, upload);
+		info = co_await replace_document_term(term_id, std::move(doc), commit, true, upload);
 	}
 
 	auto it = data_obj.find(ID_FIELD_NAME);
@@ -1227,7 +1203,7 @@ DatabaseHandler::restore_documents(const Endpoint& endpoint, int fd)
 				}
 				L_INFO("Restoring into: {}", repr(endpoints.to_string()));
 				// The command line's restore has no reactor to free: its prepares run where they are awaited.
-				indexer.emplace(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, false, false, query_field, engine::inline_chores());
+				indexer.emplace(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, false, false, query_field, engine::inline_chores());
 			}
 			if (indexer) {
 				co_await indexer->index(batch);
@@ -1906,9 +1882,9 @@ DatabaseHandler::get_metadata(std::string_view key)
 
 
 task::task<void>
-DatabaseHandler::set_metadata(const std::string& key, const std::string& value, bool commit, bool wal)
+DatabaseHandler::set_metadata(const std::string& key, const std::string& value, bool commit)
 {
-	L_CALL("DatabaseHandler::set_metadata({}, {}, {}, {})", repr(key), repr(value), commit, wal);
+	L_CALL("DatabaseHandler::set_metadata({}, {}, {})", repr(key), repr(value), commit);
 
 	assert(!endpoints.empty());
 	assert(!key.empty());
@@ -1918,7 +1894,7 @@ DatabaseHandler::set_metadata(const std::string& key, const std::string& value, 
 		lock_shard lk_shard(endpoint, flags, turn_token());
 		co_await lk_shard.pin();
 		try {
-			co_await lk_shard->set_metadata(key, value, commit, wal);
+			co_await lk_shard->set_metadata(key, value, commit);
 		} catch (const engine::Error& error) {
 			lk_shard->collect_failure(error, eptr, valid, true);
 		}
@@ -1930,10 +1906,10 @@ DatabaseHandler::set_metadata(const std::string& key, const std::string& value, 
 
 
 task::task<void>
-DatabaseHandler::set_metadata(std::string_view key, std::string_view value, bool commit, bool wal)
+DatabaseHandler::set_metadata(std::string_view key, std::string_view value, bool commit)
 {
 	assert(!key.empty());
-	co_await set_metadata(std::string(key), std::string(value), commit, wal);
+	co_await set_metadata(std::string(key), std::string(value), commit);
 }
 
 
@@ -2063,9 +2039,9 @@ DatabaseHandler::find_docid_term(const std::string& term, bool written)
 
 
 task::task<void>
-DatabaseHandler::delete_document(engine::docid did, engine::rev document_ver, bool commit, bool wal)
+DatabaseHandler::delete_document(engine::docid did, engine::rev document_ver, bool commit)
 {
-	L_CALL("DatabaseHandler::delete_document({}, {}, {}, {})", did, document_ver, commit, wal);
+	L_CALL("DatabaseHandler::delete_document({}, {}, {})", did, document_ver, commit);
 
 	assert(!endpoints.empty());
 	size_t n_shards = endpoints.size();
@@ -2074,28 +2050,28 @@ DatabaseHandler::delete_document(engine::docid did, engine::rev document_ver, bo
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags, turn_token());
 	co_await lk_shard.pin();
-	co_await lk_shard->delete_document(shard_did, commit, wal, expected_of(document_ver));
+	co_await lk_shard->delete_document(shard_did, commit, expected_of(document_ver));
 }
 
 
 task::task<void>
-DatabaseHandler::delete_document(std::string_view document_id, engine::rev document_ver, bool commit, bool wal)
+DatabaseHandler::delete_document(std::string_view document_id, engine::rev document_ver, bool commit)
 {
-	L_CALL("DatabaseHandler::delete_document({}, {}, {}, {})", repr(document_id), document_ver, commit, wal);
+	L_CALL("DatabaseHandler::delete_document({}, {}, {})", repr(document_id), document_ver, commit);
 
 	auto did = to_docid(document_id);
 	if (did != 0u) {
-		co_await delete_document(did, document_ver, commit, wal);
+		co_await delete_document(did, document_ver, commit);
 		co_return;
 	}
 
 	const auto term_id = co_await get_prefixed_term_id(document_id);
-	co_await delete_document_term(term_id, document_ver, commit, wal);
+	co_await delete_document_term(term_id, document_ver, commit);
 }
 
 
 task::task<void>
-DatabaseHandler::delete_document_term(const std::string& term, engine::rev document_ver, bool commit, bool wal)
+DatabaseHandler::delete_document_term(const std::string& term, engine::rev document_ver, bool commit)
 {
 	L_CALL("DatabaseHandler::delete_document_term({})", repr(term));
 
@@ -2119,7 +2095,7 @@ DatabaseHandler::delete_document_term(const std::string& term, engine::rev docum
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags, turn_token());
 	co_await lk_shard.pin();
-	co_await lk_shard->delete_document_term(term, commit, wal, expected_of(document_ver));
+	co_await lk_shard->delete_document_term(term, commit, expected_of(document_ver));
 }
 
 
@@ -2168,9 +2144,9 @@ uploaded_into(const DatabaseHandler::UploadedBlob* upload, size_t shard_num)
 
 
 task::task<engine::WriteResult>
-DatabaseHandler::add_document(engine::Document&& doc, bool commit, bool wal, bool version)
+DatabaseHandler::add_document(engine::Document&& doc, bool commit, bool version)
 {
-	L_CALL("DatabaseHandler::add_document(<doc>, {}, {})", commit, wal);
+	L_CALL("DatabaseHandler::add_document(<doc>, {}, {})", commit, version);
 
 	assert(!endpoints.empty());
 
@@ -2181,16 +2157,16 @@ DatabaseHandler::add_document(engine::Document&& doc, bool commit, bool wal, boo
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags, turn_token());
 	co_await lk_shard.pin();
-	auto info = co_await lk_shard->add_document(std::move(doc), commit, wal, version);
+	auto info = co_await lk_shard->add_document(std::move(doc), commit, version);
 	info.did = (info.did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
 	co_return info;
 }
 
 
 task::task<engine::WriteResult>
-DatabaseHandler::replace_document(engine::docid did, engine::Document&& doc, bool commit, bool wal, bool version, bool must_exist, const UploadedBlob* upload)
+DatabaseHandler::replace_document(engine::docid did, engine::Document&& doc, bool commit, bool version, bool must_exist, const UploadedBlob* upload)
 {
-	L_CALL("DatabaseHandler::replace_document({}, <doc>, {}, {})", did, commit, wal);
+	L_CALL("DatabaseHandler::replace_document({}, <doc>, {}, {})", did, commit, version);
 
 	assert(!endpoints.empty());
 	size_t n_shards = endpoints.size();
@@ -2200,16 +2176,16 @@ DatabaseHandler::replace_document(engine::docid did, engine::Document&& doc, boo
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags, turn_token());
 	co_await lk_shard.pin();
-	auto info = co_await lk_shard->replace_document(shard_did, std::move(doc), commit, wal, version, must_exist, chunked);
+	auto info = co_await lk_shard->replace_document(shard_did, std::move(doc), commit, version, must_exist, chunked);
 	info.did = did;
 	co_return info;
 }
 
 
 task::task<engine::WriteResult>
-DatabaseHandler::replace_document_term(const std::string& term, engine::Document&& doc, bool commit, bool wal, bool version, const UploadedBlob* upload)
+DatabaseHandler::replace_document_term(const std::string& term, engine::Document&& doc, bool commit, bool version, const UploadedBlob* upload)
 {
-	L_CALL("DatabaseHandler::replace_document_term({}, <doc>, {}, {})", repr(term), commit, wal);
+	L_CALL("DatabaseHandler::replace_document_term({}, <doc>, {}, {})", repr(term), commit, version);
 
 	assert(!endpoints.empty());
 
@@ -2228,7 +2204,7 @@ DatabaseHandler::replace_document_term(const std::string& term, engine::Document
 				auto did = co_await written_docid_term(term);
 				if (did != 0u) {
 					// Written in the shard's turn only while it is still there: else it is placed afresh.
-					co_return co_await replace_document(did, std::move(doc), commit, wal, version, true, upload);
+					co_return co_await replace_document(did, std::move(doc), commit, version, true, upload);
 				}
 			} catch (const engine::Error& error) {
 				if (!engine::is_missing(error.kind)) { throw; }
@@ -2243,7 +2219,7 @@ DatabaseHandler::replace_document_term(const std::string& term, engine::Document
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags, turn_token());
 	co_await lk_shard.pin();
-	auto info = co_await lk_shard->replace_document_term(term, std::move(doc), commit, wal, version, chunked);
+	auto info = co_await lk_shard->replace_document_term(term, std::move(doc), commit, version, chunked);
 	info.did = (info.did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
 	co_return info;
 }
@@ -2416,9 +2392,9 @@ DatabaseHandler::storage_get_stored(const Locator& locator, engine::docid did)
 
 
 task::task<bool>
-DatabaseHandler::commit(bool wal)
+DatabaseHandler::commit()
 {
-	L_CALL("DatabaseHandler::commit({})", wal);
+	L_CALL("DatabaseHandler::commit()");
 
 	assert(!endpoints.empty());
 	bool ret = true;
@@ -2428,7 +2404,7 @@ DatabaseHandler::commit(bool wal)
 		lock_shard lk_shard(endpoint, flags, turn_token());
 		co_await lk_shard.pin();
 		try {
-			ret = co_await lk_shard->commit(wal) || ret;
+			ret = co_await lk_shard->commit() || ret;
 		} catch (const engine::Error& error) {
 			lk_shard->collect_failure(error, eptr, valid, true);
 		}
@@ -2971,7 +2947,7 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 			std::exception_ptr error;
 			engine::WriteResult info;
 			try {
-				info = co_await db_handler.replace_document_term(term_id, std::move(doc), false, true, false);
+				info = co_await db_handler.replace_document_term(term_id, std::move(doc), false, false);
 			} catch (...) {
 				error = std::current_exception();
 			}
@@ -3765,7 +3741,7 @@ autocommit_and_rearm(DatabasePool& pool, Endpoint endpoint)
 
 void
 committer_commit(Endpoint endpoint) {
-	// The debouncer's thread only starts the commit: it is a task of the index, and takes its turn.
+	// The autocommit's timer only starts the commit: it is a task of the index, and takes its turn.
 	auto manager = XapiandManager::manager();
 	if (!manager || !manager->database_pool) {
 		return;

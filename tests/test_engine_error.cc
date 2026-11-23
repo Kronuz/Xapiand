@@ -176,8 +176,8 @@ void test_http_answers() {
 // failed open's backoff opens it afresh and reads it, which is Xapiand's heal (x-pool D2).
 void test_a_damaged_segment_answers_corrupt_until_healed() {
 	namespace fs = std::filesystem;
-	constexpr int WRITE = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL | DB_DISABLE_AUTOCOMMIT;
-	constexpr int READ = DB_OPEN | DB_DISABLE_WAL;
+	constexpr int WRITE = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_AUTOCOMMIT;
+	constexpr int READ = DB_OPEN;
 	const std::string path = "engine_error_damaged.db";
 	fs::remove_all(path);
 	const auto finish = [](DatabasePool& pool) {

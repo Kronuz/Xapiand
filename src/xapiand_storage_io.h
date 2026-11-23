@@ -26,7 +26,7 @@
  * The storage engine routes every file operation through its IO template
  * parameter (default storage::DefaultIO). Xapiand instead runs all storage IO
  * through its own instrumented io.cc (EINTR retry, error injection for tests,
- * the unchecked_* variants the fsyncher uses). This header is the engine's
+ * the unchecked_* variants). This header is the engine's
  * STORAGE_IO_HEADER: it declares XapiandStorageIO (a thin policy delegating to
  * io::) and #defines STORAGE_DEFAULT_IO to it, so every Storage<> instantiation
  * picks it up without passing a 4th template argument at each site.

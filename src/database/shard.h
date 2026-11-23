@@ -70,7 +70,7 @@ struct SliceWrite {
 
 // One use of an index: its pin and the flags the user asked with. Cheap to make and to drop.
 // Every operation that can wait is a task, so the callers decide where it runs; a write takes the
-// index's turn and holds it for its apply, its revision update and its WAL line, nothing longer.
+// index's turn and holds it for its apply, its proposal and its revision update, nothing longer.
 class Shard {
 	IndexPin pin_;
 	DatabasePool* pool_;
@@ -108,14 +108,6 @@ public:
 
 	bool is_autocommit_active() const {
 		return !has_db_disable_autocommit(flags);
-	}
-
-	bool is_synchronous_wal() const {
-		return has_db_synchronous_wal(flags);
-	}
-
-	bool is_wal_active() const {
-		return is_writable() && !has_db_disable_wal(flags);
 	}
 
 	bool is_write_active() const {
@@ -161,19 +153,19 @@ public:
 
 	// What follows a write: its commit when it asked for one, else the debounced autocommit. A commit whose turn
 	// times out leaves the write standing (applied and logged) for the autocommit; the caller is not failed.
-	task::task<void> finish_write(bool commit_, bool wal_);
+	task::task<void> finish_write(bool commit_);
 
 	// Commits what is applied; a commit that covers this caller's writes and is already in flight is joined.
-	task::task<bool> commit(bool wal_ = true);
+	task::task<bool> commit();
 
 	// A delete with an expected version removes the document only while it has that version (0: it does not exist).
-	task::task<void> delete_document(engine::docid shard_did, bool commit_ = false, bool wal_ = true, std::optional<engine::rev> expected_ = std::nullopt);
-	task::task<void> delete_document_term(const std::string& term, bool commit_ = false, bool wal_ = true, std::optional<engine::rev> expected_ = std::nullopt);
+	task::task<void> delete_document(engine::docid shard_did, bool commit_ = false, std::optional<engine::rev> expected_ = std::nullopt);
+	task::task<void> delete_document_term(const std::string& term, bool commit_ = false, std::optional<engine::rev> expected_ = std::nullopt);
 
-	task::task<engine::WriteResult> add_document(engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
+	task::task<engine::WriteResult> add_document(engine::Document&& doc, bool commit_ = false, bool version_ = true);
 	// `upload`, if any, is the chunked upload whose final entry the write is (D12).
-	task::task<engine::WriteResult> replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true, bool must_exist = false, ChunkedUpload* upload = nullptr);
-	task::task<engine::WriteResult> replace_document_term(const std::string& term, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true, ChunkedUpload* upload = nullptr);
+	task::task<engine::WriteResult> replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_ = false, bool version_ = true, bool must_exist = false, ChunkedUpload* upload = nullptr);
+	task::task<engine::WriteResult> replace_document_term(const std::string& term, engine::Document&& doc, bool commit_ = false, bool version_ = true, ChunkedUpload* upload = nullptr);
 
 	// The index's replication group, or null when the pool has no journal.
 	ShardGroup* group() const;
@@ -191,14 +183,14 @@ private:
 
 public:
 
-	task::task<void> add_spelling(const std::string& word, engine::termcount freqinc, bool commit_ = false, bool wal_ = true);
-	task::task<engine::termcount> remove_spelling(const std::string& word, engine::termcount freqdec, bool commit_ = false, bool wal_ = true);
+	task::task<void> add_spelling(const std::string& word, engine::termcount freqinc, bool commit_ = false);
+	task::task<engine::termcount> remove_spelling(const std::string& word, engine::termcount freqdec, bool commit_ = false);
 
 	task::task<std::unique_ptr<engine::DocView>> get_view(engine::docid shard_did);
 
 	task::task<std::vector<std::string>> get_metadata_keys();
 	task::task<std::string> get_metadata(const std::string& key);
-	task::task<void> set_metadata(const std::string& key, const std::string& value, bool commit_ = false, bool wal_ = true);
+	task::task<void> set_metadata(const std::string& key, const std::string& value, bool commit_ = false);
 
 #ifdef XAPIAND_DATA_STORAGE
 	// A blob of the index's data storage: its read is a chore, on a reader of its own.

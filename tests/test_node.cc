@@ -110,7 +110,7 @@ using A = PoolTestAccess;
 
 const std::shared_ptr<XapiandManager>& manager();
 
-constexpr int WRITE = DB_WRITABLE | DB_CREATE_OR_OPEN;   // with the WAL and the autocommit, as a node writes
+constexpr int WRITE = DB_WRITABLE | DB_CREATE_OR_OPEN;   // with the autocommit, as a node writes
 constexpr int WRITE_QUIET = WRITE | DB_DISABLE_AUTOCOMMIT;
 
 template <typename F>
@@ -1151,7 +1151,6 @@ static void test_a_put_whose_client_half_closes_completes_durably() {
 // ---- a commit of a list of indexes whose client half-closes ----
 
 static const test_utils::ReservedPort half_close_list_port;
-static constexpr int NO_LOG = WRITE_QUIET | DB_DISABLE_WAL;   // only a commit keeps the write
 
 // The child: a write applied to hcl_kept and not committed, then a half-closed POST /hcl_new,hcl_kept/:commit whose
 // resolution of hcl_new waits in its settings load (the reserved index's turn is held) while the server reads the EOF.
@@ -1166,8 +1165,8 @@ static constexpr int NO_LOG = WRITE_QUIET | DB_DISABLE_WAL;   // only a commit k
 	}
 	auto& pool = *manager()->database_pool;
 	{
-		auto entry = pin_index(pool, endpoints_of("hcl_kept")[0].path, NO_LOG);
-		Shard shard = use_index(entry, NO_LOG);
+		auto entry = pin_index(pool, endpoints_of("hcl_kept")[0].path, WRITE_QUIET);
+		Shard shard = use_index(entry, WRITE_QUIET);
 		engine::sync_wait(shard.add_document(make("K1")));
 	}
 	const auto reserved = endpoints_of(".xapiand/indexes");
@@ -1392,8 +1391,7 @@ static void test_a_registry_that_cannot_close_ends_the_stop_at_the_bound() {
 	std::_Exit(0);
 }
 
-// The stop: the HTTP service, then the autocommits, the indexes, the write-ahead logs and the fsync threads (the
-// logs after the indexes, since closing an index appends to its log).
+// The stop: the HTTP service, then the autocommits, then the indexes (each group checkpoints at its close).
 static void test_the_stop_runs_in_its_stated_order() {
 	const char* log_path = "node_order.log";
 	const auto result = run_child([&] { ordered_stop_child(log_path); }, 60s);
@@ -1401,7 +1399,7 @@ static void test_the_stop_runs_in_its_stated_order() {
 	CHECK_EQ(result.code, 0);
 	const auto log = read_file(log_path);
 	std::size_t at = 0;
-	for (const char* step : {"Stop 1: the HTTP service", "Stop 2: the autocommits", "Stop 3: the indexes", "Stop 4: the write-ahead logs", "Stop 5: the fsync threads"}) {
+	for (const char* step : {"Stop 1: the HTTP service", "Stop 2: the autocommits", "Stop 3: the indexes"}) {
 		const auto found = log.find(step, at);
 		CHECK(found != std::string::npos);
 		if (found == std::string::npos) {
@@ -2253,7 +2251,7 @@ static void test_an_existing_id_written_again_lands_on_its_shard() {
 		{
 			auto pin = pin_index(*manager()->database_pool, endpoints[held].path, WRITE_QUIET);
 			auto shard = use_index(pin, WRITE_QUIET);
-			engine::sync_wait(shard.replace_document_term(term, std::move(std::get<1>(prepared)), flushed, false));
+			engine::sync_wait(shard.replace_document_term(term, std::move(std::get<1>(prepared)), flushed));
 			CHECK_EQ(pin.entry().engine().dirty(), !flushed);   // buffered until a commit or a read refreshes it
 		}
 		if (restored) {
@@ -2304,14 +2302,14 @@ struct OffHashId {
 	engine::docid seat(std::size_t shard, const std::string& n) const {
 		auto pin = pin_index(*manager()->database_pool, endpoints[shard].path, WRITE_QUIET);
 		auto use = use_index(pin, WRITE_QUIET);
-		return engine::sync_wait(use.replace_document_term(term, std::move(std::get<1>(prepare(n))), true, false)).did;
+		return engine::sync_wait(use.replace_document_term(term, std::move(std::get<1>(prepare(n))), true)).did;
 	}
 
 	// Erases the id on `shard` by its key, in one turn of that shard.
 	void erase(std::size_t shard) const {
 		auto pin = pin_index(*manager()->database_pool, endpoints[shard].path, WRITE_QUIET);
 		auto use = use_index(pin, WRITE_QUIET);
-		engine::sync_wait(use.delete_document_term(term, false, false));
+		engine::sync_wait(use.delete_document_term(term, false));
 	}
 
 	bool holds(std::size_t shard) const {
@@ -2339,7 +2337,7 @@ static void test_a_replace_that_must_exist_writes_only_where_the_key_is() {
 			doc.add_value(DB_SLOT_VERSION, Serialize::version(*expected));
 		}
 		try {
-			engine::sync_wait(use.replace_document(did, std::move(doc), false, false, true, must_exist));
+			engine::sync_wait(use.replace_document(did, std::move(doc), false, true, must_exist));
 		} catch (const engine::Error& error) {
 			return error.kind;
 		}
@@ -2421,7 +2419,7 @@ static void test_a_replace_by_term_of_an_id_erased_since_its_lookup_places_it_af
 	auto replace = host.start(db.replace_document_term(x.term, std::move(std::get<1>(prepared)), true));
 	CHECK(eventually([&] { return host.idle(); }));
 	CHECK_FALSE(replace.done());   // the lookup waits on the turn
-	auto erase = host.start(use.delete_document_term(x.term, false, false));
+	auto erase = host.start(use.delete_document_term(x.term, false));
 	CHECK(eventually([&] { return host.idle(); }));
 	CHECK_FALSE(erase.done());   // the erase waits behind the lookup
 	hold->release();
@@ -2447,7 +2445,7 @@ static void test_a_patch_of_an_id_erased_since_its_read_patches_the_new_document
 	auto use = use_index(erasing, WRITE_QUIET);
 	auto hold = std::make_unique<HoldTurn>(entry.entry(), WRITE);
 	ParkHost host;
-	auto erase = host.start(use.delete_document_term(x.term, false, false));
+	auto erase = host.start(use.delete_document_term(x.term, false));
 	CHECK(eventually([&] { return host.idle(); }));
 	CHECK_FALSE(erase.done());   // the erase waits on the turn
 	DatabaseHandler db(x.endpoints, WRITE);

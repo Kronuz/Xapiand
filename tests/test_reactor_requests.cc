@@ -66,7 +66,7 @@ using namespace std::chrono_literals;
 
 namespace {
 
-constexpr int WRITE = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL | DB_DISABLE_AUTOCOMMIT;
+constexpr int WRITE = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_AUTOCOMMIT;
 
 std::string fresh(const char* name) {
 	std::string path = std::string("reactor_requests_") + name + ".db";
