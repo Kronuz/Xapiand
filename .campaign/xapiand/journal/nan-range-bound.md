@@ -1,6 +1,6 @@
 # nan-range-bound: journal
 
-State: waiting on jobs 261122-213854-e735ba 261122-213855-92654e 261122-213857-459669 261122-213907-f43f09 261122-213854-8ab1db
+State: waiting on jobs 261123-000908-5ce25f 261123-000920-aac63a 261123-000923-5c3bde 261123-000927-324fb3 261122-213854-8ab1db
 Quest: .campaign/xapiand/quests/nan-range-bound.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -27,7 +27,7 @@ src/aggregations/bucket_numeric.h and the two doc pages; done below).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261122-213854-e735ba (test_nan_range + test_engine_query at ca144f228); fails-without 261122-213855-92654e (head's test over main's src, 1dffb8ab8, ref mutant/nan-range-bound-base); float mutant 261122-213857-459669 (56ca1b70f, ref mutant/nan-range-bound-float); query mutant 261122-213907-f43f09 (6a9bd08a4, ref mutant/nan-range-bound-query): pending |
+| A1 | 261123-000908-5ce25f (test_nan_range + test_engine_query at ca144f228); fails-without 261123-000920-aac63a (head's test over main's src, 1dffb8ab8, ref mutant/nan-range-bound-base); float mutant 261123-000923-5c3bde (56ca1b70f, ref mutant/nan-range-bound-float); query mutant 261123-000927-324fb3 (6a9bd08a4, ref mutant/nan-range-bound-query): pending |
 | A2 | 261122-213854-8ab1db (suite at ca144f228): pending |
 | A3 | range-searches.md and range-aggregation.md under docs/src/content/docs/reference-guide/search/ say a NaN bound answers 400 naming the field and the bound |
 | A4 | pushed at ca144f228; CI not read yet |
