@@ -7143,7 +7143,8 @@
     "consensus-join-v2": {
       "accepted": {},
       "after": [
-        "detent:consensus-fetch-alongside-flake"
+        "detent:consensus-fetch-alongside-flake",
+        "detent:consensus-faultlab-repin"
       ],
       "base": "6e1122cc691ddcdd3b5e527a1d4ac037cd7add57",
       "branch": "quest/xapiand/consensus-join-v2",
@@ -7222,7 +7223,7 @@
       "risk": "high",
       "status": "active",
       "title": "consensus joins a node by token v2 on the transport port, pins keys, reloads certificates and checks the boot",
-      "updated": "2026-11-23T13:15:48",
+      "updated": "2026-11-23T15:01:23",
       "worktree": "../consensus-wt/xapiand/consensus-join-v2"
     },
     "consensus-request-install": {
