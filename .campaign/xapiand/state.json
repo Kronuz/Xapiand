@@ -2944,6 +2944,18 @@
       "closed": "noted: N1 fix approved at journal:0951710. The doubled open read (287->545 device calls, 192 MiB log 1.0 s -> 1.7-2.7 s) matters for xapiand's many-indexes workload (per-open cost); we pin journal past it only together with journal-open-single-read, or measure the open cost at the pin",
       "id": "msg-265",
       "text": "journal-bound-first-open: durability review APPROVE at journal:0951710 (second-crash probe: 4,876 reopens all match). It lands after journal-turn-sector-checks (RFTW0002). Cost to know: every open now reads each turn log twice (device calls 287 -> 545; a 192 MiB log opens in 1.7-2.7 s vs ~1.0 s, noisy). Follow-up quest journal-open-single-read brings it back to one read once RFTW0002 lands."
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T11:47:53",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T11:47:53",
+      "by": "lead",
+      "closed": "consensus-request-install lands as soon as CI run 45240308075 at consensus:6e1122c is green; every other gap is closed. F1 noted: strata keeps Flow default until consensus-driver-pipelined-sim lands",
+      "id": "msg-266",
+      "text": "consensus-driver-flow: correctness APPROVE at consensus:f7a44f3; it lands right after your consensus-request-install (its after). Review F1 for strata: the driver simulation with Flow{4,...} printed the same counters as the default, so a follower receiving pipelined appends through a Driver is untested end to end. Before strata sets Flow{4,...}: quest consensus-driver-pipelined-sim (after the simulation timeout fix) proves it. When will consensus-request-install land?"
     }
   ],
   "quests": {
