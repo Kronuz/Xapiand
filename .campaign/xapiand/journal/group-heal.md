@@ -1,6 +1,6 @@
 # group-heal: journal
 
-State: waiting on jobs 261123-021413-a25890 261123-021416-01f061 261123-021418-f94527 261123-021420-2fb770 261123-021423-f55c10 261123-021425-711463 261123-021427-94e042 261123-021429-dfeb44 (and CI at strata:908b58c0)
+State: waiting on jobs 261123-025733-6d601b 261123-025741-994ce2 261123-025745-1cfc1e 261123-025756-3c979b 261123-025800-60799b 261123-025803-7e8f02 261123-025807-5e3091 261123-025811-3c291c 261123-025815-b0df66 261123-025818-4a4f12 261123-025822-68b83b 261123-025825-5422c2 261123-025901-9a4aba (and CI at strata:a1e786f4)
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,49 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Durability fix round 1 (2026-11-23), review at strata:908b58c0 (CHANGES, F1 and F2 blocking).
+Fix at strata:a1e786f4; nothing built locally, the jobs are the first compile.
+
+- F1 (a pin held, reopen on a full disk fails). Cause: recover() released the manifest's pins
+  synchronously, and strata's release commits, so ENOSPC failed the open. Fix: recovery reads
+  the pinned generations (`held_pins`, install.hh) into the install state's `stale` list and
+  queues release_superseded, which releases them first and stalls on ENOSPC as before
+  (cc2d0b3f's rule); release_pins_held at close releases them too. Test
+  `reopen_short_of_space(3)` (voters_test, R2's case: opens on a full disk, stalls unfenced
+  with the pin kept, resume() releases it, settles, digests equal). Mutant `release-at-open`
+  releases at recovery (the reviewed behavior).
+- F2 (crash in a deferred learner's activation, `no manifest log`). Cause: the ordering, not
+  strata's open. install's crash contract ("old content or installed") presumes the old content
+  is committed; a fresh learner's index is deferred, and `index::install` writes its segment
+  copies before its first manifest, which strata's open must read as damage (a committed index
+  that lost its log looks the same). Fix in group's activation order (install.hh `activate`):
+  a deferred index (no manifest log) commits its empty state before it installs, so a crash
+  opens the old generation and resume() finishes; a crash in that commit leaves
+  `manifest-1.tmp` alone, D3-C's uncreated residue. Tests: install_test `deferred` (crash at
+  every mutating operation from the stage through the activating recovery, process and power
+  seeds 1-4, persisted or not: empty replica or complete new one) and voters_test
+  `deferred_learner_crash(3)` (R1d's sweep: a power cut on the learner's directory disk at
+  every mutation from its rejoin through the settled install; each reboot settles, digests
+  equal, no staging name; the premise "index deferred" is asserted). Mutant
+  `install-onto-deferred` (both mutant files) drops the commit.
+- Not fixed, pre-existing (D112, strata core, outside the file set): a deferred index's first
+  commit *with documents* writes its segments before its first manifest, so a crash between
+  them leaves the same `no manifest log` directory. That is any group's first checkpoint, and
+  F2's fix inherits it when a deferred learner had applied documents (a voter that never
+  checkpointed, then fell behind); a fresh learner applies nothing before its install. Probe
+  at strata main 00eb018d: job 261123-025901-9a4aba (.scratch/xapiand/group-heal-first-commit).
+  The fix belongs in strata's open of a never-committed directory (residue a first commit
+  leaves, marked before its first segment); for the lead.
+- F3-F6 untouched. F3's `trim_sources` gains the `stale` condition (same line, no F3 change).
+
+Jobs at a1e786f4 (priority 3): confirmations, the reviewer's probes unchanged but for the
+commit (.scratch/xapiand/group-heal-fix1): F1 = 261123-025733-6d601b (R2, R3), F2 =
+261123-025741-994ce2 (R1c, R1d, R1h). Suite 261123-025745-1cfc1e. Fails-without (mutants that
+restore the reviewed code): release-at-open 3c979b, install-onto-deferred (voters) 60799b,
+install-onto-deferred (install_test deferred) 4a4f12. Touched-code mutants: release-fences
+7e8f02, pin-per-flight 5e3091, install-silent 3c291c, close-skips-install-tasks b0df66,
+install holder-unordered 68b83b, no-resume 5422c2.
 
 Round 5 (2026-11-23): strata main taken (group-catalog, strata:00eb018d). Merge at
 strata:11672618, then one fix at strata:908b58c0; pushed. Nothing built locally: the jobs below
@@ -158,11 +201,11 @@ voters_test.cc world edit carried into world.hh at that merge).
 
 ## Next
 
-1. Read the jobs in State and CI at strata:908b58c0 (footprint's Linux rows: the merge adds
-   8 B, tasks_ and serving_); a failing case is fixed at the next commit. Paste `campaign
-   brief`'s evidence table. Then the lead launches the durability reviewer.
-2. witness: once its jobs pass, the lead merges the task (quest/xapiand/group-heal--witness).
-3. repair: ruled (lead, 2026-11-23, quest Decisions): option (c), through consensus-request-install; built after that quest lands. sim-rows (order 3) after repair and witness.
+1. Read the jobs in State and CI at strata:a1e786f4. If all pass: F1=261123-025733-6d601b,
+   F2=261123-025741-994ce2 for `campaign accept group-heal durability --confirm` (the suite
+   261123-025745-1cfc1e if a versioned job is required). A failing case is fixed next commit.
+2. Report the first-commit window (probe 9a4aba) to the lead with its result.
+3. repair: ruled (c), after consensus-request-install lands. sim-rows (order 3) after repair.
 
 ## Blocked on
 
@@ -218,6 +261,14 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 
 <Decisions inside the quest's scope, so the reviewer can check them.>
 
+- F2 (a1e786f4): the fix is group's activation order, not strata's open: strata cannot tell an
+  interrupted first install from a committed index that lost its log, so the group makes the
+  old state committed before install, as install's contract presumes. The general first-commit
+  window with documents (above) is strata's and the lead's.
+- F1 (a1e786f4): a pin an earlier process left is released on the chore after recovery, not
+  in it; with space short the replica stalls (and a stalled leader hands off, D3) until
+  resume(). The fails-without mutants restore the reviewed code's behavior in place (F1 releases
+  after adopt instead of before; same commit on a full disk).
 - Install pins live per bundle until superseded (75b5ac9b), not per flight: the latest bundle's
   pin keeps its generation and the set's retired files one checkpoint longer. A learner-side
   retry of the pin fetch was the alternative; it needs a timer on the learner and still loses
