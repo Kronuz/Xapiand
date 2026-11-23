@@ -77,7 +77,9 @@ e2e:end -->
 ## Open ranges and terms-only fields
 
 A `_range` with neither `_from` nor `_to` matches every document that has the field. Ranges
-work on numbers, dates, times and (by their text order) strings.
+work on numbers, dates, times and (by their text order) strings. A NaN bound (only a msgpack body can
+carry one) has no place in any field's order: on every numeric and date field it answers `400` naming
+the field, as it does in a [range aggregation](/Xapiand/reference-guide/search/aggregations/bucket/range-aggregation).
 
 A field indexed with terms only (`_index: field_terms`, see
 [Indexing Mode](/Xapiand/reference-guide/schemas/indexing-mode)) has no values to check a range
