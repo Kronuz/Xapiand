@@ -13807,17 +13807,53 @@
         "src/phonetic.h",
         "docs/dev/header-tables.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-22T21:43:25",
+          "ci": {
+            "carried": true,
+            "commit": "b6fb2cb4ce655df5285b65d5dfd961bb72e4fc02",
+            "runs": [
+              45002490785
+            ]
+          },
+          "commit": "fc6fcd6459e5fecea41a008100766c5becdec349",
+          "criteria": {
+            "A1": "261122-002109-cfb3da (the suite check), 261122-002109-cfb3da (passed at b6fb2cb4ce65; only 1 merge from main since, none touching its files)",
+            "A2": "261122-002121-a5a538 (passed at b6fb2cb4ce65; only 1 merge from main since, none touching its files)",
+            "A3": "261122-211249-714471",
+            "A4": "docs/dev/header-tables.md"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "ae96a1309eca584d3857d0059b2126a34d59aaf1",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261122-002109-cfb3da",
+              "level": "light",
+              "seconds": 732.2,
+              "state": "done",
+              "what": "hunt-header-tables check suite at ae96a1309eca"
+            }
+          ],
+          "final": true,
+          "from": "dcb4aae9eb9b1d148f381109bab35c704b1c9e7c",
+          "reason": "",
+          "tested": "a0775fc2331bc4bf77566aba27c04cfba454c219"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Header static tables: one copy and one initializer per program",
-      "updated": "2026-11-22T00:18:09",
-      "worktree": "../Xapiand-wt/xapiand/hunt-header-tables"
+      "updated": "2026-11-22T21:43:36",
+      "worktree": ""
     },
     "hunt-lua-fetch": {
       "accepted": {},
