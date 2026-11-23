@@ -12,11 +12,14 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 Code done at cpp-libraries:237350a on quest/xapiand/split-check-members (worktree
 `/Users/kronuz/code/Kronuz/cpp-libraries-wt/xapiand/split-check-members`). The `test` (A1, A2,
 A3, A5) and `lint` (A6) gate jobs are queued; the new tests have not run yet (local runs are
-refused, so every run is a job).
+refused, so every run is a job). Branch pushed at 237350a; CI run 45117787193 (tools workflow):
+shell-macos-15 and shell-ubuntu-24.04 passed, `python` (runs these tests, ruff, pyrefly) still
+queued when the session stopped at the lead's token limit.
 
 ## Next
 
-1. Read test 261122-212041-81ad6c and lint 261122-212041-782f93. A test failure is a fixture or
+1. Read test 261122-212041-81ad6c, lint 261122-212041-782f93 and CI run 45117787193's `python`
+   job (`gh run view 45117787193 -R Kronuz/cpp-libraries`). A test failure is a fixture or
    parser bug: fix, commit, `campaign verify split-check-members --for A1,A2,A3,A5`, rerun the two
    real-head jobs at the new commit (commands below).
 2. Re-tag lint for A6 (`campaign verify --for` tagged both checks A1,A2,A3,A5); CI green on the
