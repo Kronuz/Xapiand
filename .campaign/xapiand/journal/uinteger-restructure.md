@@ -1,6 +1,6 @@
 # uinteger-restructure: journal
 
-State: waiting on jobs 261123-005918-1ec261 261123-005919-29dc48 261123-005922-940970 261123-005922-f78320 261123-005923-69c83b 261123-005923-f76b83 261123-005924-542f59 261123-005924-9b4e8d 261123-005925-a0ec5a 261123-005925-703604 261123-005926-8319ef 261123-005720-a21e01 261123-005936-d61208
+State: waiting on jobs 261123-032414-71300f 261123-032417-a8012a 261123-032421-5ecc9a 261123-032451-e05f05 261123-005923-69c83b 261123-005923-f76b83 261123-005924-9b4e8d 261123-005924-542f59
 Quest: .campaign/xapiand/quests/uinteger-restructure.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -78,20 +78,35 @@ Evidence jobs rerun at 5fedce2: build-test 261123-005918-1ec261; A5 261123-00592
 261123-005924-9b4e8d / 261123-005924-542f59. Old A4 outputs kept in
 `~/.scratch/xapiand/uinteger-restructure/{aa,ab}-{mul,conv}.db44669`.
 
-A3 at db44669 (261121-222518-fe23a8 failed, as expected): 95 of 97 binaries differ, 57 distinct text
-symbols, no whole-library regression yet read: inlining shifts (k_mul_karatsuba 928 -> 1856 bytes
-with k_absdiff gone as a symbol, ntt_fwd_leaf 416 -> 656, ntt_fwd_last/ntt_inv_first/ntt_fwd3_layer
-inlined, k_ntt_mul 3280 -> 2976, test `check_*` and `main`). Each needs the new A3 table and the A4
-numbers before an explanation is written; not started.
+A3 at 5fedce2 (261123-005922-f78320 failed, as the old script fails on any difference): 95 of 97
+binaries differ, 124 distinct text symbols (the lead's note said 3 of 97: that read only the log's
+tail). Every difference is an inlining shift, none a body change (members: 354 moved, 0 errors).
+Total `__text` per binary: -1.4% to +5.0%, median +1.1%; the 2 binaries that match are the
+smallest. The job now compares `__text` by symbol and fails on a changed symbol its ALLOW table
+(in `fnsizes_diff.sh`, one regex group per reason) does not name, or a binary whose total moved by
+more than 6%; `__gcc_except_tab` rows are local labels numbered by emission order and are left out.
+Reasons (symbols named in the script; sizes are the clang Release build on this Mac):
+
+| Reason | Symbols | Example |
+|---|---|---|
+| R1 callee inlined into its callers, symbol gone | `k_absdiff`, `k_sqr_toom3`, `k_div_3by2`, `k_mod_1`, `divmod_small`, `bitwise_or`, `bitwise_lshift`, `_from_digit_bytes`, `_parse`, `_tree_encode`, `ntt_fwd3_layer`, `ntt_fwd_last`, `ntt_inv_first`, `k_div_newton_scratch_size`, `_emit_digits_n`, `_enc_fixed`, `_enc_fixed_n`, `operator<<=` | `k_absdiff` 448 B gone |
+| R2 caller changes with what it inlined | `k_mul_karatsuba` 928 -> 1856 (absorbs `k_absdiff`), `k_sqr` 320 -> 688 (absorbs `k_sqr_toom3` 368: sum equal), `k_sqr_karatsuba` 640 -> 1056, `k_ntt_mul` 3280 -> 2976, `ntt_fwd_leaf` 416 -> 656, `ntt_inv_leaf` 416 -> 672, `single_divmod` 672 -> 816, `from_digits`/`_from_digits`, `_encode_radix`, `_enc_fixed_k`, Toom evals, `k_div_*` | `k_mul_karatsuba` |
+| R3 emitted out of line now | `mult(const&, const&)` (the 3-argument `mult` is the one inlined), `ntt_forward`, `operator<<` for 8-bit types | `ntt_forward` 448 B |
+| R4 test and bench helpers holding inlined library code | `main`, `check*`, `chunk_digits`, `heap_born`, `hex`, `make_count`, `make_dividend`, `ones`, `pow2`, `random_value` (and their `.cold` parts) | `make_count` 224 -> 640 (`uinteger_t_wide_shift`), 496 -> 768 (`_shift16`), 304 -> 1168 (`_shift32`): `bitwise_or`, `bitwise_lshift` inline into it |
+| R5 std instantiations | `unique_ptr<radix>::~unique_ptr`, `vector<unsigned char>::resize`, `__throw_length_error`: Mach-O has no symbol sizes, so fnsizes reads the gap to the next symbol and these absorb neighbors | `resize` 6272 -> 6864 |
+
+The cause is definition order: out-of-class definitions are emitted in family order, not class
+order, which moves clang's bottom-up inlining decisions; no function body changed. Whether the
+shift costs time is A4's question (jobs below). The job's table is the evidence, not the
+allowlist: it only keeps a later head from adding an unexplained symbol.
 
 ## Next
 
-1. Read the jobs above: gcc_werror at head passes and at 5dd518f fails; members passes; equiv passes
-   at 5fedce2 and fails at 2523f7a; kernels head kills 21. Then A1/A5 into Evidence.
-2. Read the jobs: A3 diff (explain each size change), A4 tables into `docs/perf/` with the A/A
-   spread and hosts, A1/A5 results into Evidence.
-3. members check (A2) once split-check-members lands; answer its warnings.
-4. Step 2 (detail free functions) on its own commit, after the lead agrees the map (A7).
+1. Read A3 (261123-032414-71300f) and the GCC jobs (261123-032417-a8012a at the head,
+   261123-032421-5ecc9a fails-without at 5dd518f); put their ids in Evidence.
+2. Read A4 (261123-005923-69c83b / -f76b83 mul, -9b4e8d / -542f59 conv, queued exclusive): tables
+   into `docs/perf/` with the A/A spread and hosts, honest magnitude per operation and limb count.
+3. Step 2 (detail free functions) on its own commit, after the lead agrees the map (A7).
 
 ## Notes for tools/outline.py (msg from the lead)
 
@@ -161,11 +176,11 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261121-222414-b91586 (build-test) pending; CI on the pushed branch |
-| A2 | pending: 261121-222415-33a3b7 runs before split_check has a member mode (split-check-members) |
-| A3 | 261121-222518-fe23a8 pending |
-| A4 | A/A 261121-222535-06b7c7, 261121-222548-f7f06b; A/B 261121-222540-d43319, 261121-222601-a73e84; pending |
-| A5 | 261121-222522-c21125 pending |
+| A1 | build-test 261123-005918-1ec261 at 5fedce2; GCC 16 at CI's configuration (RelWithDebInfo `-O2 -g -D_GLIBCXX_ASSERTIONS`, plus `-Werror -Wall -Wextra`, build and ctest) 261123-032417-a8012a; fails without it at 5dd518f (the `-Wattributes` errors): 261123-032421-5ecc9a, and under the old Release configuration 261123-005720-a21e01. CI on the pushed branch |
+| A2 | members 261123-005919-29dc48 at 5fedce2 (354 moved, 0 errors, 0 warnings, 1 note); fails without: 261123-032451-e05f05 at 5dd518f (earlier: 261123-003509-c59b83). The equivalence job 261123-005936-d61208 at 2523f7a was meant to fail without the migration fix and passed: it compares each mutant's edit text, which was the same on both sides; the defect was where the edit applied (kernels killed 22 at head, 21 at master). Its proof is the kernels set at 5fedce2, 261123-005926-8319ef: 24 mutants, 21 killed, 3 equivalent, equal to master (261121-223724-2cad83, whose chunk is the first kernels one); equiv at 5fedce2 261123-005925-a0ec5a: 355 mutants, 0 differ |
+| A3 | 261123-032414-71300f (replaces 261123-005922-f78320, which failed on every difference); reasons in the A3 table above |
+| A4 | A/A 261123-005923-69c83b (mul), 261123-005924-9b4e8d (conv); A/B 261123-005923-f76b83 (mul), 261123-005924-542f59 (conv); queued exclusive, no result yet |
+| A5 | 261123-005922-940970 |
 | A6 | `docs/source-layout.md`, `README.md`, `ARCHITECTURE.md`, `CHANGELOG.md` at the head |
 | A7 | the lead reads the family map above |
 
@@ -193,3 +208,14 @@ Nothing.
   making it unconditional is left for the lead, since the evidence jobs ran at uinteger_t:5dd518f.
 - Each family header includes `../uinteger_t.hh` only: the umbrella keeps every standard include,
   so a family needs nothing else to compile alone.
+- The `members` check's one note, `uinteger_t.hh` at 1,799 lines over `--max-lines 1000`: the file is
+  the class (1,607 lines): data members, nested types, cutoffs and one documented declaration per
+  member. Splitting it further would cut the class definition, which C++ keeps in one place;
+  SPLITTING.md's size flags a look, not a split. No change.
+- GCC at CI's configuration passes `-Werror -Wall -Wextra`; Release (NDEBUG) with `-Werror` stops
+  at `test/test.cc:59` `unused variable 'base'` (used only in `assert`), identical on master, so
+  pre-existing and outside this quest: a follow-up for the lead (`(void)base;` or `[[maybe_unused]]`
+  in test.cc). The proof therefore uses CI's configuration, which keeps asserts live.
+- A3 passes with an allowlist of 7 regex rows naming 86 symbols (the table under Doing) plus a 6% bound on
+  each binary's total `__text`; the lead's expectation of 3 binaries was wrong (95 of 97 differ),
+  and no whole-library regression shows in the totals (-1.4% to +5.0%).
