@@ -1,9 +1,29 @@
 # journal-replaces-wal: journal
 
-State: waiting on jobs at Xapiand:693c91e68 (the checkpoint fix), targeted first (lead, 2026-11-23): test_pool 261123-101746-14e86e, test_node 261123-101749-45fe26, test_loop_yield 261123-101751-028fe6; before the fix, test_loop_yield alone at a quiet time 261123-101801-e33085. Kept from earlier: a99731 and d4 mutant 52e8f7 (at 0aeec8fc9; its sed no longer matches commit_group), crash 0b2796 (8081eec9d), c6bce1 (be7dc926c). Next: when the three targeted jobs pass, submit the crash check (`campaign verify`) and the full job set once at that commit, without --after; the d4 checkpoint mutant needs the perl pattern of cancelled 261123-101712-4f0aa1.
+State: waiting on targeted jobs at Xapiand:819a107b7 (CI fix round, master merged), all -DASSERTS=ON: test_pool 261123-112542-ad7b9a, test_node 261123-112545-e32cb8, test_loop_yield 261123-112549-9a6eb0, test_pool under ASan 261123-112552-b06fa2; fails without the place_stored fix: test_pool under ASan at Xapiand:a22e1537f 261123-112555-9f402f; test_loop_yield before any fix at a quiet time 261123-101801-e33085. Kept: a99731, 52e8f7, 0b2796, c6bce1. Next: when they pass and CI at the pushed head is green, the crash check and the full job set once at that commit, without --after (the d4 checkpoint mutant takes the perl pattern of 261123-101712-4f0aa1).
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
+
+Session 9 (2026-11-23), CI at Xapiand:a22e1537f red on 6 jobs (lead's log ~/.scratch/xapiand/lead/jrw-ci.log), Xapiand:3fc80367f:
+
+1. The two asserts (pool.cc:358 take_turn, pool.cc:101 ChoreAwaiter) are the expected output of test_pool's death
+   tests (test_a_task_holds_one_turn_at_most, test_a_chore_needs_a_scheduler print "ok" right after), on master too.
+   The jobs of session 8 were RelWithDebInfo with -DASSERTS=ON, as every job of mine is.
+2. heap-use-after-free in Locator::serialize (TSan, ASan, and the E2E's 616 failures; the plain E2E's "POSITIVE_INTEGER
+   is not iterable" on UPDATE /assets/sample is the same corruption): place_stored set the codecs on the locators of a
+   Data it had flushed and flushed again; Data::flush rebuilds `serialized` while its locators still view the old
+   bytes, so the second flush read freed memory. Present since d2 (CI at Xapiand:be7dc926c shows the same 616), not
+   from session 8. Fix: the codecs are set on the flushed bytes parsed again. test_pool.cc:675 (the kill -9 child
+   ended by ASan's abort, not SIGKILL) is this too. Proof: ASan test_pool at head and at a22e1537f (State).
+3. test_loop_yield.cc:693 (chores 142.7 ms vs on-loop 674.7 ms, 0.21 > 0.2): already at the edge before session 8 (CI
+   at be7dc926c: 171.0/934.2 = 0.18; local 0.13; 0.06-0.09 in the WAL era). Cause: the group's RESTORE slice encoded
+   every batch command on the HTTP loop (split_command inside propose copies each document's bytes). The chore now
+   encodes each command's single entry and drops the writes' bytes; the loop proposes the entry. The targeted job
+   prints the new ratio; e33085 gives this machine's pre-fix numbers.
+4. origin/master merged (Xapiand:819a107b7, clean; pages.yml, AGENTS.md, agent docs).
+Not the cause of any failure: the slow-commit test's chore hold and the written_key != shard_did check (the failures
+above reproduce at be7dc926c, before both).
 
 Session 8 (2026-11-23), fix round on crash check 261123-083737-64aa68 (Xapiand:0aeec8fc9, 3 of 90 failed), Xapiand:693c91e68:
 
@@ -184,7 +204,15 @@ strata: `group-catalog` (item 4), which `core` step c waits on.
 
 ## Blocked on
 
-Nothing open (5 answered below).
+6. (2026-11-23) Outside the file set, left: docs/dev/agent-codebase.md (new from master's agents-md) still describes
+   the WAL (lines 14, 71-72, 76, 80: `src/database/wal.*`, WAL replay, WAL durability). Recommend: add it to the set
+   and I reword it to the journal, as item 5's files were.
+7. (2026-11-23) Outside the file set: Data::flush (src/database/data.cc) leaves its locators' `raw` views in the bytes
+   it replaced, the root of item 2 of session 9; place_stored no longer touches locators after a flush, but any caller
+   that does is exposed. Recommend: add src/database/data.* and have flush feed() its new bytes at its end (one
+   parse), with a unit test that flushes twice under ASan. Until then, nothing in the quest depends on it.
+
+Earlier items are answered below.
 
 Lead rulings, 2026-11-23:
 - 2: option (ii). Index DELETE is its own quest, index-delete (after strata-journal-pin bumps strata's journal pin
