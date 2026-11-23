@@ -30,11 +30,8 @@ install_gap(3) and grow_and_heal(3) stops at the learner's pin fetch ("fetch 2<-
 fetch_pin "the source holds no pin at the bundle", validation_failed, SnapshotReleased reason 3,
 the next flight the same, 500 times). The leader's pin_for never traces: neither "no pin"
 (boundary/recovered mismatch) nor "make_pin threw", and install_needed saw boundary == recovered
-(3, 13). The flight's frames start 5-45 ms after SnapshotNeeded, ticks in which every chore
-drains, so the pin is not merely late: the leader's chore does not run pin_for at all, or a
-pin is removed before the fetch. Probe 2 (261122-232034-115dd4, .scratch/group-heal/probe2.sh,
-outputs {gap3,heal3}-chore.out) traces every notice item run, kick refusals (stalled, hold,
-installing), pin_for successes and unpin_for.
+(3, 13). Probe 1 logged no pin_for success line, so it could not tell late from never; probe 2
+(below) shows the pin is made, but late.
 
 Seed 132's separate cause, fixed at strata:cc2d0b3f: the leader fenced on ENOSPC in
 unpin_for's release_pin (an uncaught strata commit on the chore). The release now stalls as an
