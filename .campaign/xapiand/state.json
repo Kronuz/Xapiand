@@ -14778,6 +14778,8 @@
     "hunt-htm-constexpr-start": {
       "accepted": {},
       "after": [],
+      "base": "c4577b702aed9bfdecc837e8a9b309e2b267c48f",
+      "branch": "quest/xapiand/hunt-htm-constexpr-start",
       "checks": [
         {
           "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -14804,6 +14806,7 @@
         "CMakeLists.txt",
         "docs/**"
       ],
+      "journal": "../Xapiand-wt/xapiand/hunt-htm-constexpr-start",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -14811,9 +14814,10 @@
       "provides": [],
       "repo": "../htm",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "htm start tables constant-initialized",
-      "updated": "2026-11-23T13:22:33"
+      "updated": "2026-11-23T13:23:15",
+      "worktree": "../htm-wt/xapiand/hunt-htm-constexpr-start"
     },
     "hunt-lua-fetch": {
       "accepted": {},
