@@ -1,6 +1,6 @@
 # stox-no-libc: journal
 
-State: waiting on jobs 261123-114038-c721f8 (A1), 261123-114040-c8d496 and 261123-114043-114edd (A2), 261123-112831-f31ce1 (A3), 261123-112834-f40ac5 (A4)
+State: ready to land (lead, 2026-11-23): all criteria met at strict-stox:f51037b; CI pending.
 Quest: .campaign/xapiand/quests/stox-no-libc.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -30,13 +30,14 @@ jobs no journal names), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | 261123-114038-c721f8 (build-test, Debug, asserts on) passed at f51037b. Earlier 261123-112824-c866b0 failed at 5637e68 (old-route asserts; see Rulings) |
+| A2 | 261123-114040-c8d496 passed at f51037b (no libc call for the artifact with a leading space, '+', and through stod/stof); fails-without 261123-114043-114edd exits 134 with the old header (SIGABRT in Apple's strtod) |
+| A3 | 261123-120631-8d50a2 (rerun of 261123-112831-f31ce1) passed at f51037b: corpus plus 1,000,000 strings equal to libc |
+| A4 | 261123-120631-0ae489 (rerun of 261123-112834-f40ac5) passed at f51037b: 15 CPU-minutes of fuzzing clean on macOS |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+stod and stof decide decimal text after C-locale white space or a single '+' in the library (`fp_lead`, strict_stox.hh, through the existing `fp_slow`), so Apple's strtod is never asked for it and the 209-byte abort cannot happen there. Hex, inf, nan, '+-', a directed rounding mode and a non-'.' locale still go to libc (fp_slow returns 0 for the last two); stold stays on strtold. Open: the header's top comment (strict_stox.hh:169-174) and README.md:29 still list white space and '+' as libc's for floats; the lead fixes both on main after landing, to keep the tested tree.
 
 ## Rulings I made
 
