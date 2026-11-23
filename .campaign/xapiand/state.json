@@ -35252,18 +35252,67 @@
         }
       ],
       "journal": "../Xapiand-wt/xapiand/uinteger-restructure",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-23T06:03:46",
+          "ci": {
+            "commit": "5fedce240dc1bf362bb9237febca63e10119ba51",
+            "runs": [
+              45143195932
+            ]
+          },
+          "commit": "5fedce240dc1bf362bb9237febca63e10119ba51",
+          "criteria": {
+            "A1": "261123-005918-1ec261 (the build-test check), 261123-032417-a8012a; fails without: 261123-005720-a21e01, 261123-032421-5ecc9a",
+            "A2": "261123-005919-29dc48 (the members check), 261123-005918-1ec261, 261123-005919-29dc48; fails without: 261123-032451-e05f05",
+            "A3": "261123-032414-71300f",
+            "A4": "261123-005923-69c83b",
+            "A5": "261123-005922-940970",
+            "A6": "`docs/source-layout.md`, `README.md`, `ARCHITECTURE.md`, `CHANGELOG.md` at the head",
+            "A7": "the lead reads the family map above"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "5fedce240dc1bf362bb9237febca63e10119ba51",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-005918-1ec261",
+              "level": "light",
+              "seconds": 172.9,
+              "state": "done",
+              "what": "uinteger-restructure check build-test at 5fedce240dc1"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --members --base master uinteger_t.hh uinteger_t",
+              "commit": "5fedce240dc1bf362bb9237febca63e10119ba51",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-005919-29dc48",
+              "level": "light",
+              "seconds": 4.4,
+              "state": "done",
+              "what": "uinteger-restructure check members at 5fedce240dc1"
+            }
+          ],
+          "final": true,
+          "from": "8a6fe9030aababbb03b1206fd2bf023f31d67645",
+          "reason": "",
+          "tested": "5fedce240dc1bf362bb9237febca63e10119ba51"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../uinteger_t",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "uinteger_t: the algorithms leave the 5,709-line class body, one header per family",
-      "updated": "2026-11-23T05:24:05",
+      "updated": "2026-11-23T06:03:51",
       "worktree": "../uinteger_t-wt/xapiand/uinteger-restructure"
     },
     "unpin-after-kick": {
