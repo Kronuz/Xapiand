@@ -31511,7 +31511,9 @@
     },
     "strata-journal-pin": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "turn-log-parity"
+      ],
       "base": "93d104461a79e17b0b9e43b93965a77d7ab711ed",
       "branch": "quest/xapiand/strata-journal-pin",
       "checks": [
@@ -31538,12 +31540,11 @@
       "milestone": "",
       "needs": [],
       "provides": [],
-      "reason": "started by force: a pin bump: CMakeLists' journal line plus callers journal's API moved; the quest file stops it before it edits files group-heal holds, and the other branches take the pin by merging main",
       "repo": "../strata",
       "risk": "low",
       "status": "active",
       "title": "strata builds against journal main (Host::delete_group)",
-      "updated": "2026-11-23T08:16:30",
+      "updated": "2026-11-23T08:25:35",
       "worktree": "../strata-wt/xapiand/strata-journal-pin"
     },
     "strata-nospace-position": {
