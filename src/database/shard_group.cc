@@ -627,14 +627,17 @@ ShardGroups::closed(kronuz::consensus::GroupId id, std::optional<std::string> re
 }
 
 
+namespace {
+
+// Runs `work` on `scheduler` and blocks the calling thread until it ends, rethrowing its error.
 void
-ShardGroup::catch_up()
+run_blocking(task::scheduler_ref scheduler, task::task<void> work)
 {
 	std::mutex mtx;
 	std::condition_variable cv;
 	bool done = false;
 	std::exception_ptr error;
-	task::spawn(group.owner().scheduler(), group.read_applied([](prospect::index&) { return true; }), [&](std::exception_ptr e, std::optional<bool>) {
+	task::spawn(scheduler, std::move(work), [&](std::exception_ptr e) {
 		std::lock_guard<std::mutex> lk(mtx);
 		error = e;
 		done = true;
@@ -642,6 +645,69 @@ ShardGroup::catch_up()
 	});
 	std::unique_lock<std::mutex> lk(mtx);
 	cv.wait(lk, [&] { return done; });
+	if (error) {
+		std::rethrow_exception(error);
+	}
+}
+
+task::task<void>
+read_caught_up(ShardGroup& shard_group, const std::function<void(const ShardGroupState&, prospect::index&)>& at)
+{
+	auto& group = shard_group.group;
+	co_await group.read_applied([&](prospect::index& index) {
+		if (at) {
+			at(group.state(), index);   // on the chore, between two entries
+		}
+		return true;
+	});
+}
+
+task::task<void>
+propose_aborts(ShardGroup& shard_group, std::vector<std::uint64_t> ids)
+{
+	for (const auto id : ids) {
+		try {
+			co_await shard_group.group.propose(encode_entry(CommandFinal{id, Command{}}), strata::group::ack::none);
+		} catch (...) {
+			// Not placed: the next term's first entry retires the command instead.
+		}
+	}
+}
+
+}  // namespace
+
+
+void
+ShardGroup::catch_up(const std::function<void(const ShardGroupState&, prospect::index&)>& at)
+{
+	run_blocking(group.owner().scheduler(), read_caught_up(*this, at));
+}
+
+
+void
+ShardGroup::abort_open(const std::vector<std::uint64_t>& ids)
+{
+	if (!ids.empty()) {
+		run_blocking(group.owner().scheduler(), propose_aborts(*this, ids));
+	}
+}
+
+
+task::task<void>
+checkpoint(ShardGroup& shard_group)
+{
+	const auto home = task::current();
+	co_await task::schedule_on{shard_group.group.owner().scheduler()};
+	std::exception_ptr error;
+	try {
+		const auto published = co_await shard_group.group.checkpoint();
+		shard_group.checkpointed.store(published.through, std::memory_order_release);
+	} catch (const kronuz::consensus::closed&) {
+		error = std::make_exception_ptr(engine::Error(engine::errc::not_available, "The shard's group is closing"));
+	} catch (...) {
+		error = std::current_exception();
+	}
+	co_await task::schedule_on{home};
 	if (error) {
 		std::rethrow_exception(error);
 	}

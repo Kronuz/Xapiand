@@ -233,6 +233,8 @@ class ShardEndpoint : public Endpoint
 	// since the last commit, which persists it.
 	std::uint64_t id_high_ = 0;
 	bool id_high_moved_ = false;
+	// With a group, the counter as the log holds it: a write that moves it past this carries it in its command.
+	std::uint64_t id_high_logged_ = 0;
 	void raise_id_high(std::uint64_t id) noexcept;
 #ifdef XAPIAND_DATA_STORAGE
 	std::unique_ptr<DataStorage> writable_storage;
@@ -256,6 +258,9 @@ class ShardEndpoint : public Endpoint
 	// none while the pool has no journal. The open opens it last; the catalog's close_payload closes it.
 	std::unique_ptr<ShardGroup> group_;
 	void close_group();
+
+	// A request's commit with a group: the group's checkpoint (D16), awaited from the request, under the turn.
+	task::task<bool> commit_group();
 
 	// A document write, under the turn: prepared on the engine, then applied by the group on every voter in log
 	// order (cluster-release D3) and acknowledged at quorum, or applied on the engine when the index has no group.

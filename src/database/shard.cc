@@ -564,9 +564,26 @@ ShardEndpoint::open_blocking(kronuz::journal::IO& directory, prospect::index& in
 	if (auto* groups = database_pool.groups()) {
 		group_ = std::make_unique<ShardGroup>(*groups, directory, index);
 		group_->group.open_blocking();
-		// What the log committed before the open is applied before anything is served, and reads see it.
-		group_->catch_up();
+		// What the log committed before the open is applied before anything is served, and reads see it; the id
+		// counter is the log's.
+		std::vector<std::uint64_t> left_open;
+		std::string high;
+		group_->catch_up([&](const ShardGroupState& state, prospect::index& applied) {
+			for (const auto& chunked : state.open) {
+				left_open.push_back(chunked.first);
+			}
+			if (const auto it = applied.metadata().find(std::string(ID_HIGH_METADATA)); it != applied.metadata().end()) {
+				high = it->second;
+			}
+		});
+		// The ready point (A9): the chunked commands this term's earlier proposers left open are aborted.
+		group_->abort_open(left_open);
 		dynamic_cast<engine::strata::Shard&>(*engine_).applied_by_group();
+		if (!high.empty()) {
+			id_high_ = std::max(id_high_, MsgPack::unserialize(high).u64());
+		}
+		id_high_logged_ = id_high_;
+		id_high_moved_ = false;
 	}
 }
 
@@ -687,7 +704,7 @@ ShardEndpoint::commit(int flags, bool wal_, task::cancel_token cancel)
 	std::exception_ptr error;
 	bool changed = false;
 	try {
-		changed = co_await do_commit(*engine_, *chores, flags, wal_);
+		changed = group_ ? co_await commit_group() : co_await do_commit(*engine_, *chores, flags, wal_);
 		committed_ = flight->covers;
 	} catch (const engine::Error& exc) {
 		note_failure(exc);
@@ -706,6 +723,18 @@ ShardEndpoint::commit(int flags, bool wal_, task::cancel_token cancel)
 		std::rethrow_exception(error);
 	}
 	co_return changed;
+}
+
+
+task::task<bool>
+ShardEndpoint::commit_group()
+{
+	if (!modified.load()) {
+		co_return false;
+	}
+	co_await checkpoint(*group_);
+	modified.store(false, std::memory_order_relaxed);
+	co_return true;
 }
 
 
@@ -742,7 +771,7 @@ ShardEndpoint::do_commit(engine::Shard& eng, engine::Chores& chores_, int flags,
 	co_await storage_commit(chores_);
 #endif  // XAPIAND_DATA_STORAGE
 	const auto prior_revision = eng.revision();
-	if (id_high_moved_) {
+	if (id_high_moved_ && !group_) {
 		co_await eng.set_metadata(std::string(ID_HIGH_METADATA), MsgPack(id_high_).serialize());  // durable with its documents
 	}
 	co_await eng.commit(engine::Transaction::none);
@@ -808,6 +837,17 @@ landed(engine::Shard& eng, const engine::PreparedWrite& prepared, const strata::
 		throw engine::Error(engine::errc::not_available, "The write was not applied: retry it");
 	}
 	return dynamic_cast<engine::strata::Shard&>(eng).landed(prepared, *answer.applied);
+}
+
+// A command write of the id counter's metadata (docs/design/one-id.md).
+CommandWrite
+id_high_write(std::uint64_t high)
+{
+	CommandWrite write;
+	write.op = CommandOp::set_metadata;
+	write.key = std::string(ID_HIGH_METADATA);
+	write.document.bytes = MsgPack(high).serialize();
+	return write;
 }
 
 bool
@@ -884,10 +924,15 @@ ShardEndpoint::write_document(engine::Shard& eng, engine::WriteOp op, engine::do
 			*batched = std::move(command.writes.back());
 			co_return prepared.result;
 		}
-		if (upload != nullptr) {
-			co_return landed(eng, prepared, co_await propose_upload_command(*group_, *upload, command));
+		// The id counter this write moves goes in its command, so it is durable with the document.
+		const auto high = std::max(id_high_, op == engine::WriteOp::replace_key ? numeric_id(key) : std::uint64_t{0});
+		if (high > id_high_logged_) {
+			command.writes.push_back(id_high_write(high));
 		}
-		co_return landed(eng, prepared, co_await propose(*group_, command));
+		const auto answer = upload != nullptr ? co_await propose_upload_command(*group_, *upload, command) : co_await propose(*group_, command);
+		auto result = landed(eng, prepared, answer);
+		id_high_logged_ = std::max(id_high_logged_, high);
+		co_return result;
 	} catch (...) {
 		failed = std::current_exception();
 	}
@@ -1768,6 +1813,18 @@ Shard::restore_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, st
 			for (const auto position : batch.writes) {
 				writes[position].error = failed;
 			}
+		}
+	}
+	if (entry.id_high_ > entry.id_high_logged_) {
+		// The ids the slice issued or wrote, durable once this lands; a failure leaves it to the next write's command.
+		const auto high = entry.id_high_;
+		Command command;
+		command.writes.push_back(id_high_write(high));
+		try {
+			landed(eng, engine::PreparedWrite{}, co_await propose(*entry.group(), command));
+			entry.id_high_logged_ = std::max(entry.id_high_logged_, high);
+		} catch (...) {
+			L_EXC("The id counter of a RESTORE's slice was not logged");
 		}
 	}
 }

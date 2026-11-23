@@ -24,6 +24,7 @@
 
 #include <array>                   // for std::array
 #include <atomic>                  // for std::atomic
+#include <functional>              // for std::function
 #include <cstdint>                 // for std::uint64_t
 #include <map>                     // for std::map
 #include <memory>                  // for std::unique_ptr
@@ -201,12 +202,17 @@ struct ShardGroup {
 	ShardGroups::group_type group;
 	kronuz::journal::IO* directory;   // the slot's, where the file set lives; blobs are read through it
 	std::optional<ChunkedIds> ids;   // this leader's chunked-command ids, on the loop
+	std::atomic<std::uint64_t> checkpointed{0};   // the log index the last checkpoint() published through
 
 	ShardGroup(ShardGroups& groups, kronuz::journal::IO& directory, prospect::index& index);
 
 	// Blocks the calling thread (never the loop or the chore) until the group applied everything committed when
-	// it was called: a linearizable read's barrier (D4).
-	void catch_up();
+	// it was called: a linearizable read's barrier (D4). `at`, if any, then reads the state and the index on the chore.
+	void catch_up(const std::function<void(const ShardGroupState&, prospect::index&)>& at = {});
+
+	// Blocks the calling thread until the abort of each chunked command `ids` names is placed (D12, A9): the leader's
+	// ready point ends what its term's earlier proposers left open, so their files are freed.
+	void abort_open(const std::vector<std::uint64_t>& ids);
 };
 
 // Proposes `entry` on the group's loop from any scheduler and answers on the caller's: handler.h's ProposeEntry. A
@@ -215,3 +221,7 @@ task::task<strata::group::answer> propose_entry(ShardGroup& shard_group, std::st
 
 // This leader's next chunked-command id (D12), drawn on the loop from the term it sees now.
 task::task<std::uint64_t> next_chunked_id(ShardGroup& shard_group);
+
+// A checkpoint of the group (D16), started on its loop from any scheduler and answered on the caller's: the shard's
+// commit. Never from a commit hook (D169): the checkpoint's chore takes the index's write lease.
+task::task<void> checkpoint(ShardGroup& shard_group);

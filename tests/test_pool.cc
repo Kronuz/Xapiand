@@ -2730,6 +2730,100 @@ void test_soft_open_is_at_most_the_descriptor_cap() {
 
 }  // namespace
 
+// A request's commit with a group is the group's checkpoint (D16): its bundle covers what the writes before it applied.
+void test_a_commit_is_the_groups_checkpoint() {
+	const auto journal = fresh("journal_commit");
+	const auto path = fresh("group_commit");
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		auto entry = pin(pool, path);
+		Shard shard = use(entry, WRITE);
+		auto* group = shard.group();
+		REQUIRE(group != nullptr);
+		for (int i = 0; i < 3; ++i) {
+			engine::sync_wait(shard.add_document(make("Kc" + std::to_string(i), "c")));
+		}
+		const auto applied = group->group.applied();
+		CHECK_EQ(group->checkpointed.load(), 0u);
+		CHECK_TRUE(engine::sync_wait(shard.commit()));
+		CHECK_GE(group->checkpointed.load(), applied);
+	}
+	std::filesystem::remove_all(journal);
+	std::filesystem::remove_all(path);
+}
+
+// The id counter moves in its write's command (docs/design/one-id.md): issued ids are durable with their documents,
+// and after `kill -9` with no commit the next process issues above them.
+void test_the_id_counter_is_in_the_log() {
+	const auto journal = fresh("journal_ids");
+	const auto path = fresh("group_ids");
+	std::fflush(nullptr);
+	const pid_t pid = ::fork();
+	if (pid == 0) {
+		::alarm(30);
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		auto entry = pin(pool, path);
+		Shard shard = use(entry, WRITE);
+		engine::sync_wait(shard.replace_document_term(std::string(NEW_NUMERIC_KEY), numbered(0, "one")));
+		engine::sync_wait(shard.replace_document_term(std::string(NEW_NUMERIC_KEY), numbered(0, "two")));
+		std::fflush(nullptr);
+		::raise(SIGKILL);   // no commit: the counter is durable only if the log carries it
+	}
+	int status = 0;
+	::waitpid(pid, &status, 0);
+	CHECK(WIFSIGNALED(status) && WTERMSIG(status) == SIGKILL);
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		auto entry = pin(pool, path);
+		Shard shard = use(entry, WRITE);
+		const auto [count, high] = engine::sync_wait(shard.written_load());
+		CHECK_EQ(count, 2u);
+		CHECK_GE(high, 2u);
+	}
+	std::filesystem::remove_all(journal);
+	std::filesystem::remove_all(path);
+}
+
+// The ready point aborts what an earlier proposer of the term left open (A9): an upload whose index closed and
+// reopened in the same process resumes its term, and its final then applies nothing.
+void test_a_reopen_aborts_an_upload_left_open() {
+	Watchdog watchdog("a reopen aborts an upload", 60s);
+	const auto journal = fresh("journal_abort");
+	const auto path = fresh("group_abort");
+	{
+		DatabasePool pool(control_loop(), 8, 0, engine::default_readers_per_index, fast_sweep());
+		pool.set_journal(journal);
+		std::optional<ChunkedUpload> upload;
+		std::uint64_t term = 0;
+		{
+			Shard shard(pin(pool, path), WRITE);
+			engine::sync_wait(shard.add_document(make("Ka", "a")));
+			auto* group = shard.group();
+			REQUIRE(group != nullptr);
+			upload.emplace(engine::sync_wait(next_chunked_id(*group)), 5000, 4096);
+			Pieces body(std::string(5000, 'u'), 1000);
+			engine::sync_wait(propose_upload(group_proposer(*group), *upload, body));
+			term = chunked_term(upload->id());
+		}
+		CHECK_TRUE(until([&] { return state_of(pool, path) == strata::slot_state::free; }));   // closed, its record kept
+		Shard shard(pin(pool, path), WRITE);
+		auto* group = shard.group();
+		REQUIRE(group != nullptr);
+		CHECK_EQ(engine::sync_wait(next_chunked_id(*group)) >> 32, term);   // the reopen resumed the term
+		Data placeholder;
+		placeholder.update(ct_type_t("video/mp4"), 0, 0, 5000);
+		placeholder.flush();
+		auto doc = make("Kup", "");
+		doc.set_data(placeholder.serialize());
+		CHECK(error_kind([&] { engine::sync_wait(shard.replace_document_term("Kup", std::move(doc), false, true, true, &*upload)); }) == engine::errc::not_available);
+	}
+	std::filesystem::remove_all(journal);
+	std::filesystem::remove_all(path);
+}
+
 int main(int argc, char** argv) {
 	struct Case { const char* name; void (*fn)(); };
 	const Case cases[] = {
@@ -2794,6 +2888,9 @@ int main(int argc, char** argv) {
 		{"test_an_acknowledged_write_survives_a_kill", test_an_acknowledged_write_survives_a_kill},
 		{"test_stored_blobs_survive_a_kill", test_stored_blobs_survive_a_kill},
 		{"test_a_restore_slice_is_batch_commands", test_a_restore_slice_is_batch_commands},
+		{"test_a_commit_is_the_groups_checkpoint", test_a_commit_is_the_groups_checkpoint},
+		{"test_the_id_counter_is_in_the_log", test_the_id_counter_is_in_the_log},
+		{"test_a_reopen_aborts_an_upload_left_open", test_a_reopen_aborts_an_upload_left_open},
 	};
 	for (const auto& c : cases) {
 		if (argc > 1 && std::string(c.name).find(argv[1]) == std::string::npos) {

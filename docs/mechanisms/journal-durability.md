@@ -1,6 +1,6 @@
 > Status: in progress (quest journal-replaces-wal). Built: the prepared write, the command codec, the group's
-> application, each index's group in its catalog slot, and the writes, blobs and RESTORE through it. Pending:
-> the commit as the checkpoint, and the WAL's deletion.
+> application, each index's group in its catalog slot, the writes, blobs and RESTORE through it, and the commit
+> as the checkpoint. Pending: the WAL's deletion.
 > Design: `docs/design/cluster-release.md` D2, D3, D12, D16, D17; strata `docs/mechanisms/replication-group.md`.
 
 # Journal durability (how it works)
@@ -83,12 +83,17 @@ thread. Each index the catalog opens is a lone voter (D2) whose group borrows th
    bundle on the index as the open left it, or creates itself. Its id is the first 8 bytes of the index's
    uuid, and its journal identity the uuid.
 2. **Catch-up.** Before the open returns, a linearizable read's barrier waits until the group applied what its
-   log committed (a replay included), and the engine owes reads a refresh.
+   log committed (a replay included), and the engine owes reads a refresh. On the chore it reads the chunked
+   commands still open and the id counter's metadata. The ready point then proposes an abort for each open
+   command (A9): a reopen that resumed its term with no election would otherwise leave an earlier proposer's
+   upload open, its volume never freed.
 3. **Writes.** Under the index's turn, `ShardEndpoint::write_document` prepares on the engine, encodes the
    prepared write as a command (`command_write`) and proposes it on the group's loop at `quorum`, chunked past
    the entry limit with an id of the term the loop sees; the answer's verdict is the write's result, checked
    against what prepare predicted (`engine::strata::Shard::landed`). A metadata write is a `set_metadata`
-   command. An index with a group writes no WAL line and replays no WAL.
+   command. A write that moves the id counter past what the log holds carries it as a `set_metadata` write of
+   its own command, so the counter is durable with the document. An index with a group writes no WAL line and
+   replays no WAL.
 4. **Blobs.** An index with a group has no data storage: its blobs are records in the group's file set. At
    prepare, `stage_blobs` compresses each new stored blob (zstd, kept only when smaller) into its write's
    `CommandBlob` and leaves the document's locator a placeholder at volume 0 with the record's codec
@@ -102,7 +107,10 @@ thread. Each index the catalog opens is a lone voter (D2) whose group borrows th
    nothing), into `RestoreBatcher`'s commands of as many writes as fit one entry; each command is proposed at
    `quorum` in input order, and `restore_results` reads its writes' docids and versions from the verdict. A write
    whose document left its placed shard is missed, as before, and takes the serial path.
-6. **Close.** Every catalog close runs `close_payload` before the index's close: the group checkpoints until
+6. **Commit.** A request's commit (`?commit`, the autocommit) awaits the group's checkpoint (`commit_group`):
+   its bundle covers what the writes before it applied, and the group truncates its log behind it. The catalog's
+   commit hook stays a plain strata commit (D169: its chore holds the index's lease, which the checkpoint takes).
+7. **Close.** Every catalog close runs `close_payload` before the index's close: the group checkpoints until
    its bundle covers what it committed, and the process keeps its closed record, so a reopen resumes its term
    with no election. The catalog's commit hook and a request's commit stay plain strata commits.
 
@@ -118,7 +126,9 @@ thread. Each index the catalog opens is a lone voter (D2) whose group borrows th
   back after `kill -9` by the next process. `test_stored_blobs_survive_a_kill`: stored blobs, compressed and
   not, and an upload's blob read back byte-equal after `kill -9` with no commit and no close.
   `test_a_restore_slice_is_batch_commands`: 200 RESTORE writes take a handful of log entries, and each write's
-  docid and version are its batch verdict's.
+  docid and version are its batch verdict's. `test_a_commit_is_the_groups_checkpoint`,
+  `test_the_id_counter_is_in_the_log` (issued ids survive `kill -9` with no commit) and
+  `test_a_reopen_aborts_an_upload_left_open` (A9's ready point).
 - `tests/test_shard_group.cc`: offsets from the state and idempotent effects, rotation in log order, a chunked
   command applied at its final entry, an upload into its own volume, a higher term retiring open commands,
   entries outside their id's term applying nothing, an abort retiring its upload's volume, and the state's
