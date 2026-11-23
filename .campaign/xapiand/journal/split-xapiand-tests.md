@@ -29,12 +29,12 @@ non-C++ files); A2 runs that branch's tool meanwhile.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | suite 261121-213323-023440 at 19820a501 (replaces 261121-121046-87774b, which failed to compile at 83dbe650e: `datas_of` undeclared in search_callbacks.cc) |
-| A2 | 261121-213323-00b7d8 (rerun at 32c0358 of 261121-133857-a00ef2): split-check-sources' split_check.py --base c2bc67fac tests (a local run at 19820a501: 0 errors, 216 warnings, answered below); gate 261121-213323-00b7d8 waits on the landed tool. Earlier: 261121-114927-58c8e2, 261121-121047-65d7d0, 261121-123005-b98fae failed on non-C++ files (the landed tool) |
-| A3 | head 261122-002112-733a32 (at ccef874), base 261121-114945-35c995 (at e5f7765d1): diff only their `Test #` and `Total Tests` lines |
+| A1 | suite 261122-210558-073ca6 at 8cc624bbc (the head adds only master's merge, outside the split) |
+| A2 | split 261122-210559-d98c8d at 8cc624bbc: split_check.py at cpp-libraries main (0 errors; warnings answered below) |
+| A3 | head 261122-210559-4c7661 (at 8cc624bbc), base 261121-114945-35c995 (at e5f7765d1): diff only their `Test #` and `Total Tests` lines |
 | A4 | docs/dev/test-layout.md |
 | A5 | CI on the pushed branch at 19820a501 or later |
-| A6 | 261122-002116-2b5980 (at ccef874): each of the six new headers included twice in an otherwise empty TU, -fsyntax-only, with the flags compile_commands.json gives a piece of its directory (script ~/.scratch/xapiand/split-xapiand-tests/selfcontained_new.py; cpp-libraries' selfcontained.sh skips tests/ directories, so it is the same check, driven by hand) |
+| A6 | 261122-210600-2fe2a0 (at 8cc624bbc): each of the six new headers included twice in an otherwise empty TU, -fsyntax-only |
 | A7 | lead, 2026-11-21: read the split; four test programs split by topic into TUs with support headers, each piece opens with what it holds |
 
 ### split_check warnings, answered (local run at 19820a501, base c2bc67fac)
