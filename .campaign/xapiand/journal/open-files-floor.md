@@ -1,6 +1,6 @@
 # open-files-floor: journal
 
-State: blocked on lead: Kronuz/system leaks two descriptors on Linux; CI 44966941683 fails test_coverage_main at the minimum
+State: waiting on jobs 261122-225528-2b0953 (suite) and CI at Xapiand:4729806 (lead, 2026-11-23: system pinned at b2a874f, system-file-nr-close landed; A1 and A2 rerun there)
 Quest: .campaign/xapiand/quests/open-files-floor.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
