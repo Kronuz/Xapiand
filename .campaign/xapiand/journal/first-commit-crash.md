@@ -28,7 +28,7 @@ Nothing.
 | Criterion | Evidence |
 |---|---|
 | A1 | at strata:4955a679: build-test 261123-060918-81a036 passed; targeted lifecycle_test 261123-053633-726a56 passed (first commit 13 cuts x 9 and first refresh 9 x 9: 0 failed; install sweep 19 x 9: 0 failed) |
-| A2 | 261123-053640-93a0e0 passed (fails-without at strata:4955a679, head test over main's index.hh, complete build): "FAIL first commit cut at 1/9 (process crash): refused: no manifest log; seg-1.sx"; install sweep 75 cuts refused |
+| A2 | 261123-053633-726a56 passed at the fix; fails without: 261123-053640-93a0e0 (fails-without at strata:4955a679, head test over main's index.hh, complete build): "FAIL first commit cut at 1/9 (process crash): refused: no manifest log; seg-1.sx"; install sweep 75 cuts refused |
 | A3 | at strata:4955a679: build-test 261123-060918-81a036 passed; 726a56: second commit sweep 0 failed; existing create sweep and T1 unchanged and passing |
 | A4 | mutants at strata:4955a679: no-first-manifest 261123-064304-2767bb, commit-only 261123-064305-d17230, applied-early 261123-064305-a29217, always-empty 261123-064306-dfba67, no-install-guard 261123-053645-dd3621 |
 | other | 261123-045814-05fc0d failed at strata:89f9f5e1: the logged sweep aborted, a logged index refuses applies before its first commit; sweep and the unreachable attributes carry removed in strata:606a1d62 |
