@@ -1,6 +1,6 @@
 # group-heal: journal
 
-State: waiting on jobs 261123-005919-bdfe69 261123-005922-93c9ac 261123-005926-e5b297 261123-005929-f4d961 261123-005932-93ae28 261123-005935-e11cfa 261123-005938-a51a18 261123-005942-72e95b 261123-005945-6cfb33 261123-005949-d1a515 261123-005951-972f5c 261123-005954-4adb58 261123-005957-9f5825 (and CI at strata:75b5ac9b)
+State: waiting on jobs 261123-014752-b1fede 261123-014459-375c2a 261123-014502-a2527e 261123-014506-1871b5 261123-014646-0ebc24 261123-014651-e0f143 261123-014655-73ffe0 261123-014705-499a3a (and CI at strata:82ea744c, strata:e4828884)
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,28 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Round 4 (2026-11-23). Suite 261123-005919-bdfe69 at 75b5ac9b: installs complete; grow_and_heal
+(3, 5) failed "the cluster settles after the promotion" with the leaving voter one entry behind
+(applied = committed = 22, the rest 23). A test expectation that no longer fits, not a stall:
+consensus's core removes a committed replacement's leaving voter on the leader's next Tick (D3,
+core.h removal()) and stops replicating to it once that commits (D4), so the removed voter never
+learns its removal's commit; the test then proposed the removal itself. Fixed at strata:9ccddbf7:
+grow_and_heal cuts the leader once the promotion commits, waits for the next leader's membership
+to drop the voter (removed_by_core), retires it, settles, checks every node's membership. The old
+expectation failing is bdfe69 (and CI 45132116434 on every platform).
+CI 45132116434 also failed group_footprint on Linux only (own heap 1053, 1054, 1070 B > 1024;
+already at cd2a4a40, main green): install's members on libstdc++. Fixed at strata:82ea744c: the
+leader's installs needed and pins live in one struct made at the first install notice and freed
+when empty (saves 88 B of the object on libstdc++). Proof is CI's Linux footprint rows at
+82ea744c (macOS passes either way).
+Jobs at 82ea744c: suite b1fede (A1, A2), voters mutants release-fences 375c2a, pin-per-flight
+a2527e, install-silent 1871b5. (Suite 1eec9c and install 7941e0 were cancelled by the tool's
+same-role supersede, see below; b1fede replaces both: the suite runs group_install.)
+Witness: quest head merged into quest/xapiand/group-heal--witness at strata:e4828884 (world.hh
+carries the uploads counter, cut_leader, holds, removed_by_core; witness_test join waits for the
+core's removal as grow_and_heal does). Jobs: witness 0ebc24, mutants witness-holds-range e0f143,
+witness-refuses-image 73ffe0, group suite at the witness head 499a3a.
 
 Install stall fixed at strata:75b5ac9b (pushed with cc2d0b3f). Probe 2 (261122-232034-115dd4,
 gap3/heal3-chore.out) decided it: the leader's chore runs pin_for every flight ("pin_for:
@@ -82,11 +104,9 @@ voters_test.cc world edit carried into world.hh at that merge).
 
 ## Next
 
-1. Read the jobs above and CI at strata:75b5ac9b; a compile error or a failing case is fixed at
-   the next commit. Paste `campaign brief`'s evidence table.
-2. witness: merge the quest head into quest/xapiand/group-heal--witness (voters_test's world is
-   world.hh there: carry 74da850c's `uploads` counter, cc2d0b3f/75b5ac9b's leave_behind and
-   release_short_of_space), rerun its three jobs.
+1. Read the jobs in State and CI at strata:82ea744c (footprint's Linux rows) and e4828884; a
+   failing case is fixed at the next commit. Paste `campaign brief`'s evidence table.
+2. witness: once its jobs pass, the lead merges the task (quest/xapiand/group-heal--witness).
 3. repair: ruled (lead, 2026-11-23, quest Decisions): option (c), through consensus-request-install; built after that quest lands. sim-rows (order 3) after repair and witness.
 
 ## Blocked on
@@ -139,5 +159,9 @@ and what it leaves open. Results and how it works go in the docs of the reposito
   pin keeps its generation and the set's retired files one checkpoint longer. A learner-side
   retry of the pin fetch was the alternative; it needs a timer on the learner and still loses
   when the leader's chore is behind, so the cached pin is the one mechanism.
+- grow_and_heal and witness join no longer propose the leaving voter's removal: consensus's
+  core does it (D3), and the test checks it does, across a leader change (A1's "remove").
+- The leader's install state (installs needed, pins) is made on demand, so an idle group keeps
+  the 1024 B own-heap bound on libstdc++; the bound stays as it is.
 - A pin release short of space stalls the chore (as an apply does) rather than fencing or
   deferring (cc2d0b3f).
