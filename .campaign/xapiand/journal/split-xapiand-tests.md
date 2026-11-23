@@ -1,6 +1,6 @@
 # split-xapiand-tests: journal
 
-State: waiting on jobs 261122-002100-ba4b13 (split check), 261122-002112-733a32 (A3), 261122-002116-2b5980 (A6) at ccef874, and CI (lead, 00:21: master merged again after a transient push error stopped the landing loop at 21:33)
+State: blocked on CI at Xapiand:eb9f09ee (every job passed there: 0950af suite, 950aca split, 5dd25e A3, 2cb9f7 A6); the lead records the landing (msg-28).
 Quest: .campaign/xapiand/quests/split-xapiand-tests.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
