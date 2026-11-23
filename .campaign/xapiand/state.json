@@ -19272,17 +19272,52 @@
         "harness/restore_exit_check.sh",
         "tests/test_cjk_words_oracle.sh"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-23T06:28:09",
+          "ci": {
+            "carried": true,
+            "commit": "1fd02f84e3b49c1b540429d2854818b821c5f004",
+            "runs": [
+              45171674175
+            ]
+          },
+          "commit": "4050d4553dd5bc9543cb33d6cf9f16b210206611",
+          "criteria": {
+            "A1": "261123-060627-6e3f0b; fails without: 261121-091759-59baa5",
+            "A2": "261123-060629-786e9a",
+            "A3": "`harness/ninja_only_check.sh` (its grep half; run at the head by 261121-232251-214a22): lists configures without `-G Ninja` outside the records; docs/dev/engine-census.md is excluded by name, see Rulings"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "7e209e15a8f7eebc2d42423fbba49d1e2c724aed",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-060642-384b72",
+              "level": "light",
+              "seconds": 380.9,
+              "state": "done",
+              "what": "ninja-only check suite at 7e209e15a8f7"
+            }
+          ],
+          "final": true,
+          "from": "2c6a6c8133bf71cdde820178c95ed8b1e4016c1e",
+          "reason": "",
+          "tested": "7e209e15a8f7eebc2d42423fbba49d1e2c724aed"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "M2",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Xapiand builds with CMake and Ninja only",
-      "updated": "2026-11-21T22:29:09",
-      "worktree": "../Xapiand-wt/xapiand/ninja-only"
+      "updated": "2026-11-23T06:28:22",
+      "worktree": ""
     },
     "ninja-only-strata": {
       "accepted": {},
