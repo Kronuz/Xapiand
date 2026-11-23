@@ -1,6 +1,6 @@
 # split-check-members: journal
 
-State: waiting on jobs 261122-222307-d0b7b3 261122-222308-070251
+State: blocked on CI: tools run 45140291059 at cpp-libraries:bc16496 (queued); test and lint passed there
 Quest: .campaign/xapiand/quests/split-check-members.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -23,8 +23,7 @@ class differs: ~store() {". Fixed in the test (cpp-libraries:b671456), pushed.
 
 ## Next
 
-1. Read test 261122-222307-d0b7b3 and lint 261122-222308-070251 at cpp-libraries:b671456, and
-   CI's tools run there (`gh run list -R Kronuz/cpp-libraries --commit b671456...`).
+1. Read CI tools run 45140291059 at cpp-libraries:bc16496 (`gh run view 45140291059 -R Kronuz/cpp-libraries`).
 2. Ready for review.
 
 ## Blocked on
@@ -35,12 +34,12 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | test 261122-222307-d0b7b3 (queued; 261122-212041-81ad6c failed before the find_class fix): `OutlineTest`, `MembersTest` |
-| A2 | test 261122-222307-d0b7b3 (queued; 261122-212041-81ad6c failed before the find_class fix): `MutatedMoveTest`, one test per mutation |
-| A3 | test 261122-222307-d0b7b3 (queued; 261122-212041-81ad6c failed before the find_class fix): every existing test unchanged; `--members` is opt-in |
+| A1 | test 261123-003454-df339e passed at cpp-libraries:bc16496, 76 tests, compiles with Clang and g++-16 (261122-212041-81ad6c failed before the find_class fix): `OutlineTest`, `MembersTest` |
+| A2 | test 261123-003454-df339e passed at cpp-libraries:bc16496, 76 tests, compiles with Clang and g++-16 (261122-212041-81ad6c failed before the find_class fix): `MutatedMoveTest`, one test per mutation |
+| A3 | test 261123-003454-df339e passed at cpp-libraries:bc16496, 76 tests, compiles with Clang and g++-16 (261122-212041-81ad6c failed before the find_class fix): every existing test unchanged; `--members` is opt-in |
 | A4 | `docs/SPLITTING.md` "Restructuring a large class" and "What `tools/split_check.py` checks"; `tools/README.md` (cpp-libraries:237350a) |
-| A5 | test 261122-222307-d0b7b3 (queued; 261122-212041-81ad6c failed before the find_class fix): `OutlineTest` (outline.py output passes `--members`; compiles before and after) |
-| A6 | lint 261122-222308-070251 (queued, tagged A6); CI tools run at cpp-libraries:b671456 |
+| A5 | test 261123-003454-df339e passed at cpp-libraries:bc16496, 76 tests, compiles with Clang and g++-16 (261122-212041-81ad6c failed before the find_class fix): `OutlineTest` (outline.py output passes `--members`; compiles before and after) |
+| A6 | lint 261123-003455-033d56 passed at cpp-libraries:bc16496 (tagged A6); CI tools run 45140291059 there (queued); 50a564c's run failed on GCC (noinline) |
 
 Real heads (not criteria; the lead needs them before those quests use the check), as
 `campaign job submit --quest split-check-members --repo <repo> --commit <head> --level none
@@ -88,6 +87,21 @@ in `tools/test_split_check.py`: 7 outline (A5; 2 compile with `c++ -std=c++20 -W
 mutations (A2), 1 command line. Docs: `docs/SPLITTING.md`, `tools/README.md`.
 
 ## Rulings I made
+
+- msg (lead, 2026-11-23, GCC `inline declaration follows declaration with attribute noinline`):
+  the noinline attribute moves from the class declaration to the definition. Probe
+  261123-003012-76d31b (GCC 16, Clang, two TUs, `-Werror`): attribute on the declaration plus an
+  `inline` definition fails on GCC; attribute moved to the `inline` definition passes both;
+  `inline` on the declaration with a plain definition passes both but changes two heads; the
+  attribute repeated without `inline` is a duplicate symbol at link (an ODR break). outline.py
+  drops a standalone noinline attribute (or a macro HEADER defines as one) from the declaration,
+  refuses noinline in a longer attribute list; split_check expects the declaration without it
+  (macros defined in a file of the diff) and names the attribute when it stays. Documented in
+  SPLITTING.md (restructure section and check 3), tools/README.md and both docstrings
+  (cpp-libraries:bc16496). With the tool at bc16496, strata:a7448b3 still passes (196 moved,
+  261123-003506-460704); uinteger_t:5dd518f now fails on its 5 noinline container members
+  (261123-003509-c59b83). Its CI passed at 5dd518f because it builds without -Werror: GCC
+  warns there (run 44994722869, linux-arm64-gcc). uinteger-restructure must rerun outline.py.
 
 - msg (lead, 2026-11-22, the 73-of-74 failure): SPLITTING.md and tools/README.md fix only the
   shape (`member C::f (base file:line)` and the line that differs), not the wording, so the
