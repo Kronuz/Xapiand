@@ -26423,6 +26423,46 @@
       "title": "Default to zero retained predecessors",
       "updated": "2026-11-08T15:39:24"
     },
+    "rocksdb-parity": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE=-O3 && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [
+        "journal:turn-buffers"
+      ],
+      "files": [
+        "include/strata/core/**",
+        "bench/kv/**",
+        "test/**",
+        "fuzz/**",
+        "docs/design/rocksdb-parity.md",
+        "docs/design/standalone-turn-log.md",
+        "docs/mechanisms/**",
+        "docs/perf/**",
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [
+        "durability"
+      ],
+      "milestone": "",
+      "needs": [
+        "turn-log-parity"
+      ],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "strata matches or beats RocksDB on every gate row",
+      "updated": "2026-11-23T10:46:23"
+    },
     "rocksdb-spec": {
       "accepted": {},
       "after": [],
