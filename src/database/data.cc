@@ -23,6 +23,7 @@
 
 #include "data.h"
 
+#include <algorithm>                              // for std::none_of
 #include <atomic>                                 // for std::atomic
 
 #include "exception_engine.h"                     // for SerializationError
@@ -151,6 +152,62 @@ std::uint64_t
 Locator::compressions() noexcept
 {
 	return record_compressions.load(std::memory_order_relaxed);
+}
+
+
+Locator::Locator(const Locator& other) :
+	_raw_holder(other._raw_holder),
+	_raw_decompressed(other._raw_decompressed),
+	type(other.type),
+	ct_type(other.ct_type),
+	raw(other.raw.data() == other._raw_holder.data() ? std::string_view(_raw_holder) : other.raw),
+	volume(other.volume),
+	offset(other.offset),
+	size(other.size) { }
+
+
+Locator::Locator(Locator&& other) noexcept :
+	type(other.type),
+	ct_type(std::move(other.ct_type)),
+	raw(other.raw),
+	volume(other.volume),
+	offset(other.offset),
+	size(other.size)
+{
+	const bool held = other.raw.data() == other._raw_holder.data();
+	_raw_holder = std::move(other._raw_holder);
+	_raw_decompressed = std::move(other._raw_decompressed);
+	if (held) {
+		raw = _raw_holder;   // a short holder's bytes live inside the object, not behind a pointer
+	}
+}
+
+
+Locator&
+Locator::operator=(const Locator& other)
+{
+	if (this != &other) {
+		*this = Locator(other);
+	}
+	return *this;
+}
+
+
+Locator&
+Locator::operator=(Locator&& other) noexcept
+{
+	if (this != &other) {
+		const bool held = other.raw.data() == other._raw_holder.data();
+		_raw_holder = std::move(other._raw_holder);
+		_raw_decompressed = std::move(other._raw_decompressed);
+		type = other.type;
+		ct_type = std::move(other.ct_type);
+		raw = held ? std::string_view(_raw_holder) : other.raw;
+		volume = other.volume;
+		offset = other.offset;
+		size = other.size;
+	}
+	return *this;
 }
 
 
@@ -348,6 +405,13 @@ Data::feed(std::string&& new_serialized, std::string&& new_version)
 {
 	version = std::move(new_version);
 	serialized = std::move(new_serialized);
+	parse();
+}
+
+
+void
+Data::parse()
+{
 	locators.clear();
 	if (serialized.size() < 6) {
 		return;
@@ -388,44 +452,35 @@ Data::feed(std::string&& new_serialized, std::string&& new_version)
 void
 Data::flush(const std::vector<Locator>& ops)
 {
-	std::vector<Locator> new_locators;
-
-	// First disable current locators which are inside ops
-	for (auto& op : ops) {
-		for (auto& locator : locators) {
-			if (locator.size && locator == op) {
-				locator.size = 0;
-			}
-		}
+	// The kept locators in order: an op with no type (the main object) first, then the current locators no op
+	// replaces, then the other ops.
+	std::vector<const Locator*> kept;
+	for (const auto& op : ops) {
 		if (op.ct_type.empty() && op.size) {
-			// and push empty op first (if any)
-			new_locators.push_back(op);
+			kept.push_back(&op);
 		}
 	}
-
-	// Then push the remaining locators
-	for (auto& locator : locators) {
-		if (locator.size) {
-			new_locators.push_back(locator);
+	for (const auto& locator : locators) {
+		if (locator.size && std::none_of(ops.begin(), ops.end(), [&](const Locator& op) { return locator == op; })) {
+			kept.push_back(&locator);
 		}
 	}
-	// and afterwards the passed ops (except empty which should go first)
-	for (auto& op : ops) {
+	for (const auto& op : ops) {
 		if (!op.ct_type.empty() && op.size) {
-			new_locators.push_back(op);
+			kept.push_back(&op);
 		}
 	}
 
-	// Now replace old locators and serialize
-	locators = new_locators;
-
-	serialized.clear();
-	serialized.push_back(DATABASE_DATA_HEADER_MAGIC);
-	for (auto& locator : locators) {
-		serialized.append(locator.serialize());
+	// The new bytes are built apart from the ones the locators view, then parsed: every locator views them.
+	std::string bytes;
+	bytes.push_back(DATABASE_DATA_HEADER_MAGIC);
+	for (const auto* locator : kept) {
+		bytes.append(locator->serialize());
 	}
-	serialized.push_back('\0');
-	serialized.push_back(DATABASE_DATA_FOOTER_MAGIC);
+	bytes.push_back('\0');
+	bytes.push_back(DATABASE_DATA_FOOTER_MAGIC);
+	serialized = std::move(bytes);
+	parse();
 }
 
 

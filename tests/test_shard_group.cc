@@ -296,6 +296,78 @@ void test_abort_retires_its_upload_volume() {
 	CHECK(r.files->read(volume_name(named), 0, bytes.size()) == bytes);
 }
 
+// Whether every locator of `data` views the data's own bytes.
+bool views_its_bytes(const Data& data) {
+	const auto& bytes = data.serialize();
+	const auto* first = bytes.data();
+	const auto* last = first + bytes.size();
+	for (const auto& locator : data) {
+		if (locator.raw.data() < first || locator.raw.data() + locator.raw.size() > last) {
+			return false;
+		}
+	}
+	return true;
+}
+
+// A flush leaves the locators on the bytes it built, never on the bytes it replaced or an update's holder, so a
+// locator changed after a flush and flushed again (place_stored's codec pass) serializes live bytes.
+void test_a_flush_leaves_its_locators_on_its_bytes() {
+	const std::string big(300, 'x');   // compressed in place
+	Data data;
+	data.update(ct_type_t("text/plain"), std::string("tiny"));   // a short holder, moved when the updates grow
+	data.update(ct_type_t("image/png"), std::string(big));
+	data.update(ct_type_t("a/b"), 0, 0, 37);
+	data.flush();
+	CHECK(views_its_bytes(data));
+	REQUIRE_EQ(data.size(), 3u);
+	CHECK(data.get(ct_type_t("text/plain"))->data() == "tiny");
+	CHECK(data.get(ct_type_t("image/png"))->data() == big);
+
+	for (auto& locator : data) {
+		if (locator.ct_type == ct_type_t("a/b")) {
+			locator.type = Locator::Type::zstd_compressed_stored;
+		}
+	}
+	data.flush();
+	CHECK(views_its_bytes(data));
+	CHECK(data.get(ct_type_t("text/plain"))->data() == "tiny");
+	CHECK(data.get(ct_type_t("image/png"))->data() == big);
+	CHECK(data.get(ct_type_t("a/b"))->type == Locator::Type::zstd_compressed_stored);
+
+	// Read from bytes, a replaced locator moves last: the ones kept are rebuilt ahead of it from live bytes.
+	Data read{std::string(data.serialize())};
+	read.update(ct_type_t("text/plain"), std::string(400, 'y'));
+	read.flush();
+	CHECK(views_its_bytes(read));
+	CHECK(read.get(ct_type_t("image/png"))->data() == big);
+	CHECK(read.get(ct_type_t("text/plain"))->data() == std::string(400, 'y'));
+	CHECK_EQ(read.get(ct_type_t("a/b"))->size, 37u);
+	const Data copy = read;
+	CHECK(views_its_bytes(copy));
+	CHECK(copy.serialize() == read.serialize());
+}
+
+// place_stored sets the codec on a placeholder and keeps the document's other locators' bytes.
+void test_place_stored_keeps_the_other_locators() {
+	const std::string big(300, 'z');
+	Data data;
+	data.update(ct_type_t("text/plain"), std::string(big));
+	data.update(ct_type_t("image/png"), 0, 0, 37);
+	data.flush();
+	const auto placed = place_stored(std::string(data.serialize()),
+		{{"image/png", static_cast<std::uint8_t>(Locator::Type::zstd_compressed_stored), 3, 40, 21}});
+	const Data out{std::string(placed)};
+	CHECK(views_its_bytes(out));
+	REQUIRE(out.get(ct_type_t("text/plain")) != nullptr);
+	CHECK(out.get(ct_type_t("text/plain"))->data() == big);
+	const auto* png = out.get(ct_type_t("image/png"));
+	REQUIRE(png != nullptr);
+	CHECK(png->type == Locator::Type::zstd_compressed_stored);
+	CHECK_EQ(png->volume, 3);
+	CHECK_EQ(png->offset, 40u);
+	CHECK_EQ(png->size, 21u);
+}
+
 // The state round-trips through the checkpoint bundle's bytes, and bytes that are not one are refused.
 void test_state_bytes() {
 	Replica r("shard_group_state");
@@ -322,4 +394,5 @@ void test_state_bytes() {
 
 TEST_MAIN(test_blobs_at_the_offsets_the_state_names, test_rotation_in_log_order, test_chunked_command_applies_at_its_final_entry,
 	test_upload_into_its_own_volume, test_higher_term_retires_open_commands, test_entries_outside_their_term_apply_nothing,
-	test_abort_retires_its_upload_volume, test_state_bytes)
+	test_abort_retires_its_upload_volume, test_a_flush_leaves_its_locators_on_its_bytes, test_place_stored_keeps_the_other_locators,
+	test_state_bytes)
