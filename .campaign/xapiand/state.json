@@ -15050,7 +15050,8 @@
         "README.md",
         "docs/**",
         "AGENTS.md",
-        "ARCHITECTURE.md"
+        "ARCHITECTURE.md",
+        "CHANGELOG.md"
       ],
       "journal": "../Xapiand-wt/xapiand/hunt-soundex-one-definition",
       "landed": [],
@@ -15062,7 +15063,7 @@
       "risk": "low",
       "status": "active",
       "title": "soundex tables defined once, not per including TU",
-      "updated": "2026-11-23T13:36:54",
+      "updated": "2026-11-23T14:54:10",
       "worktree": "../soundex-wt/xapiand/hunt-soundex-one-definition"
     },
     "hunt-tls-expiry": {
