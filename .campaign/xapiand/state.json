@@ -19322,7 +19322,8 @@
       "files": [
         "src/main.cc",
         "tests/test_coverage_main.cc",
-        "harness/coverage_e2e_main.sh"
+        "harness/coverage_e2e_main.sh",
+        "CMakeLists.txt"
       ],
       "landed": [],
       "lenses": [],
@@ -19335,7 +19336,7 @@
       "risk": "normal",
       "status": "active",
       "title": "A start with fewer open files than the full pool needs shrinks the pool and starts",
-      "updated": "2026-11-21T16:29:18",
+      "updated": "2026-11-22T22:54:55",
       "worktree": "../Xapiand-wt/xapiand/open-files-floor"
     },
     "open-mix": {
