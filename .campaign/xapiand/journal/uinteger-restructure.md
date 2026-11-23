@@ -1,6 +1,6 @@
 # uinteger-restructure: journal
 
-State: waiting on jobs 261121-222414-b91586 261121-222518-fe23a8 261121-222522-c21125 261121-222535-06b7c7 261121-222540-d43319 261121-222548-f7f06b 261121-222601-a73e84 261121-223626-d524b3 261121-223630-0744ab 261121-223633-b5b630 261121-223655-7060a5 261121-223707-66d5fb 261121-223718-b4402d 261121-223730-c9a014 261121-223738-12ce4d 261121-223745-fa1a75 261121-223750-f985fb 261121-223757-b31995 261121-223802-646643 261121-223807-d3361c 261121-223812-5b0b0e 261121-223817-e54127 261121-223822-fd48f6 261121-223832-74a9ef 261121-223840-7687a2 261121-223700-cd1d87 261121-223712-9f4b7c 261121-223724-2cad83 261121-223734-c8f23e 261121-223741-5ba34c 261121-223748-005c95 261121-223754-b3101c 261121-223800-3ee005 261121-223805-f83f5f 261121-223810-a80b9e 261121-223814-836fb4 261121-223819-0e7029 261121-223827-dac4d6 261121-223835-1d2df7 261121-223844-f7858b
+State: waiting on jobs 261123-005918-1ec261 261123-005919-29dc48 261123-005922-940970 261123-005922-f78320 261123-005923-69c83b 261123-005923-f76b83 261123-005924-542f59 261123-005924-9b4e8d 261123-005925-a0ec5a 261123-005925-703604 261123-005926-8319ef 261123-005720-a21e01 261123-005936-d61208
 Quest: .campaign/xapiand/quests/uinteger-restructure.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -51,10 +51,43 @@ of at most 30 mutants (chunks.txt there; jobs.txt maps each id to its set), head
 The earlier evidence jobs ran at uinteger_t:db44669; the head is uinteger_t:5dd518f, which changes
 only `tools/`, `docs/MUTATION.md` and `AGENTS.md`.
 
+## Update 2026-11-23 (head uinteger_t:5fedce2)
+
+Lead's note: split-check-members landed (cpp-libraries:bc16496); `--members` refuses a declaration that
+keeps a noinline attribute. Fixed at uinteger_t:2523f7a: the 5 container members (`reallocate`,
+`grow`, `replace`, `copy_to_heap`, `insert`) lose `UINTEGER_T_NOINLINE` on the in-class declaration;
+the moved definitions (`inline UINTEGER_T_NOINLINE ...`) keep it. A hand edit of the 5 declarations
+(`mover.py` is scratch), the same shape outline.py writes. Proofs, all at 5fedce2: members check
+261123-005919-29dc48 (it failed at 5dd518f: 261123-003509-c59b83); `g++-16 -Werror -Wall -Wextra`
+Release build of every target (`~/.scratch/xapiand/uinteger-restructure/gcc_werror.sh`) at the head
+261123-005925-703604 and, failing-without, at 5dd518f 261123-005720-a21e01.
+
+Reading the mutation jobs (Next 1) found a real defect in my migration, uinteger_t:5fedce2:
+kernels `threshold_mid_p_not_trimmed` was killed at head (22 killed) and equivalent at master (21).
+Its regex kept master's indentation and header `mul_toom.hh`, so it matched the Toom lambdas, not the
+two Karatsuba product trims of master; it now edits `mul.hh` with the dedented regex. The equiv job
+(261123-005812 first run died on a `Counter.update` bug in equiv.py, fixed in scratch) is the test:
+at 2523f7a it must fail (261123-005936-d61208, fails-without), at 5fedce2 pass (261123-005925-a0ec5a);
+the kernels head set rerun 261123-005926-8319ef must kill 21. All other sets: head = master (divq
+32, newton 43, ntt 119, repr 13, toom 34, toom4 76), 355 mutants apply at both, 0 build errors
+(summary: `~/.scratch/xapiand/uinteger-restructure/mutants/summarize_jobs.py`). Those jobs ran at
+5dd518f; only `uinteger_t.hh`'s five declarations changed since, not a mutated header.
+
+Evidence jobs rerun at 5fedce2: build-test 261123-005918-1ec261; A5 261123-005922-940970; A3
+261123-005922-f78320; A4 A/A+A/B mul 261123-005923-69c83b / 261123-005923-f76b83, conv
+261123-005924-9b4e8d / 261123-005924-542f59. Old A4 outputs kept in
+`~/.scratch/xapiand/uinteger-restructure/{aa,ab}-{mul,conv}.db44669`.
+
+A3 at db44669 (261121-222518-fe23a8 failed, as expected): 95 of 97 binaries differ, 57 distinct text
+symbols, no whole-library regression yet read: inlining shifts (k_mul_karatsuba 928 -> 1856 bytes
+with k_absdiff gone as a symbol, ntt_fwd_leaf 416 -> 656, ntt_fwd_last/ntt_inv_first/ntt_fwd3_layer
+inlined, k_ntt_mul 3280 -> 2976, test `check_*` and `main`). Each needs the new A3 table and the A4
+numbers before an explanation is written; not started.
+
 ## Next
 
-1. Read the mutation jobs: --check at head 355 apply (master 355), equiv 0 differ, per-set kills
-   head = master; record them in Evidence.
+1. Read the jobs above: gcc_werror at head passes and at 5dd518f fails; members passes; equiv passes
+   at 5fedce2 and fails at 2523f7a; kernels head kills 21. Then A1/A5 into Evidence.
 2. Read the jobs: A3 diff (explain each size change), A4 tables into `docs/perf/` with the A/A
    spread and hosts, A1/A5 results into Evidence.
 3. members check (A2) once split-check-members lands; answer its warnings.
