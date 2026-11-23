@@ -38,9 +38,6 @@ jobs no journal names), and answer each message by its id (msg-N).
 and what it leaves open. Results and how it works go in the docs of the repository it changed
 (docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
 
-## Rulings I made
-
-<Decisions inside the quest's scope, so the reviewer can check them.>
 
 Leftover confirmed on faultlab main (42cc324): order_files_and_directory pops its mark when its
 fault fires before the effect and no file staged, and leaves the at_mark records written inside
