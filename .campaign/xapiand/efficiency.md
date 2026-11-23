@@ -952,3 +952,11 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Lead errors: my priority-resubmit script re-quoted 4 commands not starting with `sh -c '` (one exit 127, all 4 re-run unchanged); one plain A1 job lacked its --for tag. Tool: msg-35 (a task's job supersedes its quest's job of the same criterion).
 - Agent runs: group-heal promotion 162k, consensus F1 131k, consensus review 171k, group-heal merge 201k (all Opus high); group-heal durability review running.
 - Host: load 11 on 16 CPUs, 278 GiB free, 53 queued, light slots 57% used. No explorer batch: open hunt targets overlap active file sets. Quota 10% weekly at 1.9%/h; about 48 h left by the projection, before the reset.
+
+### 2026-11-23 11h (hourly)
+
+- Landed: none. require-once's CI run (started 09:58) is still in progress; 4 Xapiand runs queued on the shared runner limit.
+- group-heal: durability review (Opus high, 254k) ruled CHANGES at strata:908b58c0 with two blocking defects, each against a passing control: F1, a replica holding an install pin cannot open on a full disk (recovery's pin release commits); F2, a power cut during a fresh (deferred) learner's activation leaves no manifest log at crash points 17-23 of 38. Fix round 1 (Opus high, 216k) at strata:a1e786f4: both reviewer probes pass (dir sweep 44 points, host 28); both mutants killed (release-at-open, install-onto-deferred). Accept with unversioned probes refused; accept waits on the versioned suite 1cfc1e. Main merge (Opus high, 201k) found close racing a learner's install tasks, fixed at 908b58c0. Suspected same-shape bug on strata main (deferred index's first commit writes segments before manifest): probe 9a4aba queued.
+- turn-log-parity: every rerun at f5f6b7dc green (ASan, TSan, A2-A4, A6, fuzz 20 CPU-min, full A3 crash sweep); its D2 probe's two refusing cases are the predicted torn-tail limit, filed as hunt G1 for the journal owner.
+- uinteger-restructure: fnsizes differs in 3 of 97 binaries (test helper inlining only); GCC fix proven (noinline errors gone; a pre-existing NDEBUG unused variable in test.cc remains). Evidence pass launched (Sonnet high).
+- Host: load 48 on 16 CPUs, light slots 90% used, 45 queued, 279 GiB free. Quota 11% weekly at 1.75%/h.
