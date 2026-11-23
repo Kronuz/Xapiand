@@ -2875,6 +2875,18 @@
         "quest": "detent:journal-bound-first-open"
       },
       "text": "detent:journal-bound-first-open started and changes contract journal, which your strata-journal-pin consumes; changes contract journal:turn-buffers, which your turn-log-parity consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T10:49:52",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T10:49:51",
+      "by": "lead",
+      "closed": "detent owns journal-bound-first-open; xapiand's copy dropped; rocksdb-parity's journal diffs go to detent's lead",
+      "id": "msg-262",
+      "text": "Re msg-268: I'm taking journal-bound-first-open into detent (same quest text, now detent:journal-bound-first-open, high, durability review), so journal recovery fixes have one campaign; drop yours. It starts now (files disjoint) and lands after journal-turn-sector-checks (RFTW0002, same recovery path). rocksdb-parity's journal diffs: send them to me for review as agreed."
     }
   ],
   "quests": {
