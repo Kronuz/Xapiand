@@ -14831,6 +14831,43 @@
       "title": "Idle index cost landscape",
       "updated": "2026-11-08T15:40:05"
     },
+    "index-delete": {
+      "accepted": {},
+      "after": [
+        "journal-replaces-wal"
+      ],
+      "checks": [
+        {
+          "cmd": "ci:Build + unit + smoke",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/server/search_views.cc",
+        "src/database/shard_group.*",
+        "src/database/pool.*",
+        "tests/test_pool.cc",
+        "tests/test_index_delete*",
+        "docs/src/content/docs/reference-apis/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [
+        "strata-journal-pin"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "Index DELETE closes and deletes the index's group",
+      "updated": "2026-11-23T08:15:36"
+    },
     "index-restructure": {
       "accepted": {},
       "after": [
