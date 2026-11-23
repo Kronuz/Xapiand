@@ -1,6 +1,6 @@
 # stox-no-libc: journal
 
-State: waiting on jobs 261123-112824-c866b0 (A1), 261123-112826-d3b415 and 261123-112829-ee098b (A2), 261123-112831-f31ce1 (A3), 261123-112834-f40ac5 (A4)
+State: waiting on jobs 261123-114038-c721f8 (A1), 261123-114040-c8d496 and 261123-114043-114edd (A2), 261123-112831-f31ce1 (A3), 261123-112834-f40ac5 (A4)
 Quest: .campaign/xapiand/quests/stox-no-libc.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -39,6 +39,9 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 (docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
 
 ## Rulings I made
+
+- build-test 261123-112824-c866b0 failed at 5637e68: strict_stox_slow asserted the old route (test_reach_libc: "  1", "+1" reach libc; test_first_byte: white space and '+' reach strto*). Fixed at strict-stox head: both now assert decided-in-library; hex, inf, nan, directed rounding and locales still assert libc. Rerun: 261123-114038-c721f8.
+- The 4 `divideMPByMP` assertions in that log are the `libc_safe` children of test/slow_test.cc (a forked child tries libc first, and is expected to abort): the two curated cases at lines 114-115 (the 59-character fixture, each checked for stod and stof). They are printed only when the test fails (ctest hides passing output). My new tests call libc in-process only for strtold and on texts that pass in the replay; not a source of aborts.
 
 - stold left alone (lead's scope message): fuzz/regressions/replay-macos.txt shows Apple's strtold passing on both artifacts
   (platform_libc_strtold_* and platform_strict_stold_* Passed), so stold does not reach the aborting strtod. A2 checks stold on the
