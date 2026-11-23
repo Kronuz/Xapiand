@@ -7106,7 +7106,9 @@
     },
     "consensus-join-v2": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "detent:consensus-fetch-alongside-flake"
+      ],
       "base": "6e1122cc691ddcdd3b5e527a1d4ac037cd7add57",
       "branch": "quest/xapiand/consensus-join-v2",
       "checks": [
@@ -7162,7 +7164,11 @@
         "include/consensus/transport/connection.h",
         "test/transport/links_test.cc",
         "test/transport/connection_test.cc",
-        "test/transport/mutant_commit.py"
+        "test/transport/mutant_commit.py",
+        "test/transport/seeds_test.cc",
+        "test/transport/rpc_hosts.h",
+        "bench/transport_idle.cc",
+        "bench/flow_bench.cc"
       ],
       "journal": "../Xapiand-wt/xapiand/consensus-join-v2",
       "landed": [],
@@ -7180,7 +7186,7 @@
       "risk": "high",
       "status": "active",
       "title": "consensus joins a node by token v2 on the transport port, pins keys, reloads certificates and checks the boot",
-      "updated": "2026-11-23T13:13:28",
+      "updated": "2026-11-23T13:15:48",
       "worktree": "../consensus-wt/xapiand/consensus-join-v2"
     },
     "consensus-request-install": {
