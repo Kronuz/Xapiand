@@ -18333,8 +18333,8 @@
         "src/query_dsl.cc",
         "tests/test_coverage_multivalue_range.cc",
         "tests/test_nan_range*",
-        "tests/CMakeLists.txt",
-        "docs/src/content/docs/reference-guide/search/range-*"
+        "docs/src/content/docs/reference-guide/search/aggregations/bucket/range-aggregation.md",
+        "docs/src/content/docs/reference-guide/search/query-dsl/compound-queries/range-searches.md"
       ],
       "hunt": "query-dsl-fixes review F5",
       "landed": [],
@@ -18348,7 +18348,7 @@
       "risk": "normal",
       "status": "active",
       "title": "A NaN range bound is one behavior on every field type",
-      "updated": "2026-11-22T21:36:54",
+      "updated": "2026-11-22T21:37:02",
       "worktree": "../Xapiand-wt/xapiand/nan-range-bound"
     },
     "netlab-consensus": {
