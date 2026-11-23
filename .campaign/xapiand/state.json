@@ -2660,6 +2660,26 @@
         ]
       },
       "text": "journal-lost-bound landed: unlocks frees include/journal/host.h, src/host*, CHANGELOG.md, CMakeLists.txt for journal-group-delete; nan-range-bound"
+    },
+    {
+      "announced": {
+        "at": "2026-11-22T23:05:36",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-22T23:05:36",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-247",
+      "items": {
+        "require-once": "frees tests/test_harness.h, tests/test_harness_self.cc, tests/CMakeLists.txt for require-once"
+      },
+      "settles": {
+        "start": [
+          "require-once"
+        ]
+      },
+      "text": "set require-once: unlocks frees tests/test_harness.h, tests/test_harness_self.cc, tests/CMakeLists.txt for require-once"
     }
   ],
   "quests": {
@@ -4954,7 +4974,8 @@
         "CMakeLists.txt",
         "cmake/**",
         "docs/design/cluster-membership.md",
-        "docs/design/cluster-membership/**"
+        "docs/design/cluster-membership/**",
+        "src/engine/strata/expand.*"
       ],
       "history": [
         {
@@ -5251,7 +5272,7 @@
         }
       },
       "title": "Xapiand in a cluster: shard groups, membership, routing, search, API, migration",
-      "updated": "2026-11-21T21:55:12",
+      "updated": "2026-11-22T23:04:14",
       "worktree": "../Xapiand-wt/xapiand/cluster"
     },
     "cluster-api": {
@@ -12446,7 +12467,115 @@
       "worktree": ""
     },
     "group-catalog": {
-      "accepted": {},
+      "accepted": {
+        "durability": {
+          "at": "2026-11-22T23:02:44",
+          "base": "cc30217fc2fe2c231487c564318a520aa1bff640",
+          "blobs": {
+            "CMakeLists.txt": "100644:547b2a1015d2aa20fa747de34973bef6c07a8e02",
+            "docs/mechanisms/group-catalog.md": "100644:0bb00044abf9b9dde8bddddd7c6eb64db228c8e3",
+            "include/strata/core/catalog.hh": "100644:98ce190c5f0815f2c67570508d7ec35373373f4c",
+            "include/strata/group/group.hh": "100644:660d5fc1267f787ca0aaa9c054baab980d2c2d95",
+            "test/group/footprint_test.cc": "100644:a74d62b8de96cea78837277f02601dc30e30bb42",
+            "test/group/group_catalog_borrow.hh": "100644:39ab2ece33f1999a0092b757819b929edc72a0fb",
+            "test/group/group_catalog_test.cc": "100644:37f90016513f41d3060ac668dff529e91c4cf17d",
+            "test/group/lifetime_test.cc": "100644:a5a5d7d0f1710dbc29cb1ae616e45effface8acb",
+            "test/group/lone_voter_test.cc": "100644:2d5fa2ef6863a96d551bfc49a01fa4d9d1722271",
+            "test/group/mutants.py": "100644:5f99074fa30eb87716880416a40677fd30afe52b",
+            "test/group/voters_test.cc": "100644:d9e069bb9fcf66428625f85cc14844db9a5d70a2"
+          },
+          "by": "review",
+          "commit": "8bacffe482d82ebff39c3edcbfa0e11a0aeecfff",
+          "criteria": "fc99e81fbc964842",
+          "diffs": {
+            "CMakeLists.txt": "83409ca9ec1e719d",
+            "docs/mechanisms/group-catalog.md": "eaaf97135d3ae6fa",
+            "include/strata/core/catalog.hh": "e32cdfef700706ee",
+            "include/strata/group/group.hh": "d8f49103bf22d1d3",
+            "test/group/footprint_test.cc": "0924f179c8d63974",
+            "test/group/group_catalog_borrow.hh": "cfdbced34c5e1ca8",
+            "test/group/group_catalog_test.cc": "808c232d6f54dba7",
+            "test/group/lifetime_test.cc": "3db5db3171c1ea08",
+            "test/group/lone_voter_test.cc": "9132af64bc93e9cb",
+            "test/group/mutants.py": "48c359e3e7d3aa0c",
+            "test/group/voters_test.cc": "eb202fa79e685a4b"
+          },
+          "findings": {
+            "R1": {
+              "jobs": [
+                {
+                  "cmd": "sh -c 'TSAN_OPTIONS='\"'\"'halt_on_error=0 second_deadlock_stack=1'\"'\"' ctest --test-dir build-tsan -R '\"'\"'^(group_|catalog)'\"'\"' --output-on-failure -j4'",
+                  "commit": "8bacffe482d82ebff39c3edcbfa0e11a0aeecfff",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261122-211116-a8f861",
+                  "level": "light",
+                  "seconds": 137.6,
+                  "state": "done",
+                  "what": "R1 R2 R3 R4: TSan over the group and catalog tests at head at 8bacffe482d8"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "R2": {
+              "jobs": [
+                {
+                  "cmd": "sh -c 'TSAN_OPTIONS='\"'\"'halt_on_error=0 second_deadlock_stack=1'\"'\"' ctest --test-dir build-tsan -R '\"'\"'^(group_|catalog)'\"'\"' --output-on-failure -j4'",
+                  "commit": "8bacffe482d82ebff39c3edcbfa0e11a0aeecfff",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261122-211116-a8f861",
+                  "level": "light",
+                  "seconds": 137.6,
+                  "state": "done",
+                  "what": "R1 R2 R3 R4: TSan over the group and catalog tests at head at 8bacffe482d8"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "R3": {
+              "jobs": [
+                {
+                  "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                  "commit": "8bacffe482d82ebff39c3edcbfa0e11a0aeecfff",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261122-211206-187ec0",
+                  "level": "light",
+                  "seconds": 842.6,
+                  "state": "done",
+                  "what": "group-catalog check suite at 8bacffe482d8"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "R4": {
+              "jobs": [
+                {
+                  "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                  "commit": "8bacffe482d82ebff39c3edcbfa0e11a0aeecfff",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261122-211206-187ec0",
+                  "level": "light",
+                  "seconds": 842.6,
+                  "state": "done",
+                  "what": "group-catalog check suite at 8bacffe482d8"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "0cd46de832cd06100870edb98e30a0534003bb6a",
+          "reviewed": "096dbd042c79bba2ad1aa319b9e421552a31f16d",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "efa5214bacd3a0c7ecc4870071ee0bb611968799",
       "branch": "quest/xapiand/group-catalog",
@@ -12471,11 +12600,46 @@
         "test/group/footprint_test.cc",
         "test/group/mutants.py"
       ],
-      "journal": "../Xapiand-wt/xapiand/group-catalog",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-23T01:16:25",
+          "ci": {
+            "commit": "8bacffe482d82ebff39c3edcbfa0e11a0aeecfff",
+            "runs": [
+              45116136136
+            ]
+          },
+          "commit": "00eb018da75d20715b3e05a2593937a970b40201",
+          "criteria": {
+            "A1": "261122-230337-12f31e; fails without: 261122-211133-7c6764, 261122-211133-b0ca6a, 261122-211134-b909b9, 261122-211135-521cb5, 261122-211136-fdb1c0, 261122-211137-41350c, 261122-211138-b805d6, 261122-211138-6143f3, 261122-211140-2f6a14",
+            "A2": "261122-230337-12f31e; fails without: 261121-103856-a3faa5, 261122-211135-d64b14, 261122-211135-e08c97, 261122-211136-ca0414",
+            "A3": "261122-230337-12f31e, 261122-211116-a8f861 (passed at 8bacffe482d8; only 1 merge from main since, none touching its files); fails without: 261121-103905-bc298a, 261122-211020-f3b814, 261122-211027-87f7a1",
+            "A4": "[artifact] strata `docs/mechanisms/group-catalog.md` (strata:513d959d)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "8bacffe482d82ebff39c3edcbfa0e11a0aeecfff",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261122-211206-187ec0",
+              "level": "light",
+              "seconds": 842.6,
+              "state": "done",
+              "what": "group-catalog check suite at 8bacffe482d8"
+            }
+          ],
+          "final": true,
+          "from": "7131ed4480b14dacbb975ca9de06a4c43881cff2",
+          "reason": "",
+          "tested": "00eb018da75d20715b3e05a2593937a970b40201"
+        }
+      ],
       "lenses": [
         "durability"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [
@@ -12483,10 +12647,10 @@
       ],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "a replication group runs on its catalog slot's index",
-      "updated": "2026-11-21T10:14:06",
-      "worktree": "../strata-wt/xapiand/group-catalog"
+      "updated": "2026-11-23T01:16:36",
+      "worktree": ""
     },
     "group-core": {
       "accepted": {},
@@ -14388,7 +14552,7 @@
       "branch": "quest/xapiand/journal-group-delete",
       "checks": [
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
           "level": "light",
           "minutes": 30,
           "name": "suite"
@@ -14417,6 +14581,58 @@
         "CMakeLists.txt",
         "include/journal/journal.h"
       ],
+      "history": [
+        {
+          "at": "2026-11-23T01:03:00",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 30,
+                "name": "suite"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 30,
+                "name": "suite"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              }
+            ]
+          ],
+          "reason": "suite check gains -G Ninja (owner rule D168: every configure uses Ninja); same build, tests and flags; no review accepted yet",
+          "voided": [],
+          "weakened": [
+            "gate check suite changed"
+          ]
+        }
+      ],
       "journal": "../Xapiand-wt/xapiand/journal-group-delete",
       "landed": [],
       "lenses": [
@@ -14436,7 +14652,7 @@
       "risk": "high",
       "status": "active",
       "title": "a host deletes a left group's journal, so the node can rejoin it",
-      "updated": "2026-11-22T21:52:54",
+      "updated": "2026-11-23T01:03:00",
       "worktree": "../journal-wt/xapiand/journal-group-delete"
     },
     "journal-lost-bound": {
@@ -18997,11 +19213,54 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/node-admission",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-22T22:52:54",
+          "ci": {
+            "commit": "42a8cde325912df0cd463dabc39af0d15d2f8923",
+            "runs": [
+              44996891191
+            ]
+          },
+          "commit": "42a8cde325912df0cd463dabc39af0d15d2f8923",
+          "criteria": {
+            "A1": "261121-230902-815d26, 261121-230902-b3d90f; fails without: 261120-105031-bebe74, 261120-173338-bff111, 261120-173341-5fae97",
+            "A2": "261121-230902-815d26, 261121-230903-02ac18, 261121-230902-ad199a, 261121-230903-c5db6f; fails without: 261120-105033-4b9fdb, 261120-173345-1b7fb0, 261120-185145-6600d3, 261120-190024-386b01",
+            "A3": "261121-230903-02ac18",
+            "A4": "`docs/mechanisms/admission.md` (consensus:674bb21)",
+            "A5": "261121-230902-b3d90f, 261121-230903-02ac18, 261121-230902-b6c772; fails without: 261120-105035-bb5634, 261120-173348-7a0880, 261120-185148-3c31ce, 261120-185150-a20006, 261120-190026-ce7445, 261120-190027-3570be"
+          },
+          "evidence": [
+            {
+              "check": "suite",
+              "ci": "ci:macos-arm64",
+              "commit": "42a8cde325912df0cd463dabc39af0d15d2f8923",
+              "state": "done"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "42a8cde325912df0cd463dabc39af0d15d2f8923",
+              "state": "done"
+            },
+            {
+              "check": "tsan",
+              "ci": "ci:linux-tsan",
+              "commit": "42a8cde325912df0cd463dabc39af0d15d2f8923",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "a068ba067362beaa4b27c4943b95a70fbfb32e18",
+          "reason": "",
+          "tested": "42a8cde325912df0cd463dabc39af0d15d2f8923"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [
@@ -19009,10 +19268,10 @@
       ],
       "repo": "../consensus",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "consensus admits a node's address and pin into a running transport",
-      "updated": "2026-11-22T21:16:12",
-      "worktree": "../consensus-wt/xapiand/node-admission"
+      "updated": "2026-11-22T22:53:03",
+      "worktree": ""
     },
     "numeric-range": {
       "accepted": {},
@@ -19279,7 +19538,8 @@
       "files": [
         "src/main.cc",
         "tests/test_coverage_main.cc",
-        "harness/coverage_e2e_main.sh"
+        "harness/coverage_e2e_main.sh",
+        "CMakeLists.txt"
       ],
       "landed": [],
       "lenses": [],
@@ -19292,7 +19552,7 @@
       "risk": "normal",
       "status": "active",
       "title": "A start with fewer open files than the full pool needs shrinks the pool and starts",
-      "updated": "2026-11-21T16:29:18",
+      "updated": "2026-11-22T22:54:55",
       "worktree": "../Xapiand-wt/xapiand/open-files-floor"
     },
     "open-mix": {
@@ -24555,6 +24815,36 @@
       "title": "Move search into prospect repository",
       "updated": "2026-11-08T15:39:18"
     },
+    "require-once": {
+      "accepted": {},
+      "after": [],
+      "base": "10d3bf51fa829b787287145f5ce8e0cd7cafd467",
+      "branch": "quest/xapiand/require-once",
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_harness.h",
+        "tests/test_string.cc"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "active",
+      "title": "REQUIRE evaluates its condition once",
+      "updated": "2026-11-22T23:06:30",
+      "worktree": "../Xapiand-wt/xapiand/require-once"
+    },
     "research-indexing": {
       "accepted": {},
       "after": [],
@@ -25199,7 +25489,20 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-23T01:10:34",
+          "commit": "03560d407499654d924bbadf447689501a14d775",
+          "evidence": [],
+          "final": false,
+          "reason": "recorded after the fact: msg-28: gate job 261122-212030-8090b3 (split) passed at 235f61732c84; ae5798e3 differs from it only by master's merge (data.*, keymaker.*, header-tables.md), none in the split's paths. The land lookup omits the job's outside-script hash (fix check-spec-one, agent-campaign:f50c120, not installed). CI green at ae5798e3; lead read fnsizes: +36,684 B (0.36%), all in named buckets, LZ4/xxHash LTO re-inlining in untouched sources accepted.",
+          "recorded": "2026-11-23T01:13:53",
+          "tested": "03560d407499654d924bbadf447689501a14d775",
+          "unverified": [
+            "split: no job"
+          ]
+        }
+      ],
       "lenses": [],
       "milestone": "",
       "needs": [
@@ -25210,7 +25513,7 @@
       "risk": "low",
       "status": "active",
       "title": "schema.cc split along its responsibilities",
-      "updated": "2026-11-22T21:18:21",
+      "updated": "2026-11-23T01:13:53",
       "worktree": "../Xapiand-wt/xapiand/schema-split"
     },
     "script-method": {
@@ -27072,8 +27375,56 @@
         "tools/outline.py"
       ],
       "journal": "../Xapiand-wt/xapiand/split-check-members",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-23T00:54:22",
+          "ci": {
+            "commit": "bc16496daeabb93642f1fa3c9d4084c0c749b318",
+            "runs": [
+              45140291059
+            ]
+          },
+          "commit": "bc16496daeabb93642f1fa3c9d4084c0c749b318",
+          "criteria": {
+            "A1": "261123-003454-df339e (the test check), 261123-003454-df339e, 261123-003455-033d56",
+            "A2": "261123-003454-df339e, 261123-003455-033d56",
+            "A3": "261123-003454-df339e (the test check), 261123-003454-df339e, 261123-003455-033d56",
+            "A4": "`docs/SPLITTING.md` \"Restructuring a large class\" and \"What `tools/split_check.py` checks\"; `tools/README.md` (cpp-libraries:237350a)",
+            "A5": "261123-003454-df339e (the test check), 261123-003454-df339e, 261123-003455-033d56",
+            "A6": "261123-003455-033d56 (the lint check), 261123-003455-033d56"
+          },
+          "evidence": [
+            {
+              "cmd": "bash -c '/usr/local/bin/python3 tools/test_split_check.py && bash tools/test_selfcontained.sh'",
+              "commit": "bc16496daeabb93642f1fa3c9d4084c0c749b318",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-003454-df339e",
+              "level": "light",
+              "seconds": 184.4,
+              "state": "done",
+              "what": "split-check-members check test at bc16496daeab"
+            },
+            {
+              "cmd": "bash -c '/usr/local/bin/ruff check --config tools/ruff.toml tools/*.py && /usr/local/bin/ruff format --check --config tools/ruff.toml tools/*.py'",
+              "commit": "bc16496daeabb93642f1fa3c9d4084c0c749b318",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-003455-033d56",
+              "level": "light",
+              "seconds": 0.7,
+              "state": "done",
+              "what": "split-check-members check lint at bc16496daeab"
+            }
+          ],
+          "final": true,
+          "from": "5dfe67e00ae513143bf1442aae4b8d6bd1a765eb",
+          "reason": "",
+          "tested": "bc16496daeabb93642f1fa3c9d4084c0c749b318"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [
         "split-check-anchor"
@@ -27081,9 +27432,9 @@
       "provides": [],
       "repo": "../cpp-libraries",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "split_check proves member definitions moved out of a class body; SPLITTING.md restructures giant classes",
-      "updated": "2026-11-22T21:24:50",
+      "updated": "2026-11-23T00:54:25",
       "worktree": "../cpp-libraries-wt/xapiand/split-check-members"
     },
     "split-check-sources": {
@@ -30863,18 +31214,51 @@
         "test/test.cc",
         "CHANGELOG.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/system-file-nr-close",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-22T22:53:44",
+          "ci": {
+            "commit": "b2a874fb22da70f7a96448a3f68e3d9305559983",
+            "runs": [
+              45117171437
+            ]
+          },
+          "commit": "b2a874fb22da70f7a96448a3f68e3d9305559983",
+          "criteria": {
+            "A1": "261122-212046-713a5b (the build-test check); 261122-212046-713a5b: build-test at b2a874f (macOS; the check runs, and the sysctl paths hold no descriptor)",
+            "A2": "CI green at b2a874fb22da"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "b2a874fb22da70f7a96448a3f68e3d9305559983",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261122-212046-713a5b",
+              "level": "light",
+              "seconds": 38.1,
+              "state": "done",
+              "what": "system-file-nr-close check build-test at b2a874fb22da"
+            }
+          ],
+          "final": true,
+          "from": "2471c5f26e24e1ef3533d94fa5f34bae9184b015",
+          "reason": "",
+          "tested": "b2a874fb22da70f7a96448a3f68e3d9305559983"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../system",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "Linux file-nr readers close their descriptor",
-      "updated": "2026-11-22T21:19:32",
-      "worktree": "../system-wt/xapiand/system-file-nr-close"
+      "updated": "2026-11-22T22:53:46",
+      "worktree": ""
     },
     "t10-flood-limit": {
       "accepted": {
@@ -33230,18 +33614,38 @@
         "include/prospect/tuple_buffer_*.hh",
         "docs/source-layout.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/tuple-buffer-restructure",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-22T22:28:06",
+          "commit": "44303965ec66e29a1674447990cbbedc0deb3b9a",
+          "evidence": [
+            {
+              "check": "build-test",
+              "ci": "ci:macos-arm64",
+              "commit": "44303965ec66e29a1674447990cbbedc0deb3b9a",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "reason": "recorded after the fact: msg-28: gate job 261123-005506-e6c0af (members) passed at 44303965ec66 (23 moved, 0 errors, 0 warnings); the land lookup omits the job's outside-script hash (fix check-spec-one, agent-campaign:f50c120, not installed). Everything else brief lists was green; lead read the cut.",
+          "recorded": "2026-11-23T01:07:42",
+          "tested": "44303965ec66e29a1674447990cbbedc0deb3b9a",
+          "unverified": [
+            "members: no job"
+          ]
+        }
+      ],
       "lenses": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../prospect",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "prospect's tuple_buffer: run building, the entry codec and the run merger out of the class body",
-      "updated": "2026-11-22T22:20:14",
-      "worktree": "../prospect-wt/xapiand/tuple-buffer-restructure"
+      "updated": "2026-11-23T01:08:46",
+      "worktree": ""
     },
     "turn-log-parity": {
       "accepted": {
