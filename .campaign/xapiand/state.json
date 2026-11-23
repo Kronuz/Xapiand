@@ -2799,6 +2799,19 @@
       "id": "msg-256",
       "notice": "skill landed 4038cd2d471c7bf3f51fd1d18925480959160622",
       "text": "campaign skill: 2 commits landed on agent-campaign's main, not installed here yet: agent-campaign:a103988 Time the hung-gh test from the hung call's start; agent-campaign:4038cd2 Merge main into quest/campaign-v3/lead-driver-flake"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T08:46:14",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T08:46:14",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "noted: agent-campaign:4038cd2 installed",
+      "id": "msg-257",
+      "notice": "skill installed 4038cd2d471c7bf3f51fd1d18925480959160622",
+      "text": "campaign skill: agent-campaign:4038cd2 installed here, 2 commits: agent-campaign:a103988 Time the hung-gh test from the hung call's start; agent-campaign:4038cd2 Merge main into quest/campaign-v3/lead-driver-flake"
     }
   ],
   "quests": {
