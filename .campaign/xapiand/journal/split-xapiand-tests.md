@@ -29,12 +29,12 @@ non-C++ files); A2 runs that branch's tool meanwhile.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | suite 261122-210558-073ca6 at 8cc624bbc (the head adds only master's merge, outside the split) |
-| A2 | split 261122-210559-d98c8d at 8cc624bbc: split_check.py at cpp-libraries main (0 errors; warnings answered below) |
-| A3 | head 261122-210559-4c7661 (at 8cc624bbc), base 261121-114945-35c995 (at e5f7765d1): diff only their `Test #` and `Total Tests` lines |
+| A1 | suite 261123-011537-08f162 at 154791892 (the head adds only master's merge, outside the split) |
+| A2 | split 261123-011538-8f74cf at 154791892: split_check.py at cpp-libraries main (0 errors; warnings answered below) |
+| A3 | head 261123-011549-448a1b (at 154791892), base 261121-114945-35c995 (at e5f7765d1): diff only their `Test #` and `Total Tests` lines |
 | A4 | docs/dev/test-layout.md |
 | A5 | CI on the pushed branch at 19820a501 or later |
-| A6 | 261122-210600-2fe2a0 (at 8cc624bbc): each of the six new headers included twice in an otherwise empty TU, -fsyntax-only |
+| A6 | 261123-011550-3e2af7 (at 154791892): each of the six new headers included twice in an otherwise empty TU, -fsyntax-only |
 | A7 | lead, 2026-11-21: read the split; four test programs split by topic into TUs with support headers, each piece opens with what it holds |
 
 ### split_check warnings, answered (local run at 19820a501, base c2bc67fac)
