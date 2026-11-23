@@ -1066,3 +1066,13 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Exploration batch launched (3 Sonnet): faultfs at_mark, soundex tables, htm start tables.
 - turn-log-parity: 7 evidence reruns had never queued (two older jobs referenced a deleted journal-lost-bound worktree and aborted the batch rerun); requeued individually.
 - Quota: weekly 25% (1.53%/h; at this burn exhaustion in about 49 h, reset 2026-11-30). Host: load 3.7 (9.1 over 5 min), 286 GiB free; light slots 42% idle.
+
+## 2026-11-23 23h
+
+- Landed: none. CI green at group-heal strata:37813063 (new consensus pin) and stox-no-libc strict-stox:85260bc (macos-arm64 included: the stold fix proven where the bug lives).
+- group-heal: reruns at the pin couldn't prove it (repair_suite.sh removed; reruns kept the old CONSENSUS_DIR ref); contributor requeued 47 jobs at the pin (+20k, 270k total). Durability reviewer stopped by the lead after it kept waking on its own probe job (207k); the false-positive probe b3a6de runs on its own.
+- journal-replaces-wal: CI at 90f2688fa red on test_shard_group.cc:322 (deterministic, all three jobs), new since the master merge / zstd fix; contributor resumed. test_node's wildcard hang (job 576cc8, host load ~33) did not reproduce in CI.
+- Explorers (Sonnet medium): faultfs found a real bug on faultlab main (a failed ordering point's at_mark record makes a crash return stale bytes; fix 5d4df9b, ~88k); soundex removes the per-TU initializer (12,272 B to 0 per including TU, 1.7M-string differential; ~103k); htm: the lead's `inline` ruling was wrong (guarded init grew 192 to 277 B per TU, probe fde1c8), extern in htm.cc instead (~91k).
+- uinteger-radix-family: macos-arm64 not acquired by GitHub (capacity) on 4 attempts; rerun again; not waived (CI green on every platform is the rule).
+- Owner: D176, docs site moves to site/ after journal-replaces-wal; site-core asleep with dirty files in the main checkout (docs/ only).
+- Quota: weekly 27% (1.56%/h; exhaustion in about 47 h at this burn, reset 2026-11-30). Host: load 51 (31 over 5 min) on 16 CPUs, 98 jobs queued, 282 GiB free.
