@@ -31645,6 +31645,8 @@
     "stox-no-libc": {
       "accepted": {},
       "after": [],
+      "base": "ff3286d76ced1dd219c5d2a16a83bbccc783963e",
+      "branch": "quest/xapiand/stox-no-libc",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -31665,6 +31667,7 @@
         "CHANGELOG.md",
         "CMakeLists.txt"
       ],
+      "journal": "../Xapiand-wt/xapiand/stox-no-libc",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -31672,9 +31675,10 @@
       "provides": [],
       "repo": "../strict-stox",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "strict-stox parses every double without libc strtod",
-      "updated": "2026-11-23T11:22:02"
+      "updated": "2026-11-23T11:22:13",
+      "worktree": "../strict-stox-wt/xapiand/stox-no-libc"
     },
     "strata-engine-callbacks": {
       "accepted": {},
