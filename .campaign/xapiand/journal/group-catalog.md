@@ -131,8 +131,8 @@ add2f00a run before calling it pre-existing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261121-103852-b1cb8c (group_catalog_test at strata:096dbd04, exit 0) |
-| A2 | 261121-103852-b1cb8c; mutant 261121-103856-a3faa5 at strata:053aede3 (branch mutant/group-catalog/close-skips-checkpoint, local) pending |
+| A1 | 261122-230337-12f31e (group_catalog_test at the merged head strata:00eb018d; lead) |
+| A2 | 261122-230337-12f31e; mutant 261121-103856-a3faa5 at strata:053aede3 killed: "FAIL: the bundle covers everything applied: P_b 0 of 10" (lead read the log) |
 | A3 | 261121-103852-b1cb8c; mutant 261121-103905-bc298a at strata:1d3155e7 (branch mutant/group-catalog/close-in-commit-hook, local: commit hook closes the group, close_payload empty, lease guard removed) pending; TSan is CI's |
 | A4 | [artifact] strata `docs/mechanisms/group-catalog.md` (strata:513d959d) |
 
