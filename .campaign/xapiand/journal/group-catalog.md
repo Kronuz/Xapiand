@@ -1,6 +1,6 @@
 # group-catalog: journal
 
-State: waiting on jobs 261121-203615-54e301 (bound diagnosis at strata:e2d41b7e), 261121-204931-3120eb and 261121-204935-bd15d9 (N4 fix and mutant at strata:be285bec); strata:be285bec pushed (CI there checks N4; bound still fails until its fix)
+State: waiting on jobs 261122-210958-cb35da 261122-211020-f3b814 261122-211027-87f7a1 (bound fix), 261122-211115-8eb0f4 261122-211116-a8f861 261122-211116-4603e0 261122-211206-187ec0 and the 12 chain mutants 261122-2111* (round chain at strata:8bacffe4); strata:8bacffe4 pushed (CI runs there)
 Quest: .campaign/xapiand/quests/group-catalog.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -31,25 +31,28 @@ Causes found:
 
 ## Next
 
-Round 2 findings (diagnosis 261121-172749-984db7, CI at strata:7d57b2a0: every platform builds with
-assertions; all fail replace and bare-commit-crash on owner_break and bound):
-- owner_break is CT-R15's "a catalog index was called with no pin held": a reopen whose bundle is
-  below the log (replace, bare-commit-crash; borrow and sweep reopen at their bundle) replays on the
-  group's chore after open_payload returns, slot {0, open}, no pin. Fixed in strata:be285bec
-  (`strata::payload_work` around each group chore item, ruling 10 amended). Jobs:
-  261121-204931-3120eb (pin-check, replace, bare-commit-crash in Debug), mutant payload-unmarked
-  261121-204935-bd15d9 (the group's mark dropped; must fail pin-check).
-- bound: the journal's hypothesis is refuted (0 maps, probe 0). The slot ends `free` (Linux ASan,
-  TSan) or `failed` with failures 8 (FreeBSD, macOS, gcc): it was closed and reopened, and the
-  reopens failed on EMFILE, so begin_bound_close (owed only) never holds. Who closed it is open:
-  261121-203615-54e301 prints the passes, bound closes, replaces and every state edge.
+Round 2 findings, all at strata:8bacffe4 (pushed):
+- owner_break (CT-R15, N4): fixed in strata:be285bec. Debug 261121-204931-3120eb passed (pin-check,
+  replace, bare-commit-crash); mutant payload-unmarked 261121-204935-bd15d9 killed ("the payload's
+  applies pass the check: 3 reported"; submitted without --fails-without, so it reads "failed").
+- bound: the test's bug, not the catalog's. Diagnosis 261121-203615-54e301: passes 8, bound closes
+  1, close_payload 1, edges 3>4:8 4>3:8 3>6:1 6>0:1. The sweep's own pass (catalog.hh, the pass's
+  `begin_bound_close(i)`) closed the slot at the bound; the test drove begin_bound_close itself
+  and lost the exchange, so it never held on a freed slot (`free`). When the pass closed it while
+  the test still pinned, the pin reopened the key under EMFILE: `failed`, its open failures 8.
+  strata:8bacffe4: the case pins only while the slot rests at `owed`, stops at the eighth wake
+  failure, runs the sweep at 20 ms and waits for the pass's bound close (bound_closes 1).
+  Jobs: 261122-210958-cb35da (Debug: bound x5, then every case), fails-without
+  261122-211020-f3b814 (mutant sweep-skips-bound, new: the pass never bound-closes) and
+  261122-211027-87f7a1 (bound-skips-payload, Debug).
+- 261121-204714-4950b9 and 261121-204738-b610c4: cancelled (replaced by 3120eb and bd15d9); no log.
 
-1. Read 261121-203615-54e301; fix bound's cause, a test failing without it.
-2. Read 261121-204714-4950b9 and 261121-204738-b610c4.
-3. Push once, then rerun 261121-135825-03ec6d's chain at the head (`campaign job rerun`), the
-   TSan job, and `campaign verify group-catalog`; rerun 261121-103852-b1cb8c.
-4. All green: Evidence, State "ready for review", confirm line
-   `campaign accept group-catalog durability --confirm R1=<tsan> R2=<tsan> R3=<suite> R4=<suite>`.
+1. Read the bound jobs and the chain: run 261122-211115-8eb0f4, TSan 261122-211116-a8f861, A1
+   261122-211116-4603e0, suite 261122-211206-187ec0, mutants 261122-211133-7c6764 -b0ca6a,
+   211134-b909b9, 211135-521cb5 -d64b14 -e08c97, 211136-ca0414 -fdb1c0, 211137-41350c,
+   211138-6143f3 -b805d6, 211140-2f6a14; CI at strata:8bacffe4.
+2. All green: Evidence, State "ready for review", confirm line
+   `campaign accept group-catalog durability --confirm R1=261122-211116-a8f861 R2=261122-211116-a8f861 R3=261122-211206-187ec0 R4=261122-211206-187ec0`.
 
 Reviewer's probe 261121-132654-daff1f failed to compile (review_probe.cc:339, `op` not captured,
 in the reviewer's generated scratch file): no result. Its four scenarios are this quest's
@@ -149,6 +152,9 @@ Open for the lead (durability review): N1 (catalog contract, catalog_policy_test
 exemption, N5 (whether the sweep commits a group's uncommitted applies: the owner's).
 
 ## Rulings I made
+
+11. (Round 2) bound's close is the sweep's (D5: begin_bound_close is the pass's exchange): the
+   case observes it rather than racing it, with a 20 ms sweep period so a pass comes around.
 
 10. (Round 2, amended on the lead's ruling) N4 made real: `strata::payload_work` (catalog.hh)
    marks a thread as running a slot payload's work, and CT-R15's pin_held passes it as a pin. The
