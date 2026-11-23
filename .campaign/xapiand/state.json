@@ -14414,7 +14414,8 @@
         "test/host_delete_test.cc",
         "docs/mechanisms/host-delete.md",
         "CHANGELOG.md",
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "include/journal/journal.h"
       ],
       "journal": "../Xapiand-wt/xapiand/journal-group-delete",
       "landed": [],
@@ -14435,7 +14436,7 @@
       "risk": "high",
       "status": "active",
       "title": "a host deletes a left group's journal, so the node can rejoin it",
-      "updated": "2026-11-22T21:16:26",
+      "updated": "2026-11-22T21:52:54",
       "worktree": "../journal-wt/xapiand/journal-group-delete"
     },
     "journal-lost-bound": {
