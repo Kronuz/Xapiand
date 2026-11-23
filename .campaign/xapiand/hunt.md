@@ -464,3 +464,4 @@ quest fixes them (2 of 5 on 11-20).
 - R2 (test nit) the install sweep checks the installed documents, not the applied position.
 - (group-heal, after first-commit-crash landed at strata:4955a679) install() now takes commit_empty() itself: remove group-heal's redundant caller guard (its F2 fix at strata:a1e786f4) when group-heal next merges main.
 - (group-heal durability re-review; strata-journal-pin finding 2026-11-23) include/strata/group/group.hh:214 sends a journal GroupStatus::bounded group to driver.create; what consensus does with a replica whose log lost records behind a bound is unverified. Decide: refuse, reinstall, or create.
+- (master CI, 2026-11-23) pages.yml installs D2 with `curl https://d2lang.com/install.sh | sh`, which calls the GitHub API unauthenticated; run 45209633838 failed on three 403s (rate limit). Pin a d2 release tarball (version and sha256) instead; a CI change, needs the owner's yes.
