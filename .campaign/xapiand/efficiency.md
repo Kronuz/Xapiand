@@ -1004,3 +1004,12 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - sim-rows: barrier-row aborts were first-commit-crash's bug (all 9 rows pass with it merged); main merged into sim-rows and group-heal.
 - journal-replaces-wal: rerun after the outage failed on strata::faultfs (moved to kronuz::faultlab); lead fix Xapiand:bc757bba9.
 - Quota: weekly 17% (1.65%/h). Host: load 12, 291 GiB free, 56 jobs queued.
+
+## 2026-11-23 17h
+
+- Landed: restore-stream (Xapiand:6bb90251; A6 fuzz 32 CPU-min clean twice), queryparser-restructure (queryparser:fc02cb50; lead read the cut, A5).
+- Merged into group-heal: sim-rows (strata:68a57482). repair: 17 of 17 mutants killed at strata:06bfb2f5 after round 3 (no-ack re-aimed at `refusal`; pin-unchecked-footer kept, reachable when bytes rot after the leader's read); task merge waits on two reruns.
+- New quests: strata-journal-pin (started, Opus medium) and index-delete (planned, after it and journal-replaces-wal): DELETE answers 501 on master today.
+- journal-replaces-wal step e (Opus high, 127k, 205 tool uses): WAL, fsyncher, scheduler, flags, :wal verb and two options deleted; no-wal check passes at c0dc4160; A9 fix 3 test still fails (reopen does not abort an upload left open).
+- turn-log-parity: every rerun green at the merged head; A6 (RocksDB parity) waits on 13 unstarted parity tasks; split proposed to the owner.
+- Quota: weekly 18% (1.59%/h). Host: load 23, 289 GiB free.

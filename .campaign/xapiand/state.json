@@ -2774,6 +2774,18 @@
       "id": "msg-253",
       "notice": "skill landed fce5f0d20ab3d43e9deea3fa1961bef24cf55c35",
       "text": "campaign skill: 11 commits landed on agent-campaign's main, installed here: agent-campaign:97ea118 Run a landing quest's voided evidence at landing priority; agent-campaign:c298eb2 Type rerun_jobs' minutes and the test's job spec; agent-campaign:bb3ea82 Decide landing priority from gap kinds, not their wording; agent-campaign:089c2be Merge main into quest/campaign-v3/landing-priority; agent-campaign:a4d542e Raise a reused queued submit's priority and say so on stderr; agent-campaign:3cd60ed Merge main into quest/campaign-v3/landing-priority; agent-campaign:fa21275 Merge main into quest/campaign-v3/landing-priority; agent-campaign:36a1c08 Merge main into quest/campaign-v3/landing-priority; agent-campaign:7ecb3ea Read the reuse note on stderr in gate and scenario tests; agent-campaign:4233e0c Merge main into quest/campaign-v3/landing-priority; agent-campaign:fce5f0d Merge main into quest/campaign-v3/landing-priority"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T08:16:42",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T08:16:42",
+      "by": "lead",
+      "closed": "strata-journal-pin pins journal main now (Host::delete_group); formats stay open until release, so it repins after journal-turn-sector-checks lands",
+      "id": "msg-255",
+      "text": "Re msg-260 (strata-journal-pin): journal-earlier-turn-loss changes no API or format (recovery now reports earlier-turn damage it used to miss; landing soon). journal-drop-memory-io removes include/journal/memory_io.h; it lands after consensus-install-test-faultfs. Heads-up: journal-turn-sector-checks (owner D147) changes the on-disk turn log format RFTW0001 -> RFTW0002 with no reader of the old one; it starts once journal-earlier-turn-loss lands. Pin after it if you want the new format, or before and repin."
     }
   ],
   "quests": {
@@ -13409,8 +13421,9 @@
             "test/group/sim*",
             "docs/gates/phase-3r.md"
           ],
-          "journal": "../Xapiand-wt/xapiand/group-heal--sim-rows",
-          "worktree": "../strata-wt/xapiand/group-heal--sim-rows"
+          "journal": "",
+          "merged": "a53939071870e483e2af08316faf5f8aa1c12ba3",
+          "worktree": ""
         },
         "witness": {
           "base": "cd2a4a40b996730386c9c3f12ac4084bdd9aba34",
@@ -13429,7 +13442,7 @@
         }
       },
       "title": "Replication groups grow, heal and run in the simulator",
-      "updated": "2026-11-23T04:37:05",
+      "updated": "2026-11-23T08:07:37",
       "worktree": "../strata-wt/xapiand/group-heal"
     },
     "group-install": {
@@ -14830,6 +14843,43 @@
       "title": "Idle index cost landscape",
       "updated": "2026-11-08T15:40:05"
     },
+    "index-delete": {
+      "accepted": {},
+      "after": [
+        "journal-replaces-wal"
+      ],
+      "checks": [
+        {
+          "cmd": "ci:Build + unit + smoke",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/server/search_views.cc",
+        "src/database/shard_group.*",
+        "src/database/pool.*",
+        "tests/test_pool.cc",
+        "tests/test_index_delete*",
+        "docs/src/content/docs/reference-apis/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [
+        "strata-journal-pin"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "Index DELETE closes and deletes the index's group",
+      "updated": "2026-11-23T08:15:36"
+    },
     "index-restructure": {
       "accepted": {},
       "after": [
@@ -15389,7 +15439,31 @@
         "src/database/command.h",
         "docs/src/content/docs/tests/coverage.md",
         "src/xapiand_scheduler_trace.h",
-        "src/logger_fwd.h"
+        "src/logger_fwd.h",
+        "src/debounce_or_run.h",
+        "tests/test_debounce_or_run.cc",
+        "src/xapiand_stash_trace.h",
+        "config.h.in",
+        "AGENTS.md",
+        "README.md",
+        "docs/src/content/docs/building.md",
+        "docs/src/content/docs/options.md",
+        "docs/src/content/docs/architecture.md",
+        "docs/src/content/docs/changelog.md",
+        "src/log.h",
+        "src/metrics.h",
+        "src/metrics.cc",
+        "harness/strata_write_check.sh",
+        "harness/engine_crash_check.sh",
+        "harness/graceful_shutdown_check.sh",
+        "harness/cluster/checklist.py",
+        "harness/coverage_e2e_server.py",
+        "harness/profile_bulk.sh",
+        "tests/one_id_mutants.sh",
+        "tests/test_engine_strata.cc",
+        "tests/test_engine_replay.cc",
+        "tests/test_quarantine.cc",
+        "tests/test_coverage_database.cc"
       ],
       "history": [
         {
@@ -15643,7 +15717,7 @@
         }
       },
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-23T07:31:10",
+      "updated": "2026-11-23T08:15:15",
       "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal"
     },
     "journal-seal-repeat": {
@@ -24559,9 +24633,56 @@
         "docs/source-layout.md",
         "CMakeLists.txt"
       ],
-      "journal": "../Xapiand-wt/xapiand/queryparser-restructure",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-23T08:22:12",
+          "ci": {
+            "commit": "fc02cb50cacb5198df1fb9024afe17cf335c0ee4",
+            "runs": [
+              45124357782
+            ]
+          },
+          "commit": "fc02cb50cacb5198df1fb9024afe17cf335c0ee4",
+          "criteria": {
+            "A1": "261122-222817-2abf44 (the build-test check); build-test 261122-222817-2abf44 at queryparser:fc02cb5 passed (8/8 tests); CI run 45124357782 on the pushed branch (queued)",
+            "A2": "261123-005505-cd8ac8 (the members check), 261122-222826-4f317e",
+            "A3": "261122-222831-76a27b",
+            "A4": "`docs/source-layout.md` at queryparser:fc02cb5: each header, its lines and its layer",
+            "A5": "[manual] the lead (2026-11-23) read the cut at fc02cb50: parser.hh holds the class (data members, one declaration per member) and its builder; parser_operators.hh the driver and operator recognition (run, step, keywords, op_kind); parser_words.hh words and terms (globs, fuzzy, phrases, n-grams, stop words, make_term); parser_groups.hh grouping and the tree (frames, close_group, combine, join, nary, fold). Each is one layer a maintainer opens alone, 270-446 lines; agreed."
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "fc02cb50cacb5198df1fb9024afe17cf335c0ee4",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261122-222817-2abf44",
+              "level": "light",
+              "seconds": 72.9,
+              "state": "done",
+              "what": "queryparser-restructure check build-test at fc02cb50cacb"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --members --base main .",
+              "commit": "fc02cb50cacb5198df1fb9024afe17cf335c0ee4",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-005505-cd8ac8",
+              "level": "light",
+              "seconds": 2.3,
+              "state": "done",
+              "what": "queryparser-restructure check members at fc02cb50cacb"
+            }
+          ],
+          "final": true,
+          "from": "0fdec0c0184abb51e259765a4137b768429e9400",
+          "reason": "",
+          "tested": "fc02cb50cacb5198df1fb9024afe17cf335c0ee4"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [
         "split-queryparser"
@@ -24569,10 +24690,10 @@
       "provides": [],
       "repo": "../queryparser",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "queryparser: the parser's operator, word and group layers in headers of their own",
-      "updated": "2026-11-22T22:19:59",
-      "worktree": "../queryparser-wt/xapiand/queryparser-restructure"
+      "updated": "2026-11-23T08:22:14",
+      "worktree": ""
     },
     "queue-drain-throughput": {
       "accepted": {
@@ -28680,18 +28801,67 @@
         "AGENTS.md",
         "ARCHITECTURE.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-datetime",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-23T08:23:55",
+          "ci": {
+            "commit": "2afe1565af2adc1474c731001f9e6ec31786c57e",
+            "runs": [
+              45116922213
+            ]
+          },
+          "commit": "2afe1565af2adc1474c731001f9e6ec31786c57e",
+          "criteria": {
+            "A1": "261122-211644-7ddf11 (the build-test check), 261122-211644-7ddf11",
+            "A2": "261123-082246-764d28 (the split check)",
+            "A3": "261122-211653-463c36",
+            "A4": "docs/source-layout.md (5b07a01): a row per new file, each .cc/.h's first line states what it holds, test/diff_test.cc kept whole with reasons",
+            "A5": "CI green at 2afe1565af2a",
+            "A6": "261122-211657-6b0995",
+            "A7": "the lead's read"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "2afe1565af2adc1474c731001f9e6ec31786c57e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261122-211644-7ddf11",
+              "level": "light",
+              "seconds": 89.1,
+              "state": "done",
+              "what": "split-datetime check build-test at 2afe1565af2a"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main . test",
+              "commit": "2afe1565af2adc1474c731001f9e6ec31786c57e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-082246-764d28",
+              "level": "light",
+              "seconds": 1.4,
+              "state": "done",
+              "what": "split-datetime check split at 2afe1565af2a"
+            }
+          ],
+          "final": true,
+          "from": "b11299dfc9975abfaecbdd96c53770e9c0a56a8f",
+          "reason": "",
+          "tested": "2afe1565af2adc1474c731001f9e6ec31786c57e"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../datetime",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "datetime's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:29:42",
-      "worktree": "../datetime-wt/xapiand/split-datetime"
+      "updated": "2026-11-23T08:23:58",
+      "worktree": ""
     },
     "split-docset": {
       "accepted": {},
@@ -31338,6 +31508,44 @@
       "status": "landed",
       "title": "Field-aware strata index",
       "updated": "2026-11-08T13:25:27"
+    },
+    "strata-journal-pin": {
+      "accepted": {},
+      "after": [
+        "turn-log-parity"
+      ],
+      "base": "93d104461a79e17b0b9e43b93965a77d7ab711ed",
+      "branch": "quest/xapiand/strata-journal-pin",
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [
+        "journal"
+      ],
+      "files": [
+        "CMakeLists.txt",
+        "include/strata/group/**",
+        "include/strata/core/journal*",
+        "test/group/**",
+        "sim/**"
+      ],
+      "journal": "../Xapiand-wt/xapiand/strata-journal-pin",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "low",
+      "status": "active",
+      "title": "strata builds against journal main (Host::delete_group)",
+      "updated": "2026-11-23T08:25:35",
+      "worktree": "../strata-wt/xapiand/strata-journal-pin"
     },
     "strata-nospace-position": {
       "accepted": {},
