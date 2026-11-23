@@ -30906,18 +30906,51 @@
         "test/test.cc",
         "CHANGELOG.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/system-file-nr-close",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-22T22:53:44",
+          "ci": {
+            "commit": "b2a874fb22da70f7a96448a3f68e3d9305559983",
+            "runs": [
+              45117171437
+            ]
+          },
+          "commit": "b2a874fb22da70f7a96448a3f68e3d9305559983",
+          "criteria": {
+            "A1": "261122-212046-713a5b (the build-test check); 261122-212046-713a5b: build-test at b2a874f (macOS; the check runs, and the sysctl paths hold no descriptor)",
+            "A2": "CI green at b2a874fb22da"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "b2a874fb22da70f7a96448a3f68e3d9305559983",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261122-212046-713a5b",
+              "level": "light",
+              "seconds": 38.1,
+              "state": "done",
+              "what": "system-file-nr-close check build-test at b2a874fb22da"
+            }
+          ],
+          "final": true,
+          "from": "2471c5f26e24e1ef3533d94fa5f34bae9184b015",
+          "reason": "",
+          "tested": "b2a874fb22da70f7a96448a3f68e3d9305559983"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../system",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "Linux file-nr readers close their descriptor",
-      "updated": "2026-11-22T21:19:32",
-      "worktree": "../system-wt/xapiand/system-file-nr-close"
+      "updated": "2026-11-22T22:53:46",
+      "worktree": ""
     },
     "t10-flood-limit": {
       "accepted": {
