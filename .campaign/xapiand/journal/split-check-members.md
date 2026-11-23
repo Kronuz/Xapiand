@@ -1,6 +1,6 @@
 # split-check-members: journal
 
-State: waiting on jobs 261122-212041-81ad6c 261122-212041-782f93
+State: waiting on jobs 261122-215902-0c1bd1 261122-215902-19e3c9
 Quest: .campaign/xapiand/quests/split-check-members.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,21 +9,20 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Code done at cpp-libraries:237350a on quest/xapiand/split-check-members (worktree
-`/Users/kronuz/code/Kronuz/cpp-libraries-wt/xapiand/split-check-members`). The `test` (A1, A2,
-A3, A5) and `lint` (A6) gate jobs are queued; the new tests have not run yet (local runs are
-refused, so every run is a job). Branch pushed at 237350a; CI run 45117787193 (tools workflow):
-shell-macos-15 and shell-ubuntu-24.04 passed, `python` (runs these tests, ruff, pyrefly) still
-queued when the session stopped at the lead's token limit.
+Fix at cpp-libraries:3a6c3e6, main merged at cpp-libraries:2df69e8 (pushed). Test 261122-212041-81ad6c
+at 237350a failed 10+1 tests, all on the class-template fixture: `outline: no class store in
+src/store.hh`. Cause: `Outline.find_class` searched the statement head for the first
+`class|struct` keyword, so in `template <class Layout> class store` it took the parameter `Layout`
+for the class; the non-template `wide.hh` has no template header. Fix: blank template headers
+before matching (`without_template_headers`), as `units()` already skips them for nested classes.
+That failed job is the run without the fix.
 
 ## Next
 
-1. Read test 261122-212041-81ad6c, lint 261122-212041-782f93 and CI run 45117787193's `python`
-   job (`gh run view 45117787193 -R Kronuz/cpp-libraries`). A test failure is a fixture or
-   parser bug: fix, commit, `campaign verify split-check-members --for A1,A2,A3,A5`, rerun the two
-   real-head jobs at the new commit (commands below).
-2. Re-tag lint for A6 (`campaign verify --for` tagged both checks A1,A2,A3,A5); CI green on the
-   pushed branch for A6's [ci].
+1. Read test 261122-215902-0c1bd1 and lint 261122-215902-19e3c9 at 2df69e8 (queued), and CI's
+   `python` job at 2df69e8 (`gh run list -R Kronuz/cpp-libraries --commit 2df69e8...`).
+2. Lint is tagged A1,A2,A3,A5 by `campaign verify --for`; a resubmit `--for A6` reused it. If
+   status still shows A6 without evidence, the lead re-tags it.
 3. Ready for review.
 
 ## Blocked on
@@ -51,7 +50,12 @@ Real heads (not criteria; the lead needs them before those quests use the check)
 | strata index-restructure strata:a7448b3, `--base main --members include/strata/core` | 261122-212043-b21a3d | pass: 0 errors, 0 warnings; `strata::basic_index: 196 member definition(s) moved out of the class` |
 | uinteger_t uinteger-restructure uinteger_t:5dd518f, `--base master --members uinteger_t.hh uinteger_t` | 261122-212047-a15ac4 | pass: 0 errors, 0 warnings; `uinteger_t: 354 member definition(s) moved out of the class` |
 
-Both at cpp-libraries:237350a. The counts are the quests' own (196 definitions; 354 member
+| strata at the restructure base strata:cc30217, `outline.py list include/strata/core/index.hh` | 261122-215936-e69efb | exit 0: `basic_index`, 382 in-class member definitions (one-liners included) |
+| uinteger_t at the base uinteger_t:8a6fe90, `outline.py list uinteger_t.hh` | 261122-215945-93dd81 | exit 0: `uinteger_t`, 357 member definitions, 82 class-level preprocessor lines |
+
+Reruns at cpp-libraries:2df69e8 (the find_class fix): strata 261122-215923-26d34b, 196 moved, 0
+errors; uinteger_t 261122-215929-c0aa1a, 354 moved, 0 errors. The first two rows are at
+cpp-libraries:237350a. The counts are the quests' own (196 definitions; 354 member
 functions), so neither pass is vacuous. The same runs at cpp-libraries:da69339, before the count
 line: 261122-211651-3ffe8f, 261122-211655-7221b7, both exit 0. Superseded and cancelled by the
 reruns: 261122-211640-00b10f, 261122-211641-ebcca8.
