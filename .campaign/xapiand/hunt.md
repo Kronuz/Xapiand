@@ -417,3 +417,8 @@ quest fixes them (2 of 5 on 11-20).
   segments). Found by group-heal's contributor reading the pin path, outside its file set. Needs a
   test that fails the second commit (faultlab) and checks the pin count after the next commit.
   Durability-adjacent: one fix with that test, normal risk. In include/strata/core/index.hh (pending_pin_ :1936, :5541), held by index-restructure and turn-log-parity: start after both land.
+
+## consensus-request-install review follow-ups (2026-11-23)
+
+- N1 (nit) An older peer on peers.h closes the control connection on an unknown frame kind (peers.h:726) rather than dropping it as the mechanism note says; host_transport.h drops it. Fix the note or make peers.h drop unknown kinds. Review: .campaign/xapiand/reviews/consensus-request-install-correctness.md.
+- N2 (gap) When every transfer fails, each resend is answered InFlight and the reinstall call never completes (core.h:1172). Bound it (a deadline or attempt count that fails the call). Liveness, normal risk.
