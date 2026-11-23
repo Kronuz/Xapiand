@@ -39,7 +39,7 @@ quest fixes them (2 of 5 on 11-20).
 | H6 (#25): document `_store` (index a field without keeping its value) with E2E blocks | `feed_store` exists (`src/database/schema.cc:7209`); no docs page mentions `_store` (grep); D47 requires a page and tests for every served feature | `docs/src/content/docs/reference-guide/schemas/` | Xapiand | quest store-docs |
 | cli-restore-records: a CLI --restore of an empty dump now creates no index (it resolves on the first object), where it used to create an empty one; decide whether an empty restore should create the index | lead diff read of Xapiand:152fbdd70, src/database/handler.cc restore_documents | src/database/handler.cc | Xapiand | open |
 | cjk-segmenter review F3, F4: quote ICU's "ICU 1.8.1 to ICU 57.1" licence section in LICENSE-ICU (cjdict.txt carries 2012-2015 lines); `prev_` is int32_t (a run over 2^31 characters truncates, unreachable) | reviews/cjk-segmenter-correctness.md | LICENSE-ICU, cjk/ | analysis | done analysis:0ebdc61 (F3; F4 needs none, unreachable) |
-| query-dsl-fixes review F5: a NaN range bound is a 400 on integer and positive fields but matches nothing on float and date fields; make it one behaviour | reviews/query-dsl-fixes-correctness.md | src/aggregations/bucket.h | Xapiand | open |
+| query-dsl-fixes review F5: a NaN range bound is a 400 on integer and positive fields but matches nothing on float and date fields; make it one behaviour | reviews/query-dsl-fixes-correctness.md | src/aggregations/bucket.h | Xapiand | done: Xapiand:4177b724b (nan-range-bound) |
 | cjk-segmenter: AGENTS.md's repository map should list cjk/, data/ and the analysis::cjk target | cjk-segmenter journal | AGENTS.md | analysis | done analysis:0ebdc61 |
 | phase3-ratchets A4: indexing peak RSS is 1.57x the node budget (limit 1.1x); merge buffers are not charged to the budget (D51). Probe 261110-022424-057569 ruled merges out: with background merges off the run peaked at the same 3,221 MiB, so D51's premise is wrong and the excess is elsewhere in indexing (profile the 5M run's allocations first) | phase3-ratchets journal; docs/gates/phase-3-ratchets.md | prospect's budget and indexing path | prospect | explored (prospect:b23d139 `docs/perf/index-memory.md`): the flush's in-memory positions spill on a full-budget trigger; quest flush-within-budget |
 | phase3-ratchets A3: the many-index rows (millions of indexes per host: per-open-index cost, one-thread efficiency) have no harness (D51); high priority | phase3-ratchets journal | bench/, harness/ | prospect, Xapiand | open, quest after phase3-ratchets |
@@ -409,3 +409,35 @@ quest fixes them (2 of 5 on 11-20).
 | faultfs: an ordering point that fails before its effect removes itself but leaves its at_mark record on the file. It holds the durable bytes, so it is harmless until a sync; check whether any later sync, crash or second ordering point can read it as staged, and clear it where the point is removed | hunt-faultlab-at-mark contributor, 2026-11-21 (faultlab:7f3910c journal): `settle_staged()` clears every record only while some ordering point exists | include/faultlab/faultfs/file.h (sync, line 157), the ordering-point removal path | faultlab | open |
 | soundex: german_soundex.h, french_soundex.h and spanish_soundex.h define 7 `static const` maps and vectors in the header; each of the 4 including Xapiand TUs (handler.cc, keymaker.cc, query_dsl.cc, serialize.cc) carries a ~12.5 KB static initializer (about 50 KB in all) and a heap copy of every table. One definition per table (a .cc, or constant tables) removes three of the four | hunt-header-tables size tables (Release+LTO macOS, Xapiand:073d466 docs/dev/header-tables.md, "Library rows"): sub_I 12,448-12,912 B per TU | soundex: german_soundex.h, french_soundex.h, spanish_soundex.h | soundex | open |
 | htm: `start_vertices` builds 6 `Cartesian`s through a non-constexpr constructor in each of the 35 including TUs; a constexpr `Cartesian` constructor makes the table constant-initialized. About 6.7 KB of initializers inferred from per-TU sizes (17 TUs whose only initializer is 192 B), not proven: measure first | hunt-header-tables size tables (Xapiand:073d466 docs/dev/header-tables.md, "Library rows") | htm: htm.h (start_vertices, start_trixels), the Cartesian constructor | htm | open |
+
+## group-heal findings (2026-11-23)
+
+- strata `index::checkpoint()`: when its second commit fails, `pending_pin_` stays set, so the next
+  commit pins that generation and nothing releases it until a reopen (a leaked pin holds its
+  segments). Found by group-heal's contributor reading the pin path, outside its file set. Needs a
+  test that fails the second commit (faultlab) and checks the pin count after the next commit.
+  Durability-adjacent: one fix with that test, normal risk. In include/strata/core/index.hh (pending_pin_ :1936, :5541), held by index-restructure and turn-log-parity: start after both land.
+
+## consensus-request-install review follow-ups (2026-11-23)
+
+- N1 (nit) An older peer on peers.h closes the control connection on an unknown frame kind (peers.h:726) rather than dropping it as the mechanism note says; host_transport.h drops it. Fix the note or make peers.h drop unknown kinds. Review: .campaign/xapiand/reviews/consensus-request-install-correctness.md.
+- N2 (gap) When every transfer fails, each resend is answered InFlight and the reinstall call never completes (core.h:1172). Bound it (a deadline or attempt count that fails the call). Liveness, normal risk.
+
+## group-heal durability review follow-ups (2026-11-23, review at strata:908b58c0; full text in reviews/group-heal-durability.md)
+
+- F3 (defect) `installs_needed()` and the lazily made install state outlive the leadership. `needed` is erased only on Installed or CaughtUp, so a leader that loses its leadership (or whose peer is Removed) mid-flight names the peer forever as a follower and never frees `sources_`. That idle group then gives back the 88 B that 
+- F4 (gap) serve's guard against the teardown (`serving_`) has no test off the loop thread. The ruling "TSan in CI covers the threads" has nothing to cover: world.hh:288 calls serve on the loop, and install_test's `threads` case calls install.hh's serve, not group::serve. Also, serve_scope calls notify_all after its decrement (
+- F5 (nit) grow_and_heal and witness join retire the removed voter without checking what it holds. 
+- F6 (nit) `release_pins` at recover releases every pin in the borrowed index's manifest. Install is the only pinner today (I grepped strata and Xapiand), but the index is the catalog's (D169), so a future pinner (backup, cold tier) would lose its pins at every group open. 
+
+## turn-log-parity durability follow-up (2026-11-23)
+
+- G1 (gap, availability) One flipped byte in a log's last turn, in a fragment crossing its sector, reads as a torn tail (journal `docs/mechanisms/turn-log-damage.md`, Limits): the host reports no damage, and strata's open refuses with `the index's head names turn-log records its log lacks` (strata `index.hh`, main's check from 6e455aca). The refusal is safe (opening would reissue applied sequences), but the index stays closed until repaired. Opening it needs a journal change: a per-fragment checksum, or the group's sequence kept at its head. Evidence: the D2 probe's `small (control)` and `last chunk damaged` cases (261121-213954-ecd99d, and again 261123-002234-c8c5d2 at strata:f5f6b7dc). Owner: Detent's journal (coordinate with its lead).
+
+## journal-group-delete durability review notes (2026-11-23, APPROVE at journal:d8453f6; full text in reviews/journal-group-delete-durability.md)
+
+- N1 (nit) The doc says "a view of the deleted group lists nothing once the first commit publishes its range". The first commit publishes the deleted entry with its old incarnation and `[mark, high)`, so views list the old serials until the second commit. If that commit fails, views keep listing serials whose files are gone. 
+- N2 (nit) R4 and the doc say a failed first commit "leaves the group closed". A failure after the rename (for example, the directory sync fails with EIO) leaves the entry closed in memory, but the disk may hold it deleted, and a crash then yields deleted. Either outcome is whole, so this is wording only. 
+- N3 (nit) Each create of a new id now reads its shard file twice: once in `status()` and again in `load()`. This matters for the many-indexes workload. 
+- N4 (gap) Deleted entries are never dropped, at 45 bytes each in the shard. Ids that are never reused grow the table without bound. This is documented in Limits. 
+- N5 (gap) This predates the quest: any Host open needs 16 KiB free, so a host on a full disk cannot open whether or not a delete ran. 

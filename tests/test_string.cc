@@ -23,10 +23,81 @@
 
 #include "test_harness.h"
 
+#include <algorithm>
+#include <cstdio>
 #include <string>
+#include <unistd.h>
 
 static void test_hello() {
 	CHECK_EQ(std::string("Hello"), "Hello");
 }
 
-TEST_MAIN(test_hello)
+static int require_calls;
+static bool require_after;
+
+static int next_call() { return ++require_calls; }
+
+static void require_passes() {
+	REQUIRE(next_call() == 1);
+	REQUIRE_EQ(next_call(), 2);
+}
+
+static void require_fails() {
+	REQUIRE(next_call() == 0);
+	require_after = true;
+}
+
+static void require_eq_fails() {
+	REQUIRE_EQ(next_call(), 0);
+	require_after = true;
+}
+
+// Runs fn with stderr captured and returns what it printed.
+static std::string capture_stderr(void (*fn)()) {
+	std::fflush(stderr);
+	auto* tmp = std::tmpfile();
+	const int saved = dup(2);
+	dup2(fileno(tmp), 2);
+	fn();
+	std::fflush(stderr);
+	dup2(saved, 2);
+	close(saved);
+	std::rewind(tmp);
+	std::string out;
+	char buf[256];
+	while (auto n = std::fread(buf, 1, sizeof(buf), tmp)) {
+		out.append(buf, n);
+	}
+	std::fclose(tmp);
+	return out;
+}
+
+static void test_require_evaluates_once() {
+	require_calls = 0;
+	int checks = testh::checks;
+	int failures = testh::failures;
+	const auto ok_err = capture_stderr(require_passes);
+	const int ok_checks = testh::checks - checks;
+	const int ok_failures = testh::failures - failures;
+	CHECK(ok_err.empty());
+	CHECK_EQ(require_calls, 2);  // one evaluation per macro
+	CHECK_EQ(ok_checks, 2);
+	CHECK_EQ(ok_failures, 0);
+
+	for (auto fn : {require_fails, require_eq_fails}) {
+		require_calls = 0;
+		require_after = false;
+		failures = testh::failures;
+		const auto err = capture_stderr(fn);
+		const int new_failures = testh::failures - failures;
+		testh::failures = failures;  // the failure is intended
+		CHECK_EQ(require_calls, 1);
+		CHECK(!require_after);
+		CHECK_EQ(new_failures, 1);
+		CHECK(err.find("FAIL") != std::string::npos);
+		CHECK(err.find("REQUIRE") != std::string::npos);
+		CHECK_EQ(std::count(err.begin(), err.end(), '\n'), 1);
+	}
+}
+
+TEST_MAIN(test_hello, test_require_evaluates_once)
