@@ -460,3 +460,5 @@ quest fixes them (2 of 5 on 11-20).
 
 - F2 (nit, pre-existing on main) a first rollover retried after ENOSPC uses generation 2; a crash during the retry leaves a lone `manifest-2.tmp`, which reopens as `corrupt_index`. `create()` on main does the same.
 - Once first-commit-crash lands with its install() guard (review F1), group-heal's caller guard in include/strata/group/install.hh is redundant: remove it (one mechanism, in the core).
+- R1 (nit, re-check at strata:4955a679) install()'s guard runs before the source checkpoint check and storage admission, so a failed install leaves a committed empty generation 1 (valid, durable) while install()'s comment says a bad checkpoint "leaves this index as it was". Move the guard to just before the copies, or fix the comment.
+- R2 (test nit) the install sweep checks the installed documents, not the applied position.
