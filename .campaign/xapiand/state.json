@@ -18313,6 +18313,8 @@
     "nan-range-bound": {
       "accepted": {},
       "after": [],
+      "base": "2f8afdba4edbd53146c021cd487a469c14d16bdf",
+      "branch": "quest/xapiand/nan-range-bound",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -18340,9 +18342,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "A NaN range bound is one behavior on every field type",
-      "updated": "2026-11-21T13:23:10"
+      "updated": "2026-11-22T21:25:11",
+      "worktree": "../Xapiand-wt/xapiand/nan-range-bound"
     },
     "netlab-consensus": {
       "accepted": {},
