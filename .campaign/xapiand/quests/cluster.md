@@ -88,6 +88,10 @@ listener. `format-freeze` reviews these bytes.
 - `needs consensus-rpc-lane` (F3, with its hello limits and version range); `after
   journal-replaces-wal, group-heal, placement` (the strata pin), so the early tasks can start before
   they land and only the last integration waits.
+- Lead, 2026-11-23, on the search task's B1-B3: B2 and B3 are granted (`src/cluster/rpc_methods.*`,
+  `src/engine/strata/expand.*` in its file set; expand.* added to the quest's). B1 is option (a): the
+  task takes `src/server/search_views.cc` (expand_paths) once journal-replaces-wal and restore-stream,
+  which hold it, land; the walk goes with its replacement.
 
 ## When done
 
