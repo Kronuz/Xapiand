@@ -1,6 +1,6 @@
 # consensus-join-v2: journal
 
-State: waiting on jobs 261123-133816-735a28 261123-133820-3e888d 261123-150157-b0634d 261123-150202-29c750 261123-150206-ee4ab3 261123-150210-a56a49 261123-150215-ec3793 261123-150231-e1409c 261123-150234-473c5f 261123-150236-7aa566, and CI at consensus:45f2309
+State: waiting on jobs 261123-154007-7bb36d 261123-154010-cd7dc9 261123-154013-225d0b 261123-154016-cd7eae 261123-133816-735a28 261123-133820-3e888d 261123-150157-b0634d 261123-150202-29c750 261123-150206-ee4ab3 261123-150210-a56a49 261123-150215-ec3793 261123-150231-e1409c 261123-150234-473c5f 261123-150236-7aa566, and CI at consensus:45bca9f
 Quest: .campaign/xapiand/quests/consensus-join-v2.md (the lead's; never edit it)
 
 Code: consensus worktree `../consensus-wt/xapiand/consensus-join-v2`, branch
@@ -13,6 +13,14 @@ consensus:45f2309 (A3 join pool on the port, A5 DTHL0003 boot check, the HostTra
 fix, A6 fuzzers, A7 docs). Locally: the 50 targeted transport tests pass (admission_nodes every
 case, links, connection, node_hello, hello, seeds, rpc_host); reload stressed 40 times 8 at once
 with the redial fix, 0 failures (before it: 4 of 96). Fuzzers ran 15 s each locally, clean.
+
+Security review S1 (blocker, lead ruling 2026-11-24) fixed at consensus:45bca9f: `csr_of`
+refuses a CSR whose key is not EC P-256 before any signature work (member and issuer);
+`Issuer::issue` runs `assign` (the secret) before verifying; `verified()` counters. Test
+`forged` (forged RSA-16384 CSR: refused malformed, 0 verifications; csr_of 0.04 ms locally).
+Jobs: mutants csr-any-key 261123-154007-7bb36d, issue-verify-first 261123-154010-cd7dc9 (both
+must fail `forged`); the reviewer's probe csr_cost at the fix 261123-154013-225d0b; forged and
+issue at the fix 261123-154016-cd7eae. S2-S5 are the lead's (not fixed).
 
 ## Next
 
@@ -43,7 +51,7 @@ with the redial fix, 0 failures (before it: 4 of 96). Fuzzers ran 15 s each loca
 |---|---|
 | A1 | suite (CI at consensus:45f2309); `issue` case; mutants any-token, join-any-cluster, join-unpinned-ca, token-no-version |
 | A2 | sign-each-time 261123-132820-5a61c4 (fails issue: 3 signatures), save-in-place 261123-132818-a116ef (fails save: the kill-during-save crash test) |
-| A3 | `flood` case (suite, tsan in CI); join-no-cap 261123-150202-29c750, join-no-slot-deadline 261123-150206-ee4ab3, join-no-rate 261123-150210-a56a49 |
+| A3 | `forged` case (S1) 261123-154016-cd7eae, csr-any-key 261123-154007-7bb36d, issue-verify-first 261123-154010-cd7dc9, probe 261123-154013-225d0b; `flood` case (suite, tsan in CI); join-no-cap 261123-150202-29c750, join-no-slot-deadline 261123-150206-ee4ab3, join-no-rate 261123-150210-a56a49 |
 | A4 | `renew`, `expired`, `reload`, `redial` cases; pin-der 261123-133811-fee953 (done, fails renew), reload-keeps-links 261123-133816-735a28, reload-keeps-trust 261123-133820-3e888d, redial-at-deadline 261123-150215-ec3793 |
 | A5 | `boot` case; skip-boot-check 261123-150157-b0634d |
 | A6 | token 261123-150231-e1409c, join 261123-150234-473c5f, hello 261123-150236-7aa566 (2 workers x 16 min each, ASan+UBSan) |
