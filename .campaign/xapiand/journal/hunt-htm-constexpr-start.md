@@ -1,6 +1,6 @@
 # hunt-htm-constexpr-start: journal
 
-State: waiting on jobs 261123-132523-45413e
+State: waiting on jobs 261123-133516-e862f4 261123-133521-fde1c8 261123-133529-8903d0 261123-133531-7b7420
 Quest: .campaign/xapiand/quests/hunt-htm-constexpr-start.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,19 +9,19 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Baseline probe job 261123-132523-45413e (queued; host load ~100): compiles `#include "htm.h"` alone,
-clang++ 17 -std=c++20 -O2 -DNDEBUG, cartesian pinned 05cab81, at htm:c4577b7; prints `size -m`,
-__mod_init_func, nm and the init disassembly. Script: ~/.scratch/htm/constexpr-start/probe.sh DIR.
-
-Findings so far (reading, not measured): `Cartesian(double,double,double,int)` is defined out of line
-in cartesian.cc (cartesian repo, outside this quest's file set) and has a non-constexpr
-`toWGS84()` branch, so the 6 `start_vertices` need a dynamic initializer per TU unless the table
-stops using Cartesian or cartesian gets a constexpr ctor. `trixel_t` holds a `std::string name`.
+Baseline job 261123-132523-45413e at htm:c4577b7 (TU with only htm.h): __StaticInit 192 B, __bss 240 B,
+__mod_init_func 1 entry, `__GLOBAL__sub_I_t.cc` building `start_vertices`; start_trixels has none.
+Lead ruled (no cartesian change): make both tables `inline` variables. Done at htm:dcc43b8, with
+test/start_tables_test.cc (old values hard-coded) and its CMake target.
+Jobs: p2 probe (htm.h-only TU, two using TUs, ld -r of the two) before 261123-133516-e862f4 (c4577b7),
+after 261123-133521-fde1c8 (dcc43b8); build-test 261123-133529-8903d0 (A1); values test 261123-133531-7b7420 (A3).
 
 ## Next
 
-1. Read the job's output; if no `__mod_init_func`/init function in t.o, record "none" in Result and stop.
-2. Else decide: constexpr table inside htm.h only (plain-double table, no Cartesian ctor) vs a cartesian change (other repo: Blocked on).
+1. Read the probe outputs (logs under ~/.scratch/campaign/jobs/<id>/a1/log); record before/after in Result.
+   If clang still registers a guarded init per using TU, say so honestly.
+2. Paste `campaign brief` Evidence table, State -> ready for review, push htm branch.
+3. Result note: a constexpr Cartesian ctor (cartesian repo) would remove the last initializer; lead files the hunt row.
 
 ## Blocked on
 
