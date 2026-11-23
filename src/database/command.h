@@ -121,6 +121,9 @@ std::string encode_entry(const Command& command, std::size_t limit = COMMAND_ENT
 std::string encode_entry(const CommandChunk& chunk);
 std::string encode_entry(const CommandFinal& final, std::size_t limit = COMMAND_ENTRY_BYTES);
 
+// The bytes `write` takes in a command's entry: an entry is its header and the sum of its writes' (D17's packing).
+std::size_t encoded_size(const CommandWrite& write);
+
 // Reads an entry; raises errc::corrupt on bytes that are not one. A chunk's bytes view `entry`.
 CommandEntry decode_entry(std::string_view entry);
 

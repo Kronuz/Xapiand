@@ -884,7 +884,13 @@ void restore_documents() {
 			setup();
 			manager = XapiandManager::make();
 			auto endpoint = cli_endpoint(opts.restore_documents);
-			auto sha256 = engine::sync_wait(DatabaseHandler::restore_documents(endpoint, fd));
+			std::string sha256;
+			try {
+				sha256 = engine::sync_wait(DatabaseHandler::restore_documents(endpoint, fd));
+			} catch (const ClientError& exc) {   // the file is not a dump
+				L_CRIT("{}", exc.get_message());
+				throw SystemExit(EX_DATAERR);
+			}
 			L(-LOG_NOTICE, NOTICE_COL, "Restore sha256 = {}", sha256);
 			manager->join();
 			manager.reset();

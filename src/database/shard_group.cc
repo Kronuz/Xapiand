@@ -27,10 +27,13 @@
 #include <variant>                 // for std::get_if
 
 #include "database/data.h"         // for Data, ct_type_t
+#include "database/utils.h"        // for DB_SLOT_VERSION
 #include "engine/document.h"       // for engine::Document
 #include "engine/error.h"          // for engine::Error, engine::errc
 #include "engine/strata/document.h"  // for engine::strata::StrataDocument
 #include "engine/strata/shard.h"   // for engine::strata::append_write
+#include "reserved/fields.h"       // for VERSION_FIELD_NAME
+#include "serialize.h"             // for Serialize::version
 #include "varint.hh"               // for varint::leb128
 
 
@@ -219,6 +222,7 @@ ShardApplication::transaction(const state& s, const strata::group::entry& e) con
 	const auto& command = *r.command;
 	const auto placement = place_blobs(s, command, r.id);
 	prospect::transaction t;
+	std::map<std::string, engine::rev, std::less<>> written;   // a key's version after this command's writes so far
 	for (std::size_t w = 0; w < command.writes.size(); ++w) {
 		const auto& write = command.writes[w];
 		if (write.document.staged) {
@@ -238,22 +242,51 @@ ShardApplication::transaction(const state& s, const strata::group::entry& e) con
 		prepared.expected = write.expected;
 		prepared.result.did = write.did;
 		if (write.document.bytes.empty()) {
+			if (write.op == CommandOp::erase_key) {
+				written[write.key] = 0;
+			}
 			engine::strata::append_write(t, prepared, nullptr, index_->fields());
 			continue;
 		}
 		auto doc = engine::Document::unserialize(write.document.bytes);
-		if (!write.blobs.empty()) {
-			// The blobs' locators, from the placement: a function of the log on every replica.
+		auto& native = dynamic_cast<engine::strata::StrataDocument&>(doc.native());
+		// The version a replace by key lands at. An unconditional one (a RESTORE's, D17) was prepared ahead of the
+		// entries before it: the key's version here, after this command's earlier writes, decides, as strata's does.
+		std::optional<engine::rev> stamp;
+		if (write.op == CommandOp::replace_key) {
+			engine::rev landing = 1;
+			if (write.expected) {
+				landing = *write.expected + 1;
+			} else if (const auto it = written.find(write.key); it != written.end()) {
+				landing = it->second + 1;
+			} else if (const auto found = index_->find_key(write.key)) {
+				landing = static_cast<engine::rev>(found->second) + 1;
+			}
+			written[write.key] = landing;
+			if (landing != native.version()) {
+				stamp = landing;
+				native.stamp(landing);
+				native.add_value(DB_SLOT_VERSION, Serialize::version(landing));
+			}
+		}
+		if (!write.blobs.empty() || stamp) {
 			Data data(doc.get_data());
+			// The blobs' locators, from the placement: a function of the log on every replica.
 			for (std::size_t b = 0; b < write.blobs.size(); ++b) {
 				const auto& blob = write.blobs[b];
 				const auto [volume, offset] = placement.at[w][b];
 				data.update(ct_type_t(blob.ct_type), static_cast<ssize_t>(volume), static_cast<size_t>(offset), static_cast<size_t>(blob.record.size()));
 			}
+			if (stamp) {
+				auto obj = data.get_obj();
+				if (auto it = obj.find(VERSION_FIELD_NAME); it != obj.end()) {
+					it.value() = *stamp;
+					data.set_obj(obj);
+				}
+			}
 			data.flush();
 			doc.set_data(data.serialize());
 		}
-		auto& native = dynamic_cast<engine::strata::StrataDocument&>(doc.native());
 		prepared.result.version = native.version();
 		engine::strata::append_write(t, prepared, &native, index_->fields());
 	}

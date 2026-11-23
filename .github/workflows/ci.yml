@@ -219,8 +219,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Install newman
-        run: npm install -g newman@6
+          cache: npm
+          cache-dependency-path: harness/package-lock.json
       - name: E2E, plain and over HTTPS
         run: BIN="$PWD/build/bin/xapiand" harness/run_all.sh e2e tls
 
@@ -296,7 +296,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Install newman
-        run: npm install -g newman@6
+          cache: npm
+          cache-dependency-path: harness/package-lock.json
       - name: E2E, plain and over HTTPS, under ${{ matrix.name }}
         run: BIN="$PWD/build/bin/xapiand" harness/run_all.sh e2e tls
