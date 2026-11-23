@@ -1,6 +1,6 @@
 # group-heal: journal
 
-State: waiting on jobs 261122-214426-f15731 (probe: where every install flight fails; 35th of 65 queued at 21:27)
+State: waiting on jobs 261122-215230-313ac4 (probe: where every install flight fails; 35th of 65 queued at 21:27)
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -14,7 +14,7 @@ Install stall, round 2 (lead's note 2026-11-22). cd2a4a40's fix (frames in order
 grow_and_heal and seeds 16, 103, 108, 122, 123, 132, 140 the same way as before (leader names the
 peer in installs_needed, the peer stays at its old applied); CI run 44987690334 (asan, tsan,
 FreeBSD, macOS) the same. In a settle every message, fetch, IO and chore drains each 5 ms tick,
-so simulated time is not the cause: something fails every flight. Probe 261122-214426-f15731
+so simulated time is not the cause: something fails every flight. Probe 261122-215230-313ac4
 (unversioned, .scratch/group-heal/probe.sh + probe-src, traced; consensus 8780e44 by --ref) shows
 where: install_gap(3), grow_and_heal(3) and seed 132, at frame order kept and 3600 ms; probe-src
 now also traces a chore item that throws (its type and reason). Installs do work sometimes (13 of
@@ -50,7 +50,7 @@ voters_test.cc world edit carried into world.hh at that merge).
 
 ## Next
 
-1. Read probe 261122-214426-f15731 (its log, and .scratch/group-heal/{gap3,heal3}-trace.out in
+1. Read probe 261122-215230-313ac4 (its log, and .scratch/group-heal/{gap3,heal3}-trace.out in
    the strata worktree): which step of the flight fails every time (pin_for no pin, fetch none,
    validation_failed, Begin Busy, SnapshotTransferFailed). Fix it with a test that fails without.
 2. At the new head: install_suite.sh (A1, A2), install_test all cases (the install task's rerun),
