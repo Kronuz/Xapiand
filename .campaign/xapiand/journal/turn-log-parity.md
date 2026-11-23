@@ -1,6 +1,6 @@
 # turn-log-parity: journal
 
-State: waiting on jobs 261121-214538-7ed56e (A2 reopen_damaged at strata:bc8c614c: D1 and D2) 261121-214541-f24fed (A2 standalone) 261121-214545-0d42a7 (D2 mutant, --fails-without at strata:e60cc249) 261121-214553-5dbd30 (build-test at strata:bc8c614c); confirm D1=261121-214538-7ed56e D2=261121-214538-7ed56e (mutant 261121-214545-0d42a7); reviewer's D2 probe 261121-213954-ecd99d (at strata:5953ed46) still queued
+State: waiting on jobs 261122-211650-53b0d6 261122-211651-d55897 261122-211651-6e7f83 261122-211651-c814ac 261122-211652-48bf9b 261122-211653-bec36d 261122-211653-c0a813 261122-211654-8f477f 261122-211654-bc88d7 261122-211655-3f7d01 261122-211656-32a6f7 261122-211656-649631 261122-211721-4e393f 261122-211725-d53b60 and CI at strata:7c6aa208
 Quest: .campaign/xapiand/quests/turn-log-parity.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,30 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Group-commit merge pass (2026-11-22), head strata:7c6aa208, pushed:
+
+1. The task merge refused on its journal (add/add in `turn-log-parity--group-commit.md`).
+   Xapiand:bdced53bc merges this quest branch into the task branch, the task's journal winning
+   (pushed). strata:c074afcd (the tool's merge of 6c3d0862) was already on the quest branch.
+2. strata:7c6aa208 merges main (strata:7131ed44, README.md only) with `git merge`;
+   `campaign land --merge-main` was refused by the session's permission check.
+3. A4 mutant re-cut at the merged head: strata:3e7bad67 (`refs/mutants/turn-log-parity-cohort-groups`,
+   local), 6c946dc3's diff on 7c6aa208, building only `test_barrier_cohort`. Job 261122-211721-4e393f.
+4. Read (fix round 1, at strata:bc8c614c): D1/A2 261121-214538-7ed56e passed (`first chunk
+   damaged: bound 4`, `middle chunk damaged: bound 5`, `tolerant open: 0 failures`), so
+   manifest_named's bounds held under journal:e4b0100; standalone 261121-214541-f24fed passed;
+   D2 mutant 261121-214545-0d42a7 built, then failed `test_reopen_damaged.cc:247` twice with `a
+   turn-log chunk with no run before it`, as it must; build-test 261121-214553-5dbd30 passed
+   (90 of 90).
+5. Reviewer's D2 probe 261121-213954-ecd99d at 5953ed46: exit 1. `first` and `a third in`
+   reproduce D2. Its `small (control)` and `last chunk damaged` cases also fail, with `the
+   index's head names turn-log records its log lacks` (status 1, bound 0): not D2's message, and
+   neither the review nor the fix covers them. Rerun at the head as 261122-211656-649631; if
+   those two still fail, it is for the reviewer and lead (Blocked on 4).
+6. The A4 mutant 261121-183128-18f3a2 and the task's 261121-213641-0cfcd2 and
+   261121-213700-e680a2 failed at build (D1's `faultfs`; a captured constexpr `barrier`): not
+   evidence, no kill.
 
 Fix round 1 (durability review CHANGES at strata:5953ed46), head strata:bc8c614c:
 
@@ -72,13 +96,14 @@ Not merged: group-commit, tolerant-open (Blocked on, below). Evidence at strata:
 
 ## Next
 
-1. Read 7ed56e, f24fed, 0d42a7, 5dbd30 into Evidence; if manifest_named's bounds moved under
-   journal:e4b0100, fix the asserted bounds and rerun. Lead: `campaign accept turn-log-parity
-   durability --confirm D1=261121-214538-7ed56e --confirm D2=261121-214538-7ed56e`, or the
-   suite 261121-214553-5dbd30 for both if accept wants the suite job.
-2. Earlier: read the queued jobs (State) into Evidence; A4's mutant 261121-183128-18f3a2 must show
-   `test_barrier_cohort` failing after a clean build (a build failure is not a kill).
-3. Lead: Blocked on 1 before landing.
+1. Read the jobs in State into Evidence. The A4 mutant must show a complete build, then
+   `test_barrier_cohort` failing a CHECK. A1-A4/A6 reruns at 7c6aa208 replace their b533db12 and
+   bc8c614c runs; A4's test 261121-230329-90fd96 and 261121-213706-2e8246 were reused by identity
+   (their inputs are unchanged at 7c6aa208).
+2. Lead: rerun `campaign task merge turn-log-parity group-commit`; then `campaign accept
+   turn-log-parity durability --confirm D1=261122-211652-48bf9b --confirm D2=261122-211652-48bf9b`
+   (or the build-test 261122-211725-d53b60) once they pass.
+3. Lead: Blocked on 1 and 4 before landing.
 
 ## Blocked on
 
@@ -90,6 +115,11 @@ Not merged: group-commit, tolerant-open (Blocked on, below). Evidence at strata:
    261121-183128-18f3a2), 261121-151725-649183 and 261121-151646-4dcef9 (suite and fix at
    strata:e59af09e, superseded by build-test and 261121-183109-1a0cf0).
 3. Earlier: A5 and A6's gate rows wait for parity tasks 2-6 and 8-14 (closing pass below).
+4. Reviewer/lead: the D2 probe's control and last-chunk cases (Doing 5), if they still fail at
+   7c6aa208. Options: (a) a correct refusal (the damaged record is the log's tail and its bound
+   unknown), recorded beside N1; (b) a defect like D2, fixed with a case in test_reopen_damaged.
+   No recommendation until the rerun is read.
+5. N1 stays the owner's call; the default (land with the limit recorded) stands.
 
 Resolved: group-commit (CI-timing check replaced by recorded turns at strata:80f91fd0, merged);
 tolerant-open (merged with the pin above); build-test now configures with `-G Ninja`.
@@ -152,6 +182,16 @@ b6a7697: the item is now applicable (not done in the merge pass).
 | F13 | probe K, `d1_ladder_model.py`, job 261120-133247-a1f4a0 (exit 0, all claims hold): rooms from `segment_bytes` throw at turn 1; rooms following the spare never throw, admitted to sealed 1 turn, 229 MiB/s at 16 MiB and 1,476 MiB/s at 64 MiB; smallest rung 48 MiB/s; naive step down 5 turns, guarded 1 |
 | F4, N5, F14 A3 stall | probe G, `d7_model.py`, job 261120-133248-df88a3 (exit 0, all ok): rows 1-5 as in round 1; row 6, other writers seal within 2 turns of arrival behind a 4-room transaction, admitted to sealed 0 |
 | Round 1 | F1 probe F 261120-083804-ec1239; N6 probe B2 261120-083211-0cbbce; N1 261120-074846-356a48 |
+
+## Rulings I made (group-commit merge pass, 2026-11-22)
+
+- Main merged with `git merge origin/main` (no rebase), since `campaign land --merge-main` was
+  refused; the merge is README.md only.
+- Reran at 7c6aa208 only the build-q (Ninja) jobs and A2's two; the brief's non-Ninja specs
+  (5eca03, 0cc5e8, bf027b, 36020e, 2f7f8d, 2f69f9, 53357a, 28fbcd, 110105, 114248) and the
+  journal-override A2 runs (145607-0e1ac9, 115239-ee5107) stay superseded, as ruled in the
+  resume pass. The D2 mutant 261121-214545-0d42a7 stands at its own commit (e60cc249).
+- The A4 mutant builds `test_barrier_cohort` alone, so an unrelated target cannot fail it at build.
 
 ## Rulings I made (fix round 1, 2026-11-21)
 
