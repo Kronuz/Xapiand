@@ -1,6 +1,6 @@
 # group-heal--repair: journal
 
-State: waiting on jobs 261123-061126-fa0f89 (group_repair, group_repair_eager at strata:c7f776ac); after it 261123-061134-aacfd8 (^group_) and 14 mutants 261123-061136-9410bb .. 261123-061205-59dc8e (pin-unchecked-footer 261123-061203-9d2526); pushed
+State: waiting on jobs 261123-063129-a135ff (group_repair, group_repair_eager at strata:d457da76); after it 261123-063139-f5dbcc (^group_) and 17 mutants 261123-063143-84cfc5 .. 261123-063248-279216
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 ## Doing
@@ -37,6 +37,34 @@ set-damage-fences 649be6, no-ack 2ba6bf, waiters-unanswered ef2479, apply-damage
 read-damage-passes ccda65, activate-unchecked d1c5a1, marker-kept 0dffe6, leader-keeps 2746ad,
 no-retry 92542a, pin-unchecked-footer 9d2526, needed-kept 59dc8e (all 261123-0611xx/0612xx).
 
+Round 3 (job 261123-061126-fa0f89 at c7f776ac: eager passed, group_repair failed refusal,
+staged, source and four crash points). strata:d457da76:
+- refusal: the test measured the wrong index. The replica does acknowledge delivered ranges
+  unapplied (consensus applied 32 over the replica's 31, the damaging write's range). But once
+  the leader admits its install request (consensus core.h replicate: a `requested` peer gets the
+  image path only) and while the request is pending (the follower delivers nothing), x's log no
+  longer counts toward commits, so with y cut off the later writes cannot commit. The test now
+  writes until the first that cannot commit, checks applied >= the damaging write's index, and
+  every acked write survives.
+- staged: nothing escaped; the refusal happened but the reason stayed the marker's first text
+  (mark_damaged keeps an existing marker). adopt passes the refused file's reason to
+  adopt_damaged. Mutant reason-kept.
+- source: nothing escaped either: strata's lazy map inside make_pin (its checkpoint's commit)
+  met the damage, and become_damaged marked the source. The failure was the hand-off:
+  applied_past(id, 0) named the other damaged replica, and two damaged replicas passed
+  leadership between them (no leader at the end). hand_leadership_away now asks for a follower
+  applied through the commit index, and waits when none is named. The pin tags its reason ("the
+  pin met damage"). Mutant handoff-any. pin-unchecked-footer may survive if strata's own
+  checkpoint always meets the damage first; its job says.
+- crash at 89/83 of 91/85: the cut fell after clear_damaged, before the activation was counted
+  in either process: the replica was repaired. The check is now unmarked and the damage gone
+  (a manifest log again, or the sealed file's CRC32C).
+- crash at 53/52: a complete stage stayed after a settled repair. Hypothesis: the leader's owed
+  image (requested survives TimedOut) reached the repaired replica, which staged and validated it,
+  and consensus refused it CaughtUp (decided at InstallPrepared, after validation; no Sink notice).
+  Fix: a sound replica answers validated without staging an image at or below its applied
+  index. Mutant stage-caught-up; the failure messages print the stage's position if it stays.
+
 ## Next
 
 1. Red case or survived mutant: fix next commit, rerun.
@@ -62,7 +90,7 @@ docs/mechanisms/group-install.md (Repair).
 
 | Criterion | Evidence |
 |---|---|
-| A3 | pending: 261123-061126-fa0f89, 261123-061134-aacfd8 (at c7f776ac; 053709 failed at 1d2c820f); fails without: the 13 mutants above (first build 261123-045314-e451c4 failed, fixed at 1d2c820f) |
+| A3 | pending: 261123-063129-a135ff, 261123-063139-f5dbcc (at d457da76; fa0f89 failed at c7f776ac, 053709 at 1d2c820f); fails without: 17 mutants 261123-063143-84cfc5 .. 261123-063248-279216 |
 
 ## Result
 
@@ -79,6 +107,11 @@ Not yet.
 - A live set file has no CRC32C in the bundle, so its damage at rest is not detected (F24, no
   scrubber); the staged check covers live files through the pin's CRC32C.
 - The repair retry shares the stall hand-off's timer (one wheel entry per group).
+- A damaged leader hands off only to a follower the host names as applied through the commit
+  index; none named waits for the timer. Only a host with no view falls back to any voter.
+- A sound replica answers `validated` at once, staging nothing, for an image at or below its
+  applied index: consensus can only refuse it CaughtUp (asked_by needs a pending request, which
+  only a damaged replica makes, and reinstall is Busy while an image is in flight).
 - The test's `read` and `apply` cases inject strata's `corrupt_index` through the read function
   and the app's `before_write` hook: deterministic, and the same error strata raises.
 - A segment's damage is found where strata maps it: at the first read, apply or merge
