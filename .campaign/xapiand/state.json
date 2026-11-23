@@ -7241,9 +7241,9 @@
       ],
       "repo": "../consensus",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "consensus joins a node by token v2 on the transport port, pins keys, reloads certificates and checks the boot",
-      "updated": "2026-11-23T15:01:23",
+      "updated": "2026-11-23T15:14:35",
       "worktree": "../consensus-wt/xapiand/consensus-join-v2"
     },
     "consensus-request-install": {
