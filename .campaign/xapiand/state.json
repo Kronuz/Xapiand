@@ -30772,6 +30772,34 @@
       "updated": "2026-11-12T13:16:29",
       "worktree": ""
     },
+    "system-file-nr-close": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 15,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "system.cc",
+        "test/test.cc",
+        "CHANGELOG.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../system",
+      "risk": "normal",
+      "status": "planned",
+      "title": "Linux file-nr readers close their descriptor",
+      "updated": "2026-11-22T21:17:54"
+    },
     "t10-flood-limit": {
       "accepted": {
         "correctness": {
