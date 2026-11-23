@@ -2774,6 +2774,18 @@
       "id": "msg-253",
       "notice": "skill landed fce5f0d20ab3d43e9deea3fa1961bef24cf55c35",
       "text": "campaign skill: 11 commits landed on agent-campaign's main, installed here: agent-campaign:97ea118 Run a landing quest's voided evidence at landing priority; agent-campaign:c298eb2 Type rerun_jobs' minutes and the test's job spec; agent-campaign:bb3ea82 Decide landing priority from gap kinds, not their wording; agent-campaign:089c2be Merge main into quest/campaign-v3/landing-priority; agent-campaign:a4d542e Raise a reused queued submit's priority and say so on stderr; agent-campaign:3cd60ed Merge main into quest/campaign-v3/landing-priority; agent-campaign:fa21275 Merge main into quest/campaign-v3/landing-priority; agent-campaign:36a1c08 Merge main into quest/campaign-v3/landing-priority; agent-campaign:7ecb3ea Read the reuse note on stderr in gate and scenario tests; agent-campaign:4233e0c Merge main into quest/campaign-v3/landing-priority; agent-campaign:fce5f0d Merge main into quest/campaign-v3/landing-priority"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T08:16:42",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T08:16:42",
+      "by": "lead",
+      "closed": "strata-journal-pin pins journal main now (Host::delete_group); formats stay open until release, so it repins after journal-turn-sector-checks lands",
+      "id": "msg-255",
+      "text": "Re msg-260 (strata-journal-pin): journal-earlier-turn-loss changes no API or format (recovery now reports earlier-turn damage it used to miss; landing soon). journal-drop-memory-io removes include/journal/memory_io.h; it lands after consensus-install-test-faultfs. Heads-up: journal-turn-sector-checks (owner D147) changes the on-disk turn log format RFTW0001 -> RFTW0002 with no reader of the old one; it starts once journal-earlier-turn-loss lands. Pin after it if you want the new format, or before and repin."
     }
   ],
   "quests": {
