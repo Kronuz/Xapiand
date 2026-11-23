@@ -1,6 +1,6 @@
 # group-heal: journal
 
-State: waiting on jobs 261123-025733-6d601b 261123-025741-994ce2 261123-025745-1cfc1e 261123-025756-3c979b 261123-025800-60799b 261123-025803-7e8f02 261123-025807-5e3091 261123-025811-3c291c 261123-025815-b0df66 261123-025818-4a4f12 261123-025822-68b83b 261123-025825-5422c2 261123-025901-9a4aba (and CI at strata:a1e786f4)
+State: waiting on CI at strata:a1e786f4 (no job of mine running; 261123-025901-9a4aba failed exit 127, a probe, not a criterion). Remaining: A3 needs task repair and A5 needs task sim-rows, both unbuilt, after consensus-request-install; landing after consensus-request-install
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -201,11 +201,11 @@ voters_test.cc world edit carried into world.hh at that merge).
 
 ## Next
 
-1. Read the jobs in State and CI at strata:a1e786f4. If all pass: F1=261123-025733-6d601b,
-   F2=261123-025741-994ce2 for `campaign accept group-heal durability --confirm` (the suite
-   261123-025745-1cfc1e if a versioned job is required). A failing case is fixed next commit.
-2. Report the first-commit window (probe 9a4aba) to the lead with its result.
-3. repair: ruled (c), after consensus-request-install lands. sim-rows (order 3) after repair.
+1. CI at strata:a1e786f4 (asan, tsan, build-test); a red case is fixed next commit.
+2. Report the first-commit window to the lead (probe 261123-025901-9a4aba failed exit 127, so the
+   probe needs a rerun or the lead's call; the cause is in the Doing section).
+3. After consensus-request-install lands: repair (A3), then sim-rows (A5); then the When-done
+   review gate rows. The quest lands after consensus-request-install.
 
 ## Blocked on
 
@@ -239,17 +239,17 @@ Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generat
 Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
 checked what), and answer each message by its id (msg-N).
 
-At strata:908b58c0 (2026-11-23, jobs queued; the head before the merge, 82ea744c, passed: suite
-b1fede, witness 0ebc24, its suite 499a3a):
+At strata:a1e786f4 (2026-11-23; the code is final, its durability review accepted there: F1 and
+F2 confirmed by suite 261123-025745-1cfc1e). `campaign brief`'s rows, with the task rows:
 
 | Criterion | Evidence |
 |---|---|
-| A1 | <261121-225628-12c599 failed; 261123-021413-a25890 queued; 261123-014456-7941e0 cancelled; 261123-005919-bdfe69 failed; 261123-005922-93c9ac ran other code> |
-| A2 | <261123-021413-a25890 queued; 261123-005919-bdfe69 failed> |
-| A3 | <no evidence yet> |
-| A4 | <261123-021425-711463 queued> |
-| A5 | <no evidence yet> |
-| A6 | <no evidence yet> |
+| A1 | 261123-025745-1cfc1e (install_suite.sh, 16 of 16 `^group_` tests pass: group_install, group_voters, group_file_set, group_catalog*, group_footprint, ...; replaces a25890); fails without: install mutants skip-file-set 261121-210245-1aac19, keep-unchecked 261121-210246-3f5652, write-past-failure 261121-210246-ad33f8, marker-before-sync 261121-210247-fbfca9, holder-unordered 261121-210247-218fb3 and at a1e786f4 261123-025822-68b83b, no-resume 261121-210247-d363e5 and at a1e786f4 261123-025825-5422c2, serve-past-length 261121-210248-1c5575, pin-names-unchecked 261121-210248-b81f77; at a1e786f4 release-at-open 261123-025756-3c979b, install-onto-deferred 261123-025800-60799b and 261123-025818-4a4f12, release-fences 261123-025803-7e8f02, pin-per-flight 261123-025807-5e3091, install-silent 261123-025811-3c291c, close-skips-install-tasks 261123-025815-b0df66. Task install: merged at cd2a4a40, its step-1 jobs superseded by the above (261121-210245-1aac19 replaces 261121-173210-076626). Confirmations of F1 261123-025733-6d601b and F2 261123-025741-994ce2 |
+| A2 | 261123-025745-1cfc1e (the ungated schedules, install_gap, grow_and_heal 3 and 5 are group_voters cases); fails without: install-silent 261123-025811-3c291c at a1e786f4, 261121-210236-dca37d (earlier), 261121-133923-ba5a0d |
+| A3 | none. Task `repair` is unbuilt: it waits on consensus-request-install (ruled (c), Decisions 2026-11-23). Related, not the criterion: install_test `damaged` (a sealed file with a flipped byte is fetched again, 261123-025745-1cfc1e) and file_set_test (a flipped byte fails recovery on its CRC32C); neither fences and reinstalls through a request, and no non-prefix device runs |
+| A4 | 261123-041202-998ec3 (group_witness at a1e786f4); fails without: witness-holds-range 261123-021427-94e042 and 261123-014651-e0f143, witness-refuses-image 261123-021429-dfeb44 and 261123-014655-73ffe0, 261121-214749-38a541, 261121-214752-5dffc3 (task witness: merged at e48288841e96; its mutant rows are brief's at 908b58c0d2ee). 261123-021425-711463 (at 908b58c0) is replaced by 998ec3 |
+| A5 | none. Task `sim-rows` is unbuilt (order 3, after repair). The port is merged (task sim-port, 6d870c0536f2; sizing 261120-232059-b57cfe, determinism 261120-180334-1b82c5, lost-write mutant 261120-180342-65db6c); no job at a1e786f4 runs `simulation_*`, and the group's fault rows, checker rows and four mutants do not exist yet |
+| A6 | [artifact] `docs/mechanisms/group-install.md` and `docs/mechanisms/simulator.md` in strata at a1e786f4 (last changed by strata:a1e786f4; nothing to update: the fix round is described). group-install.md, Activation: "A deferred index (a fresh learner's, which never committed) commits its empty state first: install writes its segment copies before its manifest, and a directory holding segments with no manifest log is damage to strata's open, not an interrupted create." (F2); the binding: "pins a crash or a fenced close left in strata's manifest go after the next open: recovery reads them (`held_pins`) and queues their release on the chore, where short of space it stalls as above, so a full disk never fails the open." (F1); Proof names `reopen_short_of_space`, `deferred_learner_crash` and mutants `release-at-open`, `install-onto-deferred`. simulator.md: "`sim/` runs a cluster on one thread in simulated time. A seed fixes every draw, so a run is a function of its seed", its Tests table, and "The group's fault rows are `sim-rows`" (Status) |
 
 ## Result
 
