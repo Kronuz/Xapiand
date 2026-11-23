@@ -35,6 +35,7 @@
 #include "database/data.h"        // for Locator
 #include "database/flags.h"       // for readable_flags, DB_*
 #include "database/pool.h"        // for ShardEndpoint
+#include "database/shard_group.h" // for ShardGroup, ShardGroups
 #include "database/handler.h"     // for committer
 #include "database/utils.h"       // for DB_SLOT_VERSION
 #include "database/wal.h"         // for DatabaseWAL
@@ -501,7 +502,7 @@ public:
 // the index, so the replay holds no turn and its writes run their chores inline. The engine then takes the index's
 // chores. A throw fails the open, and the catalog destroys this entry, then the index.
 void
-ShardEndpoint::open_blocking(prospect::index& index)
+ShardEndpoint::open_blocking(kronuz::journal::IO& directory, prospect::index& index)
 {
 	L_CALL("ShardEndpoint::open_blocking()");
 
@@ -555,6 +556,26 @@ ShardEndpoint::open_blocking(prospect::index& index)
 #endif  // XAPIAND_DATABASE_WAL
 
 	engine_->use_chores(chores.get());
+
+	// The group last: it recovers on the index as the open left it (D169), and its failed open fails this one.
+	if (auto* groups = database_pool.groups()) {
+		group_ = std::make_unique<ShardGroup>(*groups, directory, index);
+		group_->group.open_blocking();
+	}
+}
+
+
+// The catalog's close_payload, before the index's close: the group checkpoints what it applied and keeps its closed
+// record for a reopen in this process. A throw (fenced, a failed checkpoint) leaves its log and last bundle standing.
+void
+ShardEndpoint::close_group()
+{
+	if (!group_) {
+		return;
+	}
+	auto& group = group_->group;
+	group.close_blocking();
+	database_pool.groups()->closed(group.id(), group.closed_record());
 }
 
 

@@ -39,6 +39,7 @@
 #include "at_end.h"               // for at_end::assert_none
 #include "database/flags.h"       // for readable_flags
 #include "database/shard.h"       // for Shard
+#include "database/shard_group.h" // for ShardGroups
 #include "completion/posix.h"     // for kronuz::journal::PosixIO
 #include "engine/strata/io_options.h"  // for engine::strata::posix_io_options
 #include "engine/error.h"         // for engine::Error, engine::errc
@@ -620,7 +621,11 @@ DatabasePool::make_host(std::size_t soft_open, const IndexSweep& sweep)
 	};
 	h.open_payload = [this](const IndexCatalog::opening& op, prospect::index& index, std::optional<ShardEndpoint>& entry) {
 		entry.emplace(*this, op.key);
-		entry->open_blocking(index);
+		entry->open_blocking(*op.io, index);
+	};
+	// The group's close, outside the chore's lease and before the index's (D169): its checkpoint covers what it applied.
+	h.close_payload = [](ShardEndpoint& entry, prospect::index&) {
+		entry.close_group();
 	};
 	h.commit = [](ShardEndpoint& entry, prospect::index&) {
 		entry.commit_blocking();
@@ -666,6 +671,13 @@ DatabasePool::DatabasePool(engine::AsioHost& timers, size_t database_pool_size, 
 	for (auto& catalog : catalogs_) {
 		catalog->start();
 	}
+}
+
+
+void
+DatabasePool::set_journal(const std::string& directory)
+{
+	groups_ = std::make_unique<ShardGroups>(directory);
 }
 
 

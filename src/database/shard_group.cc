@@ -22,10 +22,16 @@
 
 #include "database/shard_group.h"
 
+#include <algorithm>               // for std::max
+#include <chrono>                  // for std::chrono
+#include <cstring>                 // for std::memcpy
+#include <filesystem>              // for std::filesystem::create_directories
+#include <random>                  // for std::random_device
 #include <stdexcept>               // for std::logic_error
 #include <utility>                 // for std::move
 #include <variant>                 // for std::get_if
 
+#include "completion/posix.h"      // for kronuz::journal::PosixIO
 #include "database/data.h"         // for Data, ct_type_t
 #include "database/utils.h"        // for DB_SLOT_VERSION
 #include "engine/document.h"       // for engine::Document
@@ -392,4 +398,141 @@ ShardApplication::decode(std::string_view bytes) const
 		bad();
 	}
 	return s;
+}
+
+
+/*
+ * The process's journal: the host, its loop and the chore threads.
+ */
+
+namespace {
+
+namespace jn = kronuz::journal;
+
+// A lone voter (D2): this node, the group's only voter, with the D12 frame for its entries.
+kronuz::consensus::GroupOptions
+lone_voter_options()
+{
+	kronuz::consensus::GroupOptions o;
+	o.configuration.local = 1;
+	o.configuration.voters = {1};
+	o.configuration.cluster[0] = 'X';
+	o.configuration.configuration[0] = 'G';
+	o.admission = jn::AdmissionLimits{{1ull << 30, 1u << 20}, {1u << 20, 16}, {96ull << 20, 64}, 64, 3};
+	o.limits.command_bytes = COMMAND_ENTRY_BYTES;
+	o.limits.rpc_bytes = 2 * COMMAND_ENTRY_BYTES;
+	o.limits.log_bytes = 16 * COMMAND_ENTRY_BYTES;
+	o.timing = kronuz::consensus::Timing{20, 40, 100, 200, 60000};
+	return o;
+}
+
+}  // namespace
+
+
+void
+ShardGroups::Driven::begin()
+{
+	thread = std::thread([this] { scheduler.drive([this] { return quit.load(); }, [] { return true; }); });
+}
+
+
+void
+ShardGroups::Driven::wake()
+{
+	scheduler.post_call([](void*) { }, nullptr);
+}
+
+
+void
+ShardGroups::Driven::end()
+{
+	quit.store(true);
+	wake();
+	if (thread.joinable()) {
+		thread.join();
+	}
+}
+
+
+ShardGroups::ShardGroups(const std::string& directory, std::size_t chores)
+{
+	std::filesystem::create_directories(directory);
+	host_ = std::make_unique<jn::Host>(std::make_shared<jn::PosixIO>(directory), jn::Identity{'X', 'H'}, jn::HostOptions{1, jn::TurnLogOptions{}});
+	loop_ = std::make_unique<strata::group::loop>(loop_thread_.ref(), jn::completion_ref::of(io_), *host_, 0, std::random_device{}());
+	task::spawn(loop_thread_.ref(), host_->driver(0).run(jn::completion_ref::of(io_), stop_.token()), [this](std::exception_ptr) { turns_done_.store(true); });
+	task::spawn(loop_thread_.ref(), loop_->run(stop_.token()), [this](std::exception_ptr) { driver_done_.store(true); });
+	for (std::size_t i = 0; i < std::max<std::size_t>(1, chores); ++i) {
+		chores_.push_back(std::make_unique<Driven>());
+	}
+	loop_thread_.begin();
+	for (auto& chore : chores_) {
+		chore->begin();
+	}
+}
+
+
+ShardGroups::~ShardGroups()
+{
+	stop_.request(task::cancel_reason::shutdown);
+	loop_thread_.wake();
+	while (!(turns_done_.load() && driver_done_.load())) {
+		std::this_thread::sleep_for(std::chrono::microseconds(200));
+	}
+	for (auto& chore : chores_) {
+		chore->end();
+	}
+	loop_thread_.end();
+	loop_.reset();
+	host_.reset();
+}
+
+
+task::scheduler_ref
+ShardGroups::chore(kronuz::consensus::GroupId id) noexcept
+{
+	return chores_[static_cast<std::size_t>(id % chores_.size())]->ref();
+}
+
+
+kronuz::consensus::GroupId
+ShardGroups::group_id(const std::array<char, 16>& uuid) noexcept
+{
+	std::uint64_t id = 0;
+	std::memcpy(&id, uuid.data(), sizeof(id));
+	return id != 0 ? id : 1;
+}
+
+
+ShardGroups::group_type::config
+ShardGroups::config(const std::array<char, 16>& uuid)
+{
+	group_type::config c;
+	c.id = group_id(uuid);
+	c.options = lone_voter_options();
+	c.identity = uuid;
+	std::lock_guard<std::mutex> lk(closed_mtx_);
+	if (auto it = closed_.find(c.id); it != closed_.end()) {
+		c.closed = std::move(it->second);
+		closed_.erase(it);
+	}
+	return c;
+}
+
+
+void
+ShardGroups::closed(kronuz::consensus::GroupId id, std::optional<std::string> record)
+{
+	std::lock_guard<std::mutex> lk(closed_mtx_);
+	if (record) {
+		closed_[id] = std::move(*record);
+	} else {
+		closed_.erase(id);
+	}
+}
+
+
+ShardGroup::ShardGroup(ShardGroups& groups, kronuz::journal::IO& directory, prospect::index& index) :
+	app(index),
+	group(groups.loop(), groups.config(index.manifest().uuid), directory, index, app, groups.chore(ShardGroups::group_id(index.manifest().uuid)))
+{
 }

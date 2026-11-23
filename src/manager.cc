@@ -53,6 +53,7 @@
 #include "engine/host_asio.h"                    // for engine::AsioHost
 #include "engine/sync.h"                         // for engine::sync_wait
 #include "database/schemas_lru.h"                // for SchemasLRU
+#include "database/shard_group.h"                // for JOURNAL_DIRECTORY
 #include "database/utils.h"                      // for RESERVED_TYPE, unsharded_path
 #include "database/wal.h"                        // for DatabaseWALWriter
 #include "epoch.hh"                              // for epoch::now
@@ -297,6 +298,8 @@ XapiandManager::XapiandManager(std::chrono::steady_clock::time_point process_sta
 	  atom_sig(0)
 {
 	database_pool->set_control(&_rx->host);
+	// The journal of every index's group (cluster-release D2), in the data directory (the working one, setup()'s).
+	database_pool->set_journal(JOURNAL_DIRECTORY);
 	_rx->autocommits = std::make_unique<control::Debounce<Endpoint>>(_rx->host,
 		control::Debounce<Endpoint>::Timing{
 			std::chrono::milliseconds(opts.committer_debounce_timeout),

@@ -79,6 +79,8 @@ class ReplayTarget;
 class DataStorage;
 class DatabasePool;
 class IndexPin;
+class ShardGroups;
+struct ShardGroup;
 
 class WorkPool;
 class WorkGroup;
@@ -248,6 +250,11 @@ class ShardEndpoint : public Endpoint
 	std::atomic_bool stale_{false};
 	void note_failure(const engine::Error& error) noexcept;
 
+	// The index's replication group, a lone voter (cluster-release D2) over the slot's directory and index (D169);
+	// none while the pool has no journal. The open opens it last; the catalog's close_payload closes it.
+	std::unique_ptr<ShardGroup> group_;
+	void close_group();
+
 public:
 	ShardEndpoint(DatabasePool& database_pool, std::string_view path);
 	ShardEndpoint(const ShardEndpoint&) = delete;
@@ -305,8 +312,9 @@ private:
 	DatabaseWALWriter& wal_writer() const;
 
 	// The open's work on the catalog's index (open_payload, x-pool D6): the engine shard over it, the blob
-	// storage, and the WAL replayed with chores inline. The slot is `opening`, so no pin sees any of it first.
-	void open_blocking(prospect::index& index);
+	// storage, the WAL replayed with chores inline, then the group over `directory` and the index. The slot is
+	// `opening`, so no pin sees any of it first.
+	void open_blocking(kronuz::journal::IO& directory, prospect::index& index);
 
 	// The catalog's commit chore (x-pool D7, C24): runs with no pin held, under the chore's lease, at the bound
 	// close, at shutdown, in a replace close and in a demotion that only syncs a merge's output. With nothing
@@ -446,6 +454,8 @@ class DatabasePool {
 	std::chrono::milliseconds patience_{30s};           // how long the destructor waits for the shutdown before debug builds abort
 	// The IO of an index's files, by the index's path; empty: a PosixIO on <path>/strata. Set before the first pin.
 	std::function<std::unique_ptr<kronuz::journal::IO>(const std::string& path)> index_io_;
+	// The journal the indexes' groups log in (cluster-release D2), once set; it outlives the catalogs.
+	std::unique_ptr<ShardGroups> groups_;
 
 	// The catalogs' timer (on the control loop), their budget, their shutdown, and the catalogs, in the order they
 	// are made: the catalogs go first, once the timer has run what is still armed (their destructors wait for them).
@@ -534,6 +544,14 @@ public:
 
 	void set_wal_writer(DatabaseWALWriter* writer) noexcept {
 		wal_writer_.store(writer, std::memory_order_release);
+	}
+
+	// The journal over `directory`: every index opened from here on is a lone-voter group logged there. Set before
+	// the first pin.
+	void set_journal(const std::string& directory);
+
+	ShardGroups* groups() const noexcept {
+		return groups_.get();
 	}
 
 	// Gives the indexes' files another IO (a test's faultlab faultfs); set before the first pin. An IO with no index

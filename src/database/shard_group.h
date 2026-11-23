@@ -22,16 +22,24 @@
 
 #pragma once
 
+#include <array>                   // for std::array
+#include <atomic>                  // for std::atomic
 #include <cstdint>                 // for std::uint64_t
 #include <map>                     // for std::map
+#include <memory>                  // for std::unique_ptr
+#include <mutex>                   // for std::mutex
 #include <optional>                // for std::optional
 #include <string>                  // for std::string
 #include <string_view>             // for std::string_view
+#include <thread>                  // for std::thread
 #include <vector>                  // for std::vector
 
 #include "database/command.h"      // for Command
 #include "prospect/index.hh"       // for prospect::index, prospect::transaction
-#include "strata/group/group.hh"   // for strata::group::entry, strata::group::file_set
+#include "completion/seam.h"      // for kronuz::journal::InlineCompletion
+#include "journal/host.h"          // for kronuz::journal::Host
+#include "strata/group/group.hh"   // for strata::group::group, strata::group::loop
+#include "task.hh"                 // for task::blocking_scheduler, task::cancel_source
 
 
 // A shard's replication group applies its commands through this application (docs/design/cluster-release.md
@@ -101,4 +109,66 @@ private:
 
 	const prospect::index* index_;
 	mutable Resolved resolved_;
+};
+
+
+// Where the process's journal lives, relative to the data directory.
+inline constexpr const char* JOURNAL_DIRECTORY = ".journal";
+
+// The process's journal (docs/design/cluster-release.md D2): one journal host over a directory of the data root, the
+// group loop that runs its Driver on a thread of its own, and the chore threads the groups apply on. A shard's group
+// borrows its catalog slot's directory and index (D169), so the catalog opens and closes it (ShardEndpoint). Every
+// group is closed before this is destroyed.
+class ShardGroups {
+public:
+	using group_type = strata::group::group<ShardApplication>;
+
+	// The journal host over `directory`, made when missing; `chores` threads apply the groups' entries.
+	explicit ShardGroups(const std::string& directory, std::size_t chores = 2);
+	~ShardGroups();
+
+	ShardGroups(const ShardGroups&) = delete;
+	ShardGroups& operator=(const ShardGroups&) = delete;
+
+	strata::group::loop& loop() noexcept { return *loop_; }
+	task::scheduler_ref chore(kronuz::consensus::GroupId id) noexcept;
+
+	// A lone voter's group of the index with `uuid` (its id and journal identity), with the record its last close
+	// in this process kept, so the reopen resumes its term with no election.
+	group_type::config config(const std::array<char, 16>& uuid);
+	void closed(kronuz::consensus::GroupId id, std::optional<std::string> record);
+
+	static kronuz::consensus::GroupId group_id(const std::array<char, 16>& uuid) noexcept;
+
+private:
+	// A task scheduler driven by a thread of its own until end().
+	struct Driven {
+		task::blocking_scheduler scheduler;
+		std::atomic<bool> quit{false};
+		std::thread thread;
+		void begin();
+		void wake();
+		void end();
+		task::scheduler_ref ref() { return task::scheduler_ref::of(scheduler); }
+	};
+
+	kronuz::journal::InlineCompletion io_;
+	std::unique_ptr<kronuz::journal::Host> host_;
+	Driven loop_thread_;
+	std::vector<std::unique_ptr<Driven>> chores_;
+	std::unique_ptr<strata::group::loop> loop_;
+	task::cancel_source stop_;
+	std::atomic<bool> turns_done_{false};
+	std::atomic<bool> driver_done_{false};
+	std::mutex closed_mtx_;
+	std::map<kronuz::consensus::GroupId, std::string> closed_;   // under closed_mtx_
+};
+
+
+// A shard's group and its application, over the catalog slot's directory and index.
+struct ShardGroup {
+	ShardApplication app;
+	ShardGroups::group_type group;
+
+	ShardGroup(ShardGroups& groups, kronuz::journal::IO& directory, prospect::index& index);
 };

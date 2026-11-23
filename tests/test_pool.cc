@@ -58,6 +58,7 @@
 #include "database/pool.h"
 #include "pool_support.h"
 #include "database/shard.h"
+#include "database/shard_group.h"
 #include "database/wal.h"
 #include "engine/callbacks.h"
 #include "engine/chores.h"
@@ -69,6 +70,8 @@
 #include "engine/sync.h"
 #include "engine/strata/owed.h"
 #include "compressor_lz4.h"
+#include "completion/posix.h"
+#include "journal/host.h"
 #include "length.h"
 #include "node.h"
 #include "reactor.h"
@@ -89,6 +92,7 @@ struct PoolTestAccess {
 	// The catalog's commit chore, as the catalog runs it (no pin held by the caller's turn).
 	static void commit_blocking(ShardEndpoint& entry) { entry.commit_blocking(); }
 	static prospect::index& index(ShardEndpoint& entry) { return *entry.index_; }
+	static ShardGroup* group(ShardEndpoint& entry) { return entry.group_.get(); }
 	static IndexCatalog::handle where(const IndexPin& pin) { return pin.pin_.where(); }
 	static void patience(DatabasePool& pool, std::chrono::milliseconds wait) { pool.patience_ = wait; }
 	// Whether nobody holds the index's turn right now.
@@ -524,6 +528,39 @@ private:
 engine::rev revision_of(Shard& shard) {
 	engine::sync_wait(shard.ready());
 	return shard.engine().revision();
+}
+
+// With a journal, each index is a lone-voter group over its slot's index (cluster-release D2, D169): the open opens
+// it, the pool's shutdown closes it through close_payload, which leaves it closed in the journal's table, and a new
+// process recovers it under the same id.
+void test_an_index_is_a_lone_voter_group() {
+	const auto journal = fresh("journal");
+	const auto path = fresh("group");
+	kronuz::consensus::GroupId id = 0;
+	for (int process = 0; process < 2; ++process) {
+		{
+			DatabasePool pool(control_loop(), 8);
+			pool.set_journal(journal);
+			auto entry = pin(pool, path);
+			auto* group = A::group(entry.entry());
+			REQUIRE(group != nullptr);
+			CHECK_FALSE(group->group.fenced());
+			CHECK(group->group.readable());
+			const auto mine = ShardGroups::group_id(A::index(entry.entry()).manifest().uuid);
+			CHECK_EQ(group->group.id(), mine);
+			if (process == 0) {
+				id = mine;
+			}
+			CHECK_EQ(mine, id);   // the same index, the same group
+			Shard shard = use(entry, WRITE);
+			engine::sync_wait(shard.add_document(make("K" + std::to_string(process), "v")));
+			CHECK_TRUE(engine::sync_wait(shard.commit()));
+		}
+		kronuz::journal::Host host(std::make_shared<kronuz::journal::PosixIO>(journal), kronuz::journal::Identity{'X', 'H'}, kronuz::journal::HostOptions{1, kronuz::journal::TurnLogOptions{}});
+		CHECK(host.status(id) == kronuz::journal::GroupStatus::closed);
+	}
+	std::filesystem::remove_all(journal);
+	std::filesystem::remove_all(path);
 }
 
 // A write, a read, and a commit through a Shard.
@@ -2579,6 +2616,7 @@ int main(int argc, char** argv) {
 		{"test_soft_open_is_at_most_the_descriptor_cap", test_soft_open_is_at_most_the_descriptor_cap},
 		{"test_the_hostless_path_and_the_catalog_never_share_an_index", test_the_hostless_path_and_the_catalog_never_share_an_index},
 		{"test_the_sweep_erases_a_missing_index_negative_entries", test_the_sweep_erases_a_missing_index_negative_entries},
+		{"test_an_index_is_a_lone_voter_group", test_an_index_is_a_lone_voter_group},
 	};
 	for (const auto& c : cases) {
 		if (argc > 1 && std::string(c.name).find(argv[1]) == std::string::npos) {

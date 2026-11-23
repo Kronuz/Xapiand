@@ -71,12 +71,29 @@ Files live in the index's directory under the file set's `app.` prefix, written 
 the same bytes) and never unlinked by apply: the group unlinks a retired file once a bundle that omits it
 publishes.
 
+## The group of an index
+
+`src/database/shard_group.h`, `ShardGroups` and `ShardGroup`. The process keeps one journal host over
+`.journal` in the data directory (`DatabasePool::set_journal`, called by the manager), its group loop on a
+thread of its own, and two chore threads the groups apply on. The journal's IO completes inline on the loop's
+thread. Each index the catalog opens is a lone voter (D2) whose group borrows the slot's directory and index
+(strata's group-catalog, D169):
+
+1. **Open.** `open_payload` builds the entry, which opens the group last: the group recovers from its last
+   bundle on the index as the open left it, or creates itself. Its id is the first 8 bytes of the index's
+   uuid, and its journal identity the uuid.
+2. **Close.** Every catalog close runs `close_payload` before the index's close: the group checkpoints until
+   its bundle covers what it committed, and the process keeps its closed record, so a reopen resumes its term
+   with no election. The catalog's commit hook stays a plain strata commit.
+
 ## Proof
 
 - `tests/test_group_prepare.cc`: a voter applying the leader's prepared writes from their bytes holds the same
   ids, versions, data and field table; a stale expectation is refused at apply on both; prepare writes nothing.
 - `tests/test_group_command.cc`: round trips, every entry within the limit at limits around a command's size,
   refusals over the limit, and corrupt bytes at every prefix refused.
+- `tests/test_pool.cc` (`test_an_index_is_a_lone_voter_group`): the open opens the index's group, the shutdown
+  leaves it closed in the journal's table, and a second process recovers it under the same id.
 - `tests/test_shard_group.cc`: offsets from the state and idempotent effects, rotation in log order, a chunked
   command applied at its final entry, an upload into its own volume, a higher term retiring open commands,
   entries outside their id's term applying nothing, an abort retiring its upload's volume, and the state's
