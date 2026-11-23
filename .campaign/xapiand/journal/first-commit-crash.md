@@ -1,11 +1,11 @@
 # first-commit-crash: journal
 
-State: waiting on jobs 261123-050145-4fa570 261123-050148-1c20df 261123-050150-0c1ced 261123-050152-1a9db0 261123-050154-7775a1 261123-050400-666aa7
+State: waiting on jobs 261123-050148-1c20df 261123-050150-0c1ced 261123-050152-1a9db0 261123-050154-7775a1 261123-050400-666aa7
 Quest: .campaign/xapiand/quests/first-commit-crash.md (the lead's; never edit it)
 
 ## Doing
 
-Code done at strata:606a1d62. Waiting on A2 (fails-without over main's index.hh), four A4 mutants
+Code done at strata:606a1d62. A2 passed. Waiting on four A4 mutants
 and the suite (A1, A3). Branch not pushed: github.com unreachable from this host (port 443 refused).
 
 ## Next
@@ -23,7 +23,7 @@ Nothing.
 | Criterion | Evidence |
 |---|---|
 | A1 | build-test 261123-050400-666aa7 at strata:606a1d62 (pending); targeted lifecycle_test 261123-050143-ad76e7 passed: first commit 13 cuts x 9: 50 not created, 56 empty, 11 committed, 0 failed; first refresh 9 x 9: 50 not created, 31 empty, 0 failed |
-| A2 | 261123-050145-4fa570 (head's test over main's index.hh, pending). Earlier 261123-045326-9bf051 at strata:c18becbc refused 49 first-commit cuts ("no manifest log; seg-1.sx") but its control was buggy (fixed in strata:04dcb24d): superseded |
+| A2 | 261123-050145-4fa570 passed (fails-without, head's test over main's index.hh, complete build): first commit refused 49 of 90 cuts, e.g. "FAIL first commit cut at 1/9 (process crash): refused: no manifest log; seg-1.sx"; first refresh 10 of 27; control 0 failed. Earlier 261123-045326-9bf051 at strata:c18becbc refused 49 first-commit cuts ("no manifest log; seg-1.sx") but its control was buggy (fixed in strata:04dcb24d): superseded |
 | A3 | build-test 261123-050400-666aa7 (pending); ad76e7: second commit 7 x 9: 52 previous, 11 committed, 0 failed; existing create sweep and T1 unchanged and passing |
 | A4 | mutants (pending): no-first-manifest 261123-050148-1c20df, commit-only 261123-050150-0c1ced, applied-early 261123-050152-1a9db0, always-empty 261123-050154-7775a1. Submit script: Xapiand .scratch/xapiand/first-commit-crash/submit.sh |
 | other | 261123-045814-05fc0d failed at strata:89f9f5e1: the logged sweep aborted, a logged index refuses applies before its first commit; sweep and the unreachable attributes carry removed in strata:606a1d62 |
