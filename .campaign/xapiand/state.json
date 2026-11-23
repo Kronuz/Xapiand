@@ -15127,11 +15127,12 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "Detent took it as detent:journal-bound-first-open (msg-262): journal recovery fixes stay in one campaign",
       "repo": "../journal",
       "risk": "high",
-      "status": "planned",
+      "status": "dropped",
       "title": "the lost bound survives a power cut during the first open",
-      "updated": "2026-11-23T10:46:38"
+      "updated": "2026-11-23T10:50:01"
     },
     "journal-group-delete": {
       "accepted": {
