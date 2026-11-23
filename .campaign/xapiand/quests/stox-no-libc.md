@@ -1,4 +1,4 @@
-# stox-no-libc: strict-stox parses every double without libc strtod
+# stox-no-libc: strict-stox decides every decimal double without libc strtod
 
 Risk: normal. The lead writes this quest; contributors read it and never edit it. Its machine state
 (status, branch, checks, reviews) is in `state.json`: `campaign status stox-no-libc`.
@@ -8,9 +8,12 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 Hunt item "strtod abort on macOS" (cpp-libraries `docs/fuzz-2026-11.md` at cpp-libraries:ff5eacf): a
 209-byte input makes Apple libc's `strtod` SIGABRT. strict-stox:d3eaf32 decides decimal text with
 trailing bytes without libc, but the same text with a leading space or `+` (`starts_decimal` sends it
-to `STRICT_STOX_STRTOD`) and every `stold` still reach Apple's `strtod`/`strtold`. After this quest no
-strict-stox entry point calls libc's `strtod` or `strtold` for any input, on any platform, with the
-same results as today on every input libc handles.
+to `STRICT_STOX_STRTOD`) still reaches Apple's `strtod`. After this quest every decimal text, with
+any C-locale white space or sign before it, is decided by `fp_slow` without libc, with the same
+results as today on every input libc handles. Hex, inf, nan, non-nearest rounding modes and non-'.'
+locales stay with libc; `stold` stays on `strtold`, which passes both fixtures on macOS
+(`fuzz/regressions/replay-macos.txt`). Lead, 2026-11-23, after the owner asked whether a cap would
+do: a re-route through the existing exact path, no platform-specific cap and no new parser.
 
 ## Acceptance criteria
 
