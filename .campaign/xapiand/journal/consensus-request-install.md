@@ -1,6 +1,6 @@
 # consensus-request-install: journal
 
-State: waiting on jobs 261123-033638-0820c7 (cases at the main merge), 261123-033648-43dc77 (TSan cases), 261123-033712-4c866b 261123-033654-45c17f 261123-033657-79fa97 (fetch x96 at main, quest head, Detent's fix), 261123-033853-954db1 (fetch peak RSS); CI run 45166729737 at consensus:59ae07f (pushed). Blocked on Detent for the fetch flake (Blocked on).
+State: waiting on jobs 261123-033638-0820c7 (cases at the main merge), 261123-033648-43dc77 (TSan cases), 261123-033712-4c866b 261123-033654-45c17f 261123-033657-79fa97 (fetch x96 at main, quest head, Detent's fix), 261123-033853-954db1 (fetch peak RSS), 261123-034007-148a12 (A6 fuzz rerun at 59ae07f); CI run 45166729737 at consensus:59ae07f (pushed). Blocked on Detent for the fetch flake (Blocked on).
 Quest: .campaign/xapiand/quests/consensus-request-install.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -185,7 +185,7 @@ Earlier (lead, file set): settled; the wider set is in the quest's files.
 | A3 | job 261123-014608-9d6850 (leader_lost, second_request, non_leader) |
 | A4 | job 261123-014608-9d6850 (witness_bound); fails without: 261123-014617-4a6a56 (bound+1 mutant) |
 | A5 | [artifact] docs/mechanisms/install-request.md at consensus:1869826 |
-| A6 | codec round-trip and corpus replay in 261123-014608-9d6850; fuzz 261122-235137-643930 (30 CPU-min, ASan+UBSan, at 1443159; the wire format is unchanged since); wire version ruling in the note's Wire section |
+| A6 | codec round-trip and corpus replay in 261123-014608-9d6850; fuzz 261122-235137-643930 (30 CPU-min, ASan+UBSan, at 1443159; the wire format is unchanged since); wire version ruling in the note's Wire section; rerun at 59ae07f: 261123-034007-148a12 |
 | A7 | CI run 45166729737 at consensus:59ae07f (pending): `ci:linux-asan-ubsan`, `ci:linux-tsan`, `ci:macos-arm64`, `ci:macos-x86_64`, `ci:freebsd-x86_64`, `ci:linux-arm64-gcc`, `ci:linux-x86_64-gcc`, `ci:linux-x86_64-clang`; TSan of the cases 261123-033648-43dc77. At 1869826 (run 45150071779) every job but two passed: macos-x86_64 fetch (pre-existing, Blocked on), linux-x86_64-gcc a runner timeout in ccache |
 
 Review findings: F1 fixed at consensus:1869826 (test lost_record; fails without:
