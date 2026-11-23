@@ -2618,6 +2618,26 @@
         "quest": "detent:consensus-sanitizer-ci-time"
       },
       "text": "detent:consensus-sanitizer-ci-time started and may change files your consensus-request-install changes (order them with --after detent:consensus-sanitizer-ci-time, or narrow the files); may change files your node-admission changes (order them with --after detent:consensus-sanitizer-ci-time, or narrow the files); changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-22T01:30:14",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-22T01:30:14",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-244",
+      "items": {
+        "nan-range-bound": "nan-range-bound"
+      },
+      "settles": {
+        "start": [
+          "nan-range-bound"
+        ]
+      },
+      "text": "split-xapiand-src landed: unlocks nan-range-bound"
     }
   ],
   "quests": {
@@ -14454,11 +14474,52 @@
         "test/placement_test.cc",
         "docs/mechanisms/turn-log-damage.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/journal-lost-bound",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-22T21:15:14",
+          "ci": {
+            "commit": "a3eecb543a39193960ad4e2a0dbb67ef22d46a10",
+            "runs": [
+              44993258408
+            ]
+          },
+          "commit": "a3eecb543a39193960ad4e2a0dbb67ef22d46a10",
+          "criteria": {
+            "A1": "261121-222032-774530, 261121-222032-8cf2ff, 261121-222033-48e820; fails without: 261121-103024-e1fed8, 261121-105358-5bfdac, 261121-105415-3c8f01, 261121-143022-821a58",
+            "A2": "261121-222032-840708, 261121-222033-475ec7",
+            "A3": "`docs/mechanisms/lost-bound.md` at journal:2a0ff36"
+          },
+          "evidence": [
+            {
+              "check": "build-test",
+              "ci": "ci:macos-arm64",
+              "commit": "a3eecb543a39193960ad4e2a0dbb67ef22d46a10",
+              "state": "done"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "a3eecb543a39193960ad4e2a0dbb67ef22d46a10",
+              "state": "done"
+            },
+            {
+              "check": "tsan",
+              "ci": "ci:linux-tsan",
+              "commit": "a3eecb543a39193960ad4e2a0dbb67ef22d46a10",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "8b063a1484fffc3e0ba5dbb4a7994c0ed81ed954",
+          "reason": "",
+          "tested": "a3eecb543a39193960ad4e2a0dbb67ef22d46a10"
+        }
+      ],
       "lenses": [
         "durability"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [
@@ -14467,10 +14528,10 @@
       "reason": "detent:journal-tail-second-sector landed at journal:8b063a1 (msg-239)",
       "repo": "../journal",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "damage bounds a group's loss instead of losing the group",
-      "updated": "2026-11-22T21:14:52",
-      "worktree": "../journal-wt/xapiand/journal-lost-bound"
+      "updated": "2026-11-22T21:15:18",
+      "worktree": ""
     },
     "journal-replaces-wal": {
       "accepted": {},
