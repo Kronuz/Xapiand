@@ -35709,6 +35709,8 @@
     "uinteger-radix-family": {
       "accepted": {},
       "after": [],
+      "base": "a1798226a2724ba4df781a3a11365ac29501de63",
+      "branch": "quest/xapiand/uinteger-radix-family",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -35731,6 +35733,7 @@
         "ARCHITECTURE.md",
         "tools/**"
       ],
+      "journal": "../Xapiand-wt/xapiand/uinteger-radix-family",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -35738,9 +35741,10 @@
       "provides": [],
       "repo": "../uinteger_t",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "uinteger_t's output helpers leave radix_decode.hh",
-      "updated": "2026-11-23T10:20:08"
+      "updated": "2026-11-23T10:21:30",
+      "worktree": "../uinteger_t-wt/xapiand/uinteger-radix-family"
     },
     "uinteger-restructure": {
       "accepted": {
