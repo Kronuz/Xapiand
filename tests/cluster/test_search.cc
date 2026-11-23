@@ -542,7 +542,10 @@ static void test_aggregations() {
 			check_same(want, got.result, label);
 			check_whole(got, *world, label);
 			check_aggregations(want_spy.get_aggregation(), got_spy.get_aggregation(), label);
-			CHECK_GT(want_spy.get_aggregation().size(), std::size_t{10});
+			// Not vacuous: one node answers every aggregation asked (plus `_doc_count`) over seen documents.
+			const auto& whole = want_spy.get_aggregation().at("_aggregations");
+			CHECK_EQ(whole.size(), config.at("_aggs").size() + 1);
+			CHECK_GT(whole.at("_doc_count").as_i64(), std::int64_t{0});
 		}
 	}
 }
