@@ -67,7 +67,7 @@ src/manager.cc	sync_wait	shutdown_checks	allow	1	the shutdown checks after the c
 src/control_plane.h	mutex	.	allow	11	the control tasks' state (a wake pointer, cleared by a scope guard, a key's target, one map entry): O(1) sections, never held across a wait or a call (D13)
 src/shutdown_wait.h	mutex	.	allow	2	the state shared with the thread that runs a blocking stop: a flag under a lock, on the main thread at shutdown; check_may_block guards the entry (D14)
 src/shutdown_wait.h	wait	.	allow	1	the shutdown's bounded wait for a blocking stop (C14), on the main thread; check_may_block guards it (D14)
-src/single_flight.h	mutex	.	allow	2	the flights map: one lookup or erase under the lock, never held across the load or a wait (D11)
+src/single_flight.h	mutex	.	allow	3	the flights map and a flight's joiner list: the leader's end, a join, and a cancelled joiner's leave, each one O(1) map step or list erase under the lock, never held across the load or a wait (D11)
 src/database/handler.cc	mutex	lock_guard<std::mutex> lk\(mtx\)	allow	4	AgreeingIndexes: O(1) set lookups and inserts of index paths, no I/O, bounded at 65,536 (D137)
 src/database/schema.cc	mutex	it->second\.lock\(\) == schema	allow	1	weak_ptr::lock, not a mutex: VerifiedSchemas compares a cached schema pointer
 src/database/schema.cc	mutex	adopted_mtx	allow	1	the adopted-list log set: one O(1) insert per upgraded index and language, no I/O (the log line is queued, not written)

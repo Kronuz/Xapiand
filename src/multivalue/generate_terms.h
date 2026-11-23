@@ -108,7 +108,8 @@ namespace GenerateTerms {
 		bool cjk_ngram,
 		const std::string& language, const std::string& stem_language,
 		analysis::stop_strategy stop_strategy,
-		analysis::stem_strategy stem_strategy);
+		analysis::stem_strategy stem_strategy,
+		bool cjk_words = false);
 
 	/*
 	 * Generate terms for numerical ranges: at least one matches every value in [start, end], and some

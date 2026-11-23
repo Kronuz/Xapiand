@@ -1,0 +1,8 @@
+{
+  "name": "xapiand-harness",
+  "private": true,
+  "description": "The docs E2E's one newman pin; harness/newman_env.sh installs it with npm ci.",
+  "dependencies": {
+    "newman": "6.2.3"
+  }
+}

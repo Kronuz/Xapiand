@@ -725,13 +725,15 @@ include_directories(
 )
 
 # analysis: text analysis (words, case folding, Z-prefixed stems, stop words,
-# CJK n-grams, wdf, positions) behind GenerateTerms::text, with the snowball stemmers and
-# the unicode tables it builds on. Header-only analysis; snowball is a small static C
-# library. Pinned on the commits analysis itself pins. The library owns the name snowball.
+# CJK n-grams, CJK words, wdf, positions) behind GenerateTerms::text, with the snowball
+# stemmers, the unicode tables and the fst under the CJK dictionary it builds on. Header-only
+# analysis; snowball is a small static C library. Pinned on the commits analysis itself pins.
+# The library owns the name snowball.
 FetchContent_Declare(unicode  GIT_REPOSITORY https://github.com/Kronuz/unicode.git  GIT_TAG 297413c889fd99a182f1e9b8c1bc97bb2f2ded29)
 FetchContent_Declare(snowball GIT_REPOSITORY https://github.com/Kronuz/snowball.git GIT_TAG 3efcd0faa97997acf361cf8edff97cb083e14bc8)
-FetchContent_Declare(analysis GIT_REPOSITORY https://github.com/Kronuz/analysis.git GIT_TAG 158c81b56a7976682672bfe1e491ffa6f219ad10)
-FetchContent_MakeAvailable(unicode snowball analysis)
+FetchContent_Declare(fst      GIT_REPOSITORY https://github.com/Kronuz/fst.git      GIT_TAG 7338f564f7c1c6c67e9f0cc8040d68e466592fb3)
+FetchContent_Declare(analysis GIT_REPOSITORY https://github.com/Kronuz/analysis.git GIT_TAG d72eb656163572c0c3bb0f1deb7c745b81d00a26)
+FetchContent_MakeAvailable(unicode snowball fst analysis)
 
 # queryparser: the query-string parser for the text of every field (src/engine/text.cc), on the
 # host, whatever engine runs the query.
@@ -772,7 +774,7 @@ FetchContent_Declare(varint GIT_REPOSITORY https://github.com/Kronuz/varint.git 
 # prospect: the search layout on the strata segment core, behind the strata engine
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
 # strata and the libraries strata links.
-FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 397c02d578cc495813426757d5022e14d88d506a)  # strata main: an open's inherited sync waits for its first commit (sync-at-first-commit)
+FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG e3edb4266f6c2f7d48cb7fe24c58de503e7bb41f)  # strata main: catalog delivery waits through a posting post
 FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG eef601dce70260cc5a58e2089168d1cf1c7a8982)  # prospect main: completion's read-only opens, damaged segments at first map
 FetchContent_MakeAvailable(prospect)
 
@@ -1240,6 +1242,7 @@ target_link_libraries(XAPIAND_OBJ PUBLIC
 	allocators::allocators
 	cartesian::cartesian
 	analysis::analysis
+	analysis::cjk
 	queryparser::queryparser
 	prospect::prospect
 	task::asio
