@@ -49,7 +49,8 @@ Entry point is `src/main.cc`; the process is orchestrated by
 
 ## Build & toggles
 
-Build with CMake and Ninja only: every configure passes `-G Ninja`; the top-level CMakeLists refuses any other generator.
+Development builds use CMake and Ninja: every configure in our docs and scripts passes `-G Ninja`, so
+build trees and the ccache stay consistent. CMake itself accepts any generator, for CI and for users.
 
 ```sh
 cmake -G Ninja -S . -B build && cmake --build build
