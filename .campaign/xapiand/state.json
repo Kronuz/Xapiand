@@ -24723,8 +24723,7 @@
       "files": [
         "tests/test_harness.h",
         "tests/test_harness_self.cc",
-        "tests/CMakeLists.txt",
-        "tests/**/*.cc"
+        "tests/CMakeLists.txt"
       ],
       "landed": [],
       "lenses": [],
@@ -24735,7 +24734,7 @@
       "risk": "low",
       "status": "planned",
       "title": "REQUIRE evaluates its condition once",
-      "updated": "2026-11-22T23:05:02"
+      "updated": "2026-11-22T23:05:36"
     },
     "research-indexing": {
       "accepted": {},
