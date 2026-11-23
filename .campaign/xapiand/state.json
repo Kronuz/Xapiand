@@ -11446,9 +11446,7 @@
           "verdict": "APPROVE"
         }
       },
-      "after": [
-        "turn-log-parity"
-      ],
+      "after": [],
       "base": "00eb018da75d20715b3e05a2593937a970b40201",
       "branch": "quest/xapiand/first-commit-crash",
       "checks": [
@@ -11477,7 +11475,7 @@
       "risk": "high",
       "status": "review",
       "title": "A crash in a fresh index's first commit leaves an index that opens",
-      "updated": "2026-11-23T06:10:22",
+      "updated": "2026-11-23T06:57:17",
       "worktree": "../strata-wt/xapiand/first-commit-crash"
     },
     "flush-memory": {
