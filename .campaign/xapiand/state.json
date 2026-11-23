@@ -31364,6 +31364,38 @@
       "title": "Field-aware strata index",
       "updated": "2026-11-08T13:25:27"
     },
+    "strata-journal-pin": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [
+        "journal"
+      ],
+      "files": [
+        "CMakeLists.txt",
+        "include/strata/group/**",
+        "include/strata/core/journal*",
+        "test/group/**",
+        "sim/**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "low",
+      "status": "planned",
+      "title": "strata builds against journal main (Host::delete_group)",
+      "updated": "2026-11-23T08:15:33"
+    },
     "strata-nospace-position": {
       "accepted": {},
       "after": [
