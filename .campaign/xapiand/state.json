@@ -33208,6 +33208,8 @@
       "after": [
         "split-check-members"
       ],
+      "base": "4f1ffa314d956204706f9924dae9574e6e34a646",
+      "branch": "quest/xapiand/tuple-buffer-restructure",
       "checks": [
         {
           "cmd": "ci:macos-arm64",
@@ -33228,6 +33230,7 @@
         "include/prospect/tuple_buffer_*.hh",
         "docs/source-layout.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/tuple-buffer-restructure",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -33235,9 +33238,10 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "prospect's tuple_buffer: run building, the entry codec and the run merger out of the class body",
-      "updated": "2026-11-21T22:24:28"
+      "updated": "2026-11-22T22:20:14",
+      "worktree": "../prospect-wt/xapiand/tuple-buffer-restructure"
     },
     "turn-log-parity": {
       "accepted": {
