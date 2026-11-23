@@ -424,8 +424,14 @@ ShardEndpoint::commit_group()
 	if (!modified.load()) {
 		co_return false;
 	}
-	co_await checkpoint(*group_);
+	auto& eng = dynamic_cast<engine::strata::Shard&>(*engine_);
+	try {
+		co_await checkpoint(*group_, [&eng](prospect::index&) { eng.checkpointed(); });
+	} catch (...) {
+		eng.rethrow_failure();   // a fenced index is the catalog's to replace (x-pool D2)
+	}
 	modified.store(false, std::memory_order_relaxed);
+	set_revision(eng.revision());
 	co_return true;
 }
 
@@ -1090,8 +1096,8 @@ Shard::restore_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, st
 				const engine::Error error(engine::errc::reopen, "Test seam: a write marks the index stale");
 				entry.note_failure(error);
 				write.error = std::make_exception_ptr(error);
-			} else if (write.shard_did != 0 && engine::sync_wait(eng.written_key(write.term)) == 0) {
-				write.missed = true;   // gone since placement: placed afresh by the caller (B1)
+			} else if (write.shard_did != 0 && engine::sync_wait(eng.written_key(write.term)) != write.shard_did) {
+				write.missed = true;   // gone from its docid since placement (erased, or written again): placed afresh (B1)
 				missed_terms.insert(write.term);
 			} else {
 				try {

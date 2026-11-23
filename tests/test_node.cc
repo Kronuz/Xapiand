@@ -69,6 +69,7 @@
 #include "database/pool.h"
 #include "database/schemas_lru.h"
 #include "database/shard.h"
+#include "database/shard_group.h"
 #include "database/utils.h"
 #include "database/wide_search.h"
 #include "pool_support.h"
@@ -76,7 +77,6 @@
 #include "logger.h"
 #include "cast.h"
 #include "serialize.h"
-#include "engine/chores.h"
 #include "engine/host.h"
 #include "engine/document.h"
 #include "engine/error.h"
@@ -95,11 +95,6 @@
 using namespace std::chrono_literals;
 
 struct PoolTestAccess {
-	static void set_chores(ShardEndpoint& entry, std::unique_ptr<engine::Chores> chores) {
-		entry.chores = std::move(chores);
-		entry.engine_->use_chores(entry.chores.get());
-	}
-	static std::unique_ptr<engine::Chores> take_chores(ShardEndpoint& entry) { return std::move(entry.chores); }
 	static prospect::index& index(ShardEndpoint& entry) { return *entry.index_; }
 	static engine::Shard& engine(ShardEndpoint& entry) { return *entry.engine_; }
 };
@@ -345,52 +340,44 @@ private:
 	std::thread thread_;
 };
 
-// Holds the next flush chore of an index until released.
-class GateChores final : public engine::Chores {
+// Holds the thread that drives a scheduler (a group's chore) from its next item until release(): what it would run
+// after waits.
+class SchedulerHold {
+	struct State {
+		std::mutex m;
+		std::condition_variable cv;
+		bool released = false;
+		std::atomic<bool> entered{false};
+	};
+
 public:
-	explicit GateChores(std::unique_ptr<engine::Chores> inner) : inner_(std::move(inner)) { }
-
-	void arm() {
-		std::lock_guard<std::mutex> lk(m_);
-		armed_ = true;
-		gate_ = std::make_shared<task::event>();
+	explicit SchedulerHold(task::scheduler_ref scheduler) {
+		auto* held = new std::shared_ptr<State>(state_);
+		const bool posted = scheduler.post_call([](void* arg) {
+			const std::unique_ptr<std::shared_ptr<State>> held(static_cast<std::shared_ptr<State>*>(arg));
+			auto& state = **held;
+			state.entered = true;
+			std::unique_lock<std::mutex> lk(state.m);
+			state.cv.wait(lk, [&] { return state.released; });
+		}, held);
+		if (!posted) {
+			delete held;
+		}
+		CHECK(posted);
 	}
-	bool entered() const { return entered_.load(); }
+	~SchedulerHold() { release(); }
+
+	bool entered() const { return state_->entered.load(); }
 	void release() {
-		std::shared_ptr<task::event> gate;
 		{
-			std::lock_guard<std::mutex> lk(m_);
-			gate = gate_;
+			std::lock_guard<std::mutex> lk(state_->m);
+			state_->released = true;
 		}
-		if (gate) {
-			gate->set();
-		}
-	}
-
-	task::task<void> run(engine::ChoreClass cls, std::function<void()> fn) override {
-		if (cls == engine::ChoreClass::flush) {
-			std::shared_ptr<task::event> gate;
-			{
-				std::lock_guard<std::mutex> lk(m_);
-				if (armed_) {
-					armed_ = false;
-					gate = gate_;
-				}
-			}
-			if (gate) {
-				entered_ = true;
-				co_await *gate;
-			}
-		}
-		co_await inner_->run(cls, std::move(fn));
+		state_->cv.notify_all();
 	}
 
 private:
-	std::unique_ptr<engine::Chores> inner_;
-	std::mutex m_;
-	bool armed_ = false;
-	std::shared_ptr<task::event> gate_;
-	std::atomic<bool> entered_{false};
+	std::shared_ptr<State> state_ = std::make_shared<State>();
 };
 
 engine::Document make(const std::string& key) {
@@ -716,27 +703,27 @@ private:
 };
 
 // A commit that takes 400 ms runs as a task of the control loop (the autocommit), and the loop keeps answering its
-// probe the whole time: nothing on it waits for the commit.
+// probe the whole time: nothing on it waits for the commit. The commit is the group's checkpoint, which captures on
+// the group's chore: holding that chore holds the commit.
 static void test_the_control_loop_is_free_during_a_slow_commit() {
 	Watchdog watchdog("slow commit");
 	Pulse pulse;
 	const auto endpoints = endpoints_of("slow_commit");
 	auto entry = pin_index(*manager()->database_pool, endpoints[0].path, WRITE);
-	auto gate = std::make_unique<GateChores>(A::take_chores(entry.entry()));
-	auto* raw = gate.get();
-	A::set_chores(entry.entry(), std::move(gate));
 	Shard shard = use_index(entry, WRITE);
 	engine::sync_wait(shard.ready());
 	engine::sync_wait(shard.add_document(make("K1")));   // schedules the autocommit
-	raw->arm();                                           // and the commit it starts waits for release()
+	auto* group = entry.entry().group();
+	CHECK(group != nullptr);
+	SchedulerHold hold(manager()->database_pool->groups()->chore(group->group.id()));   // the commit waits for release()
 	CHECK(entry->is_modified());
 
 	const auto before = manager()->control_lag().snapshot();
-	CHECK(eventually([&] { return raw->entered(); }));   // the autocommit's commit chore is held
+	CHECK(eventually([&] { return hold.entered(); }));   // the group's chore is held
 	std::this_thread::sleep_for(400ms);
 	CHECK(entry->is_modified());                          // still not committed
 	const auto during = manager()->control_lag().snapshot();
-	raw->release();
+	hold.release();
 	CHECK(eventually([&] { return !entry->is_modified(); }));
 
 	const auto lag = lag_between(before, during);

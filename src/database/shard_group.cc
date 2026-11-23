@@ -694,7 +694,7 @@ ShardGroup::abort_open(const std::vector<std::uint64_t>& ids)
 
 
 task::task<void>
-checkpoint(ShardGroup& shard_group)
+checkpoint(ShardGroup& shard_group, std::function<void(prospect::index&)> at)
 {
 	const auto home = task::current();
 	co_await task::schedule_on{shard_group.group.owner().scheduler()};
@@ -702,6 +702,9 @@ checkpoint(ShardGroup& shard_group)
 	try {
 		const auto published = co_await shard_group.group.checkpoint();
 		shard_group.checkpointed.store(published.through, std::memory_order_release);
+		if (at) {
+			co_await shard_group.group.read_applied([&](prospect::index& index) { at(index); });
+		}
 	} catch (const kronuz::consensus::closed&) {
 		error = std::make_exception_ptr(engine::Error(engine::errc::not_available, "The shard's group is closing"));
 	} catch (...) {

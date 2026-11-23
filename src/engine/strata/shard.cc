@@ -1077,6 +1077,23 @@ Shard::applied_by_group() noexcept
 }
 
 
+void
+Shard::checkpointed() noexcept
+{
+	auto& core = *handle_->core;
+	core.pending = false;
+	core.dirty = false;
+	core.note();
+}
+
+
+void
+Shard::rethrow_failure() const
+{
+	rethrow_translated(handle_->core);
+}
+
+
 task::task<PreparedWrite>
 Shard::prepare(WriteOp op, docid did, const std::string& key, Document* doc, WriteArgs args)
 {

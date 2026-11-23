@@ -138,6 +138,14 @@ public:
 	// The shard's group applied to its index (a write, a replay): reads owe a refresh, the index a commit.
 	void applied_by_group() noexcept;
 
+	// The shard's group committed its index (a checkpoint): nothing is owed a refresh or a commit, and the revision
+	// is the manifest's. Call it on the group's chore.
+	void checkpointed() noexcept;
+
+	// Rethrows the exception being handled, a failure of the shard's group, as an engine error of its kind: a fence
+	// marks the index for replacement. Call only inside a catch block.
+	[[noreturn]] void rethrow_failure() const;
+
 private:
 	std::unique_ptr<Handle> handle_;
 	bool writable_;

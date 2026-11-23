@@ -223,5 +223,6 @@ task::task<strata::group::answer> propose_entry(ShardGroup& shard_group, std::st
 task::task<std::uint64_t> next_chunked_id(ShardGroup& shard_group);
 
 // A checkpoint of the group (D16), started on its loop from any scheduler and answered on the caller's: the shard's
-// commit. Never from a commit hook (D169): the checkpoint's chore takes the index's write lease.
-task::task<void> checkpoint(ShardGroup& shard_group);
+// commit. Never from a commit hook (D169): the checkpoint's chore takes the index's write lease. `at`, if any, then
+// runs on the chore with the index as the checkpoint committed it.
+task::task<void> checkpoint(ShardGroup& shard_group, std::function<void(prospect::index&)> at = {});
