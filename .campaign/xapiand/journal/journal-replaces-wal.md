@@ -135,35 +135,12 @@ strata: `group-catalog` (item 4), which `core` step c waits on.
 
 ## Blocked on
 
-2. Host::delete_group on index DELETE: (a) the index DELETE verb is not built (`delete_database_view` answers 501),
-   so there is no deletion to hang it on; (b) strata's journal pin (9e11713e at strata main, 5bbeedc at Xapiand's
-   e3edb426) predates journal's 131eb2e (Host::delete_group, landed by journal-group-delete at d8453f6). Options:
-   (i) a strata pin bump to journal >= d8453f6 (the lead's `campaign pin`), then this quest builds index DELETE
-   (close the index's group, `Host::delete_group`, remove the directory; a recreate at the same path starts its
-   group empty, tested); (ii) move index DELETE with delete_group to its own quest after the bump, since DELETE is
-   a new user-visible verb. Recommend (ii): this quest's outcome is the WAL's removal, and DELETE is a feature.
-3. File set: step e deleted `src/debounce_or_run.h`, `tests/test_debounce_or_run.cc` and
-   `src/xapiand_stash_trace.h` (outside the set; they used the scheduler library A8 removes). Widen the set to them.
-4. Stale WAL text outside my set (the lead's or a docs quest's): `config.h.in` `#cmakedefine XAPIAND_DATABASE_WAL`;
-   AGENTS.md, README.md, docs/src/content/docs/{building,options,architecture,changelog}.md (DATABASE_WAL,
-   Stops 4-5, fsync threads, the WAL verb); src/log.h `L_DATABASE_WAL`; src/metrics.{h,cc} `xapiand_wal_errors` and
-   the fsync gauges (never set now); harness strata_write_check.sh, engine_crash_check.sh, graceful_shutdown_check.sh,
-   cluster/checklist.py, coverage_e2e_server.py (`PUT :wal` expects a 400), profile_bulk.sh's WAL row;
-   tests/one_id_mutants.sh "no-replay"; WAL comments in test_engine_strata.cc, test_engine_replay.cc,
-   test_quarantine.cc, test_coverage_database.cc. The engine's versioned-document replay (`WriteOp::none`,
-   `PreparedWrite::replayed`) has no WAL caller now; its tests are in test_engine_strata.cc (ruling 6 revised).
-
-Nothing else open. (Answered: 1, the journal's directory: `.xapiand/journal`, the lead's ruling 2026-11-23, Xapiand:4a117e647.)
-
-Was 1. `.journal` (the journal's directory in the data root) is also a valid index name: index_path::valid accepts a
-   leading dot, so a user index `.journal` would nest under the journal host. Options: (a) refuse creating an
-   index whose first segment is `.journal` (a reserved name, documented); (b) name the journal with a byte
-   valid() refuses; (c) leave it. Recommend (a); it changes user-visible behavior, so the lead decides. Work goes
-   on meanwhile.
-
-Answered earlier: nothing else open. Session 1's items 1-4 were answered by the lead on 2026-11-21: the file set widened
-(CMakeLists.txt, engine shard, command.*, shard_group.*, the DB_DISABLE_WAL tests, search_views.cc);
-item 4 is D169, option (a), built by strata quest group-catalog, which this quest lands after.
+Nothing open. Lead rulings, 2026-11-23:
+- 2: option (ii). Index DELETE is its own quest, index-delete (after strata-journal-pin bumps strata's journal pin
+  past journal:131eb2e, and after this quest). 501 is today's behavior on master, not a regression here.
+- 3 and 4: the file set now covers the three deleted files and every file in item 4. Removing the WAL means
+  removing it everywhere (code, options, metrics, docs, harness); do item 4 in this quest. AGENTS.md is shared
+  with agents-md, which lands first: merge master before editing it.
 
 ## Evidence
 
