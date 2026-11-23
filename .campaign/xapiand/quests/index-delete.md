@@ -5,32 +5,38 @@ Risk: high. The lead writes this quest; contributors read it and never edit it. 
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+`DELETE /<index>/` removes the index. Today `delete_database_view` answers 501. After this quest,
+DELETE closes the index's shard groups, deletes each group's journal state with
+`Host::delete_group`, and removes the index's directory, then answers success. A later PUT at the
+same path creates the index anew, with an empty group: no record of the deleted index's commands
+replays into it, after a clean restart or a crash.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 DELETE then recreate at the same path starts empty: no documents, no schema, no journal
+  records from before, both after a clean restart and after a kill -9 at each step of the delete
+  (a crash sweep): a test in tests/test_pool.cc or tests/test_index_delete*, run by the suite
+- A2 The same test fails without `Host::delete_group` (a `--fails-without` job)
+- A3 DELETE of a missing index answers 404; DELETE of a nested index's parent (`twitter` with
+  `twitter/user` present) deletes only the parent's own shards, leaving the child readable
+- A4 [artifact] The API reference documents DELETE with its responses, and a docs-as-E2E example
+  covers delete then recreate
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+Consumes strata's group lifecycle (open, close) and journal's `Host::delete_group` through
+strata-journal-pin. Adds a user-visible verb that answered 501.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 2026-11-23: its own quest (journal-replaces-wal's ruling, option ii). That quest's outcome
+  is the WAL's removal; DELETE is a feature, and 501 is today's behavior on master.
+- Lead, 2026-11-23: nested indexes are core: deleting a parent never deletes a child index.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+Nothing: one user-visible verb, reviewed once.
 
 ## Tasks
 
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+None: one contributor (implementation, strong, high).

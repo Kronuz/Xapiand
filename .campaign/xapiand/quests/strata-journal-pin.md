@@ -5,32 +5,37 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+strata main pins journal at a commit on journal's main that contains `Host::delete_group`
+(journal:131eb2e, landed by journal-group-delete at journal:d8453f6), up from journal:9e11713, 70
+commits behind it. strata's callers move to whatever journal's API changed in between: no
+shims, no forwarding names. Every strata test passes on the new pin, so index-delete can call
+`Host::delete_group` through strata.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 strata's suite passes at the new pin, configured with `-G Ninja`: the `build-test` check, a job
+  tagged `--for A1`
+- A2 The group simulator rows (simulation_group_*) pass at the new pin: a job tagged `--for A2`
+- A3 [ci] CI is green on every platform at the landed commit
+- A4 [artifact] The journal's notable changes between the two pins that strata had to follow
+  (renames, behavior) are listed in the journal's Result, with the strata commits that follow them
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+Consumes journal at its main. Changes no strata API. Quest branches pinned to the old journal
+(group-heal, placement, turn-log-parity) take the new pin when they merge main.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 2026-11-23: a pin bump, not a feature. index-delete (Xapiand) needs `Host::delete_group`
+  through strata; journal-replaces-wal's contributor asked for it (its journal, Blocked on 2).
+- Lead, 2026-11-23: if journal's API changed in ways that touch group-heal's open files,
+  stop and report before adapting them; group-heal holds those files.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+Nothing: one change.
 
 ## Tasks
 
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+None: one contributor (maintenance, economical, medium; strong, high if the API moved).
