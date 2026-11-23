@@ -1,6 +1,6 @@
 # hunt-htm-constexpr-start: journal
 
-State: working
+State: waiting on jobs 261123-132523-45413e
 Quest: .campaign/xapiand/quests/hunt-htm-constexpr-start.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,11 +9,19 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Baseline probe job 261123-132523-45413e (queued; host load ~100): compiles `#include "htm.h"` alone,
+clang++ 17 -std=c++20 -O2 -DNDEBUG, cartesian pinned 05cab81, at htm:c4577b7; prints `size -m`,
+__mod_init_func, nm and the init disassembly. Script: ~/.scratch/htm/constexpr-start/probe.sh DIR.
+
+Findings so far (reading, not measured): `Cartesian(double,double,double,int)` is defined out of line
+in cartesian.cc (cartesian repo, outside this quest's file set) and has a non-constexpr
+`toWGS84()` branch, so the 6 `start_vertices` need a dynamic initializer per TU unless the table
+stops using Cartesian or cartesian gets a constexpr ctor. `trixel_t` holds a `std::string name`.
 
 ## Next
 
-1. <step>
+1. Read the job's output; if no `__mod_init_func`/init function in t.o, record "none" in Result and stop.
+2. Else decide: constexpr table inside htm.h only (plain-double table, no Cartesian ctor) vs a cartesian change (other repo: Blocked on).
 
 ## Blocked on
 
