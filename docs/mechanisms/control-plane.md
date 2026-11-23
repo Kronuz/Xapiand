@@ -57,15 +57,15 @@ A signal reaches a task on the control loop, which runs `shutdown_checks`: the l
    stops, and its scheduler closes and destroys its roots: every root that may hold a pin is gone before Stop 3 awaits every pin (x-pool C24).
 4. **Stop 3, the indexes**: `DatabasePool::finish()` and `join()` await the catalog's shutdown, which commits each index through its entry and closes it once unpinned, polling in
    slices of at most 500 ms.
-5. **Stop 4, the write-ahead logs** finish (closing an index appended to them, so they come after the indexes); **Stop 5, the fsync threads** finish.
+5. **Stop 4, the journal** finishes (closing an index appends to it, so it comes after the indexes; see `journal-durability.md`); **Stop 5, the fsync threads** finish.
 6. The hosts are destroyed before the service whose io_contexts they post to; then the registry (and with it the `WorkPool`), the logs and the schemas.
 
 D16 states this order: the acceptors close at the start of `join()`, after the clients wait, and the loops stop before the indexes close (the registry closes on the main thread, so it needs none). The
 order is logged (`Stop 1` to `Stop 5`) and tested (`test_node`: `test_the_stop_runs_in_its_stated_order`).
 
 If the service has not stopped by the deadline, or an index is still in use at it, the stop logs what was unfinished (requests in flight per loop, and each index whose turn or references are held), keeps
-the service alive for the thread that still waits in it, finishes the write-ahead logs and the fsync threads, and exits with status 75 (`EX_TEMPFAIL`) after flushing the log, without destroying what the abandoned
-threads use. A write that was not acknowledged was never promised to be durable; an acknowledged one is in the log.
+the service alive for the thread that still waits in it, finishes the journal and the fsync threads, and exits with status 75 (`EX_TEMPFAIL`) after flushing the log, without destroying what the abandoned
+threads use. A write that was not acknowledged was never promised to be durable; an acknowledged one is in the journal.
 
 A second SIGINT or SIGTERM from the start of `join()` on (`XapiandManager::shutdown_signals`, counted by the signal handler) ends the wait and the registry's at once, with the same report and exit.
 The worst case after the graceful wait for clients is the one bound, 35 s, and the flush of the logs, which has no limit of its own. The control tasks' and the autocommits' drains end by the same deadline.

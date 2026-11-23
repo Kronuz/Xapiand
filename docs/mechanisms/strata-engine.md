@@ -6,7 +6,7 @@
 (`src/engine/shard.h`). It keeps one shard as a prospect index (the search layout of the strata segment
 core) in the shard's `strata/` directory. This slice is the write side: open and close, add, replace and
 erase by docid and by key, the version check, metadata, stats, `get` by docid with its stored data, a scan
-in docid order, transactions, and replay of the write-ahead log. Search, values and term lists are later
+in docid order, transactions, and replay of the journal (`journal-durability.md`). Search, values and term lists are later
 steps (S2, P1, P2).
 
 ## How

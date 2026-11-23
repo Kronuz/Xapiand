@@ -146,7 +146,7 @@ private:
 
 std::unique_ptr<Document::Native> new_native();
 
-// The document the write-ahead log's bytes hold.
+// The document the journal's bytes hold.
 Document unserialize_document(std::string_view serialized);
 
 // The strata document inside an engine document of this implementation.

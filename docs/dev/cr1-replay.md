@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-10-27) fix/cr1-replay; bisect and root cause of CR1, fix in docs/mechanisms/wal-replay.md.
+> Status: CURRENT (2026-10-27) fix/cr1-replay; bisect and root cause of CR1, fix in docs/mechanisms/journal-durability.md.
 # CR1: numeric values ignored after kill -9 and WAL replay
 
 After `kill -9` and a restart, numeric aggregations and `_sort` ignored the replayed documents'
@@ -33,7 +33,7 @@ The documents were never lost.
 
 `reopen_writable` commits after a replay that left work pending, through `Shard::commit(true, true)`: the engine commit in the
 shard's transaction mode, the endpoint revision, the WAL COMMIT line and the update notification. A failure propagates to
-`Shard::reopen`. How it works: `docs/mechanisms/wal-replay.md`.
+`Shard::reopen`. How it works: `docs/mechanisms/journal-durability.md`.
 
 ## Checks
 

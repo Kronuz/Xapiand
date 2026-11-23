@@ -148,7 +148,7 @@ public:
 	Native& native() noexcept { return *native_; }
 	const Native& native() const noexcept { return *native_; }
 
-	// The stored form of a document, as the write-ahead log keeps it. Defined by the engine.
+	// The stored form of a document, as the journal keeps it. Defined by the engine.
 	std::string serialize() const {
 		return native_->serialize();
 	}

@@ -5,7 +5,7 @@
 A term at the engine seam is a field and the bytes under it, never one string with the field's
 name glued to the front. `engine::Document` and the query nodes name the field; each engine
 decides what a field is. The Xapian engine joins the two back into the term Xapiand has always
-written, so its index files, answers and write-ahead log lines are unchanged. The strata engine
+written, so its index files, and answers are unchanged. The strata engine
 keeps terms apart by field and declares each field in the index's field table (SF,
 `strata-fields.md`). Design: strata `docs/design/fields-and-keys.md` (D1, D9, D12, C4).
 

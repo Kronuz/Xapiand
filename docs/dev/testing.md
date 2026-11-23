@@ -26,7 +26,7 @@ cmake -G Ninja -S . -B build && cmake --build build --target xapiand -j4
 | **unit** | `ctest` | C++ units (parsers, serialize, wal, query, ...) in isolation | `-DBUILD_TESTS=ON` + GTest |
 | **functional E2E** | `run_all.sh e2e` | the whole documented HTTP API still behaves (doc-embedded assertions) | `newman` |
 | **TLS** | `run_all.sh tls` | the E2E suite over HTTPS, and every TLS refusal names its reason (`tls_check.sh`) | a `-DTLS=ON` build, `newman` 6 |
-| **recovery** | `wal_recovery_check.sh` | WAL crash recovery: uncommitted writes survive a `kill -9` via open-time replay | nothing |
+| **recovery** | `journal_replay_check.sh` | journal crash recovery: acknowledged writes survive a `kill -9` via checkpoint and journal replay | nothing |
 | **load** | `index_fortune` | bulk indexing of many docs | nothing (falls back if no `fortune(6)`) |
 | **stress / soak** | `stress_fortune` | correctness under sustained concurrency | nothing |
 | **benchmark** | `loadtest.py` / `es_loadtest.py` | index throughput + query QPS/latency (vs Elasticsearch) | a dataset (bundled) |
@@ -177,28 +177,26 @@ expired, not-yet-valid, mismatched, or group-readable certificate or key.
 
 ---
 
-## Recovery — `wal_recovery_check.sh`
+## Recovery — `journal_replay_check.sh`
 
-The durability net for the write-ahead log. Every write is appended to the per-database
-WAL as it happens, *before* the debounced commit (the timed committer only forces
+The durability net for the journal (`docs/mechanisms/journal-durability.md`). Every write is in the shard's
+journal before the node answers, *before* the debounced commit (the timed committer only forces
 at ~8-10s). So a crash after some uncommitted writes must
-be recoverable: reopening the data dir replays the WAL and restores every one of them.
+be recoverable: reopening the data dir recovers from the checkpoint and the journal and restores every one of them.
 
 The check makes that concrete: start a node, `PUT` N docs **without** `?commit=true`
-(they live only in the WAL), `kill -9` the node within ~1s (a hard crash, well before any
-timed commit), restart on the same data dir, and assert all N docs come back. It also
-greps the restart log for the replay line (`Read and execute operations WAL`) as positive
-proof the recovery went through the WAL rather than a lucky early commit.
+(they live only in the journal), `kill -9` the node within ~1s (a hard crash, well before any
+timed commit), restart on the same data dir, and assert all N docs come back.
 
 ```sh
-harness/wal_recovery_check.sh            # 50 docs (default)
-NDOCS=500 harness/wal_recovery_check.sh  # more writes
+harness/journal_replay_check.sh            # 50 docs (default)
+NDOCS=500 harness/journal_replay_check.sh  # more writes
 ```
 
 This is the modern, real-architecture equivalent of the retired `oldtests/test_wal.cc`,
 which drove the long-gone 2019 `DatabaseQueue`/`Database` API by hand; here we exercise the
-actual HTTP → WAL → crash → open-time-replay path end to end. The storage engine underneath
-(`Kronuz/storage`, the append-only checksummed volume format the WAL is built on) has its
+actual HTTP → journal → crash → open-time-replay path end to end. The storage engine underneath
+(`Kronuz/storage`, the append-only checksummed volume format the journal's blobs use) has its
 own fault-injection suite (torn writes, truncation, bit rot, a corrupt size field, and the
 guarantee that records committed before any damage stay readable) — see that repo's
 `test/test.cc`.
