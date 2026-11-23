@@ -960,3 +960,13 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - turn-log-parity: every rerun at f5f6b7dc green (ASan, TSan, A2-A4, A6, fuzz 20 CPU-min, full A3 crash sweep); its D2 probe's two refusing cases are the predicted torn-tail limit, filed as hunt G1 for the journal owner.
 - uinteger-restructure: fnsizes differs in 3 of 97 binaries (test helper inlining only); GCC fix proven (noinline errors gone; a pre-existing NDEBUG unused variable in test.cc remains). Evidence pass launched (Sonnet high).
 - Host: load 48 on 16 CPUs, light slots 90% used, 45 queued, 279 GiB free. Quota 11% weekly at 1.75%/h.
+
+### 2026-11-23 12h (hourly)
+
+- Landed: require-once Xapiand:a0ee6c5, open-files-floor Xapiand:68dea47, journal-group-delete journal:d8453f6 (durability APPROVE, no blocking finding; 5 notes to hunt).
+- Accepted: group-heal durability at strata:a1e786f4 (F1, F2 via suite 1cfc1e; all 7 mutants at the fix killed), turn-log-parity durability at strata:f5f6b7dc (D1, D2 via suite d6ced9), consensus-request-install correctness re-accepted at consensus:59ae07f (main merge, fix-scope).
+- consensus-request-install CI red only on rpc_host_fetch, pre-existing on consensus main (heartbeat gaps 1.4-4.7 s, whole-runner stall); Detent took it as consensus-rpc-fetch-lag.
+- journal-replaces-wal: restore task merged by git (Xapiand:1d6ba2c) after three by-design-failing probe reruns blocked task merge (tool gap sent to campaign-v3); steps c and d launched (Opus high).
+- Lead errors: told the owner 3 of 97 uinteger_t binaries differ in fnsizes; it is 95 (campaign job log shows only the tail; full log at jobs/<id>/a1/log). Reran non-evidence probes at a task head, which blocked its merge.
+- Agent runs: uinteger evidence pass (Sonnet high, 142k), consensus CI (Opus high, 149k), placement CI (Opus high, 131k), journal-group-delete review (Opus high, 162k), group-heal fixes (Opus high, 216k).
+- Host: load 366 on 16 CPUs (Detent's four-way reader soak), light slots 61% used, 45 queued, 285 GiB free. Quota 12% weekly at 1.6%/h.
