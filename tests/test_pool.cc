@@ -2250,14 +2250,14 @@ struct GateScheduler {
 // destroys its roots (the waiter is abandoned) and destroys the scheduler (task_asio.hh's teardown phases 2-4).
 void test_a_delivery_never_posts_to_a_torn_down_scheduler() {
 	Watchdog watchdog("a delivery posts to no torn-down scheduler");
-	strata::faultfs::filesystem fs;
+	kronuz::faultlab::filesystem fs;
 	std::promise<void> gate;
 	std::shared_future<void> opens = gate.get_future().share();
 	DatabasePool pool(control_loop(), 4);
 	pool.set_index_io([&](const std::string& at) -> std::unique_ptr<kronuz::journal::IO> {
 		opens.wait();
 		std::filesystem::create_directories(at);
-		return std::make_unique<strata::faultfs::io>(fs);
+		return std::make_unique<kronuz::faultlab::io>(fs);
 	});
 	std::mutex m;
 	std::condition_variable cv;
