@@ -22381,7 +22381,7 @@
       ],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "tasks": {
         "repair": {
           "base": "debadea4dcd9f9cef03c8463a52d79b78126ec5f",
@@ -22433,7 +22433,7 @@
         }
       },
       "title": "The root authority places and repairs groups",
-      "updated": "2026-11-21T21:37:29",
+      "updated": "2026-11-23T04:47:01",
       "worktree": "../strata-wt/xapiand/placement"
     },
     "placement-locality-sim": {
