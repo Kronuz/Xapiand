@@ -1,6 +1,6 @@
 # group-heal--repair: journal
 
-State: waiting on jobs 261123-054412-092302 (group_repair with `source`, group_repair_eager at strata:3eb092f9), 261123-054414-582fec (mutant pin-unchecked-footer), and at strata:1d2c820f 261123-053709-bfdcc2, 261123-053717-611002 (^group_), 13 mutants 261123-053726-0f397b .. 261123-053801-c068cc; not pushed (GitHub unreachable), committed locally
+State: waiting on jobs 261123-061126-fa0f89 (group_repair, group_repair_eager at strata:c7f776ac); after it 261123-061134-aacfd8 (^group_) and 14 mutants 261123-061136-9410bb .. 261123-061205-59dc8e (pin-unchecked-footer 261123-061203-9d2526); pushed
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 ## Doing
@@ -25,6 +25,17 @@ it), 13 plain `--fails-without` mutants after it: open-rethrows 0f397b, unmarked
 quarantine-first 989d11, set-damage-fences beb2bb, no-ack e73634, waiters-unanswered 209793,
 apply-damage-fences 2e878f, read-damage-passes 46e4b4, activate-unchecked 92b4fc, marker-kept
 b32ccb, leader-keeps d4d5f4, no-retry 135fbd, needed-kept c068cc (all 261123-0537xx/0538xx).
+
+Round 2 (job 261123-053709-bfdcc2 at 1d2c820f failed): consensus answers reads NotLeader on a
+follower, so the lazy `segment` read and the `read` case got "rejected (reason 1)"; and settle()
+returned before any reinstall (a damaged replica at its leader's base matches applied indexes),
+so `group_repair_eager` never saw the repair. strata:c7f776ac: `lead()` moves leadership to the
+replica before its reads; `healed()` steps until no replica is damaged before every settle in
+`repaired()` and the crash sweep; digest reads that meet damage fail a check, not the process.
+Mutants (c7f776ac): open-rethrows 9410bb, unmarked a0957d, quarantine-first 62952e,
+set-damage-fences 649be6, no-ack 2ba6bf, waiters-unanswered ef2479, apply-damage-fences 596caa,
+read-damage-passes ccda65, activate-unchecked d1c5a1, marker-kept 0dffe6, leader-keeps 2746ad,
+no-retry 92542a, pin-unchecked-footer 9d2526, needed-kept 59dc8e (all 261123-0611xx/0612xx).
 
 ## Next
 
@@ -51,7 +62,7 @@ docs/mechanisms/group-install.md (Repair).
 
 | Criterion | Evidence |
 |---|---|
-| A3 | pending: 261123-053709-bfdcc2, 261123-053717-611002; fails without: the 13 mutants above (first build 261123-045314-e451c4 failed, fixed at 1d2c820f) |
+| A3 | pending: 261123-061126-fa0f89, 261123-061134-aacfd8 (at c7f776ac; 053709 failed at 1d2c820f); fails without: the 13 mutants above (first build 261123-045314-e451c4 failed, fixed at 1d2c820f) |
 
 ## Result
 
