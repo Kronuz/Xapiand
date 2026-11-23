@@ -27275,8 +27275,56 @@
         "tools/outline.py"
       ],
       "journal": "../Xapiand-wt/xapiand/split-check-members",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-23T00:54:22",
+          "ci": {
+            "commit": "bc16496daeabb93642f1fa3c9d4084c0c749b318",
+            "runs": [
+              45140291059
+            ]
+          },
+          "commit": "bc16496daeabb93642f1fa3c9d4084c0c749b318",
+          "criteria": {
+            "A1": "261123-003454-df339e (the test check), 261123-003454-df339e, 261123-003455-033d56",
+            "A2": "261123-003454-df339e, 261123-003455-033d56",
+            "A3": "261123-003454-df339e (the test check), 261123-003454-df339e, 261123-003455-033d56",
+            "A4": "`docs/SPLITTING.md` \"Restructuring a large class\" and \"What `tools/split_check.py` checks\"; `tools/README.md` (cpp-libraries:237350a)",
+            "A5": "261123-003454-df339e (the test check), 261123-003454-df339e, 261123-003455-033d56",
+            "A6": "261123-003455-033d56 (the lint check), 261123-003455-033d56"
+          },
+          "evidence": [
+            {
+              "cmd": "bash -c '/usr/local/bin/python3 tools/test_split_check.py && bash tools/test_selfcontained.sh'",
+              "commit": "bc16496daeabb93642f1fa3c9d4084c0c749b318",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-003454-df339e",
+              "level": "light",
+              "seconds": 184.4,
+              "state": "done",
+              "what": "split-check-members check test at bc16496daeab"
+            },
+            {
+              "cmd": "bash -c '/usr/local/bin/ruff check --config tools/ruff.toml tools/*.py && /usr/local/bin/ruff format --check --config tools/ruff.toml tools/*.py'",
+              "commit": "bc16496daeabb93642f1fa3c9d4084c0c749b318",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-003455-033d56",
+              "level": "light",
+              "seconds": 0.7,
+              "state": "done",
+              "what": "split-check-members check lint at bc16496daeab"
+            }
+          ],
+          "final": true,
+          "from": "5dfe67e00ae513143bf1442aae4b8d6bd1a765eb",
+          "reason": "",
+          "tested": "bc16496daeabb93642f1fa3c9d4084c0c749b318"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [
         "split-check-anchor"
@@ -27284,9 +27332,9 @@
       "provides": [],
       "repo": "../cpp-libraries",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "split_check proves member definitions moved out of a class body; SPLITTING.md restructures giant classes",
-      "updated": "2026-11-22T21:24:50",
+      "updated": "2026-11-23T00:54:25",
       "worktree": "../cpp-libraries-wt/xapiand/split-check-members"
     },
     "split-check-sources": {
