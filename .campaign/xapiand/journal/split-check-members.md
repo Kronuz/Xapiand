@@ -21,8 +21,8 @@ That failed job is the run without the fix.
 
 1. Read test 261122-215902-0c1bd1 and lint 261122-215902-19e3c9 at 2df69e8 (queued), and CI's
    `python` job at 2df69e8 (`gh run list -R Kronuz/cpp-libraries --commit 2df69e8...`).
-2. Lint is tagged A1,A2,A3,A5 by `campaign verify --for`; a resubmit `--for A6` reused it. If
-   status still shows A6 without evidence, the lead re-tags it.
+2. A6: lint 261122-215902-19e3c9 is tagged A6 too (status lists it); CI tools run 45121217833
+   at 2df69e8 (queued) for [ci].
 3. Ready for review.
 
 ## Blocked on
@@ -33,12 +33,12 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | test 261122-212041-81ad6c (pending): `OutlineTest`, `MembersTest` |
-| A2 | test 261122-212041-81ad6c (pending): `MutatedMoveTest`, one test per mutation |
-| A3 | test 261122-212041-81ad6c (pending): every existing test unchanged; `--members` is opt-in |
+| A1 | test 261122-215902-0c1bd1 (queued; 261122-212041-81ad6c failed before the fix): `OutlineTest`, `MembersTest` |
+| A2 | test 261122-215902-0c1bd1 (queued; 261122-212041-81ad6c failed before the fix): `MutatedMoveTest`, one test per mutation |
+| A3 | test 261122-215902-0c1bd1 (queued; 261122-212041-81ad6c failed before the fix): every existing test unchanged; `--members` is opt-in |
 | A4 | `docs/SPLITTING.md` "Restructuring a large class" and "What `tools/split_check.py` checks"; `tools/README.md` (cpp-libraries:237350a) |
-| A5 | test 261122-212041-81ad6c (pending): `OutlineTest` (outline.py output passes `--members`; compiles before and after) |
-| A6 | lint 261122-212041-782f93 (pending); pyrefly 0 errors; CI after push |
+| A5 | test 261122-215902-0c1bd1 (queued; 261122-212041-81ad6c failed before the fix): `OutlineTest` (outline.py output passes `--members`; compiles before and after) |
+| A6 | lint 261122-215902-19e3c9 (queued); CI tools run 45121217833 at cpp-libraries:2df69e8 (queued) |
 
 Real heads (not criteria; the lead needs them before those quests use the check), as
 `campaign job submit --quest split-check-members --repo <repo> --commit <head> --level none
