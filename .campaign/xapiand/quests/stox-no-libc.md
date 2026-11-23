@@ -5,32 +5,36 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Hunt item "strtod abort on macOS" (cpp-libraries `docs/fuzz-2026-11.md` at cpp-libraries:ff5eacf): a
+209-byte input makes Apple libc's `strtod` SIGABRT. strict-stox:d3eaf32 decides decimal text with
+trailing bytes without libc, but the same text with a leading space or `+` (`starts_decimal` sends it
+to `STRICT_STOX_STRTOD`) and every `stold` still reach Apple's `strtod`/`strtold`. After this quest no
+strict-stox entry point calls libc's `strtod` or `strtold` for any input, on any platform, with the
+same results as today on every input libc handles.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 The suite passes (`build-test`, Debug so asserts run): a job tagged `--for A1`
+- A2 The 209-byte artifact with a leading space, with a leading `+`, and through `stold`, returns the
+  same value or error as the other entry points, with the `counted_strtod` hook counting zero libc
+  calls (a test with values); it fails without the fix (a `--fails-without` job)
+- A3 Results equal libc's on every input libc does not abort on: a differential test over the fuzz
+  corpus and a random sample of at least 1,000,000 decimal strings, values and errors compared
+- A4 The fuzz harness runs 15 CPU-minutes clean on macOS at the head (a job)
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+No API change. Values, errors and `used` counts stay as documented in `strict_stox.hh`.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Owner, 2026-11-16: macOS-only libc bug, prod is not macOS; low priority, no security review.
+- Lead, 2026-11-23: normal risk; the correctness review may be waived at landing if A2-A4 hold.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+Nothing: one change.
 
 ## Tasks
 
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+None: one contributor (implementation, economical, medium).
