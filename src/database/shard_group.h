@@ -35,6 +35,7 @@
 #include <thread>                  // for std::thread
 #include <vector>                  // for std::vector
 
+#include "completion/posix.h"      // for kronuz::journal::PosixIOOptions
 #include "database/command.h"      // for Command
 #include "engine/document.h"       // for engine::Document
 #include "engine/shard.h"          // for engine::PreparedWrite
@@ -171,6 +172,10 @@ public:
 
 	static kronuz::consensus::GroupId group_id(const std::array<char, 16>& uuid) noexcept;
 
+	// The options the journal's IO was built with (engine::strata::posix_io_options()): `--full-flush-ordering`
+	// reaches the turn log's ordering barrier, and its per-volume warning names the switch (D10).
+	const kronuz::journal::PosixIOOptions& io_options() const noexcept { return io_options_; }
+
 private:
 	// A task scheduler driven by a thread of its own until end().
 	struct Driven {
@@ -183,6 +188,7 @@ private:
 		task::scheduler_ref ref() { return task::scheduler_ref::of(scheduler); }
 	};
 
+	kronuz::journal::PosixIOOptions io_options_;
 	kronuz::journal::InlineCompletion io_;
 	std::unique_ptr<kronuz::journal::Host> host_;
 	Driven loop_thread_;

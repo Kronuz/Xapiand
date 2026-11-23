@@ -39,7 +39,9 @@
 #include "database/shard_group.h"
 #include "engine/document.h"
 #include "engine/error.h"
+#include "engine/strata/io_options.h"  // for engine::strata::log_barrier_warning
 #include "engine/strata/shard.h"   // for engine::strata::index_options, new_uuid
+#include "opts.h"                  // for opts
 
 namespace {
 
@@ -390,9 +392,34 @@ void test_state_bytes() {
 	}
 }
 
+// --full-flush-ordering reaches the journal's IO (D10): the host's PosixIO takes posix_io_options(), the switch and
+// the barrier warning that names it. Those options admit a group-writable directory, which PosixIO's defaults refuse.
+void test_the_journal_io_takes_the_io_options() {
+	const auto dir = std::filesystem::current_path() / "shard_group_io_options";
+	std::filesystem::remove_all(dir);
+	std::filesystem::create_directories(dir);
+	std::filesystem::permissions(dir, std::filesystem::perms::group_write, std::filesystem::perm_options::add);
+	const auto saved = opts.full_flush_ordering;
+	for (const bool full : {false, true}) {
+		opts.full_flush_ordering = full;
+		bool opened = false;
+		try {
+			ShardGroups groups(dir.string(), 1);
+			CHECK_EQ(groups.io_options().full_flush_ordering, full);
+			CHECK(groups.io_options().barrier_warning == &engine::strata::log_barrier_warning);
+			opened = true;
+		} catch (const std::exception& e) {
+			std::fprintf(stderr, "  the journal host refused its directory: %s\n", e.what());
+		}
+		CHECK(opened);
+	}
+	opts.full_flush_ordering = saved;
+	std::filesystem::remove_all(dir);
+}
+
 }  // namespace
 
 TEST_MAIN(test_blobs_at_the_offsets_the_state_names, test_rotation_in_log_order, test_chunked_command_applies_at_its_final_entry,
 	test_upload_into_its_own_volume, test_higher_term_retires_open_commands, test_entries_outside_their_term_apply_nothing,
 	test_abort_retires_its_upload_volume, test_a_flush_leaves_its_locators_on_its_bytes, test_place_stored_keeps_the_other_locators,
-	test_state_bytes)
+	test_state_bytes, test_the_journal_io_takes_the_io_options)

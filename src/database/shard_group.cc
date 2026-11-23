@@ -39,6 +39,7 @@
 #include "engine/document.h"       // for engine::Document
 #include "engine/error.h"          // for engine::Error, engine::errc
 #include "engine/strata/document.h"  // for engine::strata::StrataDocument
+#include "engine/strata/io_options.h"  // for engine::strata::posix_io_options
 #include "engine/strata/shard.h"   // for engine::strata::append_write
 #include "reserved/fields.h"       // for VERSION_FIELD_NAME
 #include "serialize.h"             // for Serialize::version
@@ -550,10 +551,11 @@ ShardGroups::Driven::end()
 }
 
 
-ShardGroups::ShardGroups(const std::string& directory, std::size_t chores)
+ShardGroups::ShardGroups(const std::string& directory, std::size_t chores) :
+	io_options_(engine::strata::posix_io_options())
 {
 	std::filesystem::create_directories(directory);
-	host_ = std::make_unique<jn::Host>(std::make_shared<jn::PosixIO>(directory), jn::Identity{'X', 'H'}, jn::HostOptions{1, jn::TurnLogOptions{}});
+	host_ = std::make_unique<jn::Host>(std::make_shared<jn::PosixIO>(directory, 0600, io_options_), jn::Identity{'X', 'H'}, jn::HostOptions{1, jn::TurnLogOptions{}});
 	loop_ = std::make_unique<strata::group::loop>(loop_thread_.ref(), jn::completion_ref::of(io_), *host_, 0, std::random_device{}());
 	task::spawn(loop_thread_.ref(), host_->driver(0).run(jn::completion_ref::of(io_), stop_.token()), [this](std::exception_ptr) { turns_done_.store(true); });
 	task::spawn(loop_thread_.ref(), loop_->run(stop_.token()), [this](std::exception_ptr) { driver_done_.store(true); });
