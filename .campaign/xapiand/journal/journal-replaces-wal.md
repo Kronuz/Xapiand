@@ -1,9 +1,28 @@
 # journal-replaces-wal: journal
 
-State: waiting on targeted jobs at Xapiand:819a107b7 (CI fix round, master merged), all -DASSERTS=ON: test_pool 261123-112542-ad7b9a, test_node 261123-112545-e32cb8, test_loop_yield 261123-112549-9a6eb0, test_pool under ASan 261123-112552-b06fa2; fails without the place_stored fix: test_pool under ASan at Xapiand:a22e1537f 261123-112555-9f402f; test_loop_yield before any fix at a quiet time 261123-101801-e33085. Kept: a99731, 52e8f7, 0b2796, c6bce1. Next: when they pass and CI at the pushed head is green, the crash check and the full job set once at that commit, without --after (the d4 checkpoint mutant takes the perl pattern of 261123-101712-4f0aa1).
+State: waiting on jobs at Xapiand:91113fb2f (pushed; CI runs there), all -DASSERTS=ON: test_pool 261123-113325-ab914d, test_node 261123-113327-576cc8, test_loop_yield 261123-113329-ae325b, test_pool under ASan 261123-113332-95fb3d, test_shard_group under ASan 261123-113334-eca738; fails without the Data::flush fix (data.{cc,h} as at a7f0aabd6): 261123-113337-a11289. The 819a107b7 set (ad7b9a, e32cb8, 9a6eb0, b06fa2) was superseded unrun by these. Still queued from before: 261123-112555-9f402f (test_pool ASan at a22e1537f, before any fix: fails), 261123-101801-e33085 (test_loop_yield pre-fix diagnostic). Next: when they pass and CI at 91113fb2f is green, the lead submits the crash check and the full job set at that commit, without --after (the d4 checkpoint mutant takes the perl pattern of 261123-101712-4f0aa1).
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
+
+Session 10 (2026-11-23), the lead's step (Blocked on 6 and 7, file set widened to data.* and agent-codebase.md):
+
+1. Xapiand:09a223a4e: Data::flush copied its locators and rebuilt `serialized` in place, so after a flush each
+   locator viewed the bytes it replaced (in place, while they were overwritten; freed once the string grew) or a
+   pending update's holder the flush then cleared. Now the flush builds its bytes apart and `parse()`s them (feed's
+   body): every locator views the Data's own bytes. Second hole, same class: a Locator moved or copied (pending's
+   vector growing) kept `raw` on the source's holder, which for a short (SSO) holder is inside the moved-from
+   object; Locator's copy and move now view their own holder when the source viewed its own. place_stored's
+   call-site reparse (Xapiand:3fc80367f) goes: one mechanism, the flush. Tests (test_shard_group):
+   `test_a_flush_leaves_its_locators_on_its_bytes` (every locator's raw inside serialize() after each flush, the
+   blob bytes read back, a reparse then replace, a copy), `test_place_stored_keeps_the_other_locators`.
+2. Xapiand:91113fb2f: docs/dev/agent-codebase.md describes the journal: the durability row (shard_group, command,
+   the group's `app.vol-N` file set), two invariants (apply is a function of entry and starting state; prepare
+   writes nothing), two traps (durable at the journal's ack, commit is the checkpoint; a locator views its Data's
+   bytes). `git grep -i wal` on it is empty; `no-wal` greps src only and is unaffected.
+Observed, not changed: no `Storage<>` is instantiated in src any more (manager.cc and database/utils.cc include
+storage.h for nothing or its magic constants; xapiand_storage_io.h is unused), yet CMakeLists still fetches the
+storage library and has DATA_STORAGE. For the lead: removing it is the WAL removal's tail (Proposed tasks).
 
 Session 9 (2026-11-23), CI at Xapiand:a22e1537f red on 6 jobs (lead's log ~/.scratch/xapiand/lead/jrw-ci.log), Xapiand:3fc80367f:
 
@@ -212,7 +231,7 @@ strata: `group-catalog` (item 4), which `core` step c waits on.
    that does is exposed. Recommend: add src/database/data.* and have flush feed() its new bytes at its end (one
    parse), with a unit test that flushes twice under ASan. Until then, nothing in the quest depends on it.
 
-Earlier items are answered below.
+Items 6 and 7 are done (session 10). Earlier items are answered below.
 
 Lead rulings, 2026-11-23:
 - 2: option (ii). Index DELETE is its own quest, index-delete (after strata-journal-pin bumps strata's journal pin
@@ -307,3 +326,8 @@ Drafts, applied when the code lands; each names the contract it shapes (format-f
     set on the group's chore (read_applied after the checkpoint), never from the reactor while the chore may apply.
 26. test_node's slow-commit case holds the group's chore instead of the endpoint's flush chore (the WAL-era commit's
     path, which no commit takes now); its claim is unchanged.
+27. Data's invariant is that after construction and every flush each locator views the Data's own bytes, owned by
+    Data::flush (it parses what it built); a pending Locator views its own holder or the caller's memory
+    (`data(string_view)`), and a copy or move keeps that. Callers never reparse to work around a flush.
+28. The codebase guide drops the storage library's write-cursor invariant and footer trap with the WAL's: no
+    Storage<> volume is written in src now (the blob volumes are the group's file set).
