@@ -69,12 +69,18 @@ voters_test.cc world edit carried into world.hh at that merge).
 
 ## Next
 
-1. Read probe 261122-215230-313ac4 (its log, and .scratch/group-heal/{gap3,heal3}-trace.out in
-   the strata worktree): which step of the flight fails every time (pin_for no pin, fetch none,
-   validation_failed, Begin Busy, SnapshotTransferFailed). Fix it with a test that fails without.
-2. At the new head: install_suite.sh (A1, A2), install_test all cases (the install task's rerun),
-   install mutants, install-silent; push for CI.
-3. witness: merge the quest head into quest/xapiand/group-heal--witness, rerun its three jobs.
+1. Read probe 2 (261122-221746-290a7a; its log, .scratch/group-heal/{gap3,heal3}-chore.out in the
+   strata worktree): does the leader's chore run pin_for (a "pin_for: pinned" line, or "chore ran
+   ...notice_work" lines), or is it refused (kick refused: stalled/hold/installing) or stuck
+   behind an item returning more (2) or stall (3)? Fix that cause in group.hh with a test that
+   fails without it (install_gap(3) and grow_and_heal(3) fail today; add a mutant if the fix is
+   a guard).
+2. At the new head: install_suite.sh (A1, A2), `install_suite.sh build-heal '^group_install$'`
+   (rerun of 261121-225628-12c599), install mutants, install-silent, release-fences
+   (`mutants.py BUILD release-fences --target=group_voters_test 0`); push for CI.
+3. witness: merge the quest head into quest/xapiand/group-heal--witness (voters_test's world is
+   world.hh there: carry 74da850c's `uploads` counter and cc2d0b3f's leave_behind and
+   release_short_of_space), rerun its three jobs.
 4. repair: ruled (lead, 2026-11-23, quest Decisions): option (c), through consensus-request-install; built after that quest lands. sim-rows (order 3) after repair and witness.
 
 ## Blocked on
