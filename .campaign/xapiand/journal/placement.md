@@ -1,6 +1,6 @@
 # placement: journal
 
-State: waiting on jobs 261123-033240-38613f 261123-033244-fcdb6d 261123-033248-aed250 261123-033252-6cab6f 261123-033256-4f8bcc 261123-033300-366693 261123-033304-7f8260 261123-033307-d5ae57 261123-033311-0f4e28 261123-033402-76ca9b; CI run 45166135463 at strata:ae70ff95
+State: waiting on jobs 261123-052049-32e148 261123-052058-5b15a2 261123-052101-74cf8b 261123-052104-277968 261123-052107-52773b 261123-052110-790750 261123-052112-8563b1 261123-052115-f25679 261123-052125-a1c9ef 261123-052128-9e5bf9 261123-052130-052739 261123-052133-e49432 261123-052135-697a79 261123-052141-1a0967 (correctness review F1-F3 fixed at strata:ef1e91e2; not pushed: github.com unreachable)
 Quest: .campaign/xapiand/quests/placement.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,30 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Fixing the correctness review's F1-F3 (CHANGES at ae70ff95), strata:ef1e91e2, committed, not
+pushed (github.com unreachable since ~13:00 UTC; the lead pushes):
+
+- F1: `as_recorded` names only members on nodes the root knows; a member on a removed node is
+  bad and leaves as a learner, so the record step never names an unknown node. Case
+  `orphan_learner` (the reviewer's orphan, applied over passes with the root's records); mutant
+  `record-unknown`.
+- F2: `plan_all` counts a joining learner's group before the next shard plans. Cases
+  `pass_spread` (24 shards, 8 nodes, node 1 lost: each learner on a fewest-groups candidate at
+  its turn, at most 2 per node) and `pending_record_counts` (a record's learner counted, which
+  kills the reviewer's `pass-no-count`); mutants `join-uncounted`, `record-uncounted`.
+- F3: `liveness.full_at`: before it no node is known up (a new root leader's empty table); the
+  candidate filter keeps `s.down`. Cases `candidate_up` (free node down, not lost),
+  `new_root_leader`; mutants `candidate-down`, `cold-table-up`.
+- Jobs at ef1e91e2: build 261123-052049-32e148; plan test (3000 seeds + cases) -052058-5b15a2;
+  group replace -052101-74cf8b, drain -052104-277968, replicas -052107-52773b, waits
+  -052110-790750, defer (A4) -052112-8563b1, ctest -052115-f25679; mutants (--fails-without)
+  record-unknown -052125-a1c9ef, join-uncounted -052128-9e5bf9, record-uncounted -052130-052739,
+  candidate-down -052133-e49432, cold-table-up -052135-697a79; the reviewer's `all.sh` at
+  ef1e91e2 (orphan, pileup probes; pass-no-count, candidate-down mutants) -052141-1a0967.
+- F4-F7 are the lead's to file.
+
+Earlier, at ae70ff95:
 
 Resumed 11-23. Head strata:ae70ff95, pushed; CI run 45166135463 there.
 
@@ -37,6 +61,8 @@ Resumed 11-23. Head strata:ae70ff95, pushed; CI run 45166135463 there.
 
 ## Next
 
+0. Read the F1-F3 jobs: plan and group tests pass, mutants fail, the reviewer's log shows the
+   orphan probe with no refused record, pileup spread, and both its mutants killed.
 1. Read the jobs and CI at ae70ff95; fill Evidence. Placement red: fix with a test that fails
    without it. Only group-heal's tests red: they are group-heal's; once its fixed head is green,
    merge it again. All green: State "ready for review".
@@ -71,6 +97,15 @@ At strata:ae70ff95 (pending, Doing); all passed at 63472c6a.
 Not yet: evidence and CI at ae70ff95 pending; group-heal lands first.
 
 ## Rulings I made
+
+- F3's "known up" is `liveness.full_at`, not a set of heard nodes: a node absent from
+  `down_since` is up only from `full_at`, which a new root leader sets one keepalive timeout
+  (3 x 500 ms, D6) past its start; it then enters unheard nodes in `down_since`. Before it every
+  node is down, so the plan waits (no learner, no removal, no transfer) for 1.5 s after a root
+  leader change. Default 0 keeps the probes' and tests' tables as they were. This widens the
+  `strata:placement-repair` binding's duty (set `full_at`); the mechanism note states it.
+- F1 takes the record-known-nodes option (no `remove_node` guard): the record's invariant stays
+  "only nodes the root knows", the one `replace_namespace` already enforces.
 
 - The ASan/TSan fix in `root_group_test.cc` (the root task's file, merged) is made on the quest
   branch, not a task branch, since the quest's CI is what it turns red; repair merged it.
