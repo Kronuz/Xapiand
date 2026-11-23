@@ -20,8 +20,11 @@ requests it. Reads stop at their next checkpoint; a write that was admitted comp
    wait (`take_turn`, `lock_shard`) and its slices check it, so a search waiting for its index's turn ends at once and a
    running one at its next slice. A schema's load reads the metadata (and a foreign schema) with the caller's budget
    (`SchemasLRU::get` passes `DatabaseHandler::budget` to `read_metadata` and `load_shared`), so a search still in its
-   index's first schema load ends the same way. `handle` catches `task::cancelled`, counts it, answers 503 to a client still there, and
-   closes the connection; the request's admission lease ends with its response.
+   index's first schema load ends the same way. A request that joins a schema load another request leads
+   (`SingleFlight::run`) waits under its own token: its cancel ends its wait with `task::cancelled`, while the load and
+   the other waiters go on; a leader that is cancelled ends the joiners' wait and each loads again. `handle` catches
+   `task::cancelled`, counts it, answers 503 to a client still there, and closes the connection; the request's
+   admission lease ends with its response.
 2. **Writes complete.** A write's budget has no token: a PUT whose client half-closes after its body (the server reads
    the EOF while the write waits for its turn) is applied, committed and answered (204), and survives a restart.
 3. **The peaks.** `SearchService::create_extension` runs right after the reactor's `AdmissionGate` admits a request, so
@@ -36,15 +39,14 @@ requests it. Reads stop at their next checkpoint; a write that was admitted comp
 - The demoted peak is sampled at admissions only: a loop whose demoted queue grows while no request arrives shows it at
   the next admission, or not at all. It is what the demoted cap saw, not the queue's own maximum.
 - The peaks never reset; a scrape reads the most since the node started.
-- A request that joins a schema load another request leads (`SingleFlight`) waits for that load without its own token;
-  a leader that is cancelled ends the joiners' wait and each loads again.
 - A cancel that ends a request before `handle` (a 503 at admission, a client that leaves mid-headers) is not counted.
 
 ## Code
 
-`src/metrics.{h,cc}` (the three series, `Metrics::raise_peak`), `src/database/schemas_lru.cc` (`read_metadata`,
-`load_shared`, `SchemasLRU::_update`), `src/server/search_views.cc`
+`src/metrics.{h,cc}` (the three series, `Metrics::raise_peak`), `src/single_flight.h` (`SingleFlight::run`),
+`src/database/schemas_lru.cc` (`read_metadata`, `load_shared`, `SchemasLRU::_update`), `src/server/search_views.cc`
 (`SearchService::create_extension`, `SearchService::handle`).
-Tests: `tests/test_node.cc` (`test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted`,
+Tests: `tests/test_single_flight.cc`, `tests/test_node.cc`
+(`test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted`,
 `test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled`,
 `test_a_put_whose_client_half_closes_completes_durably`, `test_the_admission_peaks_rise_under_load`).

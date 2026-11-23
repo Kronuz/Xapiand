@@ -61,9 +61,10 @@ jobs:
           usesh: true
           prepare: |
             pkg install -y cmake ninja git pkgconf zstd asio bash python3 curl node24 npm-node24
-            npm install -g newman@6
           run: |
             set -eux
+            # The pinned newman (harness/package.json), installed as root before the suite runs as nobody.
+            bash harness/newman_env.sh
             cmake -S . -B build -G Ninja \
               -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DLTO=OFF \
               -DASIO_INCLUDE_DIR=/usr/local/include
