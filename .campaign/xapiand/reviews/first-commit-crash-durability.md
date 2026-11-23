@@ -1,6 +1,6 @@
 # first-commit-crash review: durability
 
-Commit: 606a1d62 (strata:606a1d62d592, quest/xapiand/first-commit-crash)
+Commit: 4955a679 (strata:4955a679, quest/xapiand/first-commit-crash; first reviewed at strata:606a1d62, re-checked below)
 Verdict: APPROVE
 Date: 2026-11-23
 
@@ -85,3 +85,33 @@ lifecycle sweep is kv_index only; code read shows `flush_active` goes through th
 crash sweep of `install()` on a deferred index (F1 comes from reading the code), storage-admission
 accounting of the extra empty snapshot, a merge with turn-log-parity's index.hh, and GitHub CI
 (unreachable).
+
+## Re-check
+
+Commit: 4955a679 (scope: `git diff 606a1d62 4955a679`, index.hh +3/-1 and the install sweep in
+lifecycle_test.cc)
+Verdict: APPROVE
+
+- F1 fixed. `install()` now begins with `if (!m_.generation) { guarded([&] { commit_empty(); }); }`
+  (index.hh:1965), so the same single mechanism runs on both paths. `commit_empty()`'s rename and
+  directory sync are durable before `write_new` creates the first copy. The new sweep cuts a
+  deferred index's `install()` at every mutation, 9 images per cut. At the fix (261123-053633-726a56)
+  it gives 52 not created, 108 empty, 11 installed and 0 failed, out of 18 mutations. At main's
+  index.hh (261123-053640-93a0e0) 75 cuts are refused ("no manifest log; seg-1.sx"). With only the
+  guard removed (mutant 261123-053645-dd3621), the result is the same 75 refused. Logs read. The
+  other sweeps at 726a56 match the first review (first commit, first refresh and second commit
+  each 0 failed).
+- F3 fixed. The refresh() comment (index.hh:1201-1202) now says that a deferred index's first
+  refresh with documents syncs.
+- R1 (no, nit): the guard runs before `read_generation` and `check_readable` check the source, and
+  before storage admission. A deferred index whose install then throws (bad checkpoint, no
+  storage) is left with a committed empty generation 1. It no longer reads as "not created". That
+  is a durable, valid state, and group-heal's caller already creates it by committing first. But
+  install's comment (index.hh:1952-1955) still says a bad checkpoint "leaves this index as it was"
+  and "before anything here changes". Options: move the guard to just before the
+  copies' `guarded` loop, after storage admission, or amend the comment. Either is fine.
+- R2 (no, nit): the sweep's "installed" outcome checks the digest but not `applied()` against the
+  checkpoint's position (lifecycle_test.cc, install block).
+- Not run: the suite at 4955a679 (261123-060918-81a036 was still queued), more than 8 seeds for the
+  install sweep, and group-heal's caller over this change. Its `commit()` before `install()` is now
+  redundant but harmless.
