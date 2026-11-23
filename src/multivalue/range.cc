@@ -156,7 +156,8 @@ getStringQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgP
 		std::string start_s = start ? Serialize::MsgPack(field_spc, *start) : "";
 		std::string end_s = end ? Serialize::MsgPack(field_spc, *end) : "";
 
-		if (start_s > end_s) {
+		// An open end serializes empty and sorts below any start: only the ends given are compared.
+		if (start && end && start_s > end_s) {
 			return engine::Query();
 		}
 

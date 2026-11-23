@@ -4,6 +4,8 @@
 
 # The cluster code builds against msgpack as the library ships it: its own exception seam and rapidjson flags.
 get_directory_property(cluster_definitions COMPILE_DEFINITIONS)
+set(server_definitions ${cluster_definitions})
+list(FILTER server_definitions INCLUDE REGEX "^(MSGPACK_EXCEPTION_HEADER|RAPIDJSON_PARSE_DEFAULT_FLAGS)=")
 list(FILTER cluster_definitions EXCLUDE REGEX "^(MSGPACK_EXCEPTION_HEADER|RAPIDJSON_PARSE_DEFAULT_FLAGS)=")
 set_directory_properties(PROPERTIES COMPILE_DEFINITIONS "${cluster_definitions}")
 
@@ -40,6 +42,33 @@ add_dependencies(check xapiand_cluster_test_membership)
 foreach(c admission histories cold liveness duplicate)
 	add_test(NAME cluster_membership_${c} COMMAND xapiand_cluster_test_membership ${c})
 	set_tests_properties(cluster_membership_${c} PROPERTIES TIMEOUT 120)
+endforeach()
+
+# Distributed search (src/cluster/search*): the coordinator over in-process nodes holding real strata
+# shards, against one node's search. It links the server's objects as tests/test_*.cc do, with the
+# server's msgpack and rapidjson definitions back on.
+add_executable(xapiand_cluster_test_search test_search.cc "${PROJECT_SOURCE_DIR}/tests/test_stubs.cc"
+	"${CLUSTER_SRC}/search.cc" "${CLUSTER_SRC}/shard_map_view.cc")
+target_compile_definitions(xapiand_cluster_test_search PRIVATE ${server_definitions})
+target_include_directories(xapiand_cluster_test_search PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/tests")
+target_link_libraries(xapiand_cluster_test_search PRIVATE
+	XAPIAND_PACKAGE_OBJ
+	XAPIAND_OBJ
+	BOOLEAN_PARSER_OBJ
+	LZ4_OBJ
+	prometheus-cpp::core
+	YAML_OBJ
+	$<TARGET_NAME_IF_EXISTS:LUA_OBJ>
+	${CMAKE_THREAD_LIBS_INIT}
+	${UUID_LIBRARIES}
+	${M_LIBRARIES}
+	${DL_LIBRARIES}
+	${ZLIB_LIBRARIES}
+)
+add_dependencies(check xapiand_cluster_test_search)
+foreach(c equal aggregations expansions failover)
+	add_test(NAME cluster_search_${c} COMMAND xapiand_cluster_test_search ${c})
+	set_tests_properties(cluster_search_${c} PROPERTIES TIMEOUT 300)
 endforeach()
 
 # The seed corpus: one valid envelope per decoder (fuzz_rpc_seed DIR).

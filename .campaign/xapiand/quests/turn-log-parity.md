@@ -109,6 +109,15 @@ each with a test that fails without it.
   log per core, deciding D104 on numbers (`document-gate` measured K=4 at 99 against 121-144 ops/s,
   p50 40 ms against 21 ms, job 261117-034940-b2b9c3).
 
+- Lead, 2026-11-21 (owner's size rule): `include/strata/core/index.hh` (6,139 lines) and
+  `manifest_log.hh` (1,303) are split where it helps maintenance (owner, later the same day: "Let's
+  not split for the sake of splitting"; a file that is one coherent unit stays whole) by a task `split`, which the lead starts
+  right after tasks group-commit and large-tx merge into this branch and before tolerant-open edits
+  them; moves only, proved by cpp-libraries' `tools/split_check.py` (quest split-check), with
+  `index.hh` kept as the include its callers name.
+- Lead, 2026-11-21: the `split` task is superseded by quest `index-restructure` (after this quest
+  lands): 5,309 of index.hh's lines are basic_index's class body, which a moves-only split can't cut.
+
 ## May land early
 
 None: it changes log bytes and a durability mechanism.

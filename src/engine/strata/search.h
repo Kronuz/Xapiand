@@ -23,9 +23,11 @@
 
 #pragma once
 
+#include <cstdint>                 // for std::uint32_t
 #include <span>                    // for std::span
+#include <vector>                  // for std::vector
 
-#include "engine/search.h"         // for SearchRequest, SearchResult
+#include "engine/search.h"         // for SearchRequest, SearchResult, IndexStatistics
 #include "engine/shard.h"          // for Shard
 #include "task.hh"                 // for task::task
 
@@ -35,5 +37,8 @@ namespace engine::strata {
 // engine::search over strata shards (docs/mechanisms/strata-search.md): the request's query is the one
 // prepare() made, read through PreparedQuery::source().
 task::task<SearchResult> search(std::span<engine::Shard* const> shards, const SearchRequest& request);
+
+// engine::gather over strata shards.
+task::task<std::vector<IndexStatistics>> gather(std::span<engine::Shard* const> shards, const PreparedQuery& query, std::span<const std::uint32_t> index_of);
 
 }  // namespace engine::strata

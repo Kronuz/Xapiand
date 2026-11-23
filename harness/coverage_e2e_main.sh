@@ -255,9 +255,8 @@ expect_log "and says so" "$W/e3.log" "outside the data directory"
 run_to "$W/e4.log" 60 "$BIN" -D "$D" --dump nosuchindex -o "$W/e4.mp" --color never
 echo "not a dump" > "$W/bad.mp"
 run_to "$W/e5.log" 60 "$BIN" -D "$W/restored5" --restore idx -i "$W/bad.mp" --color never
-# A file that is not a dump is reported but the restore still ends with status 0 (a bug row for the lead).
 expect_log "--restore of a file that is not a dump says so" "$W/e5.log" "unsupported type"
-expect_eq "and ends with status 0" "$RC" 0
+expect_eq "and ends with EX_DATAERR" "$RC" 65
 run_to "$W/e6.log" 60 "$BIN" -D "$W/restored6" --restore ../outside -i "$W/idx.mp" --color never
 expect_eq "--restore of an index outside the data directory is EX_USAGE" "$RC" 64
 echo "  INFO  --dump of an index that does not exist ends with status $RC"
