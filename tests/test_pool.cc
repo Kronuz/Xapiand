@@ -594,6 +594,35 @@ void test_an_acknowledged_write_survives_a_kill() {
 	std::filesystem::remove_all(path);
 }
 
+// Read-your-writes on a lone voter (Q-F27 (a)): a get-by-id and a search right after an acknowledged write see it,
+// with no commit between: the group's apply leaves the shard dirty, so a read refreshes it rather than serving the
+// last periodic refresh.
+void test_a_lone_voter_reads_its_writes() {
+	const auto journal = fresh("journal_ryw");
+	const auto path = fresh("group_ryw");
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		auto entry = pin(pool, path);
+		Shard shard = use(entry, WRITE);
+		auto prepared = engine::prepare(engine::Query::term("f", "body"));
+		for (std::size_t i = 1; i <= 3; ++i) {
+			const auto data = "v" + std::to_string(i);
+			auto written = engine::sync_wait(shard.add_document(make("K" + std::to_string(i), data)));
+			auto view = engine::sync_wait(shard.get_view(written.did));
+			REQUIRE(view != nullptr);
+			CHECK_EQ(view->data(), data);
+			auto* eng = engine::sync_wait(shard.engine_for_read());
+			engine::SearchRequest request;
+			request.query = prepared.get();
+			request.maxitems = 10;
+			CHECK_EQ(engine::sync_wait(engine::search(std::vector<engine::Shard*>{eng}, request)).hits.size(), i);
+		}
+	}
+	std::filesystem::remove_all(journal);
+	std::filesystem::remove_all(path);
+}
+
 // A request body in pieces of `piece` bytes.
 class Pieces final : public DatabaseHandler::BodyChunks {
 	std::string bytes_;
@@ -2807,6 +2836,7 @@ int main(int argc, char** argv) {
 		{"test_the_sweep_erases_a_missing_index_negative_entries", test_the_sweep_erases_a_missing_index_negative_entries},
 		{"test_an_index_is_a_lone_voter_group", test_an_index_is_a_lone_voter_group},
 		{"test_an_acknowledged_write_survives_a_kill", test_an_acknowledged_write_survives_a_kill},
+		{"test_a_lone_voter_reads_its_writes", test_a_lone_voter_reads_its_writes},
 		{"test_stored_blobs_survive_a_kill", test_stored_blobs_survive_a_kill},
 		{"test_a_restore_slice_is_batch_commands", test_a_restore_slice_is_batch_commands},
 		{"test_a_commit_is_the_groups_checkpoint", test_a_commit_is_the_groups_checkpoint},
