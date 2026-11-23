@@ -1,6 +1,6 @@
 # cluster--search: journal
 
-State: waiting on jobs 261121-215150-cb25b8 (build + cluster_search_* + engine search tests), 261121-215351-3a7a5b (control: mutant/xapiand/cluster-search-drop fails cluster_search_equal), 261121-215355-00d31e (control: mutant/xapiand/cluster-search-per-shard fails cluster_search_expansions)
+State: waiting on jobs 261122-230000-c5e1b6 (build + cluster_search_* + engine search tests), 261122-230010-f469d2 (control: cluster-search-drop fails cluster_search_equal), 261122-230014-cd91c0 (control: cluster-search-per-shard fails cluster_search_expansions)
 Quest: .campaign/xapiand/quests/cluster.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -20,11 +20,13 @@ aggregation_shards, for the `search_batched` refactor). Never compiled before th
 
 ## Next
 
-1. Read 261121-215150-cb25b8; fix what it shows.
+1. Read 261122-230000-c5e1b6 at Xapiand:f743c697b; fix what it shows.
 2. Read the controls (queued after 1): `mutant/xapiand/cluster-search-drop` (Xapiand:016ae7a6e,
    `search_take` drops node 2's part; `cluster_search_equal` must fail) and
    `mutant/xapiand/cluster-search-per-shard` (Xapiand:ea804fed4, strata `expansion_of` ignores
-   `plan.expansions`; `cluster_search_expansions` must fail). Rebase them onto any fix.
+   `plan.expansions`; `cluster_search_expansions` must fail). Each is the head plus its mutation:
+   after a fix, merge the head into it (`git merge-tree --write-tree`, `commit-tree`,
+   `update-ref`), never rebase. Now Xapiand:e56df8362 (drop), Xapiand:ab6ea86a3 (per-shard).
 3. Round 2, patterns (needs B1): `index_pattern::expand` over `ShardMapView::indexes(prefix)`
    candidates, the walk, `walk_gate.h` and `tests/fuzz_index_expand.cc` deleted, the no-walk check.
 4. The RPC binding of `cluster::Nodes` (needs B2), and the coordinator's call from the handler
@@ -60,7 +62,18 @@ jobs no journal names), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A3 | pending: 261122-230000-c5e1b6, controls 261122-230010-f469d2, 261122-230014-cd91c0 |
+
+Jobs examined:
+- 261121-215150-cb25b8 (Xapiand:e09565f87) failed, exit 8: the build completed; two named tests
+  failed, both test bugs. `cluster_search_aggregations` threw "Aggregation name '_count_age' is
+  not valid" (a name starting with `_` is reserved, `aggregations.cc:255`).
+  `cluster_search_failover` died of SIGFPE in 0.06 s: `const auto& placement = placements()[1]`
+  dangled, `build()` read a zero shard count from freed memory and took `i % 0`. Fixed at
+  Xapiand:f743c697b; this job is the run without the fix. equal, expansions and the engine
+  search tests passed.
+- 261121-215351-3a7a5b, 261121-215355-00d31e: skipped (after the failed job); resubmitted at the
+  merged mutants.
 
 ## Result
 
@@ -90,3 +103,5 @@ and what it leaves open. Results and how it works go in the docs of the reposito
   down ones (load spreading follows the release).
 - S6: The coordinator serves its own shards through `serve_stats`/`serve_search` like a peer's
   ask, and every part's aggregations go through `serialize_results`/`merge_results`: one path.
+- S7: master merged into the task branch (Xapiand:bedec0a6c), cleanly, before the reruns. The
+  two failures were the test's own, fixed in the test; no engine or coordinator change.
