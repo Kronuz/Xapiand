@@ -994,3 +994,13 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Finished agents: placement fixes (Opus, 194k); sim-rows round 2 (Opus, 193k: the 5 failing rows were row bugs, rows cost 1.1 s); repair round 2 (Opus, 224k: two failures were test bugs, plus F3 and the make_pin footer check).
 - GitHub outage on the host ~13:00-15:00 UTC: all branches pushed when it returned; 3 jobs rerun.
 - Quota: weekly 16% (1.72%/h). Host: load 63 (129 over 15 min), 52 jobs queued.
+
+## 2026-11-23 16h
+
+- Landed: ninja-only (Xapiand:4050d455), first-commit-crash (strata:4955a679; first-commit cuts 49 of 90 refused at main, 0 at the fix; 5 of 5 mutants killed).
+- Correction (owner): the ninja-only configure guards were the lead's overreach; removed at Xapiand:c579bb60f and strata:93d10446. Ninja stays the rule for our development builds (D168 amended); CI and library users choose their generator.
+- Reordered: first-commit-crash ahead of turn-log-parity, whose A6 waits on 13 open parity tasks.
+- Finished agents: repair round 3 (Opus, 205k: hand-off ping-pong between damaged replicas fixed; cases pass at d457da76); turn-log-parity A5 (Opus medium, 123k: Q3-Q5 recorded closed, main merged, evidence rerun); first-commit-crash re-check (40k, APPROVE).
+- sim-rows: barrier-row aborts were first-commit-crash's bug (all 9 rows pass with it merged); main merged into sim-rows and group-heal.
+- journal-replaces-wal: rerun after the outage failed on strata::faultfs (moved to kronuz::faultlab); lead fix Xapiand:bc757bba9.
+- Quota: weekly 17% (1.65%/h). Host: load 12, 291 GiB free, 56 jobs queued.
