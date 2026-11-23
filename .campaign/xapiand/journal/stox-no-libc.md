@@ -35,7 +35,7 @@ jobs no journal names), and answer each message by its id (msg-N).
 | A3 | 261123-143457-db487a (reruns 261123-130445-dabdaa) at aebfcd9: corpus plus 1,000,000 strings equal to libc |
 | A4 | 261123-143459-89e019 (reruns 261123-130449-dfdd7f, passed at 85260bc) at aebfcd9: 15 CPU-minutes of fuzzing clean on macOS |
 | A5 | CI at aebfcd9 (85260bc green on every platform, macos-arm64 included) |
-| A6 | `README.md`: "elsewhere (x86_64 and"; `strict_stox.hh`: "strto* decides the rest" (lead, aebfcd9: README names the texts that reach libc and stold by platform; the header's top comment lists the same) |
+| A6 | `strict_stox.hh`: "decides the rest: base prefixes" (lead, aebfcd9: the header's top comment lists what reaches libc, stold by width; README.md says the same: "elsewhere (x86_64 and") |
 
 ## Result
 
