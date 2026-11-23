@@ -27020,7 +27020,8 @@
         "tools/test_split_check.py",
         "tools/testdata/**",
         "docs/SPLITTING.md",
-        "tools/README.md"
+        "tools/README.md",
+        "tools/outline.py"
       ],
       "journal": "../Xapiand-wt/xapiand/split-check-members",
       "landed": [],
@@ -27034,7 +27035,7 @@
       "risk": "low",
       "status": "active",
       "title": "split_check proves member definitions moved out of a class body; SPLITTING.md restructures giant classes",
-      "updated": "2026-11-22T00:02:01",
+      "updated": "2026-11-22T21:24:50",
       "worktree": "../cpp-libraries-wt/xapiand/split-check-members"
     },
     "split-check-sources": {
