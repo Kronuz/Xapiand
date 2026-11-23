@@ -1,6 +1,6 @@
 # group-heal--sim-rows: journal
 
-State: waiting on jobs 261123-045257-ebd91a 261123-045305-643f0d 261123-045307-7047cc 261123-045310-66fba2 261123-045313-6aa91f
+State: waiting on jobs 261123-052839-09443a 261123-052842-596b03
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,28 +9,38 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Round 1 (2026-11-23) at strata:5902da15, pushed. Nothing built locally: the jobs are the first
-compile. Plain rows: 261123-045257-ebd91a (`sh test/group/sim_suite.sh build-heal`, --task
-sim-rows, --for A5; its ctest lines give each row's seconds: the suite cost). Mutants (plain
---quest, --commit 5902da15, --fails-without, --for A5): apply-skips-entry `faults 3` 643f0d,
-recovery-as-found `barriers 3` 7047cc, read-skips-probe `faults 3` 66fba2, apply-abandoned-chunk
-`faults 3` 6aa91f.
+Round 2 (2026-11-23) at strata:bd994276. Round 1's suite 261123-045257-ebd91a failed 7 of 9:
+- barriers_3/5: `corrupt_index: no manifest log`, strata main's first-commit crash (quest
+  first-commit-crash). Probe 261123-052842-596b03: barriers rows on a scratch merge of
+  quest/xapiand/first-commit-crash (strata:b77109dc, ref refs/scratch/group-heal--sim-rows-fcc,
+  not on the task branch).
+- membership_3/5, growth_1: row bugs. A member the core removes (replacement's `leaving`) or a
+  removal removes never learns that commit, so settling before retiring it never ends (voters_test
+  retires first). growth also promoted a third data voter beside a witness without `leaving`:
+  consensus's validate_membership refuses 3 + 1 outside D9's window. Fixed: promote beside the
+  leaving member, removed_by_core, retire, settle.
+- faults_3/5: row bug. A cut upload answered in the drain isolated its leader and only a faults
+  step expired isolation, so that replica stayed a term and 4 entries behind (new term's no-op,
+  chunks 1-2, final). Also poll_upload read the answer after resetting its started<> (dangling):
+  no upload was ever counted. Fixed: isolation expires in every step, finish heals after drain,
+  the answer is held.
+- mutants: FileNotFoundError on build-heal/strata/group_sim_test. Fixed in sim/CMakeLists.txt:
+  group_sim_test's RUNTIME_OUTPUT_DIRECTORY is the build root, where mutants.py runs targets.
+Rows: 261123-052839-09443a (--task sim-rows, --for A5).
 
 ## Next
 
-1. Read the jobs (full logs ~/.scratch/campaign/jobs/<id>/a1/log). A compile error or a row that
-   fails without a mutant: fix, commit, resubmit the plain job and the mutants at the new commit.
-2. Rows most likely to need a second round: `growth_1` (consensus may refuse a 1-to-2 voter
-   promotion or a direct removal; D7's path) and `device_3` (whether 16 seeds give a non-prefix
-   log, and whether the journal reopens on it); `barriers_*` cost (one run per crash point of the
-   window: cap if the window is large).
-3. Put the suite's seconds per row in docs/gates/phase-3r.md and here.
-4. A3's simulator half (`simulation_group_corruption`, skipped with 77) is enabled by task
-   repair's merge: damaged segment, manifest and file-set files fence and reinstall.
+1. Read 09443a and 596b03. faults/membership/growth/device green: submit the four mutants at the
+   task head (plain --quest, --fails-without, --for A5). barriers waits on first-commit-crash's
+   landing; then merge main and rerun.
+2. Put the suite's seconds per row in docs/gates/phase-3r.md and here.
+3. A3's simulator half (`simulation_group_corruption`, skipped with 77) is enabled by task
+   repair's merge.
 
 ## Blocked on
 
-Nothing for A5. A3's simulator half waits for task `repair` (on consensus-request-install).
+barriers_3/5 wait on quest first-commit-crash landing on strata main. A3's simulator half waits
+for task `repair` (on consensus-request-install).
 
 ## Evidence
 
