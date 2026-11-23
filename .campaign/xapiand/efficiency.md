@@ -986,3 +986,11 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Recorded schema-split's hand landing at Xapiand:ae5798e3 (no split job ever ran: recorded, not verified).
 - Host: load 7 (Detent's soak ended), light slots 59% used last hour, 21 jobs cancelled and 7 skipped of 84.
 - GitHub still unreachable from the host: no pushes, CI reads or landings since ~13:00 UTC.
+
+## 2026-11-23 15h
+
+- Landed: split-xapiand-tests (Xapiand:d6accaa2, plain land after agent-campaign:bd54f12 fixed msg-28), uinteger-restructure (uinteger_t:5fedce24) and its README fix (uinteger_t:a179822).
+- Accepted: placement correctness at strata:ef1e91e2 (F1-F3 fixed, 5 of 5 mutants killed, reviewer probes pass: pile-up max 2 per node from 5); uinteger-restructure correctness (APPROVE, Opus 160k); first-commit-crash durability at strata:4955a679 (APPROVE plus a 40k scoped re-check).
+- Finished agents: placement fixes (Opus, 194k); sim-rows round 2 (Opus, 193k: the 5 failing rows were row bugs, rows cost 1.1 s); repair round 2 (Opus, 224k: two failures were test bugs, plus F3 and the make_pin footer check).
+- GitHub outage on the host ~13:00-15:00 UTC: all branches pushed when it returned; 3 jobs rerun.
+- Quota: weekly 16% (1.72%/h). Host: load 63 (129 over 15 min), 52 jobs queued.
