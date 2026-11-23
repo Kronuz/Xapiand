@@ -3,39 +3,52 @@
 State: working
 Quest: .campaign/xapiand/quests/consensus-join-v2.md (the lead's; never edit it)
 
-Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
-status` reads State and the first step under Next. State is one of: working, waiting on jobs <ids>,
-ready for review, fixing <findings>, blocked on <who>: <what>.
+Code: consensus worktree `../consensus-wt/xapiand/consensus-join-v2`, branch
+`quest/xapiand/consensus-join-v2`, base consensus:6e1122c.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Step 1 (A1, A2): token v2 and the DTJN0002 exchange in `admission_join.h`, key pins
+(`key_pin` in `tls.h`), the asynchronous issuer hook, `join` with a saved key, `Joined::save`
+ordered so the certificate is the commit point, and the crash test.
 
 ## Next
 
-1. <step>
+1. Step 1 as above, with `admission_nodes_test` `issue`/`save` reworked and mutants.
+2. Step 2 (A4): NodePins over key pins; the hello path re-checks chain and expiry; runtime
+   reload of certificate and bundle closing links whose chain no longer verifies.
+3. Step 3 (A3): the join exchange on the transport port (preamble `DTJN0002` before TLS, one
+   peeked byte decides), its own pool (64, 8 per source), rate (10/s per source, delayed) and
+   slot deadline (10 s), outside `handshakes`.
+4. Step 4 (A5): hello DTHL0003 with boot and directory version, acceptor check through a hook,
+   refusal reason in the refusing hello; mutant skip-boot-check.
+5. Step 5 (A6): fuzzers fuzz/join_fuzz.cc (token v2, offer, request, answer) and
+   fuzz/hello_fuzz.cc, 30 CPU-minutes each under ASan+UBSan.
+6. Step 6 (A7): docs/mechanisms/admission.md, hello.md, host-connection.md.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing. msg-269 (links.h, connection.h and their tests) granted by the lead. msg-270 asks for
+the NodePins users' pin helpers (seeds_test, rpc_hosts.h, groups_test, bench/transport_idle,
+bench/flow_bench) for step 2. msg-274 asks Detent's lead about Peers' DER pins (F11).
+
+## Contracts
+
+- `consensus:join-protocol` changes (Detent's lead reviews any change to an API Detent calls):
+  Detent calls Peers, `certificate_fingerprint` and `Fingerprint` only; none of them changes.
+  NodePins pins become key pins (`key_pin`); Detent's Seeds wiring would compute pins with it.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), name every job you examined, failures included (`campaign brief` lists failed
-jobs no journal names), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | <pending> |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+<pending>
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- Peers and session.h keep the DER certificate fingerprint (Detent's operator config pins it);
+  NodePins alone moves to key pins. Peers goes with worker-pump-removal.
