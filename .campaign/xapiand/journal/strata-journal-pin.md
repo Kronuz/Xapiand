@@ -78,3 +78,9 @@ A4, journal 9e11713 -> 9e0649d, what strata follows:
   turn-log-parity, then takes main and rebuilds its pin on top: no second copy of that check here.
 - group.hh:214 (a bounded group goes to driver.create) is group-heal's: filed in hunt.md for its durability re-review.
 - F10 of group-heal's durability re-review (2026-11-23): on journal main a bounded group reaches driver.create in group.hh, which throws; the replica never rejoins. This quest takes it after group-heal lands (group-heal holds group.hh).
+- CI at strata:2b530925 (lead, 2026-11-23): every platform fails standalone_turn_log and kv_strata_batch on journal main's
+  loop-ownership assert ("group_io and the table commits run on the group's loop; adopt_loop hands it over",
+  owned_ranges). The build-test job passed only because Release builds compile asserts out. The bump must adopt
+  journal's loop handoff: strata's turn sealer calls adopt_loop, and the t6w workaround (strata:6421d4b3) goes
+  (hunt.md, "Drop group-core's t6w workaround"). turn_seal.hh is turn-log-parity's, so this lands after it, as ruled.
+  The build-test check must run with asserts on, or CI is the only proof; the next contributor proposes how.
