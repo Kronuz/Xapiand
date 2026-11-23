@@ -322,21 +322,6 @@ public:
 // Proposes one entry to the shard's group at a level and answers what its proposer heard.
 using ProposeEntry = std::function<task::task<strata::group::answer>(std::string entry, strata::group::ack level)>;
 
-// One leader's chunked-command ids, from `floor`, the group's last log index at its ready point. An id is drawn
-// only to propose its first chunk, so an earlier leader of the same term (a reopen that resumed it) never drew one
-// at or past `floor` that reached the log.
-class ChunkedIds {
-	std::uint64_t term_;
-	std::uint64_t next_;
-
-public:
-	ChunkedIds(std::uint64_t term, std::uint64_t floor) : term_(term), next_(floor + 1) { }
-
-	std::uint64_t next() noexcept {
-		return chunked_id(term_, next_++);
-	}
-};
-
 // A blob streamed through the group into a volume of its own (D12): its bytes as chunk entries of the upload
 // stream, each entry within `limit`, then the final entry of the command that names it, or its abort.
 class ChunkedUpload {

@@ -82,9 +82,16 @@ thread. Each index the catalog opens is a lone voter (D2) whose group borrows th
 1. **Open.** `open_payload` builds the entry, which opens the group last: the group recovers from its last
    bundle on the index as the open left it, or creates itself. Its id is the first 8 bytes of the index's
    uuid, and its journal identity the uuid.
-2. **Close.** Every catalog close runs `close_payload` before the index's close: the group checkpoints until
+2. **Catch-up.** Before the open returns, a linearizable read's barrier waits until the group applied what its
+   log committed (a replay included), and the engine owes reads a refresh.
+3. **Writes.** Under the index's turn, `ShardEndpoint::write_document` prepares on the engine, encodes the
+   prepared write as a command (`command_write`) and proposes it on the group's loop at `quorum`, chunked past
+   the entry limit with an id of the term the loop sees; the answer's verdict is the write's result, checked
+   against what prepare predicted (`engine::strata::Shard::landed`). A metadata write is a `set_metadata`
+   command. An index with a group writes no WAL line and replays no WAL.
+4. **Close.** Every catalog close runs `close_payload` before the index's close: the group checkpoints until
    its bundle covers what it committed, and the process keeps its closed record, so a reopen resumes its term
-   with no election. The catalog's commit hook stays a plain strata commit.
+   with no election. The catalog's commit hook and a request's commit stay plain strata commits.
 
 ## Proof
 
@@ -94,6 +101,8 @@ thread. Each index the catalog opens is a lone voter (D2) whose group borrows th
   refusals over the limit, and corrupt bytes at every prefix refused.
 - `tests/test_pool.cc` (`test_an_index_is_a_lone_voter_group`): the open opens the index's group, the shutdown
   leaves it closed in the journal's table, and a second process recovers it under the same id.
+  `test_an_acknowledged_write_survives_a_kill`: a write acknowledged with no WAL, no commit and no close is read
+  back after `kill -9` by the next process.
 - `tests/test_shard_group.cc`: offsets from the state and idempotent effects, rotation in log order, a chunked
   command applied at its final entry, an upload into its own volume, a higher term retiring open commands,
   entries outside their id's term applying nothing, an abort retiring its upload's volume, and the state's

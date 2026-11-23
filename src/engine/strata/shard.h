@@ -131,6 +131,13 @@ public:
 	// The shard's field table, in id order, as of its last applied write.
 	std::vector<DeclaredField> declared_fields() const;
 
+	// A write the shard's replication group applied to its index (cluster-release D3): raises the verdict's refusal,
+	// checks the id and version prepare predicted, and owes reads a refresh and the index a commit.
+	WriteResult landed(const PreparedWrite& prepared, const ::strata::verdict& verdict);
+
+	// The shard's group applied to its index (a write, a replay): reads owe a refresh, the index a commit.
+	void applied_by_group() noexcept;
+
 private:
 	std::unique_ptr<Handle> handle_;
 	bool writable_;

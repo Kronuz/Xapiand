@@ -24,6 +24,7 @@
 
 #include <algorithm>               // for std::max
 #include <chrono>                  // for std::chrono
+#include <condition_variable>      // for std::condition_variable
 #include <cstring>                 // for std::memcpy
 #include <filesystem>              // for std::filesystem::create_directories
 #include <random>                  // for std::random_device
@@ -95,6 +96,28 @@ upload_volume(const ShardGroupState& s, std::uint64_t id)
 }
 
 }  // namespace
+
+
+CommandWrite
+command_write(const engine::PreparedWrite& prepared, engine::Document* doc)
+{
+	CommandWrite w;
+	switch (prepared.op) {
+		case engine::WriteOp::add: w.op = CommandOp::add; break;
+		case engine::WriteOp::replace: w.op = CommandOp::replace; break;
+		case engine::WriteOp::replace_key: w.op = CommandOp::replace_key; break;
+		case engine::WriteOp::erase: w.op = CommandOp::erase; break;
+		case engine::WriteOp::erase_key: w.op = CommandOp::erase_key; break;
+		case engine::WriteOp::none: throw std::logic_error("command_write: a write with nothing to apply");
+	}
+	w.did = prepared.did;
+	w.key = prepared.key;
+	w.expected = prepared.expected;
+	if (doc != nullptr) {
+		w.document.bytes = doc->serialize();
+	}
+	return w;
+}
 
 
 std::string
@@ -527,6 +550,27 @@ ShardGroups::closed(kronuz::consensus::GroupId id, std::optional<std::string> re
 		closed_[id] = std::move(*record);
 	} else {
 		closed_.erase(id);
+	}
+}
+
+
+void
+ShardGroup::catch_up()
+{
+	std::mutex mtx;
+	std::condition_variable cv;
+	bool done = false;
+	std::exception_ptr error;
+	task::spawn(group.owner().scheduler(), group.read_applied([](prospect::index&) { return true; }), [&](std::exception_ptr e, std::optional<bool>) {
+		std::lock_guard<std::mutex> lk(mtx);
+		error = e;
+		done = true;
+		cv.notify_one();   // under the lock: the waiter's frame outlives it
+	});
+	std::unique_lock<std::mutex> lk(mtx);
+	cv.wait(lk, [&] { return done; });
+	if (error) {
+		std::rethrow_exception(error);
 	}
 }
 

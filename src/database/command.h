@@ -109,6 +109,25 @@ constexpr std::uint64_t chunked_term(std::uint64_t id) noexcept {
 	return id >> 32;
 }
 
+// One leader's chunked-command ids, from `floor`, the group's last log index at its ready point. An id is drawn
+// only to propose its first chunk, so an earlier leader of the same term (a reopen that resumed it) never drew one
+// at or past `floor` that reached the log.
+class ChunkedIds {
+	std::uint64_t term_;
+	std::uint64_t next_;
+
+public:
+	ChunkedIds(std::uint64_t term, std::uint64_t floor) : term_(term), next_(floor + 1) { }
+
+	std::uint64_t term() const noexcept {
+		return term_;
+	}
+
+	std::uint64_t next() noexcept {
+		return chunked_id(term_, next_++);
+	}
+};
+
 // A chunk of a chunked command: bytes at an offset of one of its streams.
 struct CommandChunk {
 	std::uint64_t id = 0;

@@ -35,6 +35,8 @@
 #include <vector>                  // for std::vector
 
 #include "database/command.h"      // for Command
+#include "engine/document.h"       // for engine::Document
+#include "engine/shard.h"          // for engine::PreparedWrite
 #include "prospect/index.hh"       // for prospect::index, prospect::transaction
 #include "completion/seam.h"      // for kronuz::journal::InlineCompletion
 #include "journal/host.h"          // for kronuz::journal::Host
@@ -78,6 +80,10 @@ struct BlobPlacement {
 // Places a command's blob records from `state`: in the current volume, rotating it when a record would take it
 // past VOLUME_BYTES; a record staged in an upload stream stays in its upload's volume.
 BlobPlacement place_blobs(const ShardGroupState& state, const Command& command, std::uint64_t id = 0);
+
+// A prepared write as its command's (D3): the target, the leader's expectation and the document's bytes as prepare
+// left them (null `doc` for an erase). ShardApplication::transaction reads it back on every voter.
+CommandWrite command_write(const engine::PreparedWrite& prepared, engine::Document* doc);
 
 std::string volume_name(std::uint64_t volume);
 std::string staging_name(std::uint64_t id);
@@ -169,6 +175,11 @@ private:
 struct ShardGroup {
 	ShardApplication app;
 	ShardGroups::group_type group;
+	std::optional<ChunkedIds> ids;   // this leader's chunked-command ids, on the loop
 
 	ShardGroup(ShardGroups& groups, kronuz::journal::IO& directory, prospect::index& index);
+
+	// Blocks the calling thread (never the loop or the chore) until the group applied everything committed when
+	// it was called: a linearizable read's barrier (D4).
+	void catch_up();
 };

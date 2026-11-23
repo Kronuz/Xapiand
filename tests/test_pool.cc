@@ -563,6 +563,38 @@ void test_an_index_is_a_lone_voter_group() {
 	std::filesystem::remove_all(path);
 }
 
+// A write the group acknowledged is durable at its answer (D2): a process killed before any commit or close loses
+// none, and the next process's open replays it from the journal before it serves a read. WRITE has no WAL.
+void test_an_acknowledged_write_survives_a_kill() {
+	const auto journal = fresh("journal_kill");
+	const auto path = fresh("group_kill");
+	std::fflush(nullptr);
+	const pid_t pid = ::fork();
+	if (pid == 0) {
+		::alarm(30);
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		auto entry = pin(pool, path);
+		Shard shard = use(entry, WRITE);
+		engine::sync_wait(shard.add_document(make("Kk", "acknowledged")));
+		std::fflush(nullptr);
+		::raise(SIGKILL);   // no commit and no close: only the journal has the write
+	}
+	int status = 0;
+	::waitpid(pid, &status, 0);
+	CHECK(WIFSIGNALED(status) && WTERMSIG(status) == SIGKILL);
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		auto entry = pin(pool, path);
+		Shard shard = use(entry, WRITE);
+		auto view = engine::sync_wait(shard.get_view(1));
+		CHECK_EQ(view->data(), "acknowledged");
+	}
+	std::filesystem::remove_all(journal);
+	std::filesystem::remove_all(path);
+}
+
 // A write, a read, and a commit through a Shard.
 void test_smoke() {
 	DatabasePool pool(control_loop(), 8);
@@ -2617,6 +2649,7 @@ int main(int argc, char** argv) {
 		{"test_the_hostless_path_and_the_catalog_never_share_an_index", test_the_hostless_path_and_the_catalog_never_share_an_index},
 		{"test_the_sweep_erases_a_missing_index_negative_entries", test_the_sweep_erases_a_missing_index_negative_entries},
 		{"test_an_index_is_a_lone_voter_group", test_an_index_is_a_lone_voter_group},
+		{"test_an_acknowledged_write_survives_a_kill", test_an_acknowledged_write_survives_a_kill},
 	};
 	for (const auto& c : cases) {
 		if (argc > 1 && std::string(c.name).find(argv[1]) == std::string::npos) {

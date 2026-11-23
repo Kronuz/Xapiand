@@ -543,8 +543,9 @@ ShardEndpoint::open_blocking(kronuz::journal::IO& directory, prospect::index& in
 #endif  // XAPIAND_DATA_STORAGE
 
 #if XAPIAND_DATABASE_WAL
-	// A log that is ahead of the committed revision is replayed by whoever opens the index: the open holds it.
-	{
+	// A log that is ahead of the committed revision is replayed by whoever opens the index: the open holds it. An
+	// index with a group has no WAL: its journal recovers it.
+	if (database_pool.groups() == nullptr) {
 		ReplayTarget target(*this, *engine_, DB_WRITABLE | DB_OPEN);
 		DatabaseWAL wal(&target);
 		if (wal.execute()) {
@@ -561,6 +562,9 @@ ShardEndpoint::open_blocking(kronuz::journal::IO& directory, prospect::index& in
 	if (auto* groups = database_pool.groups()) {
 		group_ = std::make_unique<ShardGroup>(*groups, directory, index);
 		group_->group.open_blocking();
+		// What the log committed before the open is applied before anything is served, and reads see it.
+		group_->catch_up();
+		dynamic_cast<engine::strata::Shard&>(*engine_).applied_by_group();
 	}
 }
 
@@ -751,7 +755,7 @@ ShardEndpoint::do_commit(engine::Shard& eng, engine::Chores& chores_, int flags,
 	L_DATABASE("Commit on shard {}: {} -> {}", repr(to_string()), prior_revision, current_revision);
 	set_revision(current_revision);
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
+	if (wal_ && !group_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
 		wal_writer().write_commit(
 			has_db_synchronous_wal(flags),
 			path,
@@ -767,6 +771,67 @@ ShardEndpoint::do_commit(engine::Shard& eng, engine::Chores& chores_, int flags,
  * The writes. Each runs under the index's turn: the engine's apply, the counters and the WAL line are one
  * unit, so the WAL's order is the apply's order.
  */
+
+namespace {
+
+// A command through the shard's group at quorum (D3), chunked past the entry limit (D12): proposed on the group's
+// loop, answered on the caller's scheduler. A chunked command's id is drawn from the term the loop sees now.
+task::task<strata::group::answer>
+propose(ShardGroup& shard_group, const Command& command)
+{
+	auto& group = shard_group.group;
+	const auto home = task::current();
+	co_await task::schedule_on{group.owner().scheduler()};
+	std::exception_ptr error;
+	std::optional<strata::group::answer> out;
+	try {
+		const auto state = group.owner().driver().state(group.id());
+		if (!state) {
+			throw engine::Error(engine::errc::not_available, "The shard's group is not open");
+		}
+		if (!shard_group.ids || shard_group.ids->term() != state->term) {
+			shard_group.ids.emplace(state->term, std::max(state->committed, state->applied));
+		}
+		const ProposeEntry entries = [&group](std::string entry, strata::group::ack level) { return group.propose(std::move(entry), level); };
+		out.emplace(co_await propose_command(entries, command, shard_group.ids->next(), strata::group::ack::quorum));
+	} catch (const kronuz::consensus::closed&) {
+		error = std::make_exception_ptr(engine::Error(engine::errc::not_available, "The shard's group is closing"));
+	} catch (...) {
+		error = std::current_exception();
+	}
+	co_await task::schedule_on{home};
+	if (error) {
+		std::rethrow_exception(error);
+	}
+	co_return std::move(*out);
+}
+
+// What the proposer of a write hears once its replica applied it: the verdict's refusal, or the result prepare
+// predicted, checked against it.
+engine::WriteResult
+landed(engine::Shard& eng, const engine::PreparedWrite& prepared, const strata::group::answer& answer)
+{
+	if (!answer.applied) {
+		throw engine::Error(engine::errc::not_available, "The write was not applied: retry it");
+	}
+	return dynamic_cast<engine::strata::Shard&>(eng).landed(prepared, *answer.applied);
+}
+
+}  // namespace
+
+
+task::task<engine::WriteResult>
+ShardEndpoint::write_document(engine::Shard& eng, engine::WriteOp op, engine::docid did, std::string key, engine::Document* doc, engine::WriteArgs args)
+{
+	const auto prepared = co_await eng.prepare(op, did, key, doc, std::move(args));
+	if (group_ == nullptr) {
+		co_return co_await eng.apply(prepared, doc);
+	}
+	Command command;
+	command.writes.push_back(command_write(prepared, doc));
+	co_return landed(eng, prepared, co_await propose(*group_, command));
+}
+
 
 task::task<engine::WriteResult>
 ShardEndpoint::do_add(engine::Shard& eng, engine::Chores& chores_, int flags, engine::Document&& doc, [[maybe_unused]] bool wal_, bool version_)
@@ -794,7 +859,7 @@ ShardEndpoint::do_add(engine::Shard& eng, engine::Chores& chores_, int flags, en
 
 	engine::WriteResult info;
 	try {
-		info = co_await eng.add(doc, args);
+		info = co_await write_document(eng, engine::WriteOp::add, 0, std::string(), &doc, std::move(args));
 	} catch (const engine::Error& error) {
 		note_failure(error);
 		throw;
@@ -802,7 +867,7 @@ ShardEndpoint::do_add(engine::Shard& eng, engine::Chores& chores_, int flags, en
 	applied_.fetch_add(1, std::memory_order_relaxed);
 	modified.store(true, std::memory_order_relaxed);
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
+	if (wal_ && !group_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
 #ifdef XAPIAND_DATA_STORAGE
 		if (!pushed.second.empty()) {
 			doc.set_data(pushed.second);  // restore data with blobs
@@ -852,7 +917,7 @@ ShardEndpoint::do_replace(engine::Shard& eng, engine::Chores& chores_, int flags
 	}
 
 	try {
-		info = co_await eng.replace(shard_did, doc, args);
+		info = co_await write_document(eng, engine::WriteOp::replace, shard_did, std::string(), &doc, std::move(args));
 	} catch (const engine::Error& error) {
 		note_failure(error);
 #ifdef XAPIAND_DATA_STORAGE
@@ -865,7 +930,7 @@ ShardEndpoint::do_replace(engine::Shard& eng, engine::Chores& chores_, int flags
 	applied_.fetch_add(1, std::memory_order_relaxed);
 	modified.store(true, std::memory_order_relaxed);
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
+	if (wal_ && !group_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
 #ifdef XAPIAND_DATA_STORAGE
 		if (!pushed.second.empty()) {
 			doc.set_data(pushed.second);  // restore data with blobs
@@ -934,7 +999,7 @@ ShardEndpoint::do_replace_term(engine::Shard& eng, engine::Chores& chores_, int 
 	info.term = key;
 	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result); };
 	try {
-		info = co_await eng.replace_by_key(key, doc, args);
+		info = co_await write_document(eng, engine::WriteOp::replace_key, 0, key, &doc, std::move(args));
 	} catch (const engine::Error& error) {
 		note_failure(error);
 		throw;
@@ -945,7 +1010,7 @@ ShardEndpoint::do_replace_term(engine::Shard& eng, engine::Chores& chores_, int 
 	applied_.fetch_add(1, std::memory_order_relaxed);
 	modified.store(true, std::memory_order_relaxed);
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
+	if (wal_ && !group_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
 #ifdef XAPIAND_DATA_STORAGE
 		if (!pushed.second.empty()) {
 			doc.set_data(pushed.second);  // restore data with blobs
@@ -974,7 +1039,9 @@ ShardEndpoint::do_delete(engine::Shard& eng, [[maybe_unused]] int flags, engine:
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
 	try {
-		co_await eng.erase(shard_did, true, expected_);
+		engine::WriteArgs args;
+		args.expected_version = expected_;
+		co_await write_document(eng, engine::WriteOp::erase, shard_did, std::string(), nullptr, std::move(args));
 	} catch (const engine::Error& error) {
 		note_failure(error);
 		throw;
@@ -982,7 +1049,7 @@ ShardEndpoint::do_delete(engine::Shard& eng, [[maybe_unused]] int flags, engine:
 	applied_.fetch_add(1, std::memory_order_relaxed);
 	modified.store(true, std::memory_order_relaxed);
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
+	if (wal_ && !group_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
 		wal_writer().write_delete_document(
 			has_db_synchronous_wal(flags),
 			path,
@@ -1003,7 +1070,9 @@ ShardEndpoint::do_delete_term(engine::Shard& eng, [[maybe_unused]] int flags, co
 
 	[[maybe_unused]] engine::docid shard_did = 0;
 	try {
-		shard_did = co_await eng.erase_by_key(term, true, expected_);
+		engine::WriteArgs args;
+		args.expected_version = expected_;
+		shard_did = (co_await write_document(eng, engine::WriteOp::erase_key, 0, term, nullptr, std::move(args))).did;
 	} catch (const engine::Error& error) {
 		note_failure(error);
 		throw;
@@ -1011,7 +1080,7 @@ ShardEndpoint::do_delete_term(engine::Shard& eng, [[maybe_unused]] int flags, co
 	applied_.fetch_add(1, std::memory_order_relaxed);
 	modified.store(true, std::memory_order_relaxed);
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
+	if (wal_ && !group_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
 		wal_writer().write_delete_document(
 			has_db_synchronous_wal(flags),
 			path,
@@ -1031,7 +1100,17 @@ ShardEndpoint::do_set_metadata(engine::Shard& eng, [[maybe_unused]] int flags, c
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
 	try {
-		co_await eng.set_metadata(key, value);
+		if (group_) {
+			CommandWrite write;
+			write.op = CommandOp::set_metadata;
+			write.key = key;
+			write.document.bytes = value;
+			Command command;
+			command.writes.push_back(std::move(write));
+			landed(eng, engine::PreparedWrite{}, co_await propose(*group_, command));
+		} else {
+			co_await eng.set_metadata(key, value);
+		}
 	} catch (const engine::Error& error) {
 		note_failure(error);
 		throw;
@@ -1039,7 +1118,7 @@ ShardEndpoint::do_set_metadata(engine::Shard& eng, [[maybe_unused]] int flags, c
 	applied_.fetch_add(1, std::memory_order_relaxed);
 	modified.store(true, std::memory_order_relaxed);
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
+	if (wal_ && !group_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
 		wal_writer().write_set_metadata(
 			has_db_synchronous_wal(flags),
 			path,
@@ -1066,7 +1145,7 @@ ShardEndpoint::do_add_spelling(engine::Shard& eng, [[maybe_unused]] int flags, c
 	applied_.fetch_add(1, std::memory_order_relaxed);
 	modified.store(true, std::memory_order_relaxed);
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
+	if (wal_ && !group_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
 		wal_writer().write_add_spelling(
 			has_db_synchronous_wal(flags),
 			path,
@@ -1094,7 +1173,7 @@ ShardEndpoint::do_remove_spelling(engine::Shard& eng, [[maybe_unused]] int flags
 	applied_.fetch_add(1, std::memory_order_relaxed);
 	modified.store(true, std::memory_order_relaxed);
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
+	if (wal_ && !group_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
 		wal_writer().write_remove_spelling(
 			has_db_synchronous_wal(flags),
 			path,

@@ -1049,6 +1049,30 @@ assigned(const ::strata::verdict& verdict, const PreparedWrite& prepared)
 }
 
 
+WriteResult
+Shard::landed(const PreparedWrite& prepared, const ::strata::verdict& verdict)
+{
+	try {
+		if (verdict.result != ::strata::verdict::accepted) {
+			reject(verdict);
+		}
+		applied_by_group();
+		return assigned(verdict, prepared);
+	} catch (...) {
+		rethrow_translated(handle_->core);
+	}
+}
+
+
+void
+Shard::applied_by_group() noexcept
+{
+	auto& core = *handle_->core;
+	core.dirty = true;
+	core.pending = true;
+}
+
+
 task::task<PreparedWrite>
 Shard::prepare(WriteOp op, docid did, const std::string& key, Document* doc, WriteArgs args)
 {

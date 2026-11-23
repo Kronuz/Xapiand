@@ -255,6 +255,10 @@ class ShardEndpoint : public Endpoint
 	std::unique_ptr<ShardGroup> group_;
 	void close_group();
 
+	// A document write, under the turn: prepared on the engine, then applied by the group on every voter in log
+	// order (cluster-release D3) and acknowledged at quorum, or applied on the engine when the index has no group.
+	task::task<engine::WriteResult> write_document(engine::Shard& eng, engine::WriteOp op, engine::docid did, std::string key, engine::Document* doc, engine::WriteArgs args);
+
 public:
 	ShardEndpoint(DatabasePool& database_pool, std::string_view path);
 	ShardEndpoint(const ShardEndpoint&) = delete;
