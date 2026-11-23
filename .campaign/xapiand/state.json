@@ -12712,7 +12712,8 @@
     "group-heal": {
       "accepted": {},
       "after": [
-        "detent:consensus-driver-install"
+        "detent:consensus-driver-install",
+        "consensus-request-install"
       ],
       "base": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
       "branch": "quest/xapiand/group-heal",
@@ -12738,7 +12739,8 @@
       ],
       "consumes": [
         "strata:group",
-        "consensus:snapshot-channel"
+        "consensus:snapshot-channel",
+        "consensus:install-request"
       ],
       "files": [
         "include/strata/group/**",
@@ -12815,7 +12817,6 @@
       "provides": [
         "strata:group-install"
       ],
-      "reason": "install task built against detent:consensus-driver-install at consensus:887a88b; CMakeLists.txt's consensus pin moves when that lands",
       "repo": "../strata",
       "risk": "high",
       "status": "active",
@@ -12865,7 +12866,7 @@
         }
       },
       "title": "Replication groups grow, heal and run in the simulator",
-      "updated": "2026-11-21T21:36:54",
+      "updated": "2026-11-22T21:30:11",
       "worktree": "../strata-wt/xapiand/group-heal"
     },
     "group-install": {
