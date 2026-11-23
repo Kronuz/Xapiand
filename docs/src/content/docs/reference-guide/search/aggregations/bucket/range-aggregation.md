@@ -30,7 +30,8 @@ A range is half open, `_from` <= value < `_to`; a missing `_from` or `_to` leave
 `_ranges` is required (`400` otherwise). Ranges may overlap, and a value counts in each range it falls in.
 `_key` must be a string; the default key is `"<from>..<to>"` (`"..<to>"`, `"<from>.."`). The field must
 be numeric, `date`, `datetime`, `time` or `timedelta` (any other type answers `400`). Open ends of an
-`integer` field are narrowed to 64-bit integers, so check the bounds you rely on.
+`integer` field are narrowed to 64-bit integers, so check the bounds you rely on. A NaN `_from` or `_to`
+answers `400` naming the field and the bound, on every field type.
 
 Also supports all other functionality as explained in [Bucket Aggregations](..#structuring).
 

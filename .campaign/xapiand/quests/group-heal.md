@@ -79,6 +79,11 @@ payloads go to `transfer()`, the rest to `receive()`; the whole transfer finishe
 
 ## Decisions
 
+- Lead, 2026-11-23: a damaged replica reinstalls through consensus's install request
+  (consensus-request-install, `consensus:install-request`): the fenced follower asks its leader
+  for an install and takes install's path end to end, with the image as its new base. One
+  mechanism for every replica that needs state, and no new strata wire. The repair task builds on
+  it once that quest lands; options (a) and (b) are not built.
 - Design D7 (short groups are one voter plus learners, never two voters), D16, F1, F9, F24 (no
   scrubber for the release: reads and installs fail closed). Pre-release bytes (D30, D87).
 - Q3 (a) is the lead's default (`rf = 2 + witness`); the owner may still change it.

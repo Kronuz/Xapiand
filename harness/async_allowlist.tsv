@@ -19,7 +19,7 @@ src/database/pool.cc	sync_wait	run_detached|std::move\(t\)	allow	1	a detached ta
 src/database/wide_search.cc	mutex	mutex_	allow	3	Pins' count and room event: O(1) sections that test or change the free count or swap the room pointer, none with I/O; they run on the loops (take, and give from a batch's end) and the event is set outside the lock (wide-search-loop D3)
 src/database/pool.h	mutex	.	allow	1	the entry's O(1) state lock, for the uuid (D5)
 src/database/pool.h	pool	storage_commit	allow	1	the declaration: the blob fsync runs as a flush chore (D7)
-src/database/schema.cc	pool	lock_shard	allow	2	Schema::index awaits the shard it counts; a lock_shard pins the index (x-pool D3) and takes no turn (D5)
+src/database/schema/index.cc	pool	lock_shard	allow	2	Schema::index awaits the shard it counts; a lock_shard pins the index (x-pool D3) and takes no turn (D5)
 src/database/schemas_lru.cc	mutex	.	allow	25	LRU map lookup, insert and trim under the lock; compare_schema is bounded by one schema (D11); the flights' loads publish into it and their probes read it, O(1) sections with no I/O, taken and released before any await
 src/database/shard.cc	mutex	mtx\)|turn\.(try_)?lock	allow	6	the entry: O(1) state sections under its mutex, and the turn, an async mutex a task awaits without blocking; the catalog's commit chore tries it with no pin held (D5, x-pool D7)
 src/database/shard.cc	pool	co_await storage_commit	allow	1	the blob commit runs in a flush chore, first in the commit chore (D7)
