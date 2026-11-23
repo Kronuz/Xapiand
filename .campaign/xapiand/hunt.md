@@ -448,3 +448,10 @@ quest fixes them (2 of 5 on 11-20).
 - F5 (owner decision): a drain with no free node shrinks shards below rf instead of waiting (documented, D7). Options in the review file.
 - F6 (gap): "a new root voter installs the root's records" is tested only as log catch-up; install waits on group-heal's binding. Recheck once group-heal lands.
 - F7 (test nit): the test driver collects group reports before the root read, so a step finishing during the read can be planned from the older report.
+
+## uinteger-restructure correctness review follow-ups (APPROVE at uinteger_t:5fedce24)
+
+- F1 (nit) `radix_decode.hh` also holds the output side (`_store_be`, `_store_bytes`, `_digits_append`, `_digits_radix`); move them to `radix_encode.hh` or `digits.hh` so it is one family (a map change, tool-made).
+- F2 (docs) `README.md:33` ("One header, no dependencies.") and `docs/TESTING.md:3` still describe one header. Fix right after landing.
+- F4 (note) A5 proves nothing about dependencies between family headers (each includes the umbrella); step 2 must not cite it.
+- F5 (note) the A3 allowlist matches by symbol name, so it would not catch a later body change in a listed symbol.
