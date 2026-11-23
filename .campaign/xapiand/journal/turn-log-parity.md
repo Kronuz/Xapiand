@@ -1,6 +1,6 @@
 # turn-log-parity: journal
 
-State: waiting on jobs 261123-002140-82018c 261123-002143-aa5d40 261123-002230-8ef26a 261123-002230-8e8f49 261123-002231-a77d54 261123-002231-aefb80 261123-002231-ed70e1 261123-002232-cad563 261123-002232-d1e532 261123-002232-6b94b8 261123-002233-c59105 261123-002233-1e4f69 261123-002233-b4a58c 261123-002234-c8c5d2 261123-002234-e3f49d 261123-002234-7bb281 261123-002235-16613d 261123-002235-947360 261123-002236-c527d0 261123-002245-d6ced9 261122-212021-14ab70 and CI run 45138024613 at strata:f5f6b7dc
+State: waiting on jobs 261123-065606-749988 261123-065607-b0f4b3 261123-065607-c56a5b 261123-065607-ace1ac 261123-065607-fa8052 261123-065607-91bf84 261123-065608-01cd83 261123-065608-82ef2d 261123-065608-9a669c 261123-065608-5b0c3f 261123-065609-bb5118 261123-065609-528279 261123-065609-ca2600 261123-065609-934644 261123-065609-05c4fb 261123-065610-38051c 261123-065611-f67fd9 and CI at strata:3a29aa9b
 Quest: .campaign/xapiand/quests/turn-log-parity.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,17 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Landing-prep pass (2026-11-23), head strata:3a29aa9b, pushed:
+
+1. strata:4ca43683 merges origin/main (group-catalog: catalog.hh, group.hh, group tests,
+   CMakeLists.txt's group_catalog tests), textually clean; no quest file conflicts.
+2. A5: strata:3a29aa9b records Q3, Q4 and Q5 closed in `docs/design/standalone-turn-log.md`
+   ("Questions for the owner"), each with the mechanism at file:line at 4ca43683, its test and
+   its mutant jobs; the Limits entries for Q3 and Q4 follow.
+3. Every passing evidence job reran at 3a29aa9b (State), build-test 261123-065611-f67fd9. The
+   mutants stand at their own commits. At f5f6b7dc all passed (CI 45138024613 green), and the D2
+   probe 002234-c8c5d2 opened `first` and `a third in`, refusing the control and last chunk as ruled.
 
 CI-red pass (2026-11-23), head strata:f5f6b7dc, pushed:
 
@@ -126,13 +137,9 @@ Not merged: group-commit, tolerant-open (Blocked on, below). Evidence at strata:
 
 ## Next
 
-1. Read the jobs in State into Evidence. 002143-aa5d40 must show a complete build, then the
-   `owned_ranges` assertion; 14ab70 a complete build, then `test_barrier_cohort` failing a CHECK.
-   Check CI at f5f6b7dc green.
-2. Lead: `campaign accept turn-log-parity durability --confirm D1=261123-002245-d6ced9 --confirm
-   D2=261123-002245-d6ced9` (the suite at f5f6b7dc; reopen_damaged alone is 261123-002231-ed70e1)
-   once they pass.
-3. Lead: Blocked on 1 before landing.
+1. Read the jobs in State at strata:3a29aa9b (all must exit 0) and CI there; then the lead lands
+   (durability accepted at f5f6b7dc; 3a29aa9b adds main's merge and docs only).
+2. Lead: Blocked on 1 before landing.
 
 ## Blocked on
 
@@ -141,7 +148,7 @@ Not merged: group-commit, tolerant-open (Blocked on, below). Evidence at strata:
    rather than stopping. Options: (a) keep it (a no-ff merge, no rebase, the change the command
    makes); (b) revert it with a revert commit and let the lead run the command. Recommendation:
    (a). Your call.
-2. A5 and A6's gate rows wait for parity tasks 2-6 and 8-14 (closing pass below).
+2. A6's gate rows wait for parity tasks 2-6 and 8-14 (closing pass below); A5 is done (strata:3a29aa9b).
 3. N1 stays the owner's call; the default (land with the limit recorded) stands.
 
 Resolved: the D2 probe's control and last-chunk cases (Rulings, CI-red pass 2026-11-23); the journal pin (journal main a3eecb5, strata:369cd7ef); stale queued jobs (ended); group-commit (CI-timing check replaced by recorded turns at strata:80f91fd0, merged);
@@ -162,6 +169,20 @@ test/standalone_turn_log_test.cc). Semantic resolution, keeping both sides:
   (test/ninja_only_check.sh's grep is empty at the merge).
 
 ## Evidence
+
+At strata:3a29aa9b (main merged, A5's note), reruns of the f5f6b7dc jobs:
+
+| Criterion | Evidence |
+|---|---|
+| A1 | 261123-065606-749988, 261123-065607-b0f4b3, 261123-065607-c56a5b, 261123-065607-ace1ac, 261123-065607-fa8052; fails without: 261121-090430-5cd461, 261121-090433-fa1d1f, 261121-090436-c180a4, 261121-151648-9ffb16, 261123-002143-aa5d40 |
+| A2 | 261123-065607-91bf84, 261123-065608-01cd83; fails without: 261121-115241-8bbc79, 261121-145613-34602d, 261121-214545-0d42a7 |
+| A3 | 261123-065608-82ef2d, 261123-065608-9a669c, 261123-065608-5b0c3f, 261123-065609-bb5118; fails without: 261121-104113-4f8cbb, 261121-104116-816fc6, 261121-104119-d0dd11, 261121-110107-c64ff6, 261121-110108-aa171b, 261121-110110-5b9806, 261121-110112-a647c1, 261121-151703-21b6d5 |
+| A4 | 261123-065609-528279, 261123-065609-ca2600, 261123-065609-934644; fails without: 261120-082448-f562c7, 261121-101433-65f5c5, 261121-151523-00cd16, 261122-212021-14ab70 |
+| A6 | 261123-065609-05c4fb, 261123-065610-38051c; fails without: 261120-081225-8f09de, 261120-195114-cec936, 261120-202106-94eb96, 261120-202805-29d178, 261120-203457-3324d7, 261120-204252-7f2e9c, 261120-204253-47f1cc |
+| A5 | [artifact] strata:3a29aa9b, `docs/design/standalone-turn-log.md`, "Questions for the owner": Q3, Q4, Q5 closed with mechanisms, file:line, tests and mutants |
+| build-test | 261123-065611-f67fd9 |
+
+Earlier tables, superseded by the one above:
 
 At strata:369cd7ef, from `campaign brief` (each row's jobs rerun at f5f6b7dc, State):
 
@@ -210,6 +231,15 @@ b6a7697: the item is now applicable (not done in the merge pass).
 | F13 | probe K, `d1_ladder_model.py`, job 261120-133247-a1f4a0 (exit 0, all claims hold): rooms from `segment_bytes` throw at turn 1; rooms following the spare never throw, admitted to sealed 1 turn, 229 MiB/s at 16 MiB and 1,476 MiB/s at 64 MiB; smallest rung 48 MiB/s; naive step down 5 turns, guarded 1 |
 | F4, N5, F14 A3 stall | probe G, `d7_model.py`, job 261120-133248-df88a3 (exit 0, all ok): rows 1-5 as in round 1; row 6, other writers seal within 2 turns of arrival behind a 4-room transaction, admitted to sealed 0 |
 | Round 1 | F1 probe F 261120-083804-ec1239; N6 probe B2 261120-083211-0cbbce; N1 261120-074846-356a48 |
+
+## Rulings I made (landing-prep pass, 2026-11-23)
+
+- The A3 fuzz is rerun once (002235-947360), not twice: 002232-6b94b8 is the same 2 x 10 min
+  run at the same commit.
+- `docs/design/standalone-turn-log.md` is outside the quest's file set; edited on the lead's
+  explicit assignment (A5 names the file).
+- The Limits entry for Q4 keeps the double-damage case (no manifest reads back, no bound): that
+  still loses every group, as the tolerant-open test's last case shows.
 
 ## Rulings I made (CI-red pass, 2026-11-23)
 
