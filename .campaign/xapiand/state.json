@@ -35496,7 +35496,7 @@
     "turn-log-parity": {
       "accepted": {
         "design": {
-          "at": "2026-11-20T14:32:43",
+          "at": "2026-11-23T14:43:14",
           "base": "d956c0f413f058d6c0e1bdc0f1e3993f62a34ba1",
           "blobs": {
             "CMakeLists.txt": "100644:b5877040359fbe468d0e9cb52a03ec4e6c4bdb27",
@@ -35524,7 +35524,7 @@
           },
           "by": "review",
           "commit": "68e1c6a893ebf45357d847722b08213740bf908c",
-          "criteria": "8f631ec112931fb7",
+          "criteria": "46b16d548ccf3281",
           "diffs": {
             "CMakeLists.txt": "5f4c15076e32dc97",
             "bench/kv/kvdriver.hh": "42c34ec1c8ef8dba",
@@ -35585,66 +35585,6 @@
                 }
               ],
               "kind": "defect",
-              "reproduced": false
-            },
-            "F12": {
-              "jobs": [
-                {
-                  "cmd": "python3 -I bench/kv/probes/rocksdb-parity/d6_wake_model.py 14",
-                  "commit": "e287a47b927aeb7f0c3b56faae83857e9bc4c9e7",
-                  "docs": [
-                    "docs/design/rocksdb-parity.md"
-                  ],
-                  "exit": 0,
-                  "host": "kronuz",
-                  "job": "261120-133245-22acfd",
-                  "level": "light",
-                  "seconds": 1.4,
-                  "state": "done",
-                  "what": "rocksdb-parity F12: D6 wake model, depth 14"
-                }
-              ],
-              "kind": "gap",
-              "reproduced": false
-            },
-            "F13": {
-              "jobs": [
-                {
-                  "cmd": "python3 -I bench/kv/probes/rocksdb-parity/d1_ladder_model.py",
-                  "commit": "e287a47b927aeb7f0c3b56faae83857e9bc4c9e7",
-                  "docs": [
-                    "docs/design/rocksdb-parity.md"
-                  ],
-                  "exit": 0,
-                  "host": "kronuz",
-                  "job": "261120-133247-a1f4a0",
-                  "level": "light",
-                  "seconds": 0.3,
-                  "state": "done",
-                  "what": "rocksdb-parity F13: D1 ladder model"
-                }
-              ],
-              "kind": "gap",
-              "reproduced": false
-            },
-            "F14": {
-              "jobs": [
-                {
-                  "cmd": "python3 -I bench/kv/probes/rocksdb-parity/d7_model.py",
-                  "commit": "e287a47b927aeb7f0c3b56faae83857e9bc4c9e7",
-                  "docs": [
-                    "docs/design/rocksdb-parity.md"
-                  ],
-                  "exit": 0,
-                  "host": "kronuz",
-                  "job": "261120-133248-df88a3",
-                  "level": "light",
-                  "seconds": 1.2,
-                  "state": "done",
-                  "what": "rocksdb-parity D7 model with the A3 large-transaction rows"
-                }
-              ],
-              "kind": "gap",
               "reproduced": false
             },
             "F8": {
@@ -36031,7 +35971,7 @@
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-23T14:43:11",
+      "updated": "2026-11-23T14:43:14",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
