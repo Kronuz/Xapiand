@@ -227,6 +227,12 @@ b6a7697: the item is now applicable (not done in the merge pass).
 | F4, N5, F14 A3 stall | probe G, `d7_model.py`, job 261120-133248-df88a3 (exit 0, all ok): rows 1-5 as in round 1; row 6, other writers seal within 2 turns of arrival behind a 4-room transaction, admitted to sealed 0 |
 | Round 1 | F1 probe F 261120-083804-ec1239; N6 probe B2 261120-083211-0cbbce; N1 261120-074846-356a48 |
 
+## Lead rulings (2026-11-23)
+
+- Keep the plain merge strata:7c6aa208: a no-ff merge is what the command makes.
+- first-commit-crash landed first (strata:4955a679, index.hh): merge main before the next evidence round.
+- docs/design/standalone-turn-log.md is in the file set.
+
 ## Rulings I made (landing-prep pass, 2026-11-23)
 
 - The A3 fuzz is rerun once (002235-947360), not twice: 002232-6b94b8 is the same 2 x 10 min
