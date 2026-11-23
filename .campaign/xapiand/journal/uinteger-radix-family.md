@@ -1,6 +1,6 @@
 # uinteger-radix-family: journal
 
-State: working
+State: waiting on jobs 261123-102259-f52610 (build-test, A1) 261123-102259-7b84f2 (members, A2)
 Quest: .campaign/xapiand/quests/uinteger-radix-family.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,18 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Move done and committed (uinteger_t:88e41ad, pushed to quest branch). Jobs queued at it.
 
 ## Next
 
-1. <step>
+1. Read the members job log; answer each split_check warning under Rulings.
+2. If both pass, ready for review (A4 is the lead's read).
 
 ## Blocked on
 
 <What, and who decides. "Nothing" when nothing.>
+
+Nothing.
 
 ## Evidence
 
@@ -28,7 +31,10 @@ jobs no journal names), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | 261123-102259-f52610 (build-test at uinteger_t:88e41ad) |
+| A2 | 261123-102259-7b84f2 (members at uinteger_t:88e41ad) |
+| A3 | uinteger_t/docs/source-layout.md: radix_encode.hh row names `_digits_radix`, `_digits_append`; digits.hh row names `_store_be`, `_store_bytes`; radix_decode.hh row is parsing only |
+| A4 | lead reads the diff |
 
 ## Result
 
@@ -38,4 +44,5 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- `_store_be`, `_store_bytes` -> digits.hh (only caller is the raw-bytes form there); `_digits_append`, `_digits_radix` -> radix_encode.hh (`_digits_radix` calls `_encode_radix`; `_digits_append` is also used by radix_tree.hh, which follows both). `_load_be` stays in radix_decode.hh (input side).
+- split_check warnings: not yet read (jobs pending); to answer on resume.
