@@ -25454,7 +25454,20 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-23T01:10:34",
+          "commit": "03560d407499654d924bbadf447689501a14d775",
+          "evidence": [],
+          "final": false,
+          "reason": "recorded after the fact: msg-28: gate job 261122-212030-8090b3 (split) passed at 235f61732c84; ae5798e3 differs from it only by master's merge (data.*, keymaker.*, header-tables.md), none in the split's paths. The land lookup omits the job's outside-script hash (fix check-spec-one, agent-campaign:f50c120, not installed). CI green at ae5798e3; lead read fnsizes: +36,684 B (0.36%), all in named buckets, LZ4/xxHash LTO re-inlining in untouched sources accepted.",
+          "recorded": "2026-11-23T01:13:53",
+          "tested": "03560d407499654d924bbadf447689501a14d775",
+          "unverified": [
+            "split: no job"
+          ]
+        }
+      ],
       "lenses": [],
       "milestone": "",
       "needs": [
@@ -25465,7 +25478,7 @@
       "risk": "low",
       "status": "active",
       "title": "schema.cc split along its responsibilities",
-      "updated": "2026-11-22T21:18:21",
+      "updated": "2026-11-23T01:13:53",
       "worktree": "../Xapiand-wt/xapiand/schema-split"
     },
     "script-method": {
