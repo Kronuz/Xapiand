@@ -40,6 +40,7 @@
 
 #include "cast.h"                           // for Cast
 #include "lua/exception.h"               // for lua::Error
+#include "database/command.h"               // for COMMAND_ENTRY_BYTES
 #include "database/lock.h"                  // for lock_shard
 #include "database/schema.h"                // for Schema, required_spc_t
 #include "exception_engine.h"                     // for QueryParserError
@@ -2630,6 +2631,17 @@ propose_abort(const ProposeEntry& propose, std::uint64_t id)
  *
  */
 
+// One admitted object of a RESTORE stream and what its prepare left.
+struct DocIndexer::Admitted {
+	std::size_t idx;
+	MsgPack obj;
+	std::tuple<std::string, engine::Document, MsgPack> prepared;
+	std::exception_ptr error;                      // the prepare's failure: the object's result
+	std::shared_ptr<const MsgPack> changed;        // the schema its prepare left, when it changed the schema
+	int offers = 0;                                // its schema changes refused so far
+};
+
+
 DocIndexer::DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool comments, const query_field_t& query_field, engine::Chores& chores, task::budget* budget) :
 	endpoints(endpoints),
 	flags(flags),
@@ -2767,17 +2779,6 @@ prepare_plain(Schema& schema, DatabaseHandler& placement, MsgPack& body, std::si
 }
 
 }  // namespace
-
-
-// One admitted object of a RESTORE stream and what its prepare left.
-struct DocIndexer::Admitted {
-	std::size_t idx;
-	MsgPack obj;
-	std::tuple<std::string, engine::Document, MsgPack> prepared;
-	std::exception_ptr error;                      // the prepare's failure: the object's result
-	std::shared_ptr<const MsgPack> changed;        // the schema its prepare left, when it changed the schema
-	int offers = 0;                                // its schema changes refused so far
-};
 
 
 DocIndexer::~DocIndexer() = default;

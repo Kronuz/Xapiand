@@ -1108,10 +1108,12 @@ Shard::restore_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, st
 	};
 	// Chores of `slice` each prepare the writes until a command closes (a full entry) or the sub-run ends, so each
 	// proposal, and the group's syncs it waits for, carries an entry's worth of writes. A test's fixed slice is one
-	// chore. A chore that fails after the first ends the slice with the writes before it, which are proposed.
+	// chore. The last chore closes the open command, so the loop encodes no entry. A chore that fails after the first
+	// ends the slice with the writes before it, which are proposed.
 	const auto first = at;
 	const auto limit = DocIndexer::seams.writes_per_slice.load(std::memory_order_relaxed);   // a test's fixed slice
 	bool ended = false;   // a write left the index to be replaced
+	bool done = false;    // the slice's last chore ran
 	std::exception_ptr cut;
 	const auto prepare = [&] {
 		ShardEndpoint::InlineEngine inline_engine(entry, "a RESTORE's apply slice prepares on a worker in the index's turn");
@@ -1152,8 +1154,14 @@ Shard::restore_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, st
 				break;
 			}
 		}
+		done = ended || limit != 0 || at >= writes.size() || !batches.empty();
+		if (done) {
+			if (auto closed = batcher.flush()) {
+				close(std::move(*closed));
+			}
+		}
 	};
-	for (bool first_chore = true;; first_chore = false) {
+	for (bool first_chore = true; !done; first_chore = false) {
 		try {
 			co_await chores.run(engine::ChoreClass::flush, prepare);
 		} catch (...) {
@@ -1161,14 +1169,11 @@ Shard::restore_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, st
 				throw;
 			}
 			cut = std::current_exception();
+			if (auto closed = batcher.flush()) {
+				close(std::move(*closed));
+			}
 			break;
 		}
-		if (ended || limit != 0 || at >= writes.size() || !batches.empty()) {
-			break;
-		}
-	}
-	if (auto closed = batcher.flush()) {
-		close(std::move(*closed));
 	}
 	auto& eng = entry.engine();
 	const bool at_placement = has_db_ack_none(flags);
