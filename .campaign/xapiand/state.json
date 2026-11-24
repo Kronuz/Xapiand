@@ -7219,7 +7219,94 @@
       "updated": "2026-11-20T05:27:03"
     },
     "consensus-join-v2": {
-      "accepted": {},
+      "accepted": {
+        "security": {
+          "at": "2026-11-23T17:24:20",
+          "base": "6e1122cc691ddcdd3b5e527a1d4ac037cd7add57",
+          "blobs": {
+            "CMakeLists.txt": "100644:0bb5fe66f7424c3a099f8ed93cca850cd1dfd99d",
+            "bench/flow_bench.cc": "100644:35b55fd998be65bfc8da8ae2d06903e5a7907a9d",
+            "bench/transport_idle.cc": "100644:243a0107e00440c2289c0e96bdb03b3ad411748c",
+            "docs/mechanisms/admission.md": "100644:66dfeb9207b044ae67ca09b6cd2e9e206307751b",
+            "docs/mechanisms/hello.md": "100644:5d26a495ea4a5ae34abcf1485830b30d89b4223c",
+            "docs/mechanisms/host-connection.md": "100644:21d01ca4c9f36568f0004d3233f027b1681111ee",
+            "fuzz/hello_fuzz.cc": "100644:a4248b34b5cd06ae4445c22d8fd9552c8f84fec2",
+            "fuzz/join_fuzz.cc": "100644:ebb3ebb0df054c1189adfc7bf9be6f44e9dd1906",
+            "fuzz/token_fuzz.cc": "100644:4e84aa38375d8e6ad44ced0e9f35316ca4566a8d",
+            "include/consensus/transport/admission_join.h": "100644:bd0bd510b1861548673716371942e5961e3ddaa5",
+            "include/consensus/transport/connection.h": "100644:73e163547d32dacb34ede563b859ea0e5c7c4644",
+            "include/consensus/transport/host_transport.h": "100644:be2acd14c096ed2528c6b2e2878775c5d885d76e",
+            "include/consensus/transport/links.h": "100644:9e783115c8fae1d3ef8fd8b8af045a5f8b039e9c",
+            "include/consensus/transport/node_hello.h": "100644:e17c388751f02e38cef30e04c5bf939f60be8369",
+            "include/consensus/transport/node_pins.h": "100644:b10230b0d23e1f08f70bf645f54f0888a5ccbc70",
+            "include/consensus/transport/tls.h": "100644:ae3a30152e6f9064c9c73594098c8e0c21a7b837",
+            "test/transport/admission_certificates.cmake": "100644:c02b2d4c66b0b222ef9ca85fdc6cee75810c4475",
+            "test/transport/admission_mutants.py": "100755:b6f8c17b7d442b4a2f1831fd2171a802fc8ab4a7",
+            "test/transport/admission_nodes_test.cc": "100644:4baaddfda04ddda815028a1aed2276eaa89b81f2",
+            "test/transport/connection_test.cc": "100644:ed91eaa5b2baadbd8066153c12bf20510299d7a3",
+            "test/transport/hello_test.cc": "100644:89ab85678f23a1d7300dcd5b96bfe0551138e3e1",
+            "test/transport/links_test.cc": "100644:30116c46edf5ca2ec043fa2e435463c8f0a55197",
+            "test/transport/mutant_commit.py": "100755:a3f6f9ae0f96e6d830150942af46dd02f338100f",
+            "test/transport/node_hello_test.cc": "100644:f9961e224fd8e40429c2691df1275bf6d73fed6f",
+            "test/transport/rpc_hosts.h": "100644:72a8bf1af3a2f8f7ab42e4ed51bc5569f00139a2",
+            "test/transport/seeds_test.cc": "100644:df303ee78dd5ad28f9fb41f7eed381b67d647ddb"
+          },
+          "by": "review",
+          "commit": "45bca9f5c98b22f61ae9d8b8d9fc78971f1373c0",
+          "criteria": "90bb3f9ecb251306",
+          "diffs": {
+            "CMakeLists.txt": "b68fbe022768823c",
+            "bench/flow_bench.cc": "006246bbedca9dcf",
+            "bench/transport_idle.cc": "f322b5b3264c6dcf",
+            "docs/mechanisms/admission.md": "cd5af8f0f373902f",
+            "docs/mechanisms/hello.md": "a0d26ee58555c770",
+            "docs/mechanisms/host-connection.md": "ea9ace90f9689ca6",
+            "fuzz/hello_fuzz.cc": "79d329b17107a9d1",
+            "fuzz/join_fuzz.cc": "849d3096f9e54e3d",
+            "fuzz/token_fuzz.cc": "5399877746f008f8",
+            "include/consensus/transport/admission_join.h": "fc834990652127b5",
+            "include/consensus/transport/connection.h": "bfc483e3e202a019",
+            "include/consensus/transport/host_transport.h": "83ab5d6cd89d87b8",
+            "include/consensus/transport/links.h": "10300ed6d1214a7b",
+            "include/consensus/transport/node_hello.h": "2c15d350d26ad8a6",
+            "include/consensus/transport/node_pins.h": "929e418badb1c47c",
+            "include/consensus/transport/tls.h": "2926e69bc22d3903",
+            "test/transport/admission_certificates.cmake": "6fae1a3f7b943f07",
+            "test/transport/admission_mutants.py": "b9f0dbf8d86f8b68",
+            "test/transport/admission_nodes_test.cc": "ad87a7b128869d45",
+            "test/transport/connection_test.cc": "c0ba737630587cc6",
+            "test/transport/hello_test.cc": "79c01853e95a74b2",
+            "test/transport/links_test.cc": "63382c1d85266abb",
+            "test/transport/mutant_commit.py": "34d0034b799f9474",
+            "test/transport/node_hello_test.cc": "26725448182d1851",
+            "test/transport/rpc_hosts.h": "a129765455ab355d",
+            "test/transport/seeds_test.cc": "470705ecb21d7502"
+          },
+          "findings": {
+            "S1": {
+              "jobs": [
+                {
+                  "cmd": "sh -c 'cd build && ctest -R '\"'\"'consensus_admission_certificates|consensus_transport_admission_nodes_(forged|issue)$'\"'\"' --output-on-failure'",
+                  "commit": "45bca9f5c98b22f61ae9d8b8d9fc78971f1373c0",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261123-154016-cd7eae",
+                  "level": "light",
+                  "seconds": 8.2,
+                  "state": "done",
+                  "what": "S1: admission_nodes forged and issue at the fix"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "c78ae546dad817b338ace92847a5e414e88ddf37",
+          "reviewed": "45f2309320716df816280887cc040840aa7a163e",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [
         "detent:consensus-fetch-alongside-flake",
         "detent:consensus-faultlab-repin"
@@ -7301,7 +7388,7 @@
       "risk": "high",
       "status": "review",
       "title": "consensus joins a node by token v2 on the transport port, pins keys, reloads certificates and checks the boot",
-      "updated": "2026-11-23T15:14:35",
+      "updated": "2026-11-23T17:24:20",
       "worktree": "../consensus-wt/xapiand/consensus-join-v2"
     },
     "consensus-request-install": {
