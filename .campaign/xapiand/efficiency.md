@@ -1154,3 +1154,10 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - No landings. strata-journal-pin: every criterion but the review proven (A1, A2, A5, A6 + 3 mutants killed; CI 45321560305 green at 22ee0282); the durability reviewer (Opus, ~154k) stalled with nothing running, nudged to write the review. netlab-consensus: CI's linux-asan consensus_simulation timed out a third time (300.1 s); it waits for detent:consensus-simulation-asan-timeout.
 - journal-replaces-wal: A5 level tests + R1 green; A9 and A6-pin mutants killed.
 - Host: load 7; light slots 61%, runnable beside idle 50 min (the queue is mostly jrw on one slot). Quota: weekly 38%, burn 1.44%/h.
+
+## 2026-11-24 08h
+
+- No landings. strata-journal-pin: durability review (Opus, 160k, 3.6 h) CHANGES with one blocker, F1 (attach_log's `<=` loses a correct index at the bound; proven by the contributor's own mutant 539e7b). Fix round (contributor, 204k total, 5 min): strata:bb2f8a5 + lead's mutant-text fix strata:7214f27. Confirmed so far: F1 test a76b46, A6/F2 test e3aa7b, F1 inverse mutant fb418d killed, reviewer probe 4b30b6 passed. Pending: A2, two mutants, CI.
+- Wasted: 6 jobs exited 127 unrun (contributor quoted `--after J --level ...` into one word; reruns copied it); ~45 min of critical-path wait. Reported to campaign-v3 (msg-60): submit will refuse a command starting with '-'. Plus one R1 mutant whose guard grep never matched (resubmitted).
+- journal-replaces-wal: all seven A5 level mutants killed. A1 shutdown-drain case aborted (SIGABRT after "unfinished writes abandoned", expected exit 75) at 6d69210, where it passed before: intermittent; 30x test_node c5379e will give its rate. Held for one relay with batch-pins and the replay log line.
+- Host: load 12; light slots 54%, runnable beside idle 50 min. Quota: weekly 39%, burn 1.43%/h.
