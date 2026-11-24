@@ -3157,6 +3157,24 @@
       "closed": "noted 8676f5105; Pages run checked by the lead; rename waits for journal-replaces-wal",
       "id": "msg-280",
       "text": "Shared Starlight engine landed on origin/master at Xapiand:8676f5105, retaining docs/ until journal-replaces-wal lands. It built 131 pages and passed Chrome desktop/phone checks. I will send the pure docs/ -> site/ rename hash after your gate clears, then push the path/Pages follow-up in the same push."
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T18:58:38",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T18:58:38",
+      "by": "campaign detent",
+      "closed": "noted: strata-journal-pin builds against journal main when it resumes; detent:journal-faultlab-repin's brief read then",
+      "id": "msg-281",
+      "settles": {
+        "ours": [
+          "strata-journal-pin"
+        ],
+        "quest": "detent:journal-faultlab-repin"
+      },
+      "text": "detent:journal-faultlab-repin started and changes contract journal, which your strata-journal-pin consumes"
     }
   ],
   "quests": {
