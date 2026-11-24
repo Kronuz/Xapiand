@@ -1,6 +1,6 @@
 # field-check-at-map: journal
 
-State: waiting on jobs 261124-145133-73466a 261124-145136-a057fa 261124-145139-a2c903
+State: blocked on lead: d1000s10 memory gap is prospect's pool-reader cache placement (options under Blocked on)
 Quest: .campaign/xapiand/quests/field-check-at-map.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -27,13 +27,44 @@ Queued once at strata:239d51e4 (pushed): A1 head 261124-145133-73466a; A3 strict
 changed: a member order), the A1 mutant (vouch::check unchanged). `campaign verify --for A1,A4`
 defers build-test to the round's end (State ready for review).
 
+## Fix round 2 (lead: d1000s10 still over at 239d51e4)
+
+At strata:239d51e4: A1 73466a and d1000s4 a057fa pass; d1000s10 a2c903 fails, dirty 64,295 B
+over 64,147, resident 228,483 over 228,336; the proto build's `today` arm is high too.
+
+Measured (`~/.scratch/xapiand/field-check-at-map`, 1,000 indexes, d1000s10):
+- Heap is equal: malloc zone stats, blocks and bytes in use per index, base `today` 61,774-61,779,
+  proto `eager` 61,775-61,777 (so no size-class or uncounted allocation).
+- vmmap -summary of one paused run each: same 349,188 allocations, 58.9 MB allocated; frag
+  2,383 KB (base today) vs 2,539 KB (proto eager), +156 B/index, MALLOC_TINY dirty 14.7 -> 14.8 MB.
+- Cause: the map runs prospect's check mid-load, and `fielddict::reader::check_fields` opens the
+  pool into the reader's cache (400 B, 2 allocations per segment, kept). Xapiand's loop opened
+  the same cache after each open; mid-load it lands among the load's short-lived allocations.
+- Experiment, closing the segment file before the check: proto eager 64,287-64,295 vs base today
+  64,086-64,119 (from 64,332-64,369): under 50 B. Reverted.
+- Prospect's check through a reader of its own (patch: `src/prospect-fix`, fielddict.hh): base
+  `today` 59,859-59,961 (median 59,890), proto `eager` 59,855-60,035 (median 59,937), 6 runs
+  each; both 4.2 KB/index under today's 64.1 KB. Same identity hash, same d1000s4c refusals.
+
+Docs: strata:6dc38c77 (`docs/perf/eager-open.md` "The record's size", field-check.md), pushed.
+Nothing queued: the fix is outside the file set.
+
 ## Next
 
-1. Read the A3 rows; fill Evidence; set ready for review (build-test then reruns).
+1. On the lead's ruling: option 1 -> rerun A3 d1000s10 (and d1000s4) with PROSPECT at the
+   prospect commit; option 2 -> lifecycle/site note, then code.
 
 ## Blocked on
 
-Nothing. File set note for the lead under "Rulings I made" (1).
+The lead: the remaining d1000s10 gap is placement of prospect's cached pool reader, not strata's.
+1. (Recommended) Prospect: `check_fields` scans the pool through a reader of its own (patch ready,
+   ~10 lines, measured above). Land it (prospect-check-fields or a new prospect quest, or add
+   prospect `include/prospect/fielddict.hh` to this file set), then rerun A3 with PROSPECT at it.
+   Removes 4.2 KB/index on every arm; the d1000s10 gap falls within the run spread (+47 B median
+   on 6 local runs; the strict row decides).
+2. Strata only: run the eager open's checks after the load loop, as Xapiand's loop did. Splits
+   the one check site in two and keeps the 4 KB cache; not recommended.
+File set note for the lead under "Rulings I made" (1).
 
 ## Evidence
 
@@ -41,7 +72,7 @@ Nothing. File set note for the lead under "Rulings I made" (1).
 |---|---|
 | A1 | 261124-145133-73466a (head, 239d51e4); 261124-120815-138f97 (mutant, --fails-without: passed) |
 | A2 | 261124-122659-a4de45 |
-| A3 | 261124-145136-a057fa (d1000s4), 261124-145139-a2c903 (d1000s10), at 239d51e4; failed at 55a5ea73: df0b09, fcbe11 |
+| A3 | d1000s4 261124-145136-a057fa (passed, 239d51e4); d1000s10 261124-145139-a2c903 failed (see Fix round 2); failed at 55a5ea73: df0b09, fcbe11 |
 | A4 | 261124-122723-cb483e (build-test) and CI |
 | A5 | `docs/mechanisms/field-check.md` (strata) |
 | A6 | <pending CI> |
@@ -83,5 +114,7 @@ Nothing. File set note for the lead under "Rulings I made" (1).
 
 ## Messages
 
+- Lead (no id, d1000s10 still over at 239d51e4): measured; cause is prospect's pool-reader cache
+  opened mid-load (fragmentation, vmmap); fix is prospect's; blocked on the lead's choice.
 - Lead (no id): A1 head job 261124-120813-03d164 was cancelled by me; noted, evidence is now
   queued once at the ready commit and not cancelled.
