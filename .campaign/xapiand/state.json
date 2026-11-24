@@ -27998,7 +27998,9 @@
     },
     "rocksdb-parity": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "detent:journal-turn-sector-checks"
+      ],
       "checks": [
         {
           "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE=-O3 && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -28034,7 +28036,7 @@
       "risk": "high",
       "status": "planned",
       "title": "strata matches or beats RocksDB on every gate row",
-      "updated": "2026-11-23T10:46:23"
+      "updated": "2026-11-24T05:47:40"
     },
     "rocksdb-spec": {
       "accepted": {},
