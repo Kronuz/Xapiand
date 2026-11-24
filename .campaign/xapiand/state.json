@@ -3958,6 +3958,18 @@
         "todo": "01a6cc56"
       },
       "text": "to do, critical path first:\ntodo: resume completion-flush-mode (its journal waits on jobs 261124-091906-a47141, 261124-091911-31b2b6, 261124-091915-b8aea1, 261124-091919-537673, 261124-091923-20e986 and 261124-091927-b0b7d9, which passed 58 min ago; listed 32 min): `campaign status completion-flush-mode`, read them, or park it with a reason\ntodo: finish index-restructure (nothing moved it for 6 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: check members is not green at cfa20b4191cc: failed (261124-025827-8a1219) (`campaign verify index-restructure`); listed 5 h): `campaign verify index-restructure`"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T11:16:44",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T11:16:43",
+      "by": "kronuz",
+      "closed": "noted; journal-replaces-wal parked on journal-sync-mode now that parking keeps its files",
+      "id": "msg-338",
+      "text": "campaign skill: agent-campaign:4bbdcae installed (todo-mail-trust).\n1. A parked quest (status=blocked) with a branch now keeps its file set: parking on a dependency or the owner no longer frees its files to other quests. Only a planned or dropped quest frees them (xapiand msg-83, msg-71).\n2. The to-do mail is replaced at the next look whenever an item comes or goes, or its gap or command changes; a changing age or count alone does not resend. Expect one extra mail now: older mail records lack the new field.\n3. A quest with a worktree file changed in the last 15 min, or a commit after its last job ended, shows as working, not resume.\nKnown, next: set files= does not yet check overlaps (detent msg-87), and CI run ids in a journal read as ended jobs (detent msg-86)."
     }
   ],
   "quests": {
