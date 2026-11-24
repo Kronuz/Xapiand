@@ -1061,8 +1061,20 @@ static void test_an_update_sees_the_earlier_objects_of_its_stream() {
 	const std::string updates = R"([{"_id":"s","n":0},{"_id":"u","_op_type":"update","first":1},{"_id":"v","_op_type":"update","first":1},)"
 		R"({"_id":"u","_op_type":"update","second":2},{"_id":"v","_op_type":"update","second":2}])";
 	CHECK_EQ(http_call("RESTORE", "/pending/?commit", updates) / 100, 2);
-	// An update after a pending object of no id, which the index's first id (1) names once written.
-	CHECK_EQ(http_call("RESTORE", "/pending_new/?commit", R"([{"first":1},{"_id":1,"_op_type":"update","second":2}])") / 100, 2);
+	// An update of the id a pending object of no id takes, in a sharded index of numeric ids: a twin index, restored
+	// the same way without the update, names that id.
+	std::string new_id;
+	for (const std::string index : {"pending_twin", "pending_new"}) {
+		create_index(index, 5);
+		CHECK_EQ(http_call("RESTORE", "/" + index + "/?commit", R"([{"_id":1,"n":1}])") / 100, 2);   // numeric ids
+	}
+	std::string twin;
+	CHECK_EQ(http_call("RESTORE", "/pending_twin/?commit", R"([{"first":1}])", "application/json", &twin) / 100, 2);
+	if (const auto items = field_of(json_of(twin), "items"); items.size() == 1) {
+		new_id = field_of(items.at(0), "id").to_string();
+	}
+	CHECK(!new_id.empty());
+	CHECK_EQ(http_call("RESTORE", "/pending_new/?commit", R"([{"first":1},{"_id":)" + new_id + R"(,"_op_type":"update","second":2}])") / 100, 2);
 
 	// Two pieces with a pause: the update is the first object of the second batch.
 	std::string first_piece;
@@ -1076,11 +1088,11 @@ static void test_an_update_sees_the_earlier_objects_of_its_stream() {
 	}
 	CHECK_EQ(http_call_pieces("RESTORE", "/boundary/?commit", {first_piece, second_piece}, "application/x-ndjson", 500ms) / 100, 2);
 
-	for (const auto* path : {"/barrier/a", "/boundary/c", "/pending/u", "/pending/v", "/pending_new/1"}) {
+	for (const auto& path : {std::string("/barrier/a"), std::string("/boundary/c"), std::string("/pending/u"), std::string("/pending/v"), "/pending_new/" + new_id}) {
 		std::string reply;
 		CHECK_EQ(http_call("GET", path, "", "application/json", &reply), 200);
 		const auto obj = json_of(reply);
-		std::fprintf(stderr, "  GET %s: %s\n", path, obj.to_string().c_str());
+		std::fprintf(stderr, "  GET %s: %s\n", path.c_str(), obj.to_string().c_str());
 		CHECK_EQ(field_of(obj, "first").to_string(), std::string("1"));
 		CHECK_EQ(field_of(obj, "second").to_string(), std::string("2"));
 	}
