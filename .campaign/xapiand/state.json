@@ -3562,6 +3562,21 @@
         "todo": "d50daf1b"
       },
       "text": "to do, critical path first:\ntodo: resume consensus-join-v2 (its journal waits on jobs 261124-013122-ade4a2, 261124-013129-65e51c, 261124-013129-d849ad and 261124-013130-531f9c, which passed 3 h ago; new): `campaign status consensus-join-v2`, read them, or park it with a reason"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T05:41:49",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T05:41:49",
+      "by": "campaign",
+      "closed": "journal-replaces-wal: probes read, fresh contributor on the RESTORE regression; index-restructure: A3 met (stale line), only the owner's members decision remains",
+      "id": "msg-308",
+      "settles": {
+        "todo": "bb577b42"
+      },
+      "text": "to do, critical path first:\ntodo: resume journal-replaces-wal (its journal waits on jobs 261124-043555-1a9289, 261124-043602-4be160, 261124-034435-22beb7, 261124-034439-e01d6b, 261124-034443-5d5f29, 261124-033419-5c1d14 and 261124-021321-9231e2, which passed 1 min ago; new): `campaign status journal-replaces-wal`, read them, or park it with a reason\ntodo: finish index-restructure (nothing moved it for 63 min: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); new): `campaign status index-restructure`"
     }
   ],
   "quests": {
