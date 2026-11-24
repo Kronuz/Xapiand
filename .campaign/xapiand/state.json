@@ -18617,9 +18617,9 @@
       ],
       "repo": "/Users/kronuz/code/Kronuz/journal",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "journal: the caller chooses the sync mode at open (plain fsync or full flush on macOS)",
-      "updated": "2026-11-24T11:43:09",
+      "updated": "2026-11-24T12:39:02",
       "worktree": "../journal-wt/xapiand/journal-sync-mode"
     },
     "journal-turn-buffers": {
