@@ -1606,7 +1606,8 @@ static void test_a_search_batch_skips_a_missing_index() {
 // A batch pins its indexes together (cheap-reopen D3): every present index of several batches is found once, and a
 // missing one among them is skipped, not a failure of the pins beside it.
 static void test_a_search_batch_pins_its_indexes_together() {
-	Watchdog watchdog("a search batch pins its indexes together");
+	// 24 creates, writes and commits pay ~37 full device flushes each (886 F_FULLFSYNC, 21 s on macOS, job 23729b).
+	Watchdog watchdog("a search batch pins its indexes together", 120s);
 	constexpr int N = 24;
 	Endpoints endpoints;
 	for (int i = 0; i < N; ++i) {
