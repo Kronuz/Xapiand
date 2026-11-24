@@ -3254,7 +3254,8 @@ DocIndexer::take(std::vector<MsgPack>& batch, bool close)
 	};
 
 	// A prepared object joins the pending writes; true when they reached their bound.
-	const auto pending_bound = PENDING_BYTES * std::max<std::size_t>(1, children);
+	const auto bound_seam = seams.pending_bytes.load(std::memory_order_relaxed);
+	const auto pending_bound = bound_seam != 0 ? bound_seam : PENDING_BYTES * std::max<std::size_t>(1, children);
 	const auto pend = [this, pending_bound](Admitted&& one) {
 		if (const auto& term = std::get<0>(one.prepared); !one.error && !term.empty()) {
 			_pending_bytes += std::get<1>(one.prepared).get_data().size();

@@ -429,7 +429,8 @@ struct DocIndexerStats {
 // time slice, a step awaited on the loop with the RESTORE's handler between a range's placement and its apply,
 // one apply slice that throws before its writes, every write on the serial path (the model of a run), and the writes
 // an apply slice takes, with a step awaited on the loop between two slices (the turn released) given the term of the
-// slice's last write and whether it missed, and the shard (plus one) whose next placement read times out busy.
+// slice's last write and whether it missed, the shard (plus one) whose next placement read times out busy, and the
+// pending writes' bound in bytes (1: each round of objects is written before the next).
 struct DocIndexerSeams {
 	std::atomic<std::size_t> objects_per_prepare{0};
 	std::atomic<std::size_t> writes_per_slice{0};
@@ -439,6 +440,7 @@ struct DocIndexerSeams {
 	std::string stale_on_term;   // a write of a term ending so fails as a stale-marking error
 	std::atomic<bool> serial{false};
 	std::atomic<std::size_t> busy_placement_shard{0};
+	std::atomic<std::size_t> pending_bytes{0};
 };
 
 
