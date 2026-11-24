@@ -7634,6 +7634,8 @@
     "completion-flush-mode": {
       "accepted": {},
       "after": [],
+      "base": "02ab67fd44f1f47eafe2e1eb8c4baf1576440a52",
+      "branch": "quest/xapiand/completion-flush-mode",
       "checks": [
         {
           "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -7657,6 +7659,7 @@
         "CHANGELOG.md",
         "docs/**"
       ],
+      "journal": "../Xapiand-wt/xapiand/completion-flush-mode",
       "landed": [],
       "lenses": [
         "correctness"
@@ -7668,9 +7671,10 @@
       ],
       "repo": "../completion",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "completion: PosixIO takes a required flush mode (plain or full) for every sync it issues",
-      "updated": "2026-11-24T08:05:50"
+      "updated": "2026-11-24T08:08:54",
+      "worktree": "../completion-wt/xapiand/completion-flush-mode"
     },
     "completion-task-pin": {
       "accepted": {},
