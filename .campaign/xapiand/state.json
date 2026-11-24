@@ -32965,9 +32965,9 @@
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "strata builds against journal main (Host::delete_group)",
-      "updated": "2026-11-23T23:21:54",
+      "updated": "2026-11-24T00:25:35",
       "worktree": "../strata-wt/xapiand/strata-journal-pin"
     },
     "strata-nospace-position": {
