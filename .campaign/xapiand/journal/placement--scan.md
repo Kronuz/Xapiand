@@ -1,6 +1,6 @@
 # placement--scan: journal
 
-State: waiting on jobs 261120-181209-4c19f8 261120-181211-11c0e5 261120-181214-13639d
+State: waiting on jobs 261121-131722-ace692 261120-181211-11c0e5 261120-181214-13639d
 Quest: .campaign/xapiand/quests/placement.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -12,7 +12,7 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 Scan at strata:2620ba75 (include/strata/placement/scan.hh, test/placement/scan_{glob.hh,test.cc,mutants.py,cmake}),
 origin/quest/xapiand/placement merged in (lead's strata::placement target, test/placement/*.cmake glob);
 CMakeLists.txt change dropped. Pushed. Old jobs at 5494733b cancelled. Jobs queued:
-- 261120-181209-4c19f8 (A2): build placement_scan_test, run cases + model + bound (20000 seeds).
+- 261121-131722-ace692 (A2): build placement_scan_test, run cases + model + bound (20000 seeds).
 - 261120-181211-11c0e5 (A2, --fails-without): `bound` mode at mutant no-seek-past (leave() reads
   on with next() instead of seek/skip); it must fail.
 - 261120-181214-13639d (A2): the whole build-test suite on the task branch.
@@ -35,7 +35,7 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A2 | jobs 261120-181209-4c19f8, 261120-181211-11c0e5 (mutant), 261120-181214-13639d: pending |
+| A2 | jobs 261121-131722-ace692, 261120-181211-11c0e5 (mutant), 261120-181214-13639d: pending |
 | msg-1 | Mine (scan -> root, key order). The lead made path order a decision (quest file, Xapiand:8ff0a0f5f: '/' stored as byte 0); root answers it. |
 
 ## Result

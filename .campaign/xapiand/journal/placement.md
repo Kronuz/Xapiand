@@ -56,7 +56,7 @@ Resumed 11-23. Head strata:ae70ff95, pushed; CI run 45166135463 there.
   after build 261123-033240-38613f: A1 -033244-fcdb6d; A3 plan -033248-aed250, replace
   -033256-4f8bcc, drain -033300-366693, replicas -033304-7f8260, waits -033307-d5ae57, ctest
   -033311-0f4e28; A4 defer -033252-6cab6f. A2 -033402-76ca9b (now tagged --for A2 with its
-  inputs; the scan's closure is unchanged since 63472c6a). Not voided: fuzz 261121-213405-46539a
+  inputs; the scan's closure is unchanged since 63472c6a). Not voided: fuzz 261123-175400-861795
   (records.hh, format.hh and the corpus unchanged).
 
 ## Next
@@ -86,10 +86,10 @@ At strata:ae70ff95 (pending, Doing); all passed at 63472c6a.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261123-033244-fcdb6d (pending), 261121-213405-46539a; fails without: the root mutants 261120-184058-c79fd0 .. 261120-184144-06d7d2 (`campaign brief`) |
-| A2 | 261123-033402-76ca9b (pending); fails without: 261120-181211-11c0e5 |
-| A3 | 261123-033248-aed250, 261123-033256-4f8bcc, 261123-033300-366693, 261123-033304-7f8260, 261123-033307-d5ae57, 261123-033311-0f4e28 (pending); fails without: 261121-002719-b7c57d, 261121-002720-cd7f2d, 261121-002723-86ef33, 261121-002724-b25808, 261121-002725-07f209, 261121-002726-d6fee4, 261121-002727-19a20a, 261121-002752-d9cb1d, 261121-054427-5c7193 |
-| A4 | 261123-033252-6cab6f (pending); fails without: 261121-004909-30fad7, 261121-002729-8d49af |
+| A1 | 261123-175405-6faf38 (pending), 261123-175400-861795; fails without: the root mutants 261120-184058-c79fd0 .. 261120-184144-06d7d2 (`campaign brief`) |
+| A2 | 261123-175409-9300d4 (pending); fails without: 261120-181211-11c0e5 |
+| A3 | 261123-175414-9d2b85, 261123-175419-1fa92d, 261123-175423-639a0e, 261123-175428-ab5481, 261123-175432-c4625a, 261123-175438-56e7b0 (pending); fails without: 261121-002719-b7c57d, 261121-002720-cd7f2d, 261121-002723-86ef33, 261121-002724-b25808, 261121-002725-07f209, 261121-002726-d6fee4, 261121-002727-19a20a, 261121-002752-d9cb1d, 261121-054427-5c7193 |
+| A4 | 261123-175435-d52ff5 (pending); fails without: 261121-004909-30fad7, 261121-002729-8d49af |
 | A5 | `docs/mechanisms/placement-root.md`, `docs/mechanisms/placement-repair.md` (on the quest branch at ae70ff95) |
 
 ## Result

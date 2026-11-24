@@ -1,6 +1,6 @@
 # placement--root: journal
 
-State: waiting on jobs 261120-184051-b7da1d 261120-184051-22343f and 20 mutant jobs
+State: waiting on jobs 261120-184051-b7da1d 261123-175306-b9f9c4 and 20 mutant jobs
 Quest: .campaign/xapiand/quests/placement.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -10,7 +10,7 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 ## Doing
 
 Waiting on jobs at strata ab0e1beb: root tests 261120-184051-b7da1d, 10-minute fuzz
-261120-184051-22343f, 20 mutants (below). The d339430c run failed two ways, both fixed:
+261123-175306-b9f9c4, 20 mutants (below). The d339430c run failed two ways, both fixed:
 
 1. `placement_root_records` "the directory, counter and namespace keys": the test was wrong. It
    still expected a raw `/` (`Ptwitter/user`); ruling 1 stores byte 0, so it now expects
@@ -31,7 +31,7 @@ Waiting on jobs at strata ab0e1beb: root tests 261120-184051-b7da1d, 10-minute f
    case (they then prove varint's check); drop the `shortest-form` mutant and cancel
    261120-184104-36c5cc if unrun; rerun root tests and fuzz at the new head. Until then, the
    jobs at ab0e1beb stand.
-1. Read 261120-184051-b7da1d, 261120-184051-22343f and the 20 mutants; fix any failure with a job.
+1. Read 261120-184051-b7da1d, 261123-175306-b9f9c4 and the 20 mutants; fix any failure with a job.
 2. Full suite (`build-test`) on the task branch once those pass (CI runs on push).
 
 ## Blocked on
@@ -42,7 +42,7 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending at ab0e1beb: 261120-184051-b7da1d (records, placement + model, root group); fuzz 261120-184051-22343f; mutants below |
+| A1 | pending at ab0e1beb: 261120-184051-b7da1d (records, placement + model, root group); fuzz 261123-175306-b9f9c4; mutants below |
 | A5 | `docs/mechanisms/placement-root.md` (root half; repair's note is task repair's) |
 
 Mutant jobs (`--fails-without`, after 261120-184051-b7da1d, at ab0e1beb): slash-raw
