@@ -19,6 +19,13 @@ shims, no forwarding names. Every strata test passes on the new pin, so index-de
 - A3 [ci] CI is green on every platform at the landed commit
 - A4 [artifact] The journal's notable changes between the two pins that strata had to follow
   (renames, behavior) are listed in the journal's Result, with the strata commits that follow them
+- A5 An index whose head is below a bounded group's bound does not open silently: `index::attach_log`
+  loses the group and throws `log_lost`; above the bound it opens with every record. A test in
+  test/standalone_turn_log_test.cc that damages a turn log on each side of the bound, and a
+  `--fails-without` mutant (attach_log treating `bounded` as stored) that the test kills.
+- A6 A `bounded` group reopens through the path consensus's Journal Store handles (recover, or lost
+  first), never `driver.create` over an open table entry: a test in test/group that opens a
+  bounded group and checks the outcome, and a `--fails-without` mutant the test kills.
 
 ## Contracts
 
