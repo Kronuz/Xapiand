@@ -5327,6 +5327,8 @@
       "after": [
         "split-check-members"
       ],
+      "base": "cfa20b4191cc93ba7287d00e9b574f28ac31765b",
+      "branch": "quest/xapiand/catalog-restructure",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -5350,6 +5352,7 @@
         "test/catalog_policy_test.cc",
         "CMakeLists.txt"
       ],
+      "journal": "../Xapiand-wt/xapiand/catalog-restructure",
       "landed": [],
       "lenses": [
         "correctness"
@@ -5359,11 +5362,13 @@
         "group-catalog"
       ],
       "provides": [],
+      "reason": "started by force: shares only strata's top-level CMakeLists.txt with field-check-at-map, where each only adds its own test registrations (headers are globbed); the second to land merges main",
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "strata's catalog: the 2,374-line class body by mechanism (pin protocol, slot transitions, eviction policy)",
-      "updated": "2026-11-21T22:24:11"
+      "updated": "2026-11-24T11:52:06",
+      "worktree": "../strata-wt/xapiand/catalog-restructure"
     },
     "catalog-stress-cap": {
       "accepted": {},
