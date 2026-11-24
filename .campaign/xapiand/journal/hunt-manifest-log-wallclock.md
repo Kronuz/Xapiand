@@ -1,6 +1,6 @@
 # hunt-manifest-log-wallclock: journal
 
-State: waiting on jobs 261123-174439-9fb117 (A1 build-test at strata:277e595d), 261123-174446-9bce6e (A2 mutant)
+State: ready for review
 Quest: .campaign/xapiand/quests/hunt-manifest-log-wallclock.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -25,11 +25,11 @@ dense mark in log_deleted::insert, the per-edit ordinal-vector rewrite.
 
 ## Next
 
-1. A1 and A2 jobs finish; paste `campaign brief`'s table; push; CI (A4).
+1. CI (A4) at strata:277e595d: its sanitizer runs are the first check of the bounds under ASan/TSan; on a failure read its ratios before touching a bound.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
@@ -40,14 +40,33 @@ jobs no journal names), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | 261123-174439-9fb117 (build-test at strata:277e595d) passed |
+| A2 | 261123-174446-9bce6e, `--fails-without --for A2` at mutant strata:7b246c1f (277e595d plus a per-edit `ordinals()` rewrite in `log_deleted::insert`, not on the branch): failed as it must, 10M deleted apply 116.5x and read 148.8x against bounds 2 and 4; clumped 99.0x / 54.3x |
+| A3 | Form chosen: ratio to a same-process calibration (Doing above) |
+| A4 | CI at strata:277e595d: running when written |
+
+Probes examined: 261123-172410-fa7b2b (interrupted after 7 s, resubmitted), 261123-173046-c009d9 (healthy ratios, passed).
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+`test/manifest_log_test.cc` `deletes`: the 128 one-ordinal delete edits' apply and the log's open read
+are each the fastest of five runs over the fastest of five reads of the same snapshot alone (same
+process), bounded apply < 2 and read < 4 for the 10M-deleted, clumped dense and sparse-below sets.
+`time_scale` and the sanitizer macro are gone (no user left). Test-only, no library change.
+
+| | apply | read |
+|---|---|---|
+| healthy (Release probe 261123-173046-c009d9) | 0.001 / 0.009 / 0.031 | 0.99 / 0.97 / 1.14 |
+| mutant (261123-174446-9bce6e) | 10M: 116.5, clumped: 99.0 | 10M: 148.8, clumped: 54.3 |
+| bound | 2 | 4 |
+
+Healthy sits 60x under the apply bound and 3.5x under the read bound; the mutant is 25x to 58x over.
+Open: the sanitizer runs under CI are the first check of the bounds under ASan/TSan; main has moved
+(41 files), a merge is the lead's.
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- Ratio over counting work: no library counter (test-only), operator-new bytes are off under TSan and
+  blind to the walks; the at_bound check beside it already uses ratios.
+- Read bound 4 matches at_bound's; the read's healthy ratio is about 1 because the edits decode as
+  cheaply as the snapshot's own bytes.
