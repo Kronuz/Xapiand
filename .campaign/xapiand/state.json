@@ -5410,7 +5410,46 @@
       "worktree": ""
     },
     "catalog-restructure": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-24T14:18:22",
+          "base": "cfa20b4191cc93ba7287d00e9b574f28ac31765b",
+          "blobs": {
+            "CMakeLists.txt": "100644:2986f67c0c9080090810760c82262a0012e176d2",
+            "docs/mechanisms/catalog-layout.md": "100644:b62f8b2b9eebb867fbd1f1d86058d532e54f0ee2",
+            "docs/source-layout.md": "100644:90ab5d3ce17bd8d6b59a1d8e208600a2afce4417",
+            "include/strata/core/catalog.hh": "100644:7fc4c81def61f2275939a258bde3c400ed84a758",
+            "include/strata/core/catalog_observe.hh": "100644:5ef9f4ae0dea07e08a5532936fcd1203914243e2",
+            "include/strata/core/catalog_pin.hh": "100644:efc1ae16a28a24cb454ccc5cb72828c926abe07a",
+            "include/strata/core/catalog_policy.hh": "100644:b1614617c3f4b7e7c07c917b12c1e2e77266129a",
+            "include/strata/core/catalog_s3fifo.hh": "100644:dba93a155ebc32708e216747cbe8387d11847f22",
+            "include/strata/core/catalog_table.hh": "100644:8167238fc8dce6c457f2c07405f8fcb31347af1b",
+            "include/strata/core/catalog_transitions.hh": "100644:9ec074ce0a5559d2e0c94515014e653a03214bd3",
+            "test/catalog_policy_test.cc": "100644:f35532ad5b420c3297568fcbf2e207ed5b893048"
+          },
+          "by": "review",
+          "commit": "218e92dba72e9cf57940bac75c64ba5ea803ff83",
+          "criteria": "33d7f95594a300b8",
+          "diffs": {
+            "CMakeLists.txt": "37364a86695f7c33",
+            "docs/mechanisms/catalog-layout.md": "fbbe8cd519cb094c",
+            "docs/source-layout.md": "d447b8870226d735",
+            "include/strata/core/catalog.hh": "f5dc6ebfe6a4c1cc",
+            "include/strata/core/catalog_observe.hh": "230a620e1f33c65f",
+            "include/strata/core/catalog_pin.hh": "4fabebdc3112522a",
+            "include/strata/core/catalog_policy.hh": "2aec2ed46759ffcc",
+            "include/strata/core/catalog_s3fifo.hh": "89582c4f3970cff1",
+            "include/strata/core/catalog_table.hh": "bcb395dca191ea62",
+            "include/strata/core/catalog_transitions.hh": "93ad1d0ef06a0dbd",
+            "test/catalog_policy_test.cc": "e215da9dbc41ad98"
+          },
+          "findings": {},
+          "note": "",
+          "review": "165adff38b4f463f0762bb183bac0e01e96dcd70",
+          "reviewed": "218e92dba72e9cf57940bac75c64ba5ea803ff83",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "split-check-members"
       ],
@@ -5482,7 +5521,7 @@
       "risk": "high",
       "status": "review",
       "title": "strata's catalog: the 2,374-line class body by mechanism (pin protocol, slot transitions, eviction policy)",
-      "updated": "2026-11-24T12:43:46",
+      "updated": "2026-11-24T14:18:22",
       "worktree": "../strata-wt/xapiand/catalog-restructure"
     },
     "catalog-stress-cap": {
