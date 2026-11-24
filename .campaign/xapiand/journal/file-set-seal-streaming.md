@@ -1,6 +1,6 @@
 # file-set-seal-streaming: journal
 
-State: waiting on jobs 261124-004323-a98c76 261124-004325-148d8f 261124-004328-8df38e
+State: waiting on jobs 261124-004325-148d8f 261124-004328-8df38e
 Quest: .campaign/xapiand/quests/file-set-seal-streaming.md (the lead's; never edit it)
 
 ## Doing
@@ -19,7 +19,7 @@ Nothing.
 
 Commits: strata:213561d9 adds the test alone (seal still a whole read), strata:7a4284c4 the fix.
 
-- 261124-004323-a98c76 (A2): `group_file_set_test` at strata:7a4284c4.
+- 261124-004323-a98c76 (A2): `group_file_set_test` at strata:7a4284c4, passed (exit 0).
 - 261124-004325-148d8f (A2, fails-without): the same test at strata:213561d9; exits 1 only when it
   fails on "a seal reads at most", 126 on a build error or any other failure.
 - 261124-004328-8df38e (A1): build-test.
@@ -40,7 +40,7 @@ reader callers use for bytes, not checksums.
 | Criterion | Evidence |
 |---|---|
 | A1 | pending 261124-004328-8df38e |
-| A2 | pending 261124-004323-a98c76, 261124-004325-148d8f |
+| A2 | 261124-004323-a98c76 passed; fails-without 261124-004325-148d8f pending |
 | A3 | git grep above |
 | A4 | pending CI at 7a4284c4 |
 
