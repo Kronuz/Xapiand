@@ -5350,7 +5350,8 @@
         "docs/source-layout.md",
         "docs/mechanisms/catalog-layout.md",
         "test/catalog_policy_test.cc",
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "docs/mechanisms/catalog.md"
       ],
       "journal": "../Xapiand-wt/xapiand/catalog-restructure",
       "landed": [],
@@ -5362,12 +5363,11 @@
         "group-catalog"
       ],
       "provides": [],
-      "reason": "started by force: shares only strata's top-level CMakeLists.txt with field-check-at-map, where each only adds its own test registrations (headers are globbed); the second to land merges main",
       "repo": "../strata",
       "risk": "high",
       "status": "active",
       "title": "strata's catalog: the 2,374-line class body by mechanism (pin protocol, slot transitions, eviction policy)",
-      "updated": "2026-11-24T11:52:06",
+      "updated": "2026-11-24T12:24:52",
       "worktree": "../strata-wt/xapiand/catalog-restructure"
     },
     "catalog-stress-cap": {
