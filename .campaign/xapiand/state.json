@@ -32234,18 +32234,55 @@
         "CMakeLists.txt",
         "README.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/stox-no-libc",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-23T16:53:17",
+          "ci": {
+            "commit": "aebfcd9273cabd5c742270748b6e2179fb3a58cb",
+            "runs": [
+              45281003205
+            ]
+          },
+          "commit": "aebfcd9273cabd5c742270748b6e2179fb3a58cb",
+          "criteria": {
+            "A1": "261123-143451-1516fe",
+            "A2": "261123-143454-c88998; fails without: 261123-114043-114edd, 261123-130437-f0fa57",
+            "A3": "261123-143457-db487a",
+            "A4": "261123-143459-89e019",
+            "A5": "CI green at aebfcd9273ca",
+            "A6": "`strict_stox.hh`: \"decides the rest: base prefixes\" (lead, aebfcd9: the header's top comment lists what reaches libc, stold by width; README.md says the same: \"elsewhere (x86_64 and\")"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "aebfcd9273cabd5c742270748b6e2179fb3a58cb",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-143451-1516fe",
+              "level": "light",
+              "seconds": 163.0,
+              "state": "done",
+              "what": "stox-no-libc check build-test at aebfcd9273ca"
+            }
+          ],
+          "final": true,
+          "from": "ff3286d76ced1dd219c5d2a16a83bbccc783963e",
+          "reason": "",
+          "tested": "aebfcd9273cabd5c742270748b6e2179fb3a58cb"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../strict-stox",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "strict-stox parses every double without libc strtod",
-      "updated": "2026-11-23T13:08:26",
-      "worktree": "../strict-stox-wt/xapiand/stox-no-libc"
+      "updated": "2026-11-23T16:53:25",
+      "worktree": ""
     },
     "strata-engine-callbacks": {
       "accepted": {},
