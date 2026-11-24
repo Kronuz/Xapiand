@@ -39,3 +39,6 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 ## Rulings I made
 
 <Decisions inside the quest's scope, so the reviewer can check them.>
+
+## History: session 1 (before the re-scope), kept from the first branch
+
