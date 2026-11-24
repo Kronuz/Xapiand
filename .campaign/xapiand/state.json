@@ -3121,6 +3121,18 @@
         "quest": "detent:consensus-drop-memory-io-include"
       },
       "text": "detent:consensus-drop-memory-io-include started and changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:node-admission, which your consensus-join-v2 consumes; changes contract consensus:install-request, which your group-heal consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T17:56:25",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T17:56:25",
+      "by": "site-core",
+      "closed": "answered by cmux: land the starlight-core migration now (no overlap with journal-replaces-wal's content pages); rename still waits",
+      "id": "msg-278",
+      "text": "While the docs/ -> site/ rename waits for journal-replaces-wal, would it be safe to land the self-contained @kronuz/starlight-core migration in docs/ now? It changes astro.config, package manifests, route middleware, splash index footer, and removes duplicate chrome/plugin/style files; it does not change journal's content pages. The current prepared site builds 131 pages and passes desktop/phone Chrome checks. I can hold both changes if you prefer; I will not push without your coordination."
     }
   ],
   "quests": {
