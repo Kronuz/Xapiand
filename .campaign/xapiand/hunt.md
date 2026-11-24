@@ -511,3 +511,19 @@ quest fixes them (2 of 5 on 11-20).
 
 - N1: the short-file error at `include/strata/group/file_set.hh:157` names no file and says "sealed" when the failure is during the seal.
 - N2: `include/strata/group/install.hh:112` `read_prefix` is a second streaming CRC loop beside `file_set::crc32c_of`: one mechanism (fold into a shared helper).
+
+## Stale FetchContent deps in reused build dirs (2026-11-24)
+
+- cpp-libraries tools/selfcontained.sh (and any job that reuses a slot's build dir) kept journal at 9e11713 after strata's pin moved to 9c7e31c: index-restructure's 261124-004354-380c9b failed 14 of 23 headers on `Host::bound`/`lose`/`adopt_loop`/`GroupStatus::bounded`. A pin change must refetch: have selfcontained.sh (or the slot) drop `_deps/*-subbuild` stamps when a GIT_TAG changes, or key the build dir by the pin set. Start in cpp-libraries/tools/selfcontained.sh.
+
+## strata group awaiters unsafe to destroy (journal-replaces-wal, 2026-11-24)
+
+- Xapiand's shutdown drain aborted (SIGABRT) because frames freed by the control loop's `destroy_roots()` were still referenced by strata's group (the chore call, quorum and read waiters), so the Stop 3 index close could resume a freed frame. Xapiand now abandons the stop when a control task is left at the deadline (Xapiand:015dd1385, test + mutant 742fba/11605e). The strata side: a group's awaiters must be cancellable or detachable before their frames are destroyed. Start in strata include/strata/group/group.hh (the chore and waiter queues); durability, high.
+
+## index-restructure review notes (correctness APPROVE at strata:cfa20b41, 2026-11-24)
+
+- N1 (gap): `file_ledger::consistent()` is never called by the index or its index-level tests; a one-line CHECK in reclaim_bg_test's accounting helper covers it.
+- N2 (gap): no mutant for `file_ledger::rename`, and the model test never calls `rename` or `add_unlinked`.
+- N3 (nit): the ledger accepts violated preconditions silently (rename of an untracked name, double post, tracking a posted name); unreachable today, a debug assert each would state them.
+- N4 (nit): `rename` drops a replaced name's bytes instead of counting them unlinked until the sync; unreachable (sync_dir follows).
+- Reviewer's call-site mutant probe 261124-030309-f48c48 (three wrong ledger calls in the index): a SURVIVES line is a test gap row here.
