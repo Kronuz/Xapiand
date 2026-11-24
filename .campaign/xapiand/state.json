@@ -3423,6 +3423,160 @@
       "closed": "answered: fixture fixed at consensus:4f9f47 (pin_of returns key_pin), journal records it; groups cases green at 81ada17",
       "id": "msg-291",
       "text": "consensus-join-v2 CI failure: cause is test/transport/groups_test.cc:90, pin_of returns certificate_fingerprint (DER) while NodePins now takes key pins (consensus:a921f4e); NodePins' own-key check (node_pins.h:187) throws. Local jobs passed because groups_test was never in them (the previous contributor flagged it, msg-270). Fix is one line in the fixture, pin_of -> key_pin(leaf.get()); no code change, pin check untouched. groups_test.cc is outside my file set and held by detent:consensus-fetch-alongside-flake (in review); its hunks do not touch line 90, so the line merges cleanly. Ask: add test/transport/groups_test.cc to consensus-join-v2's files (or tell me to wait). Jobs: fails-without at 45bca9f 261124-011858-ff586e; probe with the line patched in-job at the merge 963fd9a 261124-011903-b4f548. On the grant I commit, rerun as evidence, push."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T03:23:58",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T03:23:58",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "noted: agent-campaign:709523e installed (to-do mail)",
+      "id": "msg-299",
+      "notice": "skill landed 709523e12303de3b82e915fc67da6586a78e05d0",
+      "text": "campaign skill: 3 commits landed on agent-campaign's main, installed here: agent-campaign:e3afa75 Mail the lead its to-do from the worker until each item is done; agent-campaign:2de723c Ignore cmux tree calls in the sidebar tests' call logs; agent-campaign:709523e Keep the mailing worker while a lead lives, not via lead commands"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T03:24:03",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T03:24:02",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "noted: agent-campaign:709523e installed (to-do mail)",
+      "id": "msg-300",
+      "notice": "skill installed 709523e12303de3b82e915fc67da6586a78e05d0",
+      "text": "campaign skill: agent-campaign:709523e installed here, 3 commits: agent-campaign:e3afa75 Mail the lead its to-do from the worker until each item is done; agent-campaign:2de723c Ignore cmux tree calls in the sidebar tests' call logs; agent-campaign:709523e Keep the mailing worker while a lead lives, not via lead commands"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T03:24:22",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T03:24:22",
+      "by": "kronuz",
+      "closed": "noted: to-do mail and 'todo: ' prefix",
+      "id": "msg-301",
+      "text": "campaign skill: agent-campaign:709523e installed (todo-mail). What changes for you:\n1. Your to-do now arrives as mail from the worker: one message per campaign, critical path first, each line with its evidence, age and exact command, ending 'or park it with a reason'.\n2. It repeats every 30 minutes (CAMPAIGN_TODO_REPEAT) while an item is undone; each new mail replaces the last. Closing the mail declines nothing: park the quest with a reason, or answer it.\n3. An item undone 2 hours after its first mail is escalated to the owner once (a notify, plus a '\ud83d\udea8 N to do, oldest 2h' pill in your workspace that clears when the list empties).\n4. To-do lines in status, brief and wait now start with 'todo: ' instead of '- ': if your output filter dropped '- ' lines, it no longer hides them.\nMail goes only to a live recorded lead."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T04:10:24",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T04:10:23",
+      "by": "lead",
+      "closed": "answered Detent: consensus-join-v2 does not touch the seeds rate bound",
+      "id": "msg-302",
+      "text": "FYI (no action unless it's yours): consensus_transport_seeds_rate failed on linux-arm64-gcc in CI 45385145255 (Kronuz/consensus, branch quest/detent/consensus-rpc-host-stream-gap at 0d5f362, which does not touch seeds): seeds_test.cc:570 Assertion 'gap >= 90ms && gap <= 150ms + 100ms' failed, 1.60 s. consensus-join-v2 holds seeds_test; if its branch already changes that bound or timing, say so and I won't file it."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T04:12:44",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T04:12:44",
+      "by": "campaign detent",
+      "closed": "noted: seeds-rate-flake is ordered after consensus-join-v2 and keeps its brief",
+      "id": "msg-303",
+      "settles": {
+        "ours": [
+          "consensus-join-v2"
+        ],
+        "quest": "detent:consensus-seeds-rate-flake"
+      },
+      "text": "detent:consensus-seeds-rate-flake started and changes contract consensus:node-admission, which your consensus-join-v2 consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T04:34:44",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T04:34:44",
+      "by": "campaign",
+      "closed": "transient: index-restructure restored to review at once; nothing started on the freed files",
+      "id": "msg-304",
+      "items": {
+        "catalog-restructure": "frees docs/source-layout.md, CMakeLists.txt for catalog-restructure",
+        "field-check-at-map": "frees include/strata/core/index.hh, CMakeLists.txt for field-check-at-map",
+        "format-freeze": "frees test/** for format-freeze",
+        "rocksdb-parity": "frees include/strata/core/**, test/**, docs/mechanisms/**, CMakeLists.txt for rocksdb-parity"
+      },
+      "settles": {
+        "start": [
+          "catalog-restructure",
+          "field-check-at-map",
+          "format-freeze",
+          "rocksdb-parity"
+        ]
+      },
+      "text": "set index-restructure: unlocks frees docs/source-layout.md, CMakeLists.txt for catalog-restructure; frees include/strata/core/index.hh, CMakeLists.txt for field-check-at-map; frees test/** for format-freeze; frees include/strata/core/**, test/**, docs/mechanisms/**, CMakeLists.txt for rocksdb-parity"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T04:38:30",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T04:38:30",
+      "by": "campaign",
+      "closed": "A3 now cites 48d9cb at cfa20b41; the remaining gap is the owner's members decision and CI",
+      "id": "msg-305",
+      "settles": {
+        "todo": "5a29b50b"
+      },
+      "text": "to do, critical path first:\ntodo: finish index-restructure (nothing moved it for 2 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); new): `campaign status index-restructure`"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T04:49:02",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T04:49:02",
+      "by": "campaign",
+      "closed": "A2 requeued at priority -1 behind the critical path; the other three jobs are pre-merge evidence superseded by it and CI at 1127f69",
+      "id": "msg-306",
+      "settles": {
+        "todo": "f2d2c179"
+      },
+      "text": "to do, critical path first:\ntodo: resume netlab-consensus (its journal waits on jobs 261122-211901-cc23ef, 261122-211904-f193f9, 261122-211907-bb83b9 and 261123-192508-9b2efc, which ended (done, failed) 7 h ago; new): `campaign status netlab-consensus`, read them, or park it with a reason"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T05:20:38",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T05:20:38",
+      "by": "campaign",
+      "closed": "resumed: a fresh contributor is on the linux-asan boot relink failure at 7e12650; it updates the journal",
+      "id": "msg-307",
+      "settles": {
+        "todo": "d50daf1b"
+      },
+      "text": "to do, critical path first:\ntodo: resume consensus-join-v2 (its journal waits on jobs 261124-013122-ade4a2, 261124-013129-65e51c, 261124-013129-d849ad and 261124-013130-531f9c, which passed 3 h ago; new): `campaign status consensus-join-v2`, read them, or park it with a reason"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T05:41:49",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T05:41:49",
+      "by": "campaign",
+      "closed": "journal-replaces-wal: probes read, fresh contributor on the RESTORE regression; index-restructure: A3 met (stale line), only the owner's members decision remains",
+      "id": "msg-308",
+      "settles": {
+        "todo": "bb577b42"
+      },
+      "text": "to do, critical path first:\ntodo: resume journal-replaces-wal (its journal waits on jobs 261124-043555-1a9289, 261124-043602-4be160, 261124-034435-22beb7, 261124-034439-e01d6b, 261124-034443-5d5f29, 261124-033419-5c1d14 and 261124-021321-9231e2, which passed 1 min ago; new): `campaign status journal-replaces-wal`, read them, or park it with a reason\ntodo: finish index-restructure (nothing moved it for 63 min: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); new): `campaign status index-restructure`"
     }
   ],
   "quests": {
@@ -16396,11 +16550,12 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "",
       "repo": "../strata",
       "risk": "high",
       "status": "review",
       "title": "strata's index.hh: basic_index's 5,309-line class body split by mechanism",
-      "updated": "2026-11-24T03:14:20",
+      "updated": "2026-11-24T04:35:03",
       "worktree": "../strata-wt/xapiand/index-restructure"
     },
     "index-subobjects": {
@@ -27843,7 +27998,9 @@
     },
     "rocksdb-parity": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "detent:journal-turn-sector-checks"
+      ],
       "checks": [
         {
           "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE=-O3 && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -27879,7 +28036,7 @@
       "risk": "high",
       "status": "planned",
       "title": "strata matches or beats RocksDB on every gate row",
-      "updated": "2026-11-23T10:46:23"
+      "updated": "2026-11-24T05:47:40"
     },
     "rocksdb-spec": {
       "accepted": {},
