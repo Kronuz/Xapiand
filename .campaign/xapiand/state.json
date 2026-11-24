@@ -12301,20 +12301,55 @@
         "include/strata/group/file_set.hh",
         "test/group/file_set*"
       ],
-      "journal": "../Xapiand-wt/xapiand/file-set-seal-streaming",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-24T01:44:35",
+          "ci": {
+            "commit": "7a4284c4cdb2511d9a69613acd73ed6be36b8335",
+            "runs": [
+              45358633452
+            ]
+          },
+          "commit": "7a4284c4cdb2511d9a69613acd73ed6be36b8335",
+          "criteria": {
+            "A1": "261124-004328-8df38e (the build-test check), 261124-004328-8df38e",
+            "A2": "261124-004323-a98c76; fails without: 261124-004325-148d8f",
+            "A3": "261124-013327-a9d310",
+            "A4": "CI green at 7a4284c4cdb2"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "7a4284c4cdb2511d9a69613acd73ed6be36b8335",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261124-004328-8df38e",
+              "level": "light",
+              "seconds": 2515.0,
+              "state": "done",
+              "what": "file-set-seal-streaming check build-test at 7a4284c4cdb2"
+            }
+          ],
+          "final": true,
+          "from": "7214f27d2fe92f2e1b71c406607fc2ecc071e688",
+          "reason": "",
+          "tested": "7a4284c4cdb2511d9a69613acd73ed6be36b8335"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 7b",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "file_set::seal checksums a volume streaming, as verify does",
-      "updated": "2026-11-24T01:35:48",
-      "worktree": "../strata-wt/xapiand/file-set-seal-streaming"
+      "updated": "2026-11-24T01:44:40",
+      "worktree": ""
     },
     "first-commit-crash": {
       "accepted": {
