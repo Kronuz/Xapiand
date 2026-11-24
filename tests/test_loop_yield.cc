@@ -1061,6 +1061,8 @@ static void test_an_update_sees_the_earlier_objects_of_its_stream() {
 	const std::string updates = R"([{"_id":"s","n":0},{"_id":"u","_op_type":"update","first":1},{"_id":"v","_op_type":"update","first":1},)"
 		R"({"_id":"u","_op_type":"update","second":2},{"_id":"v","_op_type":"update","second":2}])";
 	CHECK_EQ(http_call("RESTORE", "/pending/?commit", updates) / 100, 2);
+	// An update after a pending object of no id, which the index's first id (1) names once written.
+	CHECK_EQ(http_call("RESTORE", "/pending_new/?commit", R"([{"first":1},{"_id":1,"_op_type":"update","second":2}])") / 100, 2);
 
 	// Two pieces with a pause: the update is the first object of the second batch.
 	std::string first_piece;
@@ -1074,7 +1076,7 @@ static void test_an_update_sees_the_earlier_objects_of_its_stream() {
 	}
 	CHECK_EQ(http_call_pieces("RESTORE", "/boundary/?commit", {first_piece, second_piece}, "application/x-ndjson", 500ms) / 100, 2);
 
-	for (const auto* path : {"/barrier/a", "/boundary/c", "/pending/u", "/pending/v"}) {
+	for (const auto* path : {"/barrier/a", "/boundary/c", "/pending/u", "/pending/v", "/pending_new/1"}) {
 		std::string reply;
 		CHECK_EQ(http_call("GET", path, "", "application/json", &reply), 200);
 		const auto obj = json_of(reply);
