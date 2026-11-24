@@ -1,6 +1,6 @@
 # journal-replaces-wal: journal
 
-State: blocked on the lead: plain RESTORE in chores 66.5 s -> ~3-4 s (master ~1.3-2.3 s); the rest is the journal's full flushes per entry. Code at Xapiand:2ea5d31e0, no evidence jobs queued (round not ready by the lead's bar). See Blocked on.
+State: waiting on journal-sync-mode (lead answered Blocked on 11 as msg-2: option (a) with (c); D177 makes the journal plain on macOS like master). Code at Xapiand:162631658; next: a fresh contributor bumps the pins after journal-sync-mode lands, reruns the whole test_loop_yield, does items 6 and 7, measures like for like, and queues evidence once.
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
@@ -496,6 +496,8 @@ search_views.cc, the request tests, power_loss_check.sh, run_all.sh, docs). One 
 strata: `group-catalog` (item 4), which `core` step c waits on.
 
 ## Blocked on
+
+11 answered (lead, 2026-11-24, msg-2): (a) with (c). The bar is measured after journal-sync-mode lands, with the journal in plain mode; not (b).
 
 11. (2026-11-24, session 17) The plain RESTORE in chores is ~3-4 s at Xapiand:89a406c7f against master's ~1.3-2.3 s
     (A/B same hold; master's strict median 2.26 s), so the round misses the lead's bar on that row; the update row
