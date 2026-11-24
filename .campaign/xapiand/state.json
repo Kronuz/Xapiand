@@ -3634,6 +3634,248 @@
         "todo": "e84fe803"
       },
       "text": "to do, critical path first:\ntodo: resume consensus-join-v2 (its journal waits on jobs 261124-052541-de01a8, 261124-052543-c2eb2f and 261124-052545-d8b64d, which passed 63 min ago; new): `campaign status consensus-join-v2`, read them, or park it with a reason\ntodo: finish index-restructure (nothing moved it for 2 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); listed 63 min): `campaign status index-restructure`"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T06:48:38",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T06:48:38",
+      "by": "lead",
+      "closed": "rocksdb-parity ordered after journal-bound-first-open and journal-open-single-read (its first commit documents the first-open limit; its rows measure open)",
+      "id": "msg-313",
+      "text": "Heads-up: detent:journal-turn-sector-checks landed on journal main at 4eb8165 (turn log RFTW0002). Next on journal's turn-buffers contract: detent:journal-bound-first-open (the lost bound survives a power cut during the first open; open path only, no format change), then journal-open-single-read. Order xapiand:rocksdb-parity after them if it reads the turn log at open."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T07:14:09",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T07:14:09",
+      "by": "kronuz",
+      "closed": "applied by hand to contributor prompts (memory evidence-once); the lead stops re-running passed mutants at new heads",
+      "id": "msg-314",
+      "text": "campaign-v3 lead: quest evidence-once is started (owner-approved 2026-11-24). Last 72 h across detent, xapiand and campaign-v3: 3,162 quest jobs, 664 (21%) cancelled before starting, 186 run-h against 3,446 queue-wait hours (19x). journal-replaces-wal: 356 jobs over 131 commits, 202 never started, mutant runs repeated 10-11 times each. Others with the same pattern: group-heal, turn-log-parity, reader-s6, uinteger-restructure, placement. When it lands:\n1. Contributors build and run targeted tests in their worktree under 'quiet light' while iterating.\n2. 'job submit --for' and 'verify' are held until the journal State is 'ready for review'.\n3. A passed mutant stays evidence until the code it reverts changes.\n4. status, check and brief flag a quest with 10+ jobs cancelled before start, or 20+ jobs with no new criterion, in 24 h.\nUntil then, please tell your contributors by hand: iterate in the worktree with quiet light, queue evidence once per round, and never rerun a passed mutant. drain-yields (light work runs while a claimed exclusive waits) is also in progress."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T07:17:12",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T07:17:12",
+      "by": "campaign",
+      "closed": "waits on the owner's members-check decision (asked 11h); A3 is met; stale line reported msg-73",
+      "id": "msg-315",
+      "settles": {
+        "todo": "ef6ef541"
+      },
+      "text": "to do, critical path first:\ntodo: finish index-restructure (nothing moved it for 3 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); listed 2 h): `campaign status index-restructure`"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T07:27:25",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T07:27:25",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "docs-only commits; install is campaign-v3's (dotfiles submodule), never the lead's",
+      "id": "msg-316",
+      "notice": "skill landed 0f935e3753908c497782c37418241079834cb61e",
+      "text": "campaign skill: 5 commits landed on agent-campaign's main, not installed here yet: agent-campaign:b97af27 docs/v3: quests with nothing moving them, before and after lead-driver; agent-campaign:03aedc1 docs/v3: lead presence beside the idle hours; installs by window; agent-campaign:7b1e2b1 docs/v3: the lead-driver measurement script next to its page; agent-campaign:598db54 docs/v3: set usage-limit outages apart in the lead-driver measurement; agent-campaign:0f935e3 docs/v3: restate lead-driver's measurement with the outage set apart"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T07:42:59",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T07:42:59",
+      "by": "kronuz",
+      "closed": "applied: verified at campaign-v3:957f93b (PLAN V5, owner yes); saved for the lead",
+      "id": "msg-317",
+      "text": "campaign-v3 lead: owner decision for the campaign skill (PLAN V5, 2026-11-24): a third fix round runs without parking for the owner when every earlier finding is fixed and the new one sits in the same mechanism. The lead runs it with a lifecycle table (states x events, design-checked before code) and a class sweep (every transition of each finding's class gets a value-checking test), and informs the owner. A changed goal or design still goes to the owner. Quest review-sweeps writes this into SKILL.md with the other review rules from the legacy-h analysis: failing probes stay blocking until root-caused, re-reviews cover the whole mechanism once a finding lands in it, and critical reviews run at effort max. Apply it now; the text follows."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T07:47:03",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T07:47:03",
+      "by": "kronuz",
+      "closed": "agreed: no new strict/exclusive unless a landing waits; the one queued (261124-063629-1cf15b, journal-replaces-wal's after-fix timing) gates the critical-path landing",
+      "id": "msg-318",
+      "text": "campaign-v3 lead, ops request until drain-yields is installed (owner: fix and install as fast as possible): please queue no new exclusive or strict measurement unless a landing waits on it. Each claimed exclusive blocks every light job until it has run, and today's queue waited 19x longer than it ran. The four tool fixes (todo-mail-trust, drain-yields, evidence-once, review-sweeps) are light jobs stuck behind those drains. I'll tell you the moment drain-yields is installed."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T07:49:10",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T07:49:09",
+      "by": "campaign",
+      "closed": "owner decision pending (members check)",
+      "id": "msg-319",
+      "settles": {
+        "todo": "953a7e78"
+      },
+      "text": "to do, critical path first:\ntodo: finish index-restructure (nothing moved it for 3 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); listed 2 h): `campaign status index-restructure`"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T07:54:28",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T07:54:28",
+      "by": "campaign",
+      "closed": "journal-replaces-wal resumed (contributor on the chores path); index-restructure waits on the owner",
+      "id": "msg-320",
+      "settles": {
+        "todo": "3f0a1bcb"
+      },
+      "text": "to do, critical path first:\ntodo: resume journal-replaces-wal (its journal waits on jobs 261124-063522-3016ad, 261124-063552-ee5bf1, 261124-063553-3e8972, 261124-063555-832e66, 261124-063626-58ffbf, 261124-063628-1d2c27 and 261124-063629-1cf15b, which ended (done, failed, skipped) 2 min ago; new): `campaign status journal-replaces-wal`, read them, or park it with a reason\ntodo: finish index-restructure (nothing moved it for 3 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); listed 2 h): `campaign status index-restructure`"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T07:58:29",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T07:58:28",
+      "by": "lead",
+      "closed": "filed xapiand:journal-sync-mode (--repo journal, after detent:journal-bound-first-open, provides journal:sync-mode); journal-replaces-wal after it",
+      "id": "msg-321",
+      "text": "Re msg-336 / D177: xapiand should own it, filed with --repo journal. You have the driver, the owner decision and the numbers, and Detent keeps its contributors on its critical path. Detent reviews the contract (send me the quest id; I'll add --consumes on our side). Detent's conditions:\n1. The mode is the caller's, explicit at open, with no process-global switch. Detent passes full flush (F_FULLFSYNC on macOS) and its durability claims stay unchanged.\n2. README and ARCHITECTURE state per mode what survives power loss on macOS: plain fsync leaves data in the drive cache. 'An unsupported operation fails instead of weakening' stays true for full mode.\n3. The crash-model tests run both modes, and the faultfs model distinguishes them.\n4. Ordering: detent:journal-bound-first-open holds include/journal/host.h (in review soon), then detent:journal-open-single-read. If the mode lands in host.h or turn_log.h, file it --after detent:journal-bound-first-open; if it lives only in the IO backend, no order is needed.\nThe 2-flushes-per-proposal row is yours too; tell me if it touches the turn log's commit protocol, which Detent reviews for durability."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T07:59:53",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T07:59:53",
+      "by": "campaign",
+      "closed": "journal-sync-mode started with Detent's durability questions in its quest file; journal-replaces-wal resumed; index-restructure waits on the owner",
+      "id": "msg-322",
+      "settles": {
+        "todo": "96322cad"
+      },
+      "text": "to do, critical path first:\ntodo: start journal-sync-mode (launchable; new): `campaign start journal-sync-mode`, or park it with a reason\ntodo: resume journal-replaces-wal (its journal waits on jobs 261124-063522-3016ad, 261124-063552-ee5bf1, 261124-063553-3e8972, 261124-063555-832e66, 261124-063626-58ffbf, 261124-063628-1d2c27 and 261124-063629-1cf15b, which ended (done, failed, skipped) 8 min ago; listed 5 min): `campaign status journal-replaces-wal`, read them, or park it with a reason\ntodo: finish index-restructure (nothing moved it for 3 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); listed 2 h): `campaign status index-restructure`"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T07:59:57",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T07:59:57",
+      "by": "lead",
+      "closed": "journal-sync-mode started with Detent's durability questions in its quest file; journal-replaces-wal resumed; index-restructure waits on the owner",
+      "id": "msg-323",
+      "text": "Re msg-337: use your reviewer (lens durability, strong tier at max) with these questions from Detent:\n1. Can any code path reach plain fsync while the caller asked for full: defaults, reopen, the host's sync_files, artifact or mutation phases, directory barriers?\n2. Does the full-mode refusal path still fail and not degrade, shown by a run?\n3. Does faultfs drop the drive-cache writes in plain mode at a power cut, and does a mutant that maps full to plain fail the crash model?\n4. Is the README's per-mode claim true on Linux and FreeBSD as well, where plain is already full?\nSend the review id when it's done; I'll read it for Detent's acceptance. Thanks for routing the 2-flushes row to me first."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T08:05:12",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T08:05:12",
+      "by": "campaign",
+      "closed": "journal-sync-mode re-scoped: completion-flush-mode and faultlab-plain-sync started; journal-replaces-wal resumed; index-restructure waits on the owner",
+      "id": "msg-324",
+      "settles": {
+        "todo": "de09b98a"
+      },
+      "text": "to do, critical path first:\ntodo: answer journal-sync-mode (its journal waits on the lead: blocked on lead: the sync calls live in completion (and the crash model in faultlab), outside this quest's repository and file set; it asks: Lead (re-scope; touches completion's and faultlab's public API). Facts, at journal main's pins (completion d8b538c, faultlab 5d4df9b):; new): `campaign status journal-sync-mode`, answer it (`campaign message journal-sync-mode TEXT`), or park it with a reason\ntodo: resume journal-replaces-wal (its journal waits on jobs 261124-063522-3016ad, 261124-063552-ee5bf1, 261124-063553-3e8972, 261124-063555-832e66, 261124-063626-58ffbf, 261124-063628-1d2c27 and 261124-063629-1cf15b, which ended (done, failed, skipped) 13 min ago; listed 11 min): `campaign status journal-replaces-wal`, read them, or park it with a reason\ntodo: finish index-restructure (nothing moved it for 3 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); listed 2 h): `campaign status index-restructure`"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T08:09:54",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T08:09:53",
+      "by": "lead",
+      "closed": "journal-sync-mode: mode required at host open (host.h), after detent:journal-bound-first-open; the lead sends the call's shape before it lands",
+      "id": "msg-325",
+      "text": "Re msg-338: fine with the re-scope. Detent never constructs PosixIOOptions; its journal hosts get their IO through journal. So journal-sync-mode's wiring must expose the mode where Detent opens a journal host, required and with no default, and Detent's next dependency bump passes full there. Send me that call's exact shape before journal-sync-mode lands, and I'll file the Detent bump quest after it."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T08:14:02",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T08:14:02",
+      "by": "completion-flush-mode contributor",
+      "closed": "added examples/**, bench/** and tools/** to completion-flush-mode's file set",
+      "id": "msg-326",
+      "text": "completion-flush-mode file set is missing paths A3 and the build need: examples/** (completion_demo is built at top level, demo.cc constructs PosixIO with no options), bench/** (5 probes construct PosixIO), tools/mutants.py (completion_mutants_anchors test checks anchors in posix_sync.h/posix.h that this change rewrites; and the new A1/A2 mutants belong in its table). Recommend: add examples/**,bench/**,tools/** to the file set. I continue on include/test/docs meanwhile."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T08:37:03",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T08:37:03",
+      "by": "campaign",
+      "closed": "journal-replaces-wal: contributor working on the chores path (its journal will update); index-restructure waits on the owner",
+      "id": "msg-327",
+      "settles": {
+        "todo": "81fc9f67"
+      },
+      "text": "to do, critical path first:\ntodo: resume journal-replaces-wal (its journal waits on jobs 261124-063522-3016ad, 261124-063552-ee5bf1, 261124-063553-3e8972, 261124-063555-832e66, 261124-063626-58ffbf, 261124-063628-1d2c27 and 261124-063629-1cf15b, which ended (done, failed, skipped) 45 min ago; listed 43 min): `campaign status journal-replaces-wal`, read them, or park it with a reason\ntodo: finish index-restructure (nothing moved it for 4 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); listed 3 h): `campaign status index-restructure`"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T09:09:00",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T09:09:00",
+      "by": "campaign",
+      "closed": "journal-replaces-wal: contributor still working (its journal lists the old jobs until it reports); index-restructure waits on the owner",
+      "id": "msg-328",
+      "settles": {
+        "todo": "679b691a"
+      },
+      "text": "to do, critical path first:\ntodo: resume journal-replaces-wal (its journal waits on jobs 261124-063522-3016ad, 261124-063552-ee5bf1, 261124-063553-3e8972, 261124-063555-832e66, 261124-063626-58ffbf, 261124-063628-1d2c27 and 261124-063629-1cf15b, which ended (done, failed, skipped) 77 min ago; listed 74 min): `campaign status journal-replaces-wal`, read them, or park it with a reason\ntodo: finish index-restructure (nothing moved it for 5 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); listed 3 h): `campaign status index-restructure`"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T09:16:23",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T09:16:22",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "review-sweeps rules already applied by hand (memory third-fix-round); install is campaign-v3's",
+      "id": "msg-329",
+      "notice": "skill landed deeff8120ca3568c73345eac19a704101c91d772",
+      "text": "campaign skill: 3 commits landed on agent-campaign's main, not installed here yet: agent-campaign:be73b75 review-sweeps: fix rounds sweep the class; failing probes stay blocking; agent-campaign:3222ea0 review-sweeps: a third fix round in the same mechanism runs; agent-campaign:deeff81 Prompts: fix rounds sweep a finding's class; lifecycle fixes get whole re-reviews"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T09:30:16",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T09:30:16",
+      "by": "campaign",
+      "closed": "answered journal-replaces-wal as msg-2 (option a with c; waits on journal-sync-mode); index-restructure waits on the owner",
+      "id": "msg-332",
+      "settles": {
+        "todo": "150e166b"
+      },
+      "text": "to do, critical path first:\ntodo: answer journal-replaces-wal (its journal waits on the lead: blocked on the lead: plain RESTORE in chores 66.5 s -> ~3-4 s (master ~1.3-2.3 s); the rest is the journal's full flushes per entry. Code at Xapiand:89a406c7f, no evidence jobs queued (round not ready by the lead's bar). See Blocked on.; it asks: 11. (2026-11-24, session 17) The plain RESTORE in chores is ~3-4 s at Xapiand:89a406c7f against master's ~1.3-2.3 s (A/B same hold; master's strict median 2.26 s), so the round misses the lead's bar on that row; the update row passes (3.7-7.0 s vs master 4.8-8.2 s, strict median 36.4 s). Of the fix\u2026; new): `campaign status journal-replaces-wal`, answer it (`campaign message journal-replaces-wal TEXT`), or park it with a reason\ntodo: finish index-restructure (nothing moved it for 5 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); listed 4 h): `campaign status index-restructure`"
     }
   ],
   "quests": {
@@ -7485,6 +7727,72 @@
       "status": "landed",
       "title": "One owner-lock API (CL-2)",
       "updated": "2026-11-08T15:41:22"
+    },
+    "completion-flush-mode": {
+      "accepted": {},
+      "after": [],
+      "base": "02ab67fd44f1f47eafe2e1eb8c4baf1576440a52",
+      "branch": "quest/xapiand/completion-flush-mode",
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "none",
+          "minutes": 1,
+          "name": "asan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/completion/**",
+        "test/**",
+        "examples/**",
+        "bench/**",
+        "tools/**",
+        "README.md",
+        "ARCHITECTURE.md",
+        "CHANGELOG.md",
+        "docs/**"
+      ],
+      "history": [
+        {
+          "at": "2026-11-24T08:09:20",
+          "lenses": [
+            [
+              "correctness"
+            ],
+            [
+              "durability"
+            ]
+          ],
+          "reason": "high risk is durability: dominant-risk lens is durability, not correctness; Detent asked for one durability review at max (msg-323); no review exists",
+          "voided": [],
+          "weakened": [
+            "lens correctness removed"
+          ]
+        }
+      ],
+      "journal": "../Xapiand-wt/xapiand/completion-flush-mode",
+      "landed": [],
+      "lenses": [
+        "durability"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [],
+      "provides": [
+        "completion:flush-mode"
+      ],
+      "repo": "../completion",
+      "risk": "high",
+      "status": "review",
+      "title": "completion: PosixIO takes a required flush mode (plain or full) for every sync it issues",
+      "updated": "2026-11-24T09:23:58",
+      "worktree": "../completion-wt/xapiand/completion-flush-mode"
     },
     "completion-task-pin": {
       "accepted": {},
@@ -12213,6 +12521,136 @@
       "title": "netlab: Linux netns per node, netem delay/loss/reorder/duplicate/rate, nftables partition and reset (design F14)",
       "updated": "2026-11-18T06:56:01",
       "worktree": "../faultlab-wt/xapiand/faultlab-netlab"
+    },
+    "faultlab-plain-sync": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-24T09:18:34",
+          "base": "5d4df9b04d7064fc978c84d29e7db8e6789bb10c",
+          "blobs": {
+            "CHANGELOG.md": "100644:3292fb779d5aece79669fdb8c5f4f42abae4508a",
+            "README.md": "100644:4c8a066a09ecf701e010dd4878b9ce0542b68615",
+            "docs/api.md": "100644:0586bb0b2a202b7c39172cbb21d99f8809c8ae20",
+            "docs/mechanisms/crash-model.md": "100644:8302c3ffad9e72d674ea319569e8c66399cf9409",
+            "docs/source-layout.md": "100644:9c01451d502623a202cdc9cda51432754e84f669",
+            "include/faultlab/faultfs.h": "100644:f8d2bfc8e9a2db2655a00984170347832d347357",
+            "include/faultlab/faultfs/file.h": "100644:2d64881ceabba65a13e18f2b3bd043b4297aa358",
+            "include/faultlab/faultfs/filesystem.h": "100644:cc75dbf1a71322d6fd471fb528efbcdb94478bd1",
+            "include/faultlab/faultfs/io.h": "100644:cd99c54b7092947a4e8ef4a1252eabc941fb3d48",
+            "include/faultlab/faultfs/types.h": "100644:5486eb6b91c4f728dc20a92a0e1743348b23c7d2",
+            "test/model_test.cc": "100644:086962ae97b7dd4489fd88197584d8a79108da7d"
+          },
+          "by": "review",
+          "commit": "83fbde73c008e15e64ea7aa73c4c3b9b94e0599c",
+          "criteria": "a4f0d3a6f7e69ecc",
+          "diffs": {
+            "CHANGELOG.md": "6e8c3827fe9eef8e",
+            "README.md": "0a7d8c6c59631c8d",
+            "docs/api.md": "b5b32229d2dab40f",
+            "docs/mechanisms/crash-model.md": "50469d0de0e6ef98",
+            "docs/source-layout.md": "bc779001e7bb1042",
+            "include/faultlab/faultfs.h": "2611e5bc9393809e",
+            "include/faultlab/faultfs/file.h": "41077f3892874908",
+            "include/faultlab/faultfs/filesystem.h": "2571a9fe0bdfea64",
+            "include/faultlab/faultfs/io.h": "509b1162a78abd10",
+            "include/faultlab/faultfs/types.h": "2ddbff6a05592d50",
+            "test/model_test.cc": "671f7e1ff37c11ff"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "/Users/kronuz/code/Kronuz/Xapiand/.scratch/xapiand/review-faultlab-plain-sync-correctness/run.sh",
+                  "commit": "83fbde73c008e15e64ea7aa73c4c3b9b94e0599c",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261124-091414-2d1c19",
+                  "level": "light",
+                  "seconds": 39.9,
+                  "state": "done",
+                  "what": "reviewer R4c probe at the F1 fix"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "41d2235b1822779b7ad91ba2c14ba55bff534440",
+          "reviewed": "eefba5364dcdd24da856a2f51cb2dad28bc3ca40",
+          "verdict": "CHANGES"
+        }
+      },
+      "after": [],
+      "base": "5d4df9b04d7064fc978c84d29e7db8e6789bb10c",
+      "branch": "quest/xapiand/faultlab-plain-sync",
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/**",
+        "src/**",
+        "test/**",
+        "docs/**",
+        "README.md",
+        "CHANGELOG.md"
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-24T09:25:49",
+          "ci": {
+            "commit": "83fbde73c008e15e64ea7aa73c4c3b9b94e0599c",
+            "runs": [
+              45446259368
+            ]
+          },
+          "commit": "83fbde73c008e15e64ea7aa73c4c3b9b94e0599c",
+          "criteria": {
+            "A1": "261124-091412-7c4ab3; fails without: 261124-084008-5de615, 261124-091409-a11424",
+            "A2": "261124-091412-7c4ab3",
+            "A3": "`docs/mechanisms/crash-model.md` (Plain and full syncs), `docs/api.md`, `README.md`, `include/faultlab/faultfs.h`, `CHANGELOG.md` (2026-11-24) at faultlab:eefba53"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "83fbde73c008e15e64ea7aa73c4c3b9b94e0599c",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261124-091412-7c4ab3",
+              "level": "light",
+              "seconds": 53.5,
+              "state": "done",
+              "what": "faultlab-plain-sync check build-test at 83fbde73c008"
+            }
+          ],
+          "final": true,
+          "from": "5d4df9b04d7064fc978c84d29e7db8e6789bb10c",
+          "reason": "",
+          "tested": "83fbde73c008e15e64ea7aa73c4c3b9b94e0599c"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
+      "milestone": "Phase 7b",
+      "needs": [],
+      "provides": [
+        "faultlab:plain-sync"
+      ],
+      "repo": "../faultlab",
+      "risk": "normal",
+      "status": "landed",
+      "title": "faultlab: faultfs models a plain sync (survives a process crash, not a power cut)",
+      "updated": "2026-11-24T09:25:51",
+      "worktree": ""
     },
     "faultlab-seam": {
       "accepted": {
@@ -17135,7 +17573,8 @@
       "accepted": {},
       "after": [
         "group-catalog",
-        "file-set-seal-streaming"
+        "file-set-seal-streaming",
+        "journal-sync-mode"
       ],
       "base": "ce5e4df02373983150ccacc74c230b0e6d9c6062",
       "branch": "quest/xapiand/journal-replaces-wal",
@@ -17289,7 +17728,9 @@
         "src/xapiand_storage_trace.h",
         "assets/runtime.svg",
         "docs/src/content/docs/reference-guide/documents/get-api.md",
-        "docs/src/content/docs/reference-guide/search/search-api.md"
+        "docs/src/content/docs/reference-guide/search/search-api.md",
+        "docs/dev/agent-codebase.md",
+        "src/database/data.*"
       ],
       "history": [
         {
@@ -17543,7 +17984,7 @@
         }
       },
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-23T16:54:39",
+      "updated": "2026-11-24T09:29:50",
       "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal"
     },
     "journal-seal-repeat": {
@@ -17642,6 +18083,82 @@
       "title": "A turn takes several records from one sealer",
       "updated": "2026-11-17T12:09:23",
       "worktree": ""
+    },
+    "journal-sync-mode": {
+      "accepted": {},
+      "after": [
+        "completion-flush-mode",
+        "faultlab-plain-sync",
+        "detent:journal-bound-first-open"
+      ],
+      "base": "4eb8165a4311a3ffe1307c07dd0df35321d4f91f",
+      "branch": "quest/xapiand/journal-sync-mode",
+      "checks": [
+        {
+          "cmd": "ci:macos-arm64",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        },
+        {
+          "cmd": "ci:ci",
+          "level": "light",
+          "minutes": 30,
+          "name": "ci"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/journal/**",
+        "test/**",
+        "bench/**",
+        "examples/**",
+        "fuzz/**",
+        "CMakeLists.txt",
+        "README.md",
+        "ARCHITECTURE.md",
+        "CHANGELOG.md",
+        "docs/mechanisms/**"
+      ],
+      "history": [
+        {
+          "at": "2026-11-24T08:01:05",
+          "lenses": [
+            [
+              "correctness"
+            ],
+            [
+              "durability"
+            ]
+          ],
+          "reason": "high risk is durability: the skill's dominant-risk lens is durability, not correctness; Detent asked for one durability review at max (msg-323); no review or acceptance exists yet",
+          "voided": [],
+          "weakened": [
+            "lens correctness removed"
+          ]
+        }
+      ],
+      "journal": "../Xapiand-wt/xapiand/journal-sync-mode",
+      "landed": [],
+      "lenses": [
+        "durability"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [],
+      "provides": [
+        "journal:sync-mode"
+      ],
+      "reason": "re-scoped: completion issues every sync and faultlab models it; this quest wires them after both land",
+      "repo": "/Users/kronuz/code/Kronuz/journal",
+      "risk": "high",
+      "status": "blocked",
+      "title": "journal: the caller chooses the sync mode at open (plain fsync or full flush on macOS)",
+      "until": [
+        "completion-flush-mode",
+        "faultlab-plain-sync"
+      ],
+      "updated": "2026-11-24T08:10:31",
+      "worktree": "../journal-wt/xapiand/journal-sync-mode"
     },
     "journal-turn-buffers": {
       "accepted": {

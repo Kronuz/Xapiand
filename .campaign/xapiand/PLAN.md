@@ -359,6 +359,7 @@ A `[decision]` criterion's evidence names a row's ID here.
 | D174 | 2026-11-23 | Owner: strata's local `build-test` runs with asserts on (Release with `CMAKE_CXX_FLAGS_RELEASE=-O3`, no NDEBUG): strata-journal-pin, rocksdb-parity and new strata quests. In-flight quests gated by CI's sanitizer jobs keep their checks. |
 | D175 | 2026-11-23 | Owner: the lead may cancel superseded campaign jobs (`campaign job cancel`). Placement F5, pyrefly, the alpha.11 tag, the fnsizes CI step and release naming keep their posted defaults. |
 | D176 | 2026-11-23 | Owner: the Astro/Starlight site moves from docs/ to site/ (site-core's shared-engine extraction), with pages.yml and the tested docs path following it (a CI/gate change, approved). Timing: after journal-replaces-wal lands, as one rename-only commit (content edits in later commits), so the quests owning pages (cluster, closing-benchmark) re-map their file sets by rename. | site-core msg-271; three active quests own docs/src pages |
+| D177 | 2026-11-24 | Owner: the journal uses the same macOS flush defaults as Xapiand master: commits synced with a plain fsync by default (io::fsync, io.hh:146; master calls it "the barrier"), a full flush (F_FULLFSYNC) only with `--full-flush-ordering`. Same contract Xapiand ships today, so not a weakening; the journal library needs a caller-chosen ordering mode (its README promises F_FULLFSYNC), coordinated with Detent. Context: journal-replaces-wal RESTORE ran 3-26x slower than master, mostly in full flushes. |
 
 ## Pending owner
 
