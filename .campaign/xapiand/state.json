@@ -28145,7 +28145,9 @@
     "rocksdb-parity": {
       "accepted": {},
       "after": [
-        "detent:journal-turn-sector-checks"
+        "detent:journal-turn-sector-checks",
+        "detent:journal-bound-first-open",
+        "detent:journal-open-single-read"
       ],
       "checks": [
         {
@@ -28182,7 +28184,7 @@
       "risk": "high",
       "status": "planned",
       "title": "strata matches or beats RocksDB on every gate row",
-      "updated": "2026-11-24T05:47:40"
+      "updated": "2026-11-24T06:48:52"
     },
     "rocksdb-spec": {
       "accepted": {},
