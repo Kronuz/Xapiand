@@ -511,3 +511,7 @@ quest fixes them (2 of 5 on 11-20).
 
 - N1: the short-file error at `include/strata/group/file_set.hh:157` names no file and says "sealed" when the failure is during the seal.
 - N2: `include/strata/group/install.hh:112` `read_prefix` is a second streaming CRC loop beside `file_set::crc32c_of`: one mechanism (fold into a shared helper).
+
+## Stale FetchContent deps in reused build dirs (2026-11-24)
+
+- cpp-libraries tools/selfcontained.sh (and any job that reuses a slot's build dir) kept journal at 9e11713 after strata's pin moved to 9c7e31c: index-restructure's 261124-004354-380c9b failed 14 of 23 headers on `Host::bound`/`lose`/`adopt_loop`/`GroupStatus::bounded`. A pin change must refetch: have selfcontained.sh (or the slot) drop `_deps/*-subbuild` stamps when a GIT_TAG changes, or key the build dir by the pin set. Start in cpp-libraries/tools/selfcontained.sh.
