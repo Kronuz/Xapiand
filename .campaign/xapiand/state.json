@@ -27444,6 +27444,36 @@
       "title": "prospect pins to their heads (pin wave)",
       "updated": "2026-11-08T15:40:36"
     },
+    "prospect-pool-reader-transient": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/prospect/fielddict.hh",
+        "test/fielddict*",
+        "docs/mechanisms/fielddict*.md",
+        "docs/perf/fielddict-pool-reader.md",
+        "CHANGELOG.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "/Users/kronuz/code/Kronuz/prospect",
+      "risk": "normal",
+      "status": "planned",
+      "title": "prospect: the field check reads the pool through a reader it drops, so an opened index keeps no pool reader",
+      "updated": "2026-11-24T15:57:42"
+    },
     "prospect-pruning-floors": {
       "accepted": {},
       "after": [],
