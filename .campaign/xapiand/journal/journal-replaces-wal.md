@@ -1,6 +1,6 @@
 # journal-replaces-wal: journal
 
-State: waiting on jobs at Xapiand:7ab94031a (pushed). Gate: crash 261123-152727-be5042; no-wal 261123-152728-6a0a28 passed; CI at the pushed head gives build-test, e2e, asan, tsan. Criteria: A1 261123-152856-709fdd, 261123-152940-dd5a34, fails-without 261123-152925-f480a5, 261123-152927-bc4ebf, 261123-152930-75d92f, 261123-152932-868f23, 261123-152935-685abb, 261123-152938-dd8969; A2 261123-152858-6ea1fb, fails-without 261123-152901-a026b1, 261123-152903-53a5af; A3 261123-152906-9e8d80, 261123-152909-4b66de, fails-without 261123-152911-321a3c, 261123-152914-a77324, 261123-152916-f6d476; A4 261123-152919-29202d, fails-without 261123-152922-d6b84e; A5 261123-152942-695236, fails-without 261123-152944-81bd40, 261123-152947-bf7b9f; A8 261123-152956-ac9c00; A9 fails-without 261123-152949-135bf6, 261123-152951-7c729a, 261123-152954-946a8a. Still queued from session 10 (not run, so no verdict): 261123-142137-528ce7 (count must-fail at 09a223a4e), 261123-142155-d17a82 (test_node rerun), 261123-142143-9b5bc3, 261123-142149-92c842, 261123-131122-e573bf. Next: read them; fix only a job that fails.
+State: waiting on jobs at Xapiand:6d6921068 (pushed). Nothing compiled locally: compile check 261123-165051-0b0570 (every target, -k 0, then the new tests) gates the rest, which run --after it; Xapiand:0e256600e fixed the one compile error a probe build showed (write_levels used above its definition). Gate: crash 261123-165252-fef4e8, no-wal 261123-165252-228c39; CI at the pushed head gives build-test, e2e, asan, tsan. Criteria: see Evidence. Lead's checks: test_node 10x 261123-165247-a8e7ab (--long, no criterion), the abandon case 30x 261123-165235-1c28ca, loop-yield probes 261123-161429-7ff092 (merge base) and 261123-165249-4fae12 (head). Next: if 0b0570 fails, fix and resubmit the set (~/.scratch/xapiand/jrw-levels/resubmit.py AFTER_ID); read the loop-yield pair for item 5's verdict.
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
@@ -32,11 +32,14 @@ Session 12 (2026-11-23), task `levels` and R1 on the quest branch (lead's assign
    clears the control before the drain again.
 4. Lead msg (576cc8, the wildcard over the cap hung at 91113fb2f): not reproduced (d17a82 passed it); no mechanism
    found by reading. The watchdog now samples every thread's stack on a hang (Xapiand:03637fc50), so a recurrence
-   names its frames. The 10x test_node job at the head is the check.
+   names its frames. The 10x test_node job at the head (261123-165247-a8e7ab) is the check. The CI failures the lead
+   lists at :2255, :2620 and :737 were fixed before this session (lead's note).
 5. Lead msg (test_loop_yield.cc:693 on CI, 3 runs): CI's numbers on this quest are 0.21 and 0.22 (142.7/674.7,
    109.1/490.5 ms; bound 0.2, master's comment 0.06-0.09). Hypothesis: the denominator shrank, not the numerator
    grew: through the group every write applies on its group chore, so "prepared and written on the loop" no longer
-   writes on the loop. Probes 261123-161429-7ff092 (merge base) and 261123-161416-5784fc (head) measure both sides.
+   writes on the loop. Probes 261123-161429-7ff092 (merge base) and 261123-165249-4fae12 (head; 5784fc failed to
+   compile, the write_levels declaration) measure both sides. No verdict until they land.
+6. Out of set: the get and search API pages (`volatile`) were edited and reverted (Blocked on 10).
 
 Session 11 (2026-11-23), the evidence set at the head (lead: nothing else unless a job fails):
 
@@ -313,6 +316,13 @@ strata: `group-catalog` (item 4), which `core` step c waits on.
 
 ## Blocked on
 
+10. (2026-11-23) Outside the file set: docs/src/content/docs/reference-guide/documents/get-api.md ("Volatile") and
+    reference-guide/search/search-api.md (the `volatile` row) still say `volatile` opens the index for writing. D4: it
+    means read=linearizable. Edited, then reverted (Xapiand:6d6921068) to keep the set. Recommend: add both and I
+    apply the reverted text (get: "`read=linearizable` (or `volatile`, which means it) waits until every write the node
+    answered before the get has applied, an `ack=none` write included; the default, `read=prefix`, reads what has
+    applied", linking basics#visibility-and-durability; search: the same row for `read`, `volatile`).
+
 6. (2026-11-23) Outside the file set, left: docs/dev/agent-codebase.md (new from master's agents-md) still describes
    the WAL (lines 14, 71-72, 76, 80: `src/database/wal.*`, WAL replay, WAL durability). Recommend: add it to the set
    and I reword it to the journal, as item 5's files were.
@@ -348,15 +358,15 @@ Jobs prove criteria by their tags; paste `campaign brief`'s generated table here
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261123-152856-709fdd; 261123-152940-dd5a34; no-wal 261123-152728-6a0a28; crash 261123-152727-be5042; fails without: 261123-152925-f480a5, 261123-152927-bc4ebf, 261123-152930-75d92f, 261123-152932-868f23, 261123-152935-685abb, 261123-152938-dd8969 |
-| A2 | 261123-152858-6ea1fb; fails without: 261123-152901-a026b1, 261123-152903-53a5af |
-| A3 | 261123-152906-9e8d80; 261123-152909-4b66de; fails without: 261123-152911-321a3c, 261123-152914-a77324, 261123-152916-f6d476 |
-| A4 | 261123-152919-29202d; 261123-152856-709fdd; fails without: 261123-152922-d6b84e |
-| A5 | ci:Functional E2E (docs); 261123-152940-dd5a34; 261123-152942-695236; fails without: 261123-152944-81bd40, 261123-152947-bf7b9f |
+| A1 | 261123-165103-2b225f; 261123-165150-46d736; 261123-165229-26f9f6; 261123-165235-1c28ca; no-wal 261123-165252-228c39; crash 261123-165252-fef4e8; fails without: 261123-165135-36e01f, 261123-165137-8ec228, 261123-165140-99c0aa, 261123-165142-9e1f71, 261123-165145-a60381, 261123-165147-e4c73e, 261123-165232-41ee12 |
+| A2 | 261123-165106-195af5; fails without: 261123-165109-560112, 261123-165112-923dcd |
+| A3 | 261123-165114-9e834c; 261123-165117-9d42ae; fails without: 261123-165120-541aae, 261123-165123-cf493c, 261123-165126-61010f |
+| A4 | 261123-165129-548f8f; 261123-165103-2b225f; fails without: 261123-165132-60295c |
+| A5 | ci:Functional E2E (docs); 261123-165152-8bf61b; 261123-165210-4f05e9; fails without: 261123-165154-d1a0f8, 261123-165157-ded424, 261123-165213-4ee4de, 261123-165215-2c8a56, 261123-165217-7c699d, 261123-165219-0f06b3, 261123-165221-583df2, 261123-165223-998438, 261123-165225-1c5d88, 261123-165227-d0f01f |
 | A6 | D113 (owner: Q1 (a), default ack quorum, bulk loaders choose none) and D142 (owner: Q6 as written, ?commit = ack=quorum&refresh=true; Q-F27 (a), read-your-writes served from the leader's replica); the code ships both defaults, A4's test covers Q-F27 |
 | A7 | docs/mechanisms/journal-durability.md: Every shard is a strata::group: a lone voter at rf = 1. The group's journal is the shard's only durability path |
-| A8 | 261123-152956-ac9c00 |
-| A9 | 261123-152856-709fdd; fails without: 261123-152949-135bf6, 261123-152951-7c729a, 261123-152954-946a8a |
+| A8 | 261123-165208-588fd6 |
+| A9 | 261123-165103-2b225f; fails without: 261123-165200-4ebfb3, 261123-165202-26b0dd, 261123-165205-dd6ea0 |
 
 ## Result
 
@@ -443,3 +453,17 @@ Drafts, applied when the code lands; each names the contract it shapes (format-f
 31. A4's test reads through test_pool's Shard (get_view, engine_for_read and engine::search), not HTTP: read-your-writes
     is the shard's refresh-before-read, the same under any handler; the mutant that serves the last refresh is the
     dirty mark the group's apply sets.
+32. The `levels` task row's globs are widened to the quest's set where ack=none needs them: src/database/{shard,pool,
+    handler}.*, flags.h, shard_group.*, src/engine/strata/shard.*, tests/test_node.cc (all in the quest's files).
+33. ack=none answers 202 Accepted (RESTORE too): the write is placed, not applied, and its answer carries no _version
+    or docid (contract xapiand:ack-read-levels).
+34. A metadata write (a schema's, a setting's) is always proposed at quorum, whatever the request's level: a later
+    write's prepare must read the schema it changed.
+35. The turn's next holder waits for an ack=none write's apply (ShardEndpoint::unapplied_, take_turn): D3's "prepare
+    from applied state" on a lone voter, so a prepare, a placement read or a commit sees it.
+36. HTTP ?commit no longer checkpoints: it is ack=quorum&refresh=true (D4); COMMIT /idx/ is the checkpoint (Q8 (a)).
+    RESTORE takes only the ack flag: its closing commit refreshes already.
+37. Shutdown (lead msg on d17a82): the registry's control stays set until the control scheduler closes (Stop 2), so a
+    detached task never runs synchronously on the thread that drains that loop; finish() leaves the control to its
+    owner; DatabasePool::stop_names() stops the names' build up front, as set_control(nullptr) did.
+38. test_node's Watchdog samples every thread on a hang (sample on macOS, gdb where installed): a diagnostic, not a fix.
