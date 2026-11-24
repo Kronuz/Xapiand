@@ -32858,12 +32858,28 @@
           ],
           "voided": [],
           "weakened": []
+        },
+        {
+          "at": "2026-11-23T19:27:39",
+          "lenses": [
+            [
+              "correctness"
+            ],
+            [
+              "durability"
+            ]
+          ],
+          "reason": "durability is the dominant risk (bounded groups on a damaged turn log); the one durability reviewer carries the correctness questions; no review existed yet",
+          "voided": [],
+          "weakened": [
+            "lens correctness removed"
+          ]
         }
       ],
       "journal": "../Xapiand-wt/xapiand/strata-journal-pin",
       "landed": [],
       "lenses": [
-        "correctness"
+        "durability"
       ],
       "milestone": "",
       "needs": [],
@@ -32872,7 +32888,7 @@
       "risk": "high",
       "status": "active",
       "title": "strata builds against journal main (Host::delete_group)",
-      "updated": "2026-11-23T19:26:48",
+      "updated": "2026-11-23T19:27:39",
       "worktree": "../strata-wt/xapiand/strata-journal-pin"
     },
     "strata-nospace-position": {
