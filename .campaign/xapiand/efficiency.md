@@ -1119,3 +1119,11 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Site: site-core landed the shared Starlight engine (Xapiand:8676f5105); main checkout still dirty with its old draft, blocking Xapiand landings.
 - Host: runnable work beside idle light slots 46, 53, 55 min in three hours; cause per-quest build-slot serialization (42 of 109 queued jobs on journal-replaces-wal's one slot). Reported to campaign-v3 (msg-51).
 - Quota: weekly 34%, burn 1.59%/h, exhaustion ~41h before the 11-30 reset.
+
+## 2026-11-24 03h
+
+- Landed: hunt-single-flight-race at Xapiand:83aed22a7 (300 of 300 runs); hunt-manifest-log-wallclock at strata:e0a1c78f (ratio bounds; mutant 116.5x/148.8x vs 2/4); placement at strata:e9f0fafd (correctness re-accepted at the merged head: no placement commit since ef1e91e, F1/F2 confirmed by the plan test 261123-175414-9d2b85).
+- Lead fixes: 4 placement A3 reruns failed to compile on a stale consensus pin (b8de3b8+20198fc, superseded by strata's pin, which has the fix as 9a2476d); resubmitted at strata's own pin. netlab 3-node VM rows failed at boot (guest never reached SSH, load ~35); rerun queued.
+- Agent runs: strata-journal-pin contributor launched (Sonnet, medium): re-pin journal to main, now the file-set holder of 5 quests incl. file-set-seal-streaming.
+- journal-replaces-wal: compile check ran after 90 min queued (priority inversion, campaign-v3 msg-51); A1/A4/A9, A2 + mutant, A3 x2, A8 green at 6d6921068; crash gate test_node batch-pins hang 2 of 2 under load.
+- Host: light slots 59% used, runnable beside idle 48 min (down from 55). Quota: weekly 35%, burn 1.57%/h.
