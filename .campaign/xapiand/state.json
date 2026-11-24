@@ -17321,7 +17321,64 @@
       "updated": "2026-11-23T08:15:36"
     },
     "index-restructure": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-24T11:50:00",
+          "base": "7a4284c4cdb2511d9a69613acd73ed6be36b8335",
+          "blobs": {
+            "CMakeLists.txt": "100644:e84313f49ac7f65bb00002ca61faf6099b643947",
+            "docs/mechanisms/index-layout.md": "100644:fac10c12128e66a8058fa0979d9d208920fd740f",
+            "docs/source-layout.md": "100644:554b7222c43a88dff05c3a6a557fbb9b1d87ab2a",
+            "include/strata/core/index.hh": "100644:da088b7ff55983ebc521ac89a688e72b2b751a48",
+            "include/strata/core/index_apply.hh": "100644:e65aec6c98c3b1256c8c3f80a8f84007b7739df6",
+            "include/strata/core/index_buffer.hh": "100644:46a23670dd409797607b43c542a567a447ba0288",
+            "include/strata/core/index_checkpoint.hh": "100644:2c37a482970b45eda50e3e25e0f61faef6c5edc8",
+            "include/strata/core/index_commit.hh": "100644:809cf29d10aadcf9eabc14547f79fee333af0a21",
+            "include/strata/core/index_flush.hh": "100644:11209e5423319102e886270b1597b53e99dddd8b",
+            "include/strata/core/index_ledger.hh": "100644:f7006196ad2b4242c6ca1b265be35b1af521eda8",
+            "include/strata/core/index_merge.hh": "100644:f6e14955b4eed0f3a41fe7a0f7a5e0155b1f1591",
+            "include/strata/core/index_open.hh": "100644:825c82e6e521e96e20482fc7ac5b8db42e6478f9",
+            "include/strata/core/index_publish.hh": "100644:30f0f6511a5a6a4a7badbc4998b071d2885ca5be",
+            "include/strata/core/index_read.hh": "100644:8027d48f27c43aa83a9c393ff872c0312d60f368",
+            "include/strata/core/index_storage.hh": "100644:966c14b7edbb013adec437ad0b6c93cbeba49808",
+            "include/strata/core/index_turns.hh": "100644:42d071cb6d98cb6e031ca3589ab046c4081fe833",
+            "test/index/ledger.cmake": "100644:65a57ffa008ee4280a429dfac32a34146c874e52",
+            "test/index/ledger_mutants.py": "100755:57dfbc60b94bcc20808943bc5c6097feb565d716",
+            "test/index/ledger_test.cc": "100644:ccf608950510702d052f8bbf1457ee466d1ba4d4",
+            "test/reclaim_bg_test.cc": "100644:6136c3940bdd2550c661f01906098e33f03698fe"
+          },
+          "by": "review",
+          "commit": "cfa20b4191cc93ba7287d00e9b574f28ac31765b",
+          "criteria": "3c36bf00acdc55d0",
+          "diffs": {
+            "CMakeLists.txt": "626352b52f924694",
+            "docs/mechanisms/index-layout.md": "c1389ab3beb5c9f3",
+            "docs/source-layout.md": "36f0efd2a4441643",
+            "include/strata/core/index.hh": "eb9306553a95aa91",
+            "include/strata/core/index_apply.hh": "2a08472607588e10",
+            "include/strata/core/index_buffer.hh": "269597c550940697",
+            "include/strata/core/index_checkpoint.hh": "9ba74e1b2b72ba94",
+            "include/strata/core/index_commit.hh": "afcc4638e5f574db",
+            "include/strata/core/index_flush.hh": "509d2956094cf150",
+            "include/strata/core/index_ledger.hh": "f30973ba2affd9cd",
+            "include/strata/core/index_merge.hh": "16d07c85b54c9955",
+            "include/strata/core/index_open.hh": "6dd6cd2455ae2be7",
+            "include/strata/core/index_publish.hh": "e612cc8b02892fb6",
+            "include/strata/core/index_read.hh": "5520901a6bd82c31",
+            "include/strata/core/index_storage.hh": "ef3c12aaa6bbe8a2",
+            "include/strata/core/index_turns.hh": "429a11ff9e097f6e",
+            "test/index/ledger.cmake": "e9f115ec461d3e2c",
+            "test/index/ledger_mutants.py": "05152a34a95620c7",
+            "test/index/ledger_test.cc": "008036ace5f62851",
+            "test/reclaim_bg_test.cc": "d3dc71a9158e59d7"
+          },
+          "findings": {},
+          "note": "",
+          "review": "87f559d6ce6a4e1b9508361f1b13df0f93a1e459",
+          "reviewed": "cfa20b4191cc93ba7287d00e9b574f28ac31765b",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "turn-log-parity",
         "split-check-members",
@@ -17426,7 +17483,7 @@
       "risk": "high",
       "status": "review",
       "title": "strata's index.hh: basic_index's 5,309-line class body split by mechanism",
-      "updated": "2026-11-24T11:48:37",
+      "updated": "2026-11-24T11:50:00",
       "worktree": "../strata-wt/xapiand/index-restructure"
     },
     "index-subobjects": {
