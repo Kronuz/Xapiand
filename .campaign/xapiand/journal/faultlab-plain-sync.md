@@ -1,16 +1,16 @@
 # faultlab-plain-sync: journal
 
-State: working
+State: ready for review; waiting on jobs 261124-084008-5de615
 Quest: .campaign/xapiand/quests/faultlab-plain-sync.md (the lead's; never edit it)
 
 ## Doing
 
-Building and running faultlab's C++ tests locally on faultlab:eefba53 (model, sync value tests).
+Nothing: the round is done, and only the mutant job remains.
 
 ## Next
 
-1. Green locally; then the mutant branch `mutant/faultlab-plain-sync` (plain treated as full) and
-   its `--fails-without` job; `campaign verify faultlab-plain-sync`.
+1. Read 261124-084008-5de615: it must fail (the mutant is killed). If it passes, the mutant
+   survived: fix the test and do not rerun the same mutant.
 
 ## Blocked on
 
@@ -20,15 +20,21 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending |
-| A2 | pending |
+| A1 | 261124-084008-5de615 (mutant `mutant/faultlab-plain-sync`, faultlab:f0426b2: `persists(fsync)` is true on macOS, a plain sync treated as full; "macOS fsync (plain): a kill keeps the synced bytes, a crash may drop them" in test/model_test.cc must FAIL), running; value cases green locally at faultlab:eefba53 |
+| A2 | 261124-084011-18ae99 (build-test at faultlab:eefba53): one case per call: fsync, F_FULLFSYNC, F_BARRIERFSYNC (macOS), fsync and fdatasync (Linux, both modes, unchanged), FreeBSD/other fsync |
 | A3 | `docs/mechanisms/crash-model.md` (Plain and full syncs), `docs/api.md`, `README.md`, `include/faultlab/faultfs.h`, `CHANGELOG.md` (2026-11-24) at faultlab:eefba53 |
 
 ## Result
 
 faultfs models plain and full syncs: `filesystem::set_flush_mode(flush_mode, sync_platform)` and
 `sync_call_at(sync_site)` (types.h `call_for`, `persists`). Docs: faultlab
-`docs/mechanisms/crash-model.md#plain-and-full-syncs`.
+`docs/mechanisms/crash-model.md#plain-and-full-syncs`. On macOS a plain fsync survives a kill,
+and a crash may drop it (the sweep reaches both outcomes). F_FULLFSYNC, and fsync or fdatasync on
+Linux, survive every crash. F_BARRIERFSYNC orders only, and a plain directory sync settles
+nothing. The default is full on the host, so users that set no mode see no change: faultfs,
+model, policy, seeds, sector, recorder, scenario and the demo pass unchanged. Open: completion's
+own flush-mode enum. Once completion:flush-mode lands, journal-sync-mode maps it to
+faultlab's enum (R1).
 
 ## Rulings I made
 
