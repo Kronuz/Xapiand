@@ -490,5 +490,5 @@ quest fixes them (2 of 5 on 11-20).
 
 | Target | Evidence | Start in | Repo | Status |
 |---|---|---|---|---|
-| group_catalog_failed_open fails once on main ("two pins opened the group and failed: 3") | strata main run 45204145143 at 93d10446; next run at 757c00ab green | test/group (group-heal holds it: after group-heal lands) | strata | open |
+| group_catalog_failed_open fails once on main ("two pins opened the group and failed: 3") | strata main run 45204145143 at 93d10446; next run at 757c00ab green | test/group/group_catalog_test.cc:731 (strata-journal-pin holds test/group/**: after it lands) | strata | open |
 

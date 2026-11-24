@@ -1110,3 +1110,12 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Lead slips: the single-flight check named a nonexistent target and lacked -DBUILD_TESTS=ON (2 failed jobs, 2 weakening records).
 - Explorer launched (Sonnet medium): hunt-manifest-log-wallclock (strata test bound by wall-clock).
 - Quota: weekly 33% (1.62%/h; exhaustion in about 41 h at this burn, reset 2026-11-30). Host: load 22 (14 over 5 min), light slots 46% used last hour with 46 min of runnable work beside idle slots, 110 jobs queued, 279 GiB free.
+
+## 2026-11-24 02h
+
+- Landed: group-heal at strata:04e52312 (24 mutants killed; durability re-check APPROVE at that commit; 15 queued mutant reruns cancelled as surplus).
+- Agent runs: journal-replaces-wal contributor (360k, batch-pins hang read as serialized F_FULLFSYNC on the journal host's one loop thread, not a deadlock; probe queued); hunt-manifest-log-wallclock explorer (109k, ratio bounds; mutant 116.5x/148.8x vs bounds 2/4; A1-A3 proven, CI pending).
+- Lead: placement merged main (strata:da1ee3fb), 24 evidence reruns queued, 7 green so far; its ASan CI failure is manifest_log's wall-clock bound, not placement.
+- Site: site-core landed the shared Starlight engine (Xapiand:8676f5105); main checkout still dirty with its old draft, blocking Xapiand landings.
+- Host: runnable work beside idle light slots 46, 53, 55 min in three hours; cause per-quest build-slot serialization (42 of 109 queued jobs on journal-replaces-wal's one slot). Reported to campaign-v3 (msg-51).
+- Quota: weekly 34%, burn 1.59%/h, exhaustion ~41h before the 11-30 reset.
