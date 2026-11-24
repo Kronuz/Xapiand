@@ -1054,10 +1054,10 @@ XapiandManager::join()
 		_rx->sig_reader.cancel(ec);
 	}
 
-	// The index registry's tasks that timers started (an idle close, a commit) run on the control loop, which
-	// has stopped: from now on they run on the thread that starts them, and the ones already posted run here,
-	// on this thread, until they end.
-	database_pool->set_control(nullptr);
+	// The index registry's tasks that timers start (an idle close, a commit) still go to the control loop, which
+	// the drains run here: run on this thread instead, one could wait for a turn or a commit that a task of that
+	// loop holds, which only this thread resumes. The control is cleared when its scheduler closes (Stop 2).
+	database_pool->stop_names();
 	drain_control(_rx->tasks, "control", deadline);
 
 	// This method should finish and wait for all objects and threads to finish
@@ -1115,6 +1115,7 @@ XapiandManager::join()
 	// the same way, with the loop stopped: its scheduler closes and destroys them. Every root that may hold a pin
 	// is gone before the catalog's shutdown is awaited, which waits for every pin (x-pool C24).
 	if (!abandoned_) {
+		database_pool->set_control(nullptr);   // from here a detached task runs on the thread that starts it
 		_rx->reactor.io().stop();
 		_rx->reactor.scheduler().close();
 		_rx->reactor.scheduler().destroy_roots();

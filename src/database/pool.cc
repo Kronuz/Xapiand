@@ -996,8 +996,7 @@ DatabasePool::finish()
 	L_CALL("DatabasePool::finish()");
 
 	finished_.store(true);
-	names_.request_stop();   // the names' build is a task of that loop (name-index D5)
-	control_.store(nullptr);  // the loop that ran the detached tasks stops: from now on they run where they are started
+	names_.request_stop();   // the names' build is a task of the control loop (name-index D5)
 }
 
 

@@ -1053,6 +1053,55 @@ static void test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has
 	}
 }
 
+// The child: an autocommit of `late` that holds its turn, suspended in a checkpoint whose group chore is held, when
+// the shutdown starts; a second autocommit of it fires while the shutdown drains the control loop.
+[[noreturn]] static void late_autocommit_child(const char* log_path) {
+	std::freopen(log_path, "w", stderr);
+	std::setvbuf(stderr, nullptr, _IONBF, 0);
+	Logging::handlers.push_back(std::make_unique<StderrLogger>());
+	RunningNode node("node_late_autocommit_data", std::to_string(abandon_port.port()));
+	if (!node.ready()) {
+		std::_Exit(2);
+	}
+	manager()->shutdown_write_bound = 2000ms;
+	if (http_call(abandon_port.port(), "PUT", "/late/1", R"({"n":1})").rfind("HTTP/1.1 2", 0) != 0) {
+		std::_Exit(6);
+	}
+	const auto endpoint = endpoints_of("late")[0];
+	std::unique_ptr<SchedulerHold> chore;
+	{
+		auto pin = pin_index(*manager()->database_pool, endpoint.path, WRITE);
+		if (pin.entry().group() == nullptr) {
+			std::_Exit(3);
+		}
+		chore = std::make_unique<SchedulerHold>(manager()->database_pool->groups()->chore(pin.entry().group()->group.id()));
+	}
+	std::this_thread::sleep_for(800ms);   // the write's autocommit (200 ms) took the turn and waits for the chore
+	XapiandManager::schedule_autocommit(endpoint);   // the next one fires 200 ms into the shutdown's drain
+	const auto now = static_cast<long long>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+	L(-LOG_NOTICE, NOTICE_COL, "SHUTDOWN_AT {}", now);
+	manager()->shutdown(now, now);
+	std::this_thread::sleep_for(60s);   // the shutdown ends the process
+	std::_Exit(5);
+}
+
+// A detached task (a timer's autocommit) that fires while the shutdown drains the control loop runs on that loop,
+// not on the draining thread: there it would wait for the turn or the commit of a task of that loop, which only that
+// thread resumes. The stop ends in its bound, abandoning the index whose checkpoint cannot run.
+static void test_an_autocommit_during_the_shutdown_drain_runs_on_the_control_loop() {
+	const char* log_path = "node_late_autocommit.log";
+	const auto result = run_child([&] { late_autocommit_child(log_path); }, 90s);
+	CHECK(result.exited);
+	CHECK_EQ(result.code, 75);   // EX_TEMPFAIL: the checkpoint's chore is held, so the index is abandoned
+	const auto log = read_file(log_path);
+	const auto stopped_in = stop_ms(log);
+	CHECK_GE(stopped_in, 0);
+	CHECK_LT(stopped_in, 2000 + 800);
+	if (result.code != 75 || stopped_in < 0 || stopped_in >= 2000 + 800) {
+		std::fprintf(stderr, "%s\n", log.c_str());
+	}
+}
+
 // ---- a write whose client half-closes after its body ----
 
 static const test_utils::ReservedPort half_close_port;
@@ -3878,6 +3927,7 @@ int main(int argc, char** argv) {
 		{"test_the_stop_runs_in_its_stated_order", test_the_stop_runs_in_its_stated_order},
 		{"test_a_registry_that_cannot_close_ends_the_stop_at_the_bound", test_a_registry_that_cannot_close_ends_the_stop_at_the_bound},
 		{"test_the_http_grace_follows_the_time_left_in_the_budget", test_the_http_grace_follows_the_time_left_in_the_budget},
+		{"test_an_autocommit_during_the_shutdown_drain_runs_on_the_control_loop", test_an_autocommit_during_the_shutdown_drain_runs_on_the_control_loop},
 		{"test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has_time", test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has_time},
 		{"test_a_second_signal_ends_the_shutdowns_wait", test_a_second_signal_ends_the_shutdowns_wait},
 		{"test_a_put_whose_client_half_closes_completes_durably", test_a_put_whose_client_half_closes_completes_durably},

@@ -496,12 +496,19 @@ public:
 		return soft_open_;
 	}
 
-	// A null control also stops the names' build: it is a task of the control loop (name-index D5).
+	// A null control also stops the names' build: it is a task of the control loop (name-index D5). Its owner clears
+	// it when the loop's scheduler closes, not before: a detached task run on the thread that drains the loop could
+	// wait for a task of that loop.
 	void set_control(engine::Host* control) noexcept {
 		if (control == nullptr) {
 			names_.request_stop();
 		}
 		control_.store(control, std::memory_order_release);
+	}
+
+	// Stops the names' build, a task of the control loop, so a shutdown's drain does not wait for it.
+	void stop_names() noexcept {
+		names_.request_stop();
 	}
 
 	void set_turn_timeout(double seconds) noexcept {
@@ -535,8 +542,8 @@ public:
 	// end on this thread.
 	void run_detached(task::task<void> t);
 
-	// The tasks run_detached posted to the control loop that have not ended. A shutdown that stops the loop
-	// clears the control with set_control(nullptr), then runs the loop until this is zero.
+	// The tasks run_detached posted to the control loop that have not ended. A shutdown runs the loop until this is
+	// zero or its bound passes, then clears the control with set_control(nullptr) as the loop's scheduler closes.
 	std::size_t detached() const noexcept {
 		return detached_.load();
 	}
