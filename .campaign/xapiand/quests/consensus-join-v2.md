@@ -63,6 +63,10 @@ only for the boot the directory admitted (M7), and refuses with a reason.
   (one join path, always TLS) and D152 (membership by commands).
 - Lens: security. One reviewer, who also carries the protocol's correctness questions: the rate
   budget, idempotency, and the boot check under reordering.
+- Lead, 2026-11-24 (security review S1): before any signature work, loop 0 refuses a CSR whose key is
+  not the type `fresh_join_key` makes (P-256), and `Issuer::issue` checks the secret before it
+  verifies the CSR. A test with a large-RSA CSR shows the refusal happens without verification; a
+  mutant that verifies first fails it.
 
 ## May land early
 

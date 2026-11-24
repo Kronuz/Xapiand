@@ -464,7 +464,7 @@ quest fixes them (2 of 5 on 11-20).
 - R2 (test nit) the install sweep checks the installed documents, not the applied position.
 - (group-heal, after first-commit-crash landed at strata:4955a679) install() now takes commit_empty() itself: remove group-heal's redundant caller guard (its F2 fix at strata:a1e786f4) when group-heal next merges main.
 - (group-heal durability re-review; strata-journal-pin finding 2026-11-23) include/strata/group/group.hh:214 sends a journal GroupStatus::bounded group to driver.create; what consensus does with a replica whose log lost records behind a bound is unverified. Decide: refuse, reinstall, or create.
-- (master CI, 2026-11-23) pages.yml installs D2 with `curl https://d2lang.com/install.sh | sh`, which calls the GitHub API unauthenticated; run 45209633838 failed on three 403s (rate limit). Pin a d2 release tarball (version and sha256) instead; a CI change, needs the owner's yes.
+- (master CI, 2026-11-23) (done: pages.yml pins d2 v0.9.0 with its sha256) pages.yml installs D2 with `curl https://d2lang.com/install.sh | sh`, which calls the GitHub API unauthenticated; run 45209633838 failed on three 403s (rate limit). Pin a d2 release tarball (version and sha256) instead; a CI change, needs the owner's yes.
 - ARCHITECTURE.md's scheduler/threadpool text and docs/dev/dependencies.md's dependency tree are stale on master (11-23, journal-replaces-wal step h): rewrite both from the code; documentation, economical; after journal-replaces-wal lands (it holds ARCHITECTURE.md).
 
 ## group-heal durability re-check follow-ups (2026-11-23, APPROVE at strata:870ac9f5; full text in reviews/group-heal-durability.md)
@@ -477,3 +477,37 @@ quest fixes them (2 of 5 on 11-20).
 | F16: duplicated helpers in the repair path | review re-check F16 | the review's file:line | strata | open |
 | consensus fetch-alongside-consensus flakes on CI macos-x86_64: 13 of 16 fetches exact, commits beside them up to 7 s late (groups_test.cc:2543) | main a068ba06 run 44996244171; consensus-request-install run 45240308075 | test/transport/groups_test.cc | consensus | Detent's quest consensus-fetch-alongside-flake (2026-11-23) |
 | cartesian: a constexpr `Cartesian` constructor for raw unit-sphere coordinates would make htm's start tables constant-initialized, removing the last 192 B static initializer htm-constexpr-start leaves (one inline definition program-wide) | probe 261123-132523-45413e: __StaticInit 192 B per TU before the fix | cartesian.h/cartesian.cc (the out-of-line Cartesian(double,double,double,int), its WGS84 branch) | cartesian | open |
+
+## consensus-join-v2 security review follow-ups (2026-11-24, non-blocking)
+
+| Target | Evidence | Start | Must stay identical |
+|---|---|---|---|
+| JoinService::take scans the whole source map under its mutex past 256 addresses (S2) | review S2: an IPv6 /64 flood keeps ~1 entry per connection per second; each accept pays the scan | consensus `admission_join.h`, JoinService::take | join admission, rate and slot behavior |
+| Stalled joiners hold all 64 join slots and newcomers are refused (S3) | review S3: 8 addresses or one /64 make joining unavailable for the flood | consensus join slots, slot deadline | established nodes unaffected (A3) |
+| Xapiand's issuer hook relays every well-formed request to the root's leader (S5) | review S5: one relay per unauthenticated request | Xapiand cluster issuer hook | consensus unchanged |
+
+## strata main flakes (2026-11-24)
+
+| Target | Evidence | Start in | Repo | Status |
+|---|---|---|---|---|
+| group_catalog_failed_open fails once on main ("two pins opened the group and failed: 3") | strata main run 45204145143 at 93d10446; next run at 757c00ab green | test/group/group_catalog_test.cc:731 (strata-journal-pin holds test/group/**: after it lands) | strata | open |
+
+
+## strata-journal-pin findings (2026-11-24)
+
+- A replica whose turn log is damaged has no path back: with journal's lost bound, `Host::open` keeps the group `bounded`; strata now routes `bounded` to `driver.recover` (strata:22ee0282), where journal's Store loses it durably and throws Corruption, and `create_group` refuses any status but none. So a damaged replica stays failed until an operator acts. Needs a design call: lose-then-create plus group-heal's image install (strata:group-install), or a repair entry point in journal. Also check that `lost` going to `create` (unchanged) is the intended path. Start in include/strata/group/group.hh, witness.hh, journal's Host::create_group. Durability, high; after strata-journal-pin lands (it holds the files).
+
+## consensus ASan simulation timeout (2026-11-24)
+
+- consensus `consensus_simulation` under linux-asan-ubsan runs 174, 279 and 174 s on main (CI runs 45310416625 and the two before) against its 300 s TIMEOUT; it timed out twice on quest/xapiand/netlab-consensus at 177548c0 (run 45319374410), whose diff adds only bench/netlab and docs. detent:consensus-simulation-asan-timeout owns the fix; netlab-consensus lands on green CI after it.
+
+## strata-journal-pin durability review follow-ups (2026-11-24, CHANGES at strata:1cbb6e30; full text in reviews/strata-journal-pin-durability.md)
+
+- F3: a damaged replica (bounded, then lost on recover) has no path back; needs a journal entry point, since `delete_group` takes only closed groups. Already filed above (strata-journal-pin findings).
+- F4: `lost` still goes to `driver.create` in group.hh; check that is the intended path for a group journal lost before the pin.
+- F5: an index delete must stage its first record above `retired` after the delete; check the index-delete path.
+
+## file-set-seal-streaming correctness review nits (2026-11-24, APPROVE at strata:7a4284c4)
+
+- N1: the short-file error at `include/strata/group/file_set.hh:157` names no file and says "sealed" when the failure is during the seal.
+- N2: `include/strata/group/install.hh:112` `read_prefix` is a second streaming CRC loop beside `file_set::crc32c_of`: one mechanism (fold into a shared helper).

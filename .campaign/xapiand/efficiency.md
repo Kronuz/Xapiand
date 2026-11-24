@@ -1076,3 +1076,101 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - uinteger-radix-family: macos-arm64 not acquired by GitHub (capacity) on 4 attempts; rerun again; not waived (CI green on every platform is the rule).
 - Owner: D176, docs site moves to site/ after journal-replaces-wal; site-core asleep with dirty files in the main checkout (docs/ only).
 - Quota: weekly 27% (1.56%/h; exhaustion in about 47 h at this burn, reset 2026-11-30). Host: load 51 (31 over 5 min) on 16 CPUs, 98 jobs queued, 282 GiB free.
+
+## 2026-11-24 00h
+
+- Landed: turn-log-parity (strata:757c00a; 18 superseded job citations swapped by the lead, durability and design re-accepted with their original confirming jobs), hunt-faultfs-at-mark-clear (faultlab:5d4df9b; Detent repinning consensus and journal to it).
+- Incident (lead): campaign commits Xapiand:bba0c5a2a and b3af21591 swept site-core's staged deletion of 18 docs/src files (its unfinished move to @kronuz/starlight-core) into master through the shared index; Pages failed ~2 h. Restored at 49e3c510e and 4c84ab9da (site source equals the last good deploy, 160c03a0f). Rule now: `git commit -- PATHS` in shared checkouts.
+- journal-replaces-wal: test_shard_group was the contributor's own wrong count (Data() holds the main object, data.cc:489), fixed at c4d06c80d; CI green at a76e2ed61; master merged by hand (352710042). Previous contributor retired at 250k; fresh Opus contributor for the full evidence set and an Opus durability reviewer launched in parallel.
+- consensus-join-v2: implementation done (220k, 2h03m); A2 and A4 mutants killed; contributor fixed a pre-existing HostTransport redial bug (reload flaky 4/96 to 40/40). Opus security reviewer launched. groups_test.cc waits on Detent's flake quest (land first, agreed).
+- group-heal: false-positive probe clean (635 refused-pin re-reads over 23 suites, 0 healthy sources marked damaged; 9 real corruptions reinstalled); 44 jobs left. Its reviewer stopped by the lead (it kept waking on its own probe).
+- htm explorer: extern table in htm.cc (htm:e51e63e), CI green; probes queued. soundex: A3 sizes in docs/TABLES.md (soundex:ba10f53). stox-no-libc: lead's header comment (strict-stox:aebfcd9). Both wait on macOS arm64 CI (runner shortage; uinteger_t's attempt 7).
+- Tool bug to campaign-v3 (msg-47): artifact rows with backticks or two files stay pending silently (~6 edits, ~40k lead tokens).
+- Quota: weekly 29% (1.58%/h; exhaustion in about 45 h at this burn, reset 2026-11-30). Host: load 42 (52 over 5 min) on 16 CPUs, 113 jobs queued, 284 GiB free.
+
+## 2026-11-24 00h30
+
+- Landed: none. Close: hunt-htm-constexpr-start (all evidence, CI at htm:6fff441), group-heal (reruns at the merged head strata:04e523125802 and CI), stox-no-libc and soundex (macos-arm64 runner).
+- test_node (owner asked): fails only on journal-replaces-wal, three different cases since 11:33 (576cc8 hang, d17a82 shutdown-abandon :992-:1003, CI 45220356167 flush/revision); 11 of 11 local runs on other quests and every master CI passed it. Lead had called the hang load: wrong. Contributor told to find one cause first, 10x proof. test_loop_yield.cc:693 failed CI 3x, also only on this quest.
+- hunt-single-flight-race: master's flake (CI 45242486008) is a test race, B counts its cancellation inside its task; lead fix Xapiand:82389d31b, 300-run job queued.
+- group-heal: 14 of 14 A3 mutants killed; lead merged strata main (41 files), fixed A6's row and 16 task citations; durability re-check (Sonnet, 67k, 41 s) APPROVE at 04e523125802 (consensus 59ae07f..6e1122c changes no include/ or src/).
+- consensus-join-v2: S1 probe at the fix, forged RSA-16384 and DSA requests refused at 0.032 ms against 0.126 ms for a real P-256 one (was 10.1 ms); join-no-cap, join-no-rate, skip-boot-check, redial-at-deadline mutants killed; token fuzz 2x16 min clean.
+- htm: per-TU initializers removed: two users + htm.o go from 3 initializers (576 B) to 1 (192 B) (jobs 885328, 9f4fa2); written up in htm docs/start-tables.md.
+- No explorer batch: seven quests wait on the lead to land and 66 jobs are queued; review and landing are the limit, not ideas.
+- Quota: weekly 31% (1.60%/h; exhaustion in about 43 h at this burn, reset 2026-11-30). Host: load 9 (17 over 5 min), light slots 67% used last hour, 280 GiB free.
+
+## 2026-11-24 01h
+
+- Landed: hunt-htm-constexpr-start (htm:6fff441), stox-no-libc (strict-stox:aebfcd9), hunt-soundex-one-definition (soundex:5ed383c, after merging soundex main's ci.yml commit), uinteger-radix-family (uinteger_t:88e41ad; macos-arm64 finally acquired).
+- journal-replaces-wal: contributor (Opus, 329k, 1h19m) found test_node's cause: join() cleared the control loop before draining it, so an autocommit ran in place and deadlocked on a turn held by a task of that loop (hung 6 of 30 at c4d06c80d); fix Xapiand:6686f9ffc with test and mutant; 30x and 10x reruns queued. loop_yield baseline on master: chores 169-175 ms against 2,752-3,076 ms on the loop (about 6%, bound 20%); head probe pending.
+- group-heal: 24 mutants killed in all (A1 skip-file-set; A3 22 of 22); simulator rows pass at the merged head; suite rerun and CI pending.
+- netlab-consensus (no contributor): lead merged consensus main (rpc_host_fetch flake fix), requeued VM rows (the 5-node failure was the VM's GitHub fetch), swapped 5 stale citations.
+- consensus-join-v2: fuzz token, join and hello all clean (ASan+UBSan, 2x16 min each).
+- Reuse audit (campaign-v3's docs-script bug): 180 reused rows, 18 with non-prose docs changes, 1 real (restore-free-off-loop e2e read a regenerated accounts.ndjson); master CI 57f736336 passed it, no claim changes.
+- Lead slips: the single-flight check named a nonexistent target and lacked -DBUILD_TESTS=ON (2 failed jobs, 2 weakening records).
+- Explorer launched (Sonnet medium): hunt-manifest-log-wallclock (strata test bound by wall-clock).
+- Quota: weekly 33% (1.62%/h; exhaustion in about 41 h at this burn, reset 2026-11-30). Host: load 22 (14 over 5 min), light slots 46% used last hour with 46 min of runnable work beside idle slots, 110 jobs queued, 279 GiB free.
+
+## 2026-11-24 02h
+
+- Landed: group-heal at strata:04e52312 (24 mutants killed; durability re-check APPROVE at that commit; 15 queued mutant reruns cancelled as surplus).
+- Agent runs: journal-replaces-wal contributor (360k, batch-pins hang read as serialized F_FULLFSYNC on the journal host's one loop thread, not a deadlock; probe queued); hunt-manifest-log-wallclock explorer (109k, ratio bounds; mutant 116.5x/148.8x vs bounds 2/4; A1-A3 proven, CI pending).
+- Lead: placement merged main (strata:da1ee3fb), 24 evidence reruns queued, 7 green so far; its ASan CI failure is manifest_log's wall-clock bound, not placement.
+- Site: site-core landed the shared Starlight engine (Xapiand:8676f5105); main checkout still dirty with its old draft, blocking Xapiand landings.
+- Host: runnable work beside idle light slots 46, 53, 55 min in three hours; cause per-quest build-slot serialization (42 of 109 queued jobs on journal-replaces-wal's one slot). Reported to campaign-v3 (msg-51).
+- Quota: weekly 34%, burn 1.59%/h, exhaustion ~41h before the 11-30 reset.
+
+## 2026-11-24 03h
+
+- Landed: hunt-single-flight-race at Xapiand:83aed22a7 (300 of 300 runs); hunt-manifest-log-wallclock at strata:e0a1c78f (ratio bounds; mutant 116.5x/148.8x vs 2/4); placement at strata:e9f0fafd (correctness re-accepted at the merged head: no placement commit since ef1e91e, F1/F2 confirmed by the plan test 261123-175414-9d2b85).
+- Lead fixes: 4 placement A3 reruns failed to compile on a stale consensus pin (b8de3b8+20198fc, superseded by strata's pin, which has the fix as 9a2476d); resubmitted at strata's own pin. netlab 3-node VM rows failed at boot (guest never reached SSH, load ~35); rerun queued.
+- Agent runs: strata-journal-pin contributor launched (Sonnet, medium): re-pin journal to main, now the file-set holder of 5 quests incl. file-set-seal-streaming.
+- journal-replaces-wal: compile check ran after 90 min queued (priority inversion, campaign-v3 msg-51); A1/A4/A9, A2 + mutant, A3 x2, A8 green at 6d6921068; crash gate test_node batch-pins hang 2 of 2 under load.
+- Host: light slots 59% used, runnable beside idle 48 min (down from 55). Quota: weekly 35%, burn 1.57%/h.
+
+## 2026-11-24 04h
+
+- No landings. strata-journal-pin contributor finished (180k, Sonnet): journal pinned at 9c7e31c; bounded groups fixed in attach_log (at-or-below the bound loses, test t5b, 2 mutants) and group.hh/witness.hh (route to recover, 1 mutant); A1 green at 22ee0282. Found: a damaged replica has no path back (hunt row). Durability reviewer launched (Opus), running (154k so far).
+- journal-replaces-wal: A4 and its mutant, d1, d2, d3 mutants all killed; only the batch-pins hang and file-set-seal-streaming remain before its final-commit set.
+- Tool: fff3dc7's named-folder rule treats `-S .` as naming the whole repo, so prose-only commits void every cmake job (6 jrw jobs, ~2.5 run-hours); reported to campaign-v3 (msg-55). Owner V4 (slow runs once per round) noted: 118 of 278 run-hours in 72h were reruns.
+- Host: light slots 48%, runnable beside idle 54 min; load 57 (a detent legacy-h light job at 7.1 cores, 3.5 slots). Quota: weekly 36%, burn 1.54%/h.
+
+## 2026-11-24 05h
+
+- No landings. strata-journal-pin: A1, A2, A5, A6 green at 22ee0282 (docs-only head 1cbb6e30 keeps them); 3 mutants, CI and the durability review (Opus, running) remain. netlab-consensus: 3-node VM rows green at 1f64ca59; both VM sets rerun at the merged head 177548c0; its CI ASan timeout (consensus_simulation, 300 s; detent's open quest) rerun.
+- journal-replaces-wal: d4 x2, A1 bundle mutants killed; restore/replay/shard-group/codec green.
+- Correction: the "named-folder regression" (msg-55) was this campaign's tested_docs (docs/src/content/docs/**) voiding every job on page edits; decision to the owner (move it into the e2e check's --inputs; gate change, needs a yes).
+- Sidebar: 63 stale campaign-xapiand-* pills cleared from detent, campaign-v3 and site-core tabs; campaign-v3 quest sidebar-lead-only fixes the cause. I no longer set quest pills by hand.
+- Host: light slots 61%, runnable beside idle 40 min; load 19. Quota: weekly 37%, burn 1.52%/h.
+
+## 2026-11-24 06h
+
+- No landings. netlab-consensus: both VM sets green at the merged head 177548c0; ready except CI, whose linux-asan consensus_simulation timed out twice (main runs 174-279 s vs 300 s; detent:consensus-simulation-asan-timeout owns it); third rerun in progress, hunt row filed. strata-journal-pin: A5 + 2 mutants, A6 green; A6 mutant, CI (rerun after a cancel; docs-only head has no CI run) and the durability review (still running) remain.
+- journal-replaces-wal: A9 mutants (term, abort seal, ready point) killed; A5's journal_replay_check failed one assertion (no file-size error line in the log; behavior correct). Held for the contributor with the batch-pins probe.
+- Host: load 188 at 22:20 from detent's legacy-h light jobs (test_reader_switch 559% CPU, a 16-thread test; rust integration 285%); detent cancelled the stale one and gives those tests ctest PROCESSORS next round. Light slots 68%, runnable beside idle 34 min. Quota: weekly 37%, burn 1.46%/h.
+
+## 2026-11-24 07h
+
+- No landings. strata-journal-pin: every criterion but the review proven (A1, A2, A5, A6 + 3 mutants killed; CI 45321560305 green at 22ee0282); the durability reviewer (Opus, ~154k) stalled with nothing running, nudged to write the review. netlab-consensus: CI's linux-asan consensus_simulation timed out a third time (300.1 s); it waits for detent:consensus-simulation-asan-timeout.
+- journal-replaces-wal: A5 level tests + R1 green; A9 and A6-pin mutants killed.
+- Host: load 7; light slots 61%, runnable beside idle 50 min (the queue is mostly jrw on one slot). Quota: weekly 38%, burn 1.44%/h.
+
+## 2026-11-24 08h
+
+- No landings. strata-journal-pin: durability review (Opus, 160k, 3.6 h) CHANGES with one blocker, F1 (attach_log's `<=` loses a correct index at the bound; proven by the contributor's own mutant 539e7b). Fix round (contributor, 204k total, 5 min): strata:bb2f8a5 + lead's mutant-text fix strata:7214f27. Confirmed so far: F1 test a76b46, A6/F2 test e3aa7b, F1 inverse mutant fb418d killed, reviewer probe 4b30b6 passed. Pending: A2, two mutants, CI.
+- Wasted: 6 jobs exited 127 unrun (contributor quoted `--after J --level ...` into one word; reruns copied it); ~45 min of critical-path wait. Reported to campaign-v3 (msg-60): submit will refuse a command starting with '-'. Plus one R1 mutant whose guard grep never matched (resubmitted).
+- journal-replaces-wal: all seven A5 level mutants killed. A1 shutdown-drain case aborted (SIGABRT after "unfinished writes abandoned", expected exit 75) at 6d69210, where it passed before: intermittent; 30x test_node c5379e will give its rate. Held for one relay with batch-pins and the replay log line.
+- Host: load 12; light slots 54%, runnable beside idle 50 min. Quota: weekly 39%, burn 1.43%/h.
+
+- 01:00 landing: strata-journal-pin at strata:7214f27d (durability accepted with F1=a76b46, F2=e3aa7b; build-test edd28e, CI 45351185385). Total: contributor ~204k, reviewer 160k; one fix round. Started file-set-seal-streaming (Opus, critical path) and resumed index-restructure (fresh Opus, merge main + A3). format-freeze held: it holds strata test/** and reviews the release's formats, so it waits for cluster.
+
+## 2026-11-24 09h
+
+- Landed: strata-journal-pin at strata:7214f27d (00:55).
+- file-set-seal-streaming (Opus contributor, 117k, 17 min): seal streams through crc32c_of (64 KiB reads, was up to 32 GiB); test + fix strata:213561d9/7a4284c4; bounded-read test a98c76 passed; build-test, fails-without and CI running. Correctness reviewer (Opus) launched in parallel with them (critical path).
+- index-restructure (fresh Opus resume, 139k): merged main (index.hh rebuilt with cpp-libraries outline.py, the strict bound kept), members c5b586 green (202 definitions moved, 0 warnings); basic_index 5,413 to 2,100 lines. File set widened with test/index/** and CMakeLists.txt for A3 (lead; one bad `set` overwrote the globs for a commit, restored). Step 1 lands early on A1/A2 per the quest file.
+- consensus-join-v2: CI at 45bca9f5 failed on 8 of 8 platforms (transport-groups fixtures: "local certificate is not the local node's key"); fresh Opus contributor resumed; cause found in test/transport/groups_test.cc:90. cluster parked until journal-replaces-wal and consensus-join-v2 (campaign-v3 flagged it as stalled 52 h).
+- journal-replaces-wal probes: batch-pins passes 3/3 but takes 33-37 s, ~850 full flushes at 35-43 ms each (F_FULLFSYNC median); held for the contributor with the drain abort.
+- Host: load 38-49 (legacy-h fnsizes LTO at 4.6 cores); light slots 70%, runnable beside idle 29 min. Quota: weekly 40%, burn 1.41%/h.
+
+- 01:50 landing: file-set-seal-streaming at strata:7a4284c4 (contributor 117k, reviewer 104k, APPROVE with no blockers; reviewer ran in parallel with the suite and CI, ~40 min from start to land). journal-replaces-wal resumed with a fresh Opus contributor (the old one ~360k): bump strata to 7a4284c4 (closes R2), merge master, the drain abort, batch-pins' ~850 full flushes, the replay log line, CI's failures. consensus-join-v2: fixture fix f01607b + lead's merge of main 81ada17 (Detent's fetch-alongside-flake landed at consensus:512e3ef); token fuzzer green. Lead's reader had filtered `- ` to-do lines for 16 h (fixed; campaign-v3 adds a `todo: ` prefix).

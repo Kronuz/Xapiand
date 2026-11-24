@@ -30,14 +30,13 @@ const cmake = fs.readFileSync(new URL('../CMakeLists.txt', import.meta.url), 'ut
 const versionMatch = cmake.match(/set\s*\(\s*PACKAGE_VERSION\s+"([^"$]+)"\s*\)/);
 process.env.PUBLIC_XAPIAND_VERSION = versionMatch ? versionMatch[1] : 'dev';
 
-import kronuzDark from './src/styles/kronuz-dark.json';
-import kronuzLight from './src/styles/kronuz-light.json';
+import { kronuzDark, kronuzLight } from '@kronuz/starlight-core/styles/themes.mjs';
 import { sidebar } from './src/lib/sidebar.mjs';
-import { restLangs } from './src/plugins/rest-lang.mjs';
-import remarkAnsi from './src/plugins/remark-ansi.mjs';
-import remarkHints from './src/plugins/remark-hints.mjs';
-import remarkD2 from './src/plugins/remark-d2.mjs';
-import { pluginRestCurl } from './src/plugins/ec-rest-curl.mjs';
+import { restLangs } from '@kronuz/starlight-core/plugins/rest-lang.mjs';
+import remarkAnsi from '@kronuz/starlight-core/plugins/remark-ansi.mjs';
+import remarkHints from '@kronuz/starlight-core/plugins/remark-hints.mjs';
+import remarkD2 from '@kronuz/starlight-core/plugins/remark-d2.mjs';
+import { pluginRestCurl } from '@kronuz/starlight-core/plugins/ec-rest-curl.mjs';
 import { SITE_TITLE, SITE_DESCRIPTION, REPO_URL } from './src/consts';
 import rehypeExternalLinks from 'rehype-external-links';
 
@@ -48,10 +47,10 @@ export default defineConfig({
   site: 'https://kronuz.github.io',
   base: '/Xapiand',
   // The six Jekyll hint styles (tip/info/caution/warning/unimplemented/construction) are
-  // rendered as custom `:::hint{.type}` asides; see src/remark-hints.mjs + custom.css.
+  // rendered as custom `:::hint{.type}` asides by the shared plugin and CSS.
   markdown: {
     // remarkD2 turns ```d2 fences into themed (light+dark) diagrams at build time
-    // by shelling out to the d2 CLI (must be on PATH); see src/remark-d2.mjs.
+    // by shelling out to the d2 CLI through the shared plugin.
     remarkPlugins: [remarkAnsi, remarkHints, remarkD2],
     // Open external (http/https) links in a new tab; internal links are relative,
     // so they're untouched and keep navigating in place.
@@ -79,7 +78,7 @@ export default defineConfig({
       description: SITE_DESCRIPTION,
       logo: { light: './src/assets/logo-light.svg', dark: './src/assets/logo-dark.svg', alt: 'Xapiand' },
       favicon: '/favicon.svg',
-      customCss: ['./src/styles/custom.css'],
+      customCss: ['@kronuz/starlight-core/styles/docs.css', '@kronuz/starlight-core/styles/footer.css'],
       // The landing page uses the Jekyll site's typefaces (Lato body, Montserrat
       // display) so it reads like the old home; load them the same way Jekyll did.
       head: [
@@ -119,17 +118,17 @@ export default defineConfig({
         SocialIcons: './src/components/SocialIcons.astro',
         // The footer keeps author-only edit links; the title row holds only the title.
         PageTitle: './src/components/PageTitle.astro',
-        EditLink: './src/components/EditLink.astro',
-        Search: './src/components/Search.astro',
-        ThemeSelect: './src/components/ThemeSelect.astro',
-        MarkdownContent: './src/components/MarkdownContent.astro',
+        EditLink: '@kronuz/starlight-core/components/EditLink.astro',
+        Search: '@kronuz/starlight-core/components/Search.astro',
+        ThemeSelect: '@kronuz/starlight-core/components/DocsThemeSelect.astro',
+        MarkdownContent: '@kronuz/starlight-core/components/DocsMarkdownContent.astro',
         // Server-rendered sidebar: clickable group headers, chevron-only toggle, groups
         // stay expanded when they contain the current page.
         Sidebar: './src/components/Sidebar.astro',
         // Prev/next pager shows each destination's real title, not its "Overview" label.
         Pagination: './src/components/Pagination.astro',
         // Page footer with a site-wide copyright line (like the blog), kept on every page.
-        Footer: './src/components/Footer.astro',
+        Footer: '@kronuz/starlight-core/components/Footer.astro',
       },
     }),
   ],

@@ -43,7 +43,7 @@ jobs:
         working-directory: docs
       - name: Install D2 (build-time diagram renderer)
         # The architecture docs render ```d2 fences to SVG at build time by shelling
-        # out to the d2 CLI (see docs/src/lib/renderD2.mjs). Without it, those pages build
+        # out to the d2 CLI through starlight-core. Without it, those pages build
         # empty. A pinned release with its checksum: no install script, no GitHub API calls.
         env:
           D2_VERSION: v0.9.0
