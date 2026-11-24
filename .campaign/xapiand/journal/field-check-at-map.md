@@ -9,33 +9,50 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Round 1 code written in strata worktree `strata-wt/xapiand/field-check-at-map`: vouch carries the
+field table's size and key field, `vouch::check` runs at every map; `basic_segment::check_fields`;
+`test/field_check_map_test.cc`; `bench/eager_open` (the explorer's harness, both sides over one
+prospect); docs. Local build of the test queued under `quiet light` (host load 86-144).
 
 ## Next
 
-1. <step>
+1. Local build + run of field_check_map_test; fix; commit.
+2. Mutant commit (skip the field check in `vouch::check`) and A1 `--fails-without` job.
+3. A2 identity job and A3 strict row job (`bench/eager_open/ab.sh`, `--ref BASE=strata@main`,
+   `--ref PROSPECT=prospect@4430396`); `campaign verify field-check-at-map`.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing. File set note for the lead under "Rulings I made" (1).
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), name every job you examined, failures included (`campaign brief` lists failed
-jobs no journal names), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | <pending> |
+| A2 | <pending> |
+| A3 | <pending> |
+| A4 | <pending> |
+| A5 | `docs/mechanisms/field-check.md` (strata) |
+| A6 | <pending CI> |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+<pending>
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+1. File set: index-restructure split `index.hh`, so the map's check sits in `index_open.hh`
+   (`open_body_of`), outside the quest's file set; the quest also lands the explorer's harness
+   (`bench/eager_open/**`, A3) and its perf note (`docs/perf/eager-open.md`). I edit those three
+   paths; the lead should add them to the file set. `open_body_of` only calls `v.check(seg)`; the
+   claim's checks live in `vouch` (index.hh), in one place.
+2. The test plugin is strata's own (a stored plugin whose records are field ids, its reader with
+   `check_fields`), not prospect's: strata's suite does not depend on prospect. Prospect main
+   already forwards `inverted_plugin::reader::check_fields` (prospect:4430396), so the A2/A3 jobs
+   exercise the real dictionary check.
+3. A3's rule: Xapiand's open after the move (proto `eager`, the check at map, no host loop)
+   against today's (base `today`, Xapiand's `verify_fields` loop), per fixture: proto's median open
+   p50, open CPU, dirty and resident at most the top of the A/A band (base and aa runs of `today`).
+   proto `today` (both checks, until drop-open-verify lands) and base `eager` (no check at all) are
+   reported beside it, not judged.
