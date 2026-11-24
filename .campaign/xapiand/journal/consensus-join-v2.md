@@ -1,12 +1,25 @@
 # consensus-join-v2: journal
 
-State: waiting on jobs 261123-154007-7bb36d 261123-154010-cd7dc9 261123-154013-225d0b 261123-154016-cd7eae 261123-133816-735a28 261123-133820-3e888d 261123-150157-b0634d 261123-150202-29c750 261123-150206-ee4ab3 261123-150210-a56a49 261123-150215-ec3793 261123-150231-e1409c 261123-150234-473c5f 261123-150236-7aa566, and CI at consensus:45bca9f
+State: blocked on msg-291 (groups_test.cc grant); waiting on jobs 261124-011858-ff586e 261124-011903-b4f548
 Quest: .campaign/xapiand/quests/consensus-join-v2.md (the lead's; never edit it)
 
 Code: consensus worktree `../consensus-wt/xapiand/consensus-join-v2`, branch
 `quest/xapiand/consensus-join-v2`, base consensus:6e1122c.
 
 ## Doing
+
+2026-11-24, CI run 45290843170 at consensus:45bca9f failed on every platform: every
+consensus_transport_groups_* case aborts at NodePins construction ("the local certificate is not
+the local node's key"). Cause: test/transport/groups_test.cc:90 `pin_of` returns
+`certificate_fingerprint` (DER); NodePins takes key pins since consensus:a921f4e and checks its
+own (node_pins.h:187). Local jobs passed because no job ran groups_test (only admission_nodes,
+links, connection, node_hello, hello, seeds, rpc_host). Fix: one line in the fixture,
+`return key_pin(leaf.get());`; no non-test code changes. groups_test.cc is outside the file set
+and held by detent:consensus-fetch-alongside-flake (its hunks miss line 90): msg-291 asks the
+lead for it. Merged consensus main at consensus:963fd9a (clean), pushed. Jobs:
+261124-011858-ff586e (A1 fails-without, groups cases at 45bca9f), 261124-011903-b4f548 (probe,
+not evidence: groups cases at 963fd9a with the line patched in-job).
+
 
 All code for A1-A7 is committed and pushed: consensus:166327d (A1, A2), consensus:a921f4e (A4),
 consensus:45f2309 (A3 join pool on the port, A5 DTHL0003 boot check, the HostTransport redial
@@ -30,6 +43,10 @@ issue at the fix 261123-154016-cd7eae. S2-S5 are the lead's (not fixed).
 3. A security review is the lead's to launch.
 
 ## Blocked on
+
+- msg-291 (lead): add test/transport/groups_test.cc to the file set for the one-line pin_of
+  fix (recommended), or I wait for detent:consensus-fetch-alongside-flake to land. Until then
+  the suite and CI cannot be green.
 
 - The lead (msg-270): test/transport/groups_test.cc's pin helper must call `key_pin` (one
   line); it is held by Detent's consensus-fetch-alongside-flake. Until then groups_test compiles
