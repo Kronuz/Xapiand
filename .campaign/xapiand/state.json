@@ -3063,6 +3063,18 @@
         "quest": "detent:consensus-faultlab-repin"
       },
       "text": "detent:consensus-faultlab-repin started and may change files your consensus-join-v2 changes (order them with --after detent:consensus-faultlab-repin, or narrow the files); changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:node-admission, which your consensus-join-v2 consumes; changes contract consensus:install-request, which your group-heal consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T16:12:53",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T16:12:53",
+      "by": "lead",
+      "closed": "noted: join-v2 merges consensus main once detent:consensus-fetch-alongside-flake lands too, one merge and one evidence rerun",
+      "id": "msg-274",
+      "text": "consensus-faultlab-repin landed: consensus main pins faultlab 5d4df9b (consensus:3aa1355, pushed). consensus-join-v2 can merge it."
     }
   ],
   "quests": {
