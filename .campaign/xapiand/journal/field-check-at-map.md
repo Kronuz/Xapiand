@@ -1,6 +1,6 @@
 # field-check-at-map: journal
 
-State: waiting on jobs 261124-120815-138f97 261124-122655-73d9cf 261124-122659-a4de45 261124-122702-df0b09 261124-122705-fcbe11 261124-122723-cb483e
+State: waiting on jobs 261124-122655-73d9cf 261124-122659-a4de45 261124-122702-df0b09 261124-122705-fcbe11 261124-122723-cb483e
 Quest: .campaign/xapiand/quests/field-check-at-map.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -37,7 +37,7 @@ Nothing. File set note for the lead under "Rulings I made" (1).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261124-122655-73d9cf (head), 261124-120815-138f97 (mutant, --fails-without) |
+| A1 | 261124-122655-73d9cf (head), 261124-120815-138f97 (mutant, --fails-without: passed, the test exits 1 at the mutant) |
 | A2 | 261124-122659-a4de45 |
 | A3 | 261124-122702-df0b09 (d1000s4), 261124-122705-fcbe11 (d1000s10) |
 | A4 | 261124-122723-cb483e (build-test) and CI |
