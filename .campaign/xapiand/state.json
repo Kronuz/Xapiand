@@ -5899,9 +5899,10 @@
         "xapiand:search-fanout",
         "xapiand:cluster-routes"
       ],
+      "reason": "parked by the lead: its 11-21 jobs stand; resume with a fresh contributor once both land",
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "blocked",
       "tasks": {
         "search": {
           "base": "a6c06ac27e6eabe5aa24102153bf8d84ab6f9f87",
@@ -5927,7 +5928,11 @@
         }
       },
       "title": "Xapiand in a cluster: shard groups, membership, routing, search, API, migration",
-      "updated": "2026-11-23T11:00:05",
+      "until": [
+        "journal-replaces-wal",
+        "consensus-join-v2"
+      ],
+      "updated": "2026-11-24T01:16:08",
       "worktree": "../Xapiand-wt/xapiand/cluster"
     },
     "cluster-api": {
