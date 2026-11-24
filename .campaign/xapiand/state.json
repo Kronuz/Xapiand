@@ -16364,15 +16364,12 @@
         "index-restructure"
       ],
       "provides": [],
-      "reason": "split proposal pending the owner: index-restructure step 1 landing alone as low risk was denied as weakening; default keeps step 2 inside index-restructure",
+      "reason": "superseded: step 2 (file_ledger) was built inside index-restructure, which is in review at strata:cfa20b41",
       "repo": "../strata",
       "risk": "high",
-      "status": "blocked",
+      "status": "dropped",
       "title": "strata's basic_index: mechanisms with their own state become member classes (index-restructure's step 2)",
-      "until": [
-        "owner"
-      ],
-      "updated": "2026-11-24T02:46:19"
+      "updated": "2026-11-24T02:59:59"
     },
     "install-own-files": {
       "accepted": {},
