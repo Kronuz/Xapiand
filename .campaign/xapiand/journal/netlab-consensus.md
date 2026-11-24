@@ -65,7 +65,7 @@ applied index and the leader's `ss -tin` every 0.5 s, with the load wait raised 
 ## Round 2026-11-22 (resumed)
 
 - Jobs at consensus:4e98c8c: selftest 261122-211901-cc23ef ok; fails-without 261121-155541-b33da6
-  failed as it must; 3 nodes 261123-060708-4a7840 all checks; 5 nodes 261123-171232-0a653b 43 of
+  failed as it must; 3 nodes 261123-185239-88a690 all checks; 5 nodes 261123-171232-0a653b 43 of
   44, "1ms: round trip" again: peer 3 4.135 vs 3.461 ± 0.517. Residuals (ping - set - floor) at
   1 ms: 3 nodes -0.26..+0.05, 5 nodes -0.19..+0.71, and the missing peer differs per run.
 - Fix consensus:e534d6c: lateness sampled in 5 rounds alternating with each peer's pings (2 pings,
@@ -92,8 +92,8 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | selftest 261121-112209-2d8347 (green, a2324305b4dd); at consensus:4e98c8c selftest 261122-211901-cc23ef, fails-without 261121-155541-b33da6. Rows: 3 nodes 261121-103053-c94e37 (all checks, d81ac11); 5 nodes 261121-103053-6192c5 (43 of 44; "1ms: round trip", the stale floor fixed in d531f22). Reruns at 4e98c8c: 3 nodes 261123-060708-4a7840, 5 nodes 261123-171232-0a653b. Calibration 261120-174928-5e07e0. |
-| A2 | partition-1ms in 261121-103053-c94e37 and 261121-103053-6192c5: 5 nodes elects 1,471 ms against a 2,304 ms bound, rejoin 407 ms, no cut-leader ack, 3,621 operations, 0 violations; reruns at 4e98c8c 261123-060708-4a7840 and 261123-171232-0a653b |
+| A1 | selftest 261121-112209-2d8347 (green, a2324305b4dd); at consensus:4e98c8c selftest 261122-211901-cc23ef, fails-without 261121-155541-b33da6. Rows: 3 nodes 261121-103053-c94e37 (all checks, d81ac11); 5 nodes 261121-103053-6192c5 (43 of 44; "1ms: round trip", the stale floor fixed in d531f22). Reruns at 4e98c8c: 3 nodes 261123-185239-88a690, 5 nodes 261123-171232-0a653b. Calibration 261120-174928-5e07e0. |
+| A2 | partition-1ms in 261121-103053-c94e37 and 261121-103053-6192c5: 5 nodes elects 1,471 ms against a 2,304 ms bound, rejoin 407 ms, no cut-leader ack, 3,621 operations, 0 violations; reruns at 4e98c8c 261123-185239-88a690 and 261123-171232-0a653b |
 | A3 | `docs/perf/netlab-consensus.md` at consensus:c1a2138: tables per node count with job ids, calibration, hunt rows, 8 findings |
 
 ## Result
