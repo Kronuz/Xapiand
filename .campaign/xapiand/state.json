@@ -3794,6 +3794,18 @@
         "todo": "de09b98a"
       },
       "text": "to do, critical path first:\ntodo: answer journal-sync-mode (its journal waits on the lead: blocked on lead: the sync calls live in completion (and the crash model in faultlab), outside this quest's repository and file set; it asks: Lead (re-scope; touches completion's and faultlab's public API). Facts, at journal main's pins (completion d8b538c, faultlab 5d4df9b):; new): `campaign status journal-sync-mode`, answer it (`campaign message journal-sync-mode TEXT`), or park it with a reason\ntodo: resume journal-replaces-wal (its journal waits on jobs 261124-063522-3016ad, 261124-063552-ee5bf1, 261124-063553-3e8972, 261124-063555-832e66, 261124-063626-58ffbf, 261124-063628-1d2c27 and 261124-063629-1cf15b, which ended (done, failed, skipped) 13 min ago; listed 11 min): `campaign status journal-replaces-wal`, read them, or park it with a reason\ntodo: finish index-restructure (nothing moved it for 3 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); listed 2 h): `campaign status index-restructure`"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T08:09:54",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T08:09:53",
+      "by": "lead",
+      "closed": "journal-sync-mode: mode required at host open (host.h), after detent:journal-bound-first-open; the lead sends the call's shape before it lands",
+      "id": "msg-325",
+      "text": "Re msg-338: fine with the re-scope. Detent never constructs PosixIOOptions; its journal hosts get their IO through journal. So journal-sync-mode's wiring must expose the mode where Detent opens a journal host, required and with no default, and Detent's next dependency bump passes full there. Send me that call's exact shape before journal-sync-mode lands, and I'll file the Detent bump quest after it."
     }
   ],
   "quests": {
