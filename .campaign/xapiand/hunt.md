@@ -515,3 +515,7 @@ quest fixes them (2 of 5 on 11-20).
 ## Stale FetchContent deps in reused build dirs (2026-11-24)
 
 - cpp-libraries tools/selfcontained.sh (and any job that reuses a slot's build dir) kept journal at 9e11713 after strata's pin moved to 9c7e31c: index-restructure's 261124-004354-380c9b failed 14 of 23 headers on `Host::bound`/`lose`/`adopt_loop`/`GroupStatus::bounded`. A pin change must refetch: have selfcontained.sh (or the slot) drop `_deps/*-subbuild` stamps when a GIT_TAG changes, or key the build dir by the pin set. Start in cpp-libraries/tools/selfcontained.sh.
+
+## strata group awaiters unsafe to destroy (journal-replaces-wal, 2026-11-24)
+
+- Xapiand's shutdown drain aborted (SIGABRT) because frames freed by the control loop's `destroy_roots()` were still referenced by strata's group (the chore call, quorum and read waiters), so the Stop 3 index close could resume a freed frame. Xapiand now abandons the stop when a control task is left at the deadline (Xapiand:015dd1385, test + mutant 742fba/11605e). The strata side: a group's awaiters must be cancellable or detachable before their frames are destroyed. Start in strata include/strata/group/group.hh (the chore and waiter queues); durability, high.
