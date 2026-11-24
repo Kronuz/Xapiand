@@ -538,3 +538,7 @@ quest fixes them (2 of 5 on 11-20).
 
 - strata/journal: every proposal on a lone voter costs two turn-log full flushes (F_FULLFSYNC, ~26 ms each on macOS); probe 261124-054543-cc6648 counted 4,006 flushes = 104.1 s of a 112.4 s on-loop RESTORE of 2,000 updates. Xapiand now batches a RESTORE's writes into full log entries (Xapiand:c2766c5bf); the library side is halving the per-proposal flushes (one flush covering the entry and its commit index, or a commit index carried by the next entry). Start in strata's group turn-log append path on a lone voter; performance, high (every rf=1 write pays it).
 - Xapiand (pre-existing, unchanged by journal-replaces-wal): at ack=none, an update read after a same-id write that is placed but not yet applied can miss that write. Needs a test first (an update right after a same-id ack=none write), then a fix; correctness, normal.
+
+## faultlab-plain-sync review notes (2026-11-24)
+
+- faultlab N4: in plain mode faultfs's `strays_` is never cleared, so every ordering point walks every file ever pushed (quadratic over a long sweep). Start in include/faultlab/faultfs/filesystem.h; performance of the crash sweeps, normal.

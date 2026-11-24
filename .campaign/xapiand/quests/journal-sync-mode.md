@@ -26,6 +26,11 @@ with faultfs's plain-sync model (`faultlab-plain-sync`).
 - A4 [artifact] `README.md` and `ARCHITECTURE.md` state per mode what survives power loss on macOS
   ("plain fsync leaves data in the drive's cache"), and that "an unsupported operation fails
   instead of weakening" holds for `full`. `CHANGELOG.md` names the API change.
+- A6 One table, checked against the real calls: a test records the calls completion's PosixIO makes
+  per operation and mode (completion's `replace_sync_calls` seam) and compares them with faultlab's
+  `call_for`/`persists`, so a call completion weakens cannot stay "persists" in the model (review of
+  faultlab-plain-sync, Q3). If completion's `FlushMode` moves to io.h, faultlab uses it and drops its
+  own enum.
 - A5 Before and after on macOS at named commits: the journal bench's append rate in each mode
   against main (one `strict` job, numbers in `docs/mechanisms/`), stating the honest magnitude.
 
