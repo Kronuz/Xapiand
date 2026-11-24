@@ -15109,6 +15109,32 @@
       "updated": "2026-11-18T01:59:04",
       "worktree": "../Xapiand-wt/xapiand/hunt-lua-fetch"
     },
+    "hunt-manifest-log-wallclock": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build --target manifest_log_test && ctest --test-dir build -R \"^manifest_log\" --output-on-failure",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "test/manifest_log_test.cc"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "low",
+      "status": "planned",
+      "title": "manifest_log_test's replay bound counts work, not wall-clock time",
+      "updated": "2026-11-23T17:20:52"
+    },
     "hunt-radix-router": {
       "accepted": {
         "correctness": {
