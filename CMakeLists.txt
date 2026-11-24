@@ -757,7 +757,7 @@ include_directories("${ZSTD_INCLUDE_DIR}")
 # prospect: the search layout on the strata segment core, behind the strata engine
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
 # strata and the libraries strata links.
-FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 00eb018da75d20715b3e05a2593937a970b40201)  # strata main: strata::group with the catalog's group slots (group-catalog)
+FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 7a4284c4cdb2511d9a69613acd73ed6be36b8335)  # strata main: file-set seals stream their CRC32C (file-set-seal-streaming)
 FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG eef601dce70260cc5a58e2089168d1cf1c7a8982)  # prospect main: completion's read-only opens, damaged segments at first map
 FetchContent_MakeAvailable(prospect)
 
