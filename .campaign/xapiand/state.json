@@ -18042,9 +18042,10 @@
         "xapiand:restore-batch",
         "xapiand:ack-read-levels"
       ],
+      "reason": "fix at Xapiand:162631658; plain RESTORE gap is the journal's full flushes; measured like for like after journal-sync-mode (D177 plain mode); a fresh contributor then bumps pins, reruns test_loop_yield, does items 6-7, queues evidence once",
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "blocked",
       "tasks": {
         "chunks": {
           "base": "7e232b1f71688995bd97437c563b254d5a8e5b34",
@@ -18080,7 +18081,10 @@
         }
       },
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-24T10:29:52",
+      "until": [
+        "journal-sync-mode"
+      ],
+      "updated": "2026-11-24T11:16:57",
       "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal"
     },
     "journal-seal-repeat": {
