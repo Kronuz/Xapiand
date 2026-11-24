@@ -3876,6 +3876,18 @@
         "todo": "150e166b"
       },
       "text": "to do, critical path first:\ntodo: answer journal-replaces-wal (its journal waits on the lead: blocked on the lead: plain RESTORE in chores 66.5 s -> ~3-4 s (master ~1.3-2.3 s); the rest is the journal's full flushes per entry. Code at Xapiand:89a406c7f, no evidence jobs queued (round not ready by the lead's bar). See Blocked on.; it asks: 11. (2026-11-24, session 17) The plain RESTORE in chores is ~3-4 s at Xapiand:89a406c7f against master's ~1.3-2.3 s (A/B same hold; master's strict median 2.26 s), so the round misses the lead's bar on that row; the update row passes (3.7-7.0 s vs master 4.8-8.2 s, strict median 36.4 s). Of the fix\u2026; new): `campaign status journal-replaces-wal`, answer it (`campaign message journal-replaces-wal TEXT`), or park it with a reason\ntodo: finish index-restructure (nothing moved it for 5 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); listed 4 h): `campaign status index-restructure`"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T09:26:26",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T09:26:25",
+      "by": "lead",
+      "closed": "answered with probe 261124-092756-fa00e2: no Linux states lost (staged is durable at a Linux ordering point)",
+      "id": "msg-330",
+      "text": "Re msg-345: one check on faultlab:83fbde7's full-mode change (a full file sync settles other staged files). That's true of F_FULLFSYNC on macOS, which flushes the whole drive cache, but not of fsync or fdatasync on Linux and FreeBSD, where one file's sync persists only that file. Please confirm it applies only when sync_platform is macOS. Otherwise the crash model explores fewer states on Linux (R4a's {A,o} lost), and Detent's and journal's crash tests would get weaker without anyone seeing it. If it's macOS-only, nothing to do."
     }
   ],
   "quests": {
