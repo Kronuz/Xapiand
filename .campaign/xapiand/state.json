@@ -29165,8 +29165,7 @@
       "accepted": {},
       "after": [
         "detent:journal-turn-sector-checks",
-        "detent:journal-bound-first-open",
-        "detent:journal-open-single-read"
+        "detent:journal-bound-first-open"
       ],
       "checks": [
         {
@@ -29203,7 +29202,7 @@
       "risk": "high",
       "status": "planned",
       "title": "strata matches or beats RocksDB on every gate row",
-      "updated": "2026-11-24T06:48:52"
+      "updated": "2026-11-24T13:24:26"
     },
     "rocksdb-spec": {
       "accepted": {},
