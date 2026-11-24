@@ -1191,3 +1191,10 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - netlab-consensus: merged consensus main (Detent's ASan speedup, consensus_simulation ~58 s) at consensus:1127f69; A2 rerun queued.
 - Idle-slot fill: three 25-min low-priority fuzz soaks of consensus-join-v2's decoders (no tokens).
 - Host: load 9-14; light slots 59%, runnable beside idle 44 min. Quota: weekly 42%, burn 1.39%/h, exhaustion ~42 h (before the 11-30 reset).
+
+## 2026-11-24 12h
+
+- No landings. journal-replaces-wal (fresh Opus, 193k, finished): the drain failure was the stop order (a control task held the HTTP stop's whole budget, skipping the control-loop check; master has it too), fixed at Xapiand:2305b1335; the replay check's uncaught "short turn log preallocation" became a recovery error naming the file-size limit (a7b187c56); batch-pins measured 886 full flushes in 22.2 s, watchdog raised. At the head 113722c: build+tests, no-wal, A8, R2 and its mutant green; drain 30x, crash, CI running.
+- consensus-join-v2: all 7 mutants killed on the merged head; CI's linux GCC jobs hit an internal compiler error in admission_nodes_test's impostor coroutine (pre-existing since 45bca9f). First lead workaround (no structured binding, b92b6c8) did not help; second (name the braced join-offer temporary, 7e12650) in CI. macOS fetch failure is Detent's loop-stall flake.
+- index-restructure: build-test at cfa20b41 green; reviewer's call-site probe killed all 3 mutants (no test gap). Waits on CI and the owner's yes on the members check.
+- Host: load 13-15; light slots 52% used, queued jobs wait on quest slots. Quota: weekly 44%, burn 1.40%/h, exhaustion ~40 h (before the 11-30 reset).
