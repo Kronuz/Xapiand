@@ -1,9 +1,42 @@
 # journal-replaces-wal: journal
 
-State: waiting on jobs at Xapiand:6d6921068 (code); the head adds the get and search API pages back (docs only, CI's e2e covers them), pushed. Nothing compiled locally: compile check 261123-165051-0b0570 (every target, -k 0, then the new tests) gates the rest, which run --after it; Xapiand:0e256600e fixed the one compile error a probe build showed (write_levels used above its definition). Gate: crash 261123-165252-fef4e8, no-wal 261123-165252-228c39; CI at the pushed head gives build-test, e2e, asan, tsan. Criteria: see Evidence. Lead's checks: batch-pins sync probe 261123-174805-f1b77c, test_node 30x 261123-174823-c5379e, test_node 10x 261123-165247-a8e7ab (--long, no criterion), the abandon case 30x 261123-165235-1c28ca, loop-yield probes 261123-161429-7ff092 (merge base: on the loop ~2,950 ms, in chores ~172 ms, 0.057) and 261123-165249-4fae12 (head). Next: if 0b0570 fails, fix and resubmit the set (~/.scratch/xapiand/jrw-levels/resubmit.py AFTER_ID); read the loop-yield pair for item 5's verdict.
+State: waiting on jobs at Xapiand:015dd1385 (pushed; CI runs build-test, e2e, asan, tsan) on slot xapiand-journal-replaces-wal-b (slot a is busy with the lead's a8e7ab then c5379e): R2 4b0f48, R2 mutant f28acb, drain 30x 2a3ef4, drain mutant 5d7aa1, replay check d250e2, sync-count probe 9e4f83. Next: read them; the batch-pins verdict from 9e4f83; then the full evidence set once (State "ready for review").
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
+
+Session 13 (2026-11-24), the lead's relay (~/.scratch/xapiand/lead/jrw-relay.md) and R2:
+
+1. CI at 34553fa85 (run 45308297820): Functional E2E (docs), ASan+UBSan and TSan all failed on the same 4 E2E
+   assertions, this branch's own: docs_to_postman.py adds a bare `?commit` to every request that names none, and
+   `?commit` beside `ack=none` answers 400 (D4), so basics.md's two ack=none examples failed and the linearizable get
+   and prefix search after them saw nothing. The suites under both sanitizers were GREEN (failed: 0). Fix
+   Xapiand:6d237b1af: the two e2e blocks name `params: commit=false` (quickstart's `echo=false` precedent); the
+   generated requests checked locally (docs_to_postman.py on basics.md: `ack=none&commit=false`). Observation for
+   the lead: the generator's blanket `?commit` is a WAL-era default; with D4 every docs write is refresh=true.
+2. Crash check 261123-165000-bd1f5e (and fef4e8 at 6d6921068): test_node failed, the batch-pins case hung past its
+   40 s watchdog (item 7 of session 12); every other test passed. Probe 9e4f83 attributes its flushes per file.
+3. R2: strata pinned at 7a4284c4 (Xapiand:a2f35ed91; journal 9c7e31c, consensus 6e1122c come with it; no Xapiand
+   use of the changed group internals). Test (Xapiand:ea5ac38e8) test_shard_group
+   `test_a_seal_reads_its_volume_in_bounded_pieces`: an upload of 16 x 64 KiB + 7 applied as chunks and a final over
+   an IO recording the largest read; the seal's CRC32C is the bytes' and no read exceeds 64 KiB. Mutant: strata at
+   00eb018 through --ref (FETCHCONTENT_SOURCE_DIR_STRATA), the old whole-file seal.
+4. The shutdown-drain abort (26f9f6, SIGABRT after "Exiting with unfinished writes abandoned", nothing printed).
+   Cause by reading (strata group.hh at 7a4284c4): the drains end at the deadline with the two autocommits of
+   `late` left (one suspended in the group checkpoint whose chore the test holds, one waiting behind it); the
+   shutdown then closed the control scheduler and destroy_roots() freed their frames. strata's group keeps raw
+   pointers into such frames (a chore `call_work` the awaiter owns, `waiters_`/`readers_` resumed by fail_waiters
+   in tear_down), so Stop 3's close of `late` can resume or post a freed frame: a race with _Exit, hence once.
+   Fix Xapiand:015dd1385: a control task left at the deadline abandons the stop with the loop left running (as an
+   abandoned HTTP stop does), warning "The control loop's unfinished tasks are left running"; only an idle loop is
+   closed and its roots destroyed. The drain case checks the warning (deterministic: its mutant, the old destroy,
+   misses the line). Diagnostic kept (Xapiand:bedf01221): the test node prints a SIGABRT's sender and stack.
+   For the lead and strata: a group awaiter whose frame is destroyed stays linked (chore_awaiter, quorum and read
+   waiters have no destructor that unlinks); destroy-safe awaiters there would make destroy_roots safe everywhere.
+5. Replay check 8bf61b: recovery correct, the file-size line missing. The harness now prints the failed start's
+   log end on that miss (Xapiand:bedf01221); d250e2 shows what the node logs under `ulimit -f`.
+6. R1: the mutant is 261123-232529-f93da2 (killed, exit 1), not 4ee4de (127, never ran).
+7. Merged origin/master (Xapiand:a740b6751, clean: the docs site engine, pages.yml; master's site files taken).
 
 Session 12 (2026-11-23), task `levels` and R1 on the quest branch (lead's assignment), then the lead's two messages:
 
