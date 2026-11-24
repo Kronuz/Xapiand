@@ -4033,6 +4033,30 @@
         ]
       },
       "text": "set journal-replaces-wal: unlocks frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete; frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T11:41:22",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T11:41:22",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-342",
+      "items": {
+        "index-delete": "frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete",
+        "journal-sync-mode": "journal-sync-mode (until completion-flush-mode, faultlab-plain-sync met: `campaign set journal-sync-mode status=active`)",
+        "more-like-this": "frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this"
+      },
+      "settles": {
+        "start": [
+          "index-delete",
+          "journal-sync-mode",
+          "more-like-this"
+        ]
+      },
+      "text": "completion-flush-mode landed: unlocks journal-sync-mode (until completion-flush-mode, faultlab-plain-sync met: `campaign set journal-sync-mode status=active`); frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete; frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this"
     }
   ],
   "quests": {
@@ -17471,20 +17495,55 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/index-restructure",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-24T11:50:19",
+          "ci": {
+            "commit": "cfa20b4191cc93ba7287d00e9b574f28ac31765b",
+            "runs": [
+              45379651676
+            ]
+          },
+          "commit": "cfa20b4191cc93ba7287d00e9b574f28ac31765b",
+          "criteria": {
+            "A1": "261124-025827-57b6da (the build-test check), 261124-025827-57b6da",
+            "A2": "D178 (step 1's members, fnsizes and selfcontained proofs at strata:351eebc5 are listed there)",
+            "A3": "261124-034954-48d9cb; fails without: 261124-025159-f8ed6f, 261124-025203-ff830f, 261124-025207-4882f1, 261124-025211-9ae8da",
+            "A4": "strata docs/source-layout.md, docs/mechanisms/index-layout.md (strata:3db2a49e)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "cfa20b4191cc93ba7287d00e9b574f28ac31765b",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261124-025827-57b6da",
+              "level": "light",
+              "seconds": 1892.4,
+              "state": "done",
+              "what": "index-restructure check build-test at cfa20b4191cc"
+            }
+          ],
+          "final": true,
+          "from": "7a4284c4cdb2511d9a69613acd73ed6be36b8335",
+          "reason": "",
+          "tested": "cfa20b4191cc93ba7287d00e9b574f28ac31765b"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "strata's index.hh: basic_index's 5,309-line class body split by mechanism",
-      "updated": "2026-11-24T11:50:00",
-      "worktree": "../strata-wt/xapiand/index-restructure"
+      "updated": "2026-11-24T11:50:31",
+      "worktree": ""
     },
     "index-subobjects": {
       "accepted": {},
