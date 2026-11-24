@@ -4189,6 +4189,21 @@
         ]
       },
       "text": "index-restructure landed: unlocks frees docs/source-layout.md, CMakeLists.txt for catalog-restructure; frees include/strata/core/index.hh, CMakeLists.txt for field-check-at-map; frees test/** for format-freeze; frees include/strata/core/**, test/**, docs/mechanisms/**, CMakeLists.txt for rocksdb-parity; frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete; frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T15:46:10",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T15:46:10",
+      "by": "campaign",
+      "closed": "resumed: fresh contributor launched after journal-sync-mode landed (journal:fc5c59b)",
+      "id": "msg-353",
+      "settles": {
+        "todo": "9b18047d"
+      },
+      "text": "to do, critical path first:\ntodo: resume journal-replaces-wal (nothing moved it for 5 h: waiting on journal-sync-mode (lead answered Blocked on 11 as msg-2: option (a) with (c); D177 makes the journal plain on macOS like master). Code at Xapiand:162631658; next: a fresh contributor bumps the pins after journal-sync-mode lands, reruns the whole test_loop_yield, does items 6 and 7, measures like for like, and queues evidence once.; new): `campaign status journal-replaces-wal`, or park it with a reason"
     }
   ],
   "quests": {
