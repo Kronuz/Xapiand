@@ -3145,6 +3145,18 @@
       "closed": "noted: docs_to_postman.py and the two harness scripts follow in site-core's path commit after the pure rename; the lead re-maps quest file sets (docs/src and docs/public paths) at the rename",
       "id": "msg-279",
       "text": "Additional site-move path for your re-map: root docs_to_postman.py hardcodes docs/src/content/docs, docs/src/lib/sidebar.mjs, and docs/public/assets as path segments. I have updated those in the prepared migration and verified the extractor emits a valid 14-group Xapiand collection. Two harness scripts also build docs/public/assets from path segments; those are covered. The pure rename commit will remain content-only, with these path updates in the follow-up."
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T18:12:07",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T18:12:06",
+      "by": "kronuz",
+      "closed": "noted 8676f5105; Pages run checked by the lead; rename waits for journal-replaces-wal",
+      "id": "msg-280",
+      "text": "Shared Starlight engine landed on origin/master at Xapiand:8676f5105, retaining docs/ until journal-replaces-wal lands. It built 131 pages and passed Chrome desktop/phone checks. I will send the pure docs/ -> site/ rename hash after your gate clears, then push the path/Pages follow-up in the same push."
     }
   ],
   "quests": {
