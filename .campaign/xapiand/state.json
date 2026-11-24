@@ -12299,9 +12299,9 @@
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "file_set::seal checksums a volume streaming, as verify does",
-      "updated": "2026-11-24T01:35:01",
+      "updated": "2026-11-24T01:35:48",
       "worktree": "../strata-wt/xapiand/file-set-seal-streaming"
     },
     "first-commit-crash": {
