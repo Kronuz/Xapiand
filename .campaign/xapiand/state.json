@@ -15158,7 +15158,7 @@
       "branch": "quest/xapiand/hunt-single-flight-race",
       "checks": [
         {
-          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build --target test_single_flight && ctest --test-dir build -R \"^test_single_flight$\" --output-on-failure",
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build --target xapiand_test_single_flight && ctest --test-dir build -R \"^test_single_flight$\" --output-on-failure",
           "level": "light",
           "minutes": 60,
           "name": "build-test"
@@ -15167,6 +15167,34 @@
       "consumes": [],
       "files": [
         "tests/test_single_flight.cc"
+      ],
+      "history": [
+        {
+          "at": "2026-11-23T16:38:22",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build --target test_single_flight && ctest --test-dir build -R \"^test_single_flight$\" --output-on-failure",
+                "level": "light",
+                "minutes": 60,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build --target xapiand_test_single_flight && ctest --test-dir build -R \"^test_single_flight$\" --output-on-failure",
+                "level": "light",
+                "minutes": 60,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "the check named a target that does not exist (test_single_flight); the executable is xapiand_test_single_flight; same test, same ctest filter",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
       ],
       "landed": [],
       "lenses": [],
@@ -15177,7 +15205,7 @@
       "risk": "low",
       "status": "active",
       "title": "test_single_flight waits for the leaving joiner's task, not a snapshot",
-      "updated": "2026-11-23T16:11:24",
+      "updated": "2026-11-23T16:38:22",
       "worktree": "../Xapiand-wt/xapiand/hunt-single-flight-race"
     },
     "hunt-soundex-one-definition": {
