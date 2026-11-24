@@ -15311,18 +15311,53 @@
       "files": [
         "test/manifest_log_test.cc"
       ],
-      "journal": "../Xapiand-wt/xapiand/hunt-manifest-log-wallclock",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-23T19:20:09",
+          "ci": {
+            "commit": "e0a1c78fa516784be669a17e0829eecb154fba24",
+            "runs": [
+              45310506949
+            ]
+          },
+          "commit": "e0a1c78fa516784be669a17e0829eecb154fba24",
+          "criteria": {
+            "A1": "261123-174439-9fb117 (the build-test check), 261123-174439-9fb117 (passed at 277e595dd1ac; only 1 merge from main since, none touching its files)",
+            "A2": "261123-181130-89410d; fails without: 261123-174446-9bce6e",
+            "A3": "`test/manifest_log_test.cc`: \"snapshot's own read in the same process: the machine's speed cancels.\"",
+            "A4": "CI green at e0a1c78fa516"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build --target manifest_log_test && ctest --test-dir build -R \"^manifest_log\" --output-on-failure",
+              "commit": "277e595dd1ac2a38f488cae59dcc7fb5d508d1eb",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-174439-9fb117",
+              "level": "light",
+              "seconds": 77.0,
+              "state": "done",
+              "what": "hunt-manifest-log-wallclock check build-test at 277e595dd1ac"
+            }
+          ],
+          "final": true,
+          "from": "04e5231258028801d5fba3b333dbf0c673ddcec3",
+          "reason": "",
+          "tested": "e0a1c78fa516784be669a17e0829eecb154fba24"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "manifest_log_test's replay bound counts work, not wall-clock time",
-      "updated": "2026-11-23T17:21:53",
-      "worktree": "../strata-wt/xapiand/hunt-manifest-log-wallclock"
+      "updated": "2026-11-23T19:20:15",
+      "worktree": ""
     },
     "hunt-radix-router": {
       "accepted": {
