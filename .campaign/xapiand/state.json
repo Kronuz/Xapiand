@@ -15113,6 +15113,32 @@
       "updated": "2026-11-17T22:45:34",
       "worktree": ""
     },
+    "hunt-single-flight-race": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build --target test_single_flight && ctest --test-dir build -R \"^test_single_flight$\" --output-on-failure",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_single_flight.cc"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "test_single_flight waits for the leaving joiner's task, not a snapshot",
+      "updated": "2026-11-23T16:11:10"
+    },
     "hunt-soundex-one-definition": {
       "accepted": {},
       "after": [],
