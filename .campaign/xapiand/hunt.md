@@ -506,3 +506,8 @@ quest fixes them (2 of 5 on 11-20).
 - F3: a damaged replica (bounded, then lost on recover) has no path back; needs a journal entry point, since `delete_group` takes only closed groups. Already filed above (strata-journal-pin findings).
 - F4: `lost` still goes to `driver.create` in group.hh; check that is the intended path for a group journal lost before the pin.
 - F5: an index delete must stage its first record above `retired` after the delete; check the index-delete path.
+
+## file-set-seal-streaming correctness review nits (2026-11-24, APPROVE at strata:7a4284c4)
+
+- N1: the short-file error at `include/strata/group/file_set.hh:157` names no file and says "sealed" when the failure is during the seal.
+- N2: `include/strata/group/install.hh:112` `read_prefix` is a second streaming CRC loop beside `file_set::crc32c_of`: one mechanism (fold into a shared helper).
