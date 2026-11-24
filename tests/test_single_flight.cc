@@ -118,7 +118,7 @@ static void test_a_joiner_whose_token_fires_leaves_while_the_load_goes_on() {
 	CHECK(eventually([&] { return cancelled.load() == 1; }, 1s));
 	CHECK_EQ(flights.waiting(), 1u);   // C still waits
 	CHECK_EQ(got.load(), 0);           // and the load still runs
-	CHECK_EQ(tasks.running(), 2u);
+	CHECK(eventually([&] { return tasks.running() == 2u; }));   // B's task ends just after it counts itself
 
 	release.set();
 	CHECK(eventually([&] { return tasks.running() == 0; }));
