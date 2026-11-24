@@ -27463,8 +27463,24 @@
         "docs/perf/fielddict-pool-reader.md",
         "CHANGELOG.md"
       ],
+      "history": [
+        {
+          "at": "2026-11-24T15:58:03",
+          "lenses": [
+            [],
+            [
+              "correctness"
+            ]
+          ],
+          "reason": "",
+          "voided": [],
+          "weakened": []
+        }
+      ],
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
@@ -27472,7 +27488,7 @@
       "risk": "normal",
       "status": "planned",
       "title": "prospect: the field check reads the pool through a reader it drops, so an opened index keeps no pool reader",
-      "updated": "2026-11-24T15:57:42"
+      "updated": "2026-11-24T15:58:03"
     },
     "prospect-pruning-floors": {
       "accepted": {},
