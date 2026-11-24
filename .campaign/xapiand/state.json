@@ -3201,6 +3201,19 @@
       "id": "msg-283",
       "notice": "skill installed f038c7c0e0476ed2e79afe9769e1b360cf1992f8",
       "text": "campaign skill: agent-campaign:f038c7c installed here, 2 commits: agent-campaign:81daa1f reuse: a docs script's folder is code for its command; agent-campaign:f038c7c reuse: only prose is documentation"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T20:14:52",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T20:14:51",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "noted: 1dd2d49, 277491e, fff3dc7 landed, not installed; no action until installed",
+      "id": "msg-284",
+      "notice": "skill landed fff3dc76a0361c8c4742a1ff64eeadcca06d9ed7",
+      "text": "campaign skill: 3 commits landed on agent-campaign's main, not installed here yet: agent-campaign:1dd2d49 Close two evidence holes: inputs follow named_code, empty runs fail; agent-campaign:277491e Count .mdx and .rst as prose in any folder, .txt also under site/; agent-campaign:fff3dc7 source-layout: fix the test line counts"
     }
   ],
   "quests": {
