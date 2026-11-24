@@ -552,3 +552,10 @@ quest fixes them (2 of 5 on 11-20).
 - completion docs (N3): completion-seam.md:17,27 and sync-files.md:12,15 are stale after the flush-mode landing; docs, low.
 - completion seam table (N2): interned per image, not per process; two shared libraries each hand out index 1 for different seams. Test seams only; note it in flush-mode.md or key by address; low.
 - Gate checks (N1, sent to campaign-v3 as msg-91): the slot build-test ran 22 of 25 tests because earlier mutant jobs left task and asio OFF in the slot's CMake cache. Until fixed, confirm findings with a fresh-build job or CI.
+
+## catalog-restructure review notes (2026-11-24, reviews/catalog-restructure-correctness.md)
+
+- strata docs/mechanisms/catalog.md:230,248 still name `policy_mu_`; the fix is ready as a patch (~/.scratch/xapiand/lead/0001-Name-the-policy-subobject-s-mutex-in-catalog.md.patch); the lead applies it on main after the landing.
+- catalog_table.hh is a leftover bucket and catalog_observe.hh (117 lines) sits near the ~100-line floor (N2): revisit at the next catalog change; low.
+- catalog_s3fifo.hh comment "links this class alone writes" omits that q_next doubles as the free-list link (N3); docs, low.
+- The ghost-hit counter is now taken after the unlock (N4): stats only; check it is atomic or say why a torn read is fine; low.
