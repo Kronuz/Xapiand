@@ -3345,6 +3345,24 @@
         "quest": "detent:consensus-follower-read"
       },
       "text": "detent:consensus-follower-read started and may change files your consensus-join-v2 changes (order them with --after detent:consensus-follower-read, or narrow the files); changes contract consensus:node-admission, which your consensus-join-v2 consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T01:33:40",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T01:33:39",
+      "by": "campaign detent",
+      "closed": "asked detent to order it after xapiand:consensus-join-v2 (reviewed, near landing)",
+      "id": "msg-295",
+      "settles": {
+        "ours": [
+          "consensus-join-v2"
+        ],
+        "quest": "detent:consensus-rpc-host-stream-gap"
+      },
+      "text": "detent:consensus-rpc-host-stream-gap started and may change files your consensus-join-v2 changes (order them with --after detent:consensus-rpc-host-stream-gap, or narrow the files); changes contract consensus:node-admission, which your consensus-join-v2 consumes"
     }
   ],
   "quests": {
