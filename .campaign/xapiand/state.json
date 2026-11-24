@@ -12586,11 +12586,45 @@
         "README.md",
         "CHANGELOG.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/faultlab-plain-sync",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-24T09:25:49",
+          "ci": {
+            "commit": "83fbde73c008e15e64ea7aa73c4c3b9b94e0599c",
+            "runs": [
+              45446259368
+            ]
+          },
+          "commit": "83fbde73c008e15e64ea7aa73c4c3b9b94e0599c",
+          "criteria": {
+            "A1": "261124-091412-7c4ab3; fails without: 261124-084008-5de615, 261124-091409-a11424",
+            "A2": "261124-091412-7c4ab3",
+            "A3": "`docs/mechanisms/crash-model.md` (Plain and full syncs), `docs/api.md`, `README.md`, `include/faultlab/faultfs.h`, `CHANGELOG.md` (2026-11-24) at faultlab:eefba53"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "83fbde73c008e15e64ea7aa73c4c3b9b94e0599c",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261124-091412-7c4ab3",
+              "level": "light",
+              "seconds": 53.5,
+              "state": "done",
+              "what": "faultlab-plain-sync check build-test at 83fbde73c008"
+            }
+          ],
+          "final": true,
+          "from": "5d4df9b04d7064fc978c84d29e7db8e6789bb10c",
+          "reason": "",
+          "tested": "83fbde73c008e15e64ea7aa73c4c3b9b94e0599c"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 7b",
       "needs": [],
       "provides": [
@@ -12598,10 +12632,10 @@
       ],
       "repo": "../faultlab",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "faultlab: faultfs models a plain sync (survives a process crash, not a power cut)",
-      "updated": "2026-11-24T09:18:34",
-      "worktree": "../faultlab-wt/xapiand/faultlab-plain-sync"
+      "updated": "2026-11-24T09:25:51",
+      "worktree": ""
     },
     "faultlab-seam": {
       "accepted": {
