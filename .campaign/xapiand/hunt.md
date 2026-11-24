@@ -542,3 +542,7 @@ quest fixes them (2 of 5 on 11-20).
 ## faultlab-plain-sync review notes (2026-11-24)
 
 - faultlab N4: in plain mode faultfs's `strays_` is never cleared, so every ordering point walks every file ever pushed (quadratic over a long sweep). Start in include/faultlab/faultfs/filesystem.h; performance of the crash sweeps, normal.
+
+## journal-replaces-wal RESTORE, session 17 (2026-11-24)
+
+- journal (Detent reviews): a 2,000-object plain RESTORE's ~31 entries of 1 MiB cost 88-89 F_FULLFSYNC (41 turn-log, 24 group artifact, 12 journal directory), serialized at the device across 5 groups; 1 MiB entries seem to take the artifact path. With the 2-flushes-per-proposal row: one flush per entry, or one turn shared by concurrent groups' entries. Measure after journal-sync-mode (plain mode) lands; performance, high.
