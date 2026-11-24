@@ -3075,6 +3075,19 @@
       "closed": "noted: join-v2 merges consensus main once detent:consensus-fetch-alongside-flake lands too, one merge and one evidence rerun",
       "id": "msg-274",
       "text": "consensus-faultlab-repin landed: consensus main pins faultlab 5d4df9b (consensus:3aa1355, pushed). consensus-join-v2 can merge it."
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T16:13:07",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T16:13:07",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "noted: agent-campaign 4cda35e..63249d4 installed",
+      "id": "msg-275",
+      "notice": "skill landed 63249d4b15239ecfc98c213aa9d56e0f4b3b0901",
+      "text": "campaign skill: 5 commits landed on agent-campaign's main, installed here: agent-campaign:4cda35e Keep a live lead's record; deliver every message to the lead; agent-campaign:325c7d0 Take the lead record only from the campaign's home; agent-campaign:5fe91c8 Update source-layout for lead-claim's line counts; agent-campaign:200b5c4 Read the fake cmux's calls as empty when none were made; agent-campaign:63249d4 Make the sidebar test's session the lead"
     }
   ],
   "quests": {
