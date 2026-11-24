@@ -1,11 +1,11 @@
 # completion-flush-mode: journal
 
-State: ready for review (fix round 1 at completion:b6f44b5, pushed); waiting on jobs 261124-110320-b7760e 261124-110324-f3f38e 261124-110328-fbd236 261124-110332-cae4a1 261124-110339-12e18b 261124-110342-c05f38 261124-110423-819ee6 (build-test) 261124-110438-571300 (A3 rerun); CI run 45466078230
+State: ready for review (fix round 1 at completion:b4600a8, pushed); waiting on jobs 261124-111516-8fc497 (build-test) 261124-111527-641d3d (A3) 261124-110328-fbd236 (f8) 261124-110332-cae4a1 (f9) 261124-110339-12e18b (probes P1-P5, P7) 261124-110342-c05f38 (P6); CI at b4600a8
 Quest: .campaign/xapiand/quests/completion-flush-mode.md (the lead's; never edit it)
 
 ## Doing
 
-Fix round 1 (durability review, CHANGES, F1-F7) at completion:b6f44b5. Local, under quiet light
+Fix round 1 (durability review, CHANGES, F1-F7) at completion:b4600a8 (b6f44b5 plus the seam-shape count, msg below). Local, under quiet light
 (macOS x86_64): sync_primitives, sync_calls and sync_files pass; f6-f9 each killed locally; the full
 build (all targets) compiles. Evidence queued once at b6f44b5.
 
@@ -55,16 +55,18 @@ change (P2 sets `SyncCalls::fsync_call`, P3 builds `FlushMode` from 0 expecting 
 replacement sets `fsync_call`). The jobs run a copy at
 `.scratch/xapiand/completion-flush-mode/probe/` (home) with three edits, nothing else:
 P2 sets `calls_for_mode.seam = intern_sync_seam({&rec_fsync, &rec_fcntl})`; P3 catches and prints
-the refusal; g5's replacement copies `sync_calls_` and sets `mode = plain`. Jobs:
-261124-110339-12e18b (P1-P5, P7), 261124-110342-c05f38 (P6, g1-g6).
+the refusal; g5's replacement copies `sync_calls_` and sets `mode = plain`. Jobs (at b6f44b5;
+b4600a8 differs only in test/check_seam.py, which they do not run): 261124-110339-12e18b (P1-P5,
+P7), 261124-110342-c05f38 (P6, g1-g6). f6 261124-110320-b7760e and f7 261124-110324-f3f38e passed
+(killed); f8, f9 pending.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | fix round 1 at b6f44b5: f6-f9 (table above), build-test 261124-110423-819ee6; round 0: mutants, `--fails-without`, at completion:113cee9: f1 plain keeps F_FULLFSYNC for File::sync_data (261124-091906-a47141, completion_sync_calls_test), f2 plain keeps F_FULLFSYNC in sync_directory (261124-091911-31b2b6, completion_sync_calls_test), f3 full issues fsync (261124-091915-b8aea1, completion_sync_files_test), f4 plain keeps F_FULLFSYNC for File::sync, owner.lock and batch devices (261124-091919-537673, completion_sync_files_test); suite in build-test 261124-091927-b0b7d9 |
+| A1 | fix round 1 at b6f44b5: f6-f9 (table above), build-test 261124-111516-8fc497 (at b4600a8; 261124-110423-819ee6 at b6f44b5 failed completion_seam_shape only, 21 of 22); round 0: mutants, `--fails-without`, at completion:113cee9: f1 plain keeps F_FULLFSYNC for File::sync_data (261124-091906-a47141, completion_sync_calls_test), f2 plain keeps F_FULLFSYNC in sync_directory (261124-091911-31b2b6, completion_sync_calls_test), f3 full issues fsync (261124-091915-b8aea1, completion_sync_files_test), f4 plain keeps F_FULLFSYNC for File::sync, owner.lock and batch devices (261124-091919-537673, completion_sync_files_test); suite in build-test 261124-091927-b0b7d9 |
 | A2 | mutant f5, full falls back to fsync on ENOTSUP/EOPNOTSUPP/ENOTTY (261124-091923-20e986, completion_sync_calls_test `full_refusal`); existing tests in build-test 261124-091927-b0b7d9 |
-| A3 | 261124-110438-571300 (rerun of 261124-091935-9baf66 at b6f44b5) (no `full_flush_ordering` in include, test, bench, examples, tools); every in-repo caller passes the mode (the build in 261124-091927-b0b7d9 compiles them; `PosixIO(dir)` does not compile); external callers below |
+| A3 | 261124-111527-641d3d (rerun of 261124-091935-9baf66 at b4600a8; passed at b6f44b5 as 261124-110438-571300) (no `full_flush_ordering` in include, test, bench, examples, tools); every in-repo caller passes the mode (the build in 261124-091927-b0b7d9 compiles them; `PosixIO(dir)` does not compile); external callers below |
 | A4 | [artifact] completion `README.md` "Flush modes", `ARCHITECTURE.md` "Flush modes" (per site, per platform, per mode; power loss on macOS), `CHANGELOG.md` 2026-11-24, `docs/mechanisms/flush-mode.md` |
 | A5 | `ci:linux-asan-ubsan` (CI on the pushed branch) |
 
@@ -113,6 +115,13 @@ External callers to migrate (signature: `PosixIO(dir, options, artifact_mode = 0
   `PosixIO::sync_directory` issue only what it names; `table_rows` in
   `test/sync_primitives_test.cc` checks every row. faultlab can replace `call_for` with it.
 - msg-326 (mine, to the lead, file set): answered; examples/**, bench/**, tools/** added.
+
+- Lead (fix round 1, build-test 261124-110423-819ee6 failed completion_seam_shape: posix.h 1
+  direct File::sync, expected 2): the expectation follows F1, no call site lost. sync_files and
+  sync_staged each had their own self-sync loop; F1 merged them into `batch_fds`, the one place a
+  PosixIO batch lets a file sync itself, and every batch path reaches it (cross_backend checks
+  each). completion:b4600a8 sets `test/check_seam.py` to posix.h 1 with a comment; local CTest
+  21 of 21 at b4600a8 (Debug, no asio/task); build-test requeued as 261124-111516-8fc497.
 
 ## Cancelled jobs
 
