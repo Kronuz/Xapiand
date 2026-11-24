@@ -1106,6 +1106,7 @@ static void test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has
 		chore = std::make_unique<SchedulerHold>(manager()->database_pool->groups()->chore(pin.entry().group()->group.id()));
 	}
 	std::this_thread::sleep_for(800ms);   // the write's autocommit (200 ms) took the turn and waits for the chore
+	L(-LOG_NOTICE, NOTICE_COL, "DETACHED_AT_SHUTDOWN {}", manager()->database_pool->detached());
 	XapiandManager::schedule_autocommit(endpoint);   // the next one fires 200 ms into the shutdown's drain
 	const auto now = static_cast<long long>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
 	L(-LOG_NOTICE, NOTICE_COL, "SHUTDOWN_AT {}", now);
@@ -1124,11 +1125,12 @@ static void test_an_autocommit_during_the_shutdown_drain_runs_on_the_control_loo
 	CHECK(result.exited);
 	CHECK_EQ(result.code, 75);   // EX_TEMPFAIL: the checkpoint's chore is held, so the index is abandoned
 	const auto log = read_file(log_path);
-	CHECK(log.find("The control loop's unfinished tasks are left running") != std::string::npos);
+	const bool left = log.find("The control loop's unfinished tasks are left running") != std::string::npos;
+	CHECK(left);
 	const auto stopped_in = stop_ms(log);
 	CHECK_GE(stopped_in, 0);
 	CHECK_LT(stopped_in, 2000 + 800);
-	if (result.code != 75 || stopped_in < 0 || stopped_in >= 2000 + 800) {
+	if (result.code != 75 || !left || stopped_in < 0 || stopped_in >= 2000 + 800) {
 		std::fprintf(stderr, "%s\n", log.c_str());
 	}
 }
