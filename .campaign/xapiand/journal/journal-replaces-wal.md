@@ -1,9 +1,35 @@
 # journal-replaces-wal: journal
 
-State: waiting on jobs at Xapiand:015dd1385 (pushed; CI runs build-test, e2e, asan, tsan) on slot xapiand-journal-replaces-wal-b (slot a is busy with the lead's a8e7ab then c5379e): R2 261124-021302-0b04e0, R2 mutant 261124-021321-9231e2, drain 30x 261124-021306-742fba, drain mutant 261124-021314-11605e, replay check 261124-021317-01a519, sync-count probe 261124-021310-23729b (the first six, at 0207xx, were cancelled unrun: zsh passed `--slot NAME` as one word). Next: read them; the batch-pins verdict from 9e4f83; then the full evidence set once (State "ready for review").
+State: waiting on jobs at Xapiand:a7b187c56 (not yet pushed: pushed once the drain 30x shows the build): drain probe 261124-033015-701cc3 (b2be5cac8), drain 30x 261124-033019-2a8cd9, drain mutant 261124-033023-f97bf7 (mutant/jrw-drain-destroy), replay check 261124-033415-7ce077, replay mutant 261124-033419-5c1d14 (mutant/jrw-recovery-report); still queued from session 13: R2 mutant 261124-021321-9231e2. Next: read them, push, rerun the evidence set at the head, `campaign verify`, then State "ready for review".
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
+
+Session 14 (2026-11-24), the drain case's missing warning and the lead's replay-check message:
+
+1. The drain case (015dd1385's test) missed only its warning (local 742fba run 1, CI TSan and ASan+UBSan; exit 75 in
+   its bound). Cause by reading: the child slept 800 ms and assumed the first write's autocommit (200 ms after it)
+   was suspended in a checkpoint behind the chore it then held; under load or a sanitizer the endpoints lookup and
+   pin outlast 200 ms, the autocommit checkpoints first, so no control task is left at the deadline and Stop 3's
+   close abandons instead (same exit, no warning). The code's path is right; the test's precondition was a race.
+   Probe 701cc3 (Xapiand:b2be5cac8) logs the detached count as the shutdown starts and prints the child's log on a
+   miss: a failing run must show 0. Fix Xapiand:cae4f2900: the child waits for the first autocommit to end, holds
+   the chore (entered), writes at ack=none (202: placed, apply held, index modified), and starts the shutdown once
+   detached() != 0, so the autocommit is in the held checkpoint whatever the timing. 30x 2a8cd9; mutant f97bf7
+   (Xapiand:4dcc14fbd, 015dd1385's check off) must fail it.
+2. Batch-pins verdict (probe 23729b): the case took 21.4 s at load 14, of which 886 F_FULLFSYNC calls took 22.2 s
+   (per index ~37: the turns log 252, the journal directory 217, artifacts 192, the index's own 72+24+27+26). The
+   hang under the crash gate was these flushes past the 40 s default watchdog, not a pin. Xapiand:bb8036409 gives the
+   case 120 s (the wildcard case's bound). For the lead (strata/journal): fewer full flushes per create, write and
+   checkpoint is the journal host's batching.
+3. Lead msg (replay check 01a519, "a recovery that cannot write does not serve"): the node refused to serve, but died
+   with "Uncaught exception: short turn log preallocation": journal's TurnLog::preallocate throws a bare
+   runtime_error on the short write a file-size limit gives (no errno, no file). Verdict: the uncaught exception was
+   the defect. Fix Xapiand:a7b187c56: the manager reports "The journal in .xapiand/journal cannot be recovered:
+   <error> (the process's file-size limit is N bytes)" and ends the start with EX_IOERR; the check requires that
+   report and no "Uncaught exception". Check 7ce077; mutant 5c1d14 (Xapiand:e68110ef7, the report removed) must
+   fail the failure case. For the lead (journal library): a short write should continue to the error and name
+   the file and errno (EFBIG); a hunt row, not this quest.
 
 Session 13 (2026-11-24), the lead's relay (~/.scratch/xapiand/lead/jrw-relay.md) and R2:
 
@@ -520,3 +546,9 @@ Drafts, applied when the code lands; each names the contract it shapes (format-f
     detached task never runs synchronously on the thread that drains that loop; finish() leaves the control to its
     owner; DatabasePool::stop_names() stops the names' build up front, as set_control(nullptr) did.
 38. test_node's Watchdog samples every thread on a hang (sample on macOS, gdb where installed): a diagnostic, not a fix.
+39. The drain case's fix is the test's, not the code's: 015dd1385's abandon is right; the case now builds its
+    precondition (an autocommit in a held checkpoint) from observed state, never a sleep.
+40. The batch-pins case's watchdog is 120 s, named by its flush count; fewer flushes are the journal library's.
+41. A journal that cannot be recovered ends the start with EX_IOERR and one critical line naming the directory, the
+    library's error and a finite file-size limit; it is reported in the manager (where set_journal runs), not wrapped
+    in ShardGroups.
