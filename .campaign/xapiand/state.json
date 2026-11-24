@@ -7864,7 +7864,146 @@
       "updated": "2026-11-08T15:41:22"
     },
     "completion-flush-mode": {
-      "accepted": {},
+      "accepted": {
+        "durability": {
+          "at": "2026-11-24T11:40:48",
+          "base": "02ab67fd44f1f47eafe2e1eb8c4baf1576440a52",
+          "blobs": {
+            "ARCHITECTURE.md": "100644:547c9e78242a4db02efb30e5e0be43e87d68311f",
+            "CHANGELOG.md": "100644:d7476bd8552e87afa518322a4fdb0a948738b1b4",
+            "README.md": "100644:c4d5c52024a7604bd2968fa0ee98583be0b63735",
+            "bench/commit_probe.cc": "100644:66c37608236d76a7374c84ead3ba946ef2c8218a",
+            "bench/dirflush_probe.cc": "100644:6b0133be4279b490d5b61be3233ee5db899d776b",
+            "bench/lane_probe.cc": "100644:e75ec8d1799c38e60c0d1f0a3327f12ec52e5e0b",
+            "bench/sync_probe.cc": "100644:417545233f42b86e10cde5908918f30d35b93eb4",
+            "bench/unlink_probe.cc": "100644:3965b1fec0f4ba066d656faed3aaf92015c51c97",
+            "docs/PLATFORM_FINDINGS.md": "100644:063056afd57f601f1b3c09dfdf2c68327fc81fec",
+            "docs/mechanisms/barriers.md": "100644:4b97966dcb7a8cf121196853f6607e50ad7058b7",
+            "docs/mechanisms/commit-barriers.md": "100644:d652270c37e240afd5680e370701ea1d29df30a6",
+            "docs/mechanisms/flush-mode.md": "100644:2e4464c0841dcee7ceda508ab463acbf51584b7e",
+            "docs/mechanisms/sync-files.md": "100644:8b4a11e88f27fb07e4bdfadc91b240c3e2f02666",
+            "docs/source-layout.md": "100644:dc4506a3cf8c6f51d4e125eab84381e5a453f956",
+            "examples/demo.cc": "100644:b17f729328ab767a59c3c1b65118fbabdeac0fc6",
+            "include/completion/api.h": "100644:10e2c36d412c679304b994ab18f73b42863c49eb",
+            "include/completion/io.h": "100644:3353df6c5553220b6c9fb47a177162cd4ab8fd73",
+            "include/completion/posix.h": "100644:294b81439ea9b1bc66ce6567377dcedca57f2ca6",
+            "include/completion/posix_file.h": "100644:ee66ba14f78de41f87dabc05a3c9f54cd64ee9be",
+            "include/completion/posix_sync.h": "100644:2786783c9d7a90af66ead184a07888b7465cb60a",
+            "test/asio_extension_test.cc": "100644:20dbc36907d8200280a32e666390a411a52fa54e",
+            "test/check_seam.py": "100644:b74e6c1eb9ce5529f182e96ca4efd15d89ac6b61",
+            "test/core_test.cc": "100644:ca5de872a806a3db6d2d407c86d108e9740f379a",
+            "test/create_into_test.cc": "100644:9eaebbb14cc1f728e746d2a05655b11a535abc9b",
+            "test/cursor_close_test.cc": "100644:67dbb3591acc4458137d8cacc53c5d2dbdc09b7f",
+            "test/dir_lock_test.cc": "100644:d0d4f98d41d8fe7be1ecfcb74297da4c2a70b715",
+            "test/dir_trust_test.cc": "100644:23bad73d710fc39cea19a0ab9731f3101bf098de",
+            "test/image_close_test.cc": "100644:3f08245f23d724b209bfd43ba0d50c113a74259e",
+            "test/inspection_test.cc": "100644:a0bed8c690159363439a52792c793dbb40108163",
+            "test/map_test.cc": "100644:334bf7a276cf6d278451fb443d931a6e218fd63f",
+            "test/owner_lock_test.cc": "100644:6c411194237740e57b5eee6044e1bb20a2fd3d91",
+            "test/posix_resource_test.cc": "100644:2101854d2207c5b88edc41f5d556ef3b8a007936",
+            "test/reuse_test.cc": "100644:16022250bf4273fa29b79db060e928af456affcc",
+            "test/scan_test.cc": "100644:9007cd01098b23959eed7c79f0e9bf477ebe64ee",
+            "test/sync_calls_test.cc": "100644:9ace4b51c840c0199df24011ba4b8c03da4363b8",
+            "test/sync_data_test.cc": "100644:f7c76cb1ae3abdfd3f9bf8d3d265dc0ed5c3193a",
+            "test/sync_files_test.cc": "100644:0c7dda45f392e7a73840a9a7c134c96ff9a2fa88",
+            "test/sync_primitives_test.cc": "100644:d260d72b7875ad41b1448d6b85ba98bd2bd525e4",
+            "test/sync_seam_test.cc": "100644:055a10be7815732245f15e21cf9e097f01804b24",
+            "tools/mutants.py": "100644:7c36864c69a1d0c41d12688acb02d5af64b54b78"
+          },
+          "by": "review",
+          "commit": "b4600a82a8d30d4f63541d9c322a4ac5eceaee95",
+          "criteria": "2461652ed28d2d5e",
+          "diffs": {
+            "ARCHITECTURE.md": "f7832ce9eae17672",
+            "CHANGELOG.md": "2524519172fdf885",
+            "README.md": "926368b2cb7fdd54",
+            "bench/commit_probe.cc": "2870f9ef6526bbd0",
+            "bench/dirflush_probe.cc": "6a800d8d76a0a967",
+            "bench/lane_probe.cc": "457402f282e310bb",
+            "bench/sync_probe.cc": "11d6a73bbc6a19f9",
+            "bench/unlink_probe.cc": "05cc2db01e6b9603",
+            "docs/PLATFORM_FINDINGS.md": "3746648187bfefce",
+            "docs/mechanisms/barriers.md": "626c35bda859fed0",
+            "docs/mechanisms/commit-barriers.md": "29ecb979d767446d",
+            "docs/mechanisms/flush-mode.md": "369a34513c55209d",
+            "docs/mechanisms/sync-files.md": "3087eb30e5a94282",
+            "docs/source-layout.md": "dbe26d668b5cbe8e",
+            "examples/demo.cc": "cb766f44596f81ac",
+            "include/completion/api.h": "bad9cce679d4c837",
+            "include/completion/io.h": "9f4caf90cbdcbee9",
+            "include/completion/posix.h": "b5858060c0fc2a77",
+            "include/completion/posix_file.h": "34f28692c2da4be1",
+            "include/completion/posix_sync.h": "e8720d3b0e217b4d",
+            "test/asio_extension_test.cc": "e1cf95be5b94be04",
+            "test/check_seam.py": "00f3775171ed1d60",
+            "test/core_test.cc": "78dc1b9ee661d820",
+            "test/create_into_test.cc": "2f7c9b98b797635d",
+            "test/cursor_close_test.cc": "d05272e369af3995",
+            "test/dir_lock_test.cc": "440294e2a6b189de",
+            "test/dir_trust_test.cc": "3ac3cf913c2a1b96",
+            "test/image_close_test.cc": "426267b66cddd1d4",
+            "test/inspection_test.cc": "e7f0bc83b0ad3fce",
+            "test/map_test.cc": "33e4d0f1d3ee3798",
+            "test/owner_lock_test.cc": "c5eef3f4cd955a79",
+            "test/posix_resource_test.cc": "68f5ac2e826d64ec",
+            "test/reuse_test.cc": "58615a8e42a69e0a",
+            "test/scan_test.cc": "bbde0726c91cef44",
+            "test/sync_calls_test.cc": "ae3119ffc6eb78f1",
+            "test/sync_data_test.cc": "b0fbd58b9acc4f7a",
+            "test/sync_files_test.cc": "15775f59582eb101",
+            "test/sync_primitives_test.cc": "0880c33cdc7e7bf4",
+            "test/sync_seam_test.cc": "ebaaae318e0432ce",
+            "tools/mutants.py": "ad651caf935416a9"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "sh /Users/kronuz/code/Kronuz/Xapiand/.scratch/xapiand/review-completion-flush-mode-durability-r2/fresh_suite.sh",
+                  "commit": "b4600a82a8d30d4f63541d9c322a4ac5eceaee95",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261124-112648-36eb3f",
+                  "level": "light",
+                  "seconds": 115.2,
+                  "state": "done",
+                  "what": "durability re-review R2: fresh suite at b4600a8 with task and asio ON (25 tests, not the slot's 22)"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "F2": {
+              "jobs": [
+                {
+                  "cmd": "sh /Users/kronuz/code/Kronuz/Xapiand/.scratch/xapiand/review-completion-flush-mode-durability-r2/fresh_suite.sh",
+                  "commit": "b4600a82a8d30d4f63541d9c322a4ac5eceaee95",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261124-112648-36eb3f",
+                  "level": "light",
+                  "seconds": 115.2,
+                  "state": "done",
+                  "what": "durability re-review R2: fresh suite at b4600a8 with task and asio ON (25 tests, not the slot's 22)"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "fix_scope": {
+            "paths": [
+              "include/completion/io.h",
+              "test/check_seam.py"
+            ],
+            "reason": "the fix adds batch_fds and the seam table; the whole mechanism was re-reviewed at b4600a8 and approved in reviews/completion-flush-mode-durability-r2.md; F1/F2 tests (cross_backend, reusable) run in the full 25-test suite at b4600a8; the reviewer probes passed at b6f44b5 (12e18b, c05f38)"
+          },
+          "note": "",
+          "review": "8759cd29fbe12ad8189c23bc9437cb60340f838f",
+          "reviewed": "113cee91991e567729554d14f5716fa226e46e68",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "02ab67fd44f1f47eafe2e1eb8c4baf1576440a52",
       "branch": "quest/xapiand/completion-flush-mode",
@@ -7926,7 +8065,7 @@
       "risk": "high",
       "status": "review",
       "title": "completion: PosixIO takes a required flush mode (plain or full) for every sync it issues",
-      "updated": "2026-11-24T09:23:58",
+      "updated": "2026-11-24T11:40:48",
       "worktree": "../completion-wt/xapiand/completion-flush-mode"
     },
     "completion-task-pin": {
