@@ -3,42 +3,83 @@
 State: working
 Quest: .campaign/xapiand/quests/journal-sync-mode.md (the lead's; never edit it)
 
-Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
-status` reads State and the first step under Next. State is one of: working, waiting on jobs <ids>,
-ready for review, fixing <findings>, blocked on <who>: <what>.
-
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Session 2 (after the re-scope). Code and docs committed on journal quest/xapiand/journal-sync-mode:
+journal:7f3e548 (pins completion b4600a8 + faultlab 83fbde7; every PosixIO passes a mode;
+bench/demo take it; test/sync_mode_test.cc; T9 plain sweep), journal:3d7481e (docs). Local runs
+next (host load 78 at 12:02, light queue).
 
 ## Next
 
-1. <step>
+1. Local: sync_mode_test host/refusal/table (passed once: 12, 4, 40 checks), T9 plain sweep
+   (timing under 600 s), the touched suites.
+2. A5 wiring: a script building main's journal_bench next to the branch's; one strict job.
+3. Mutant commits (A2: full sweep opened plain; A1 seam: full opened plain), then evidence jobs
+   and `campaign verify journal-sync-mode --for A1`.
+4. host.h change only after detent:journal-bound-first-open lands (see Contract for Detent).
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Lead, on the host-open shape (see Contract for Detent): recommendation (a), no host.h change.
+Not blocking the rest.
+
+## Contract for Detent
+
+What Detent's next journal/completion bump must change, at completion:b4600a8:
+
+- `kronuz::journal::PosixIO(directory)` no longer compiles. Every PosixIO takes
+  `PosixIOOptions{FlushMode::full}` (Detent's mode):
+  `std::make_unique<kronuz::journal::PosixIO>(dir, kronuz::journal::PosixIOOptions{kronuz::journal::FlushMode::full})`.
+  Detent builds PosixIOs directly today, contrary to msg-325's "never constructs PosixIOOptions":
+  src/detent_authority/service.cc:1835,1847,1849,1851 (journal storage and history), and
+  completion PosixIOs in src/detent_local/disk_store.cc:467, src/detent_relay/mirror_service.cc:364,
+  benchmarks/, docs/design/async-drivers-bench/. consensus builds journal::Host over
+  `std::make_shared<j::PosixIO>(dir)` in bench/netlab/node.cc:211.
+- A Host follows its IO: `journal::Host(std::shared_ptr<IO>, Identity, HostOptions)` has no mode
+  of its own, and every file the PosixIO opens keeps its mode.
+
+Shapes for "the mode where a host opens" (lead decides; needs host.h, after
+detent:journal-bound-first-open):
+
+- (a) Recommended: none in host.h. The PosixIO's required option is already where every host's
+  storage is opened, with no default, and it is the one place the mode lives; a Host-level mode
+  could only duplicate it (IO has no accessor to check it against, and faultfs's io has none).
+- (b) `Host(std::shared_ptr<PosixIO> io, Identity, FlushMode mode, HostOptions = {})`: throws
+  std::invalid_argument unless `io->flush_mode() == mode`; the IO-typed constructor stays for
+  faultfs. A second statement of the same choice, checked.
+- (c) `Host(const std::filesystem::path& directory, PosixIOOptions io, Identity, HostOptions = {})`:
+  the host builds its PosixIO; host.h then includes completion/posix.h (POSIX-only today it is not).
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), name every job you examined, failures included (`campaign brief` lists failed
-jobs no journal names), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | <no evidence yet> |
+| A2 | <no evidence yet> |
+| A3 | <no evidence yet> |
+| A4 | [artifact] journal:3d7481e README.md (Highlights, "Flush modes"), ARCHITECTURE.md ("POSIX backend and the durability model"), CHANGELOG.md 2026-11-24, docs/mechanisms/sync-mode.md |
+| A6 | <no evidence yet> |
+| A5 | <no evidence yet> |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+Not yet.
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- Tests open PosixIO in `full` (Detent's mode, the stronger); sync_mode_test and T9 run both.
+- journal_bench and journal_demo take the mode as a required argument; the bench's comparator is
+  renamed the raw loop (it collided with `plain`) and flushes with the call the mode makes for a
+  data barrier (completion's `sync_call(data, mode)`).
+- T9 sets the macOS calls (`set_flush_mode(mode, sync_platform::macos)`) on every host, so the
+  modes differ, and the full-as-plain mutant dies, on Linux CI too. The damage sub-sweeps
+  (corrupted blocks, tears, sectors) are mode-independent and run in full only.
+- Plain mode's power-loss rule in T9: every group not reported lost recovers a state it was in
+  (its acknowledged history or the in-flight turn); and the sweep requires at least one power
+  loss to lose an acknowledged record, so a model that kept everything fails it.
+- A6: completion's FlushMode stays in posix_sync.h (not io.h), so faultlab keeps its enum; the
+  test maps one to the other and checks the two tables equal on every platform.
 
 ## History: session 1 (before the re-scope), kept from the first branch
 
@@ -95,13 +136,7 @@ Options:
 
 No jobs: no code yet.
 
-| Criterion | Evidence |
-|---|---|
-| A1 | <no evidence yet> |
-| A2 | <no evidence yet> |
-| A3 | <no evidence yet> |
-| A4 | <no evidence yet> |
-| A5 | <no evidence yet> |
+None for any criterion.
 
 ### Result
 
