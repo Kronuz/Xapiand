@@ -3314,6 +3314,19 @@
       "id": "msg-292",
       "notice": "skill installed 884bc84c4330ea345a0e1ebfcdd2d0e161fbb8d2",
       "text": "campaign skill: agent-campaign:884bc84 installed here, 6 commits: agent-campaign:0faea9d Test that only the campaign's lead draws its sidebar; agent-campaign:cc588cf Draw a campaign's sidebar only from its recorded lead; agent-campaign:a198886 Merge branch 'main' into quest/campaign-v3/sidebar-lead-only; agent-campaign:3b53580 Merge branch 'main' into quest/campaign-v3/sidebar-lead-only; agent-campaign:15f274d Test that a cleared shared bar is redrawn by its other campaign; agent-campaign:884bc84 Redraw a shared workspace's bar after clearing a stray one"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T01:31:36",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T01:31:36",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "duplicate of msg-292: sidebar-lead-only noted",
+      "id": "msg-293",
+      "notice": "skill landed 884bc84c4330ea345a0e1ebfcdd2d0e161fbb8d2",
+      "text": "campaign skill: 6 commits landed on agent-campaign's main, installed here: agent-campaign:0faea9d Test that only the campaign's lead draws its sidebar; agent-campaign:cc588cf Draw a campaign's sidebar only from its recorded lead; agent-campaign:a198886 Merge branch 'main' into quest/campaign-v3/sidebar-lead-only; agent-campaign:3b53580 Merge branch 'main' into quest/campaign-v3/sidebar-lead-only; agent-campaign:15f274d Test that a cleared shared bar is redrawn by its other campaign; agent-campaign:884bc84 Redraw a shared workspace's bar after clearing a stray one"
     }
   ],
   "quests": {
