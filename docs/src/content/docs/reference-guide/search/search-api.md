@@ -67,7 +67,7 @@ replace the parameters of the same name; a body `_sort` and `sort` parameters ad
 | `check_at_least` | `_check_at_least` | The least documents to examine; the node reads every match when the search has aggregations. |
 | `collapse`, `collapse_max` | | See [Collapsing results](#collapsing-results). |
 | `selector` | `_selector` | Keeps one part of each hit (`accountNumber`, `contact.city`). |
-| `read`, `volatile` | | `read=linearizable` (or `volatile`) waits until every write answered before the search has applied; see [Visibility and Durability](/Xapiand/basics#visibility-and-durability). |
+| `volatile` | | Opens the index for writing, so the search sees the writer's latest view. |
 | `pretty`, `human`, `comments` | | How the answer is written; see [Options](/Xapiand/options). |
 | `spelling`, `synonyms`, `icase` | | Read and ignored. |
 

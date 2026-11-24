@@ -100,11 +100,13 @@ e2e:end -->
 
 ## Volatile
 
-`read=linearizable` (or `volatile`, which means it) waits until every write the
-node answered before the get has applied, an `ack=none` write included. The
-default, `read=prefix`, reads what has applied; see
-[Visibility and Durability](/Xapiand/basics#visibility-and-durability).
+By passing the `volatile` query param to the request, the operation opens the
+index for writing, so the read sees the latest view the writer has.
+
+:::hint{.caution}
+Try limiting the use of `volatile` as it will hit performance.
+:::
 
 Sources: `src/server/search_views.cc:1834-1889` (the get and the `#docid`, `#shard` fields,
 only with `request.comments`), `src/opts.cc:252-255` (`--comments`), and
-`query_field_maker` in `src/server/search_views.cc` (`volatile`, `read`).
+`src/server/search_views.cc:2371-2380` (`volatile`).
