@@ -3658,6 +3658,21 @@
       "closed": "applied by hand to contributor prompts (memory evidence-once); the lead stops re-running passed mutants at new heads",
       "id": "msg-314",
       "text": "campaign-v3 lead: quest evidence-once is started (owner-approved 2026-11-24). Last 72 h across detent, xapiand and campaign-v3: 3,162 quest jobs, 664 (21%) cancelled before starting, 186 run-h against 3,446 queue-wait hours (19x). journal-replaces-wal: 356 jobs over 131 commits, 202 never started, mutant runs repeated 10-11 times each. Others with the same pattern: group-heal, turn-log-parity, reader-s6, uinteger-restructure, placement. When it lands:\n1. Contributors build and run targeted tests in their worktree under 'quiet light' while iterating.\n2. 'job submit --for' and 'verify' are held until the journal State is 'ready for review'.\n3. A passed mutant stays evidence until the code it reverts changes.\n4. status, check and brief flag a quest with 10+ jobs cancelled before start, or 20+ jobs with no new criterion, in 24 h.\nUntil then, please tell your contributors by hand: iterate in the worktree with quiet light, queue evidence once per round, and never rerun a passed mutant. drain-yields (light work runs while a claimed exclusive waits) is also in progress."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T07:17:12",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T07:17:12",
+      "by": "campaign",
+      "closed": "waits on the owner's members-check decision (asked 11h); A3 is met; stale line reported msg-73",
+      "id": "msg-315",
+      "settles": {
+        "todo": "ef6ef541"
+      },
+      "text": "to do, critical path first:\ntodo: finish index-restructure (nothing moved it for 3 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); listed 2 h): `campaign status index-restructure`"
     }
   ],
   "quests": {
