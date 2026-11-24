@@ -1,6 +1,6 @@
 # strata-journal-pin: journal
 
-State: waiting on jobs 261123-232607-c47395 (A1) 261123-232610-a38bc7 (A2) 261123-232608-a429f8 (A5, F1) 261123-232612-095f67 (A6, F2) and the mutants and probe below
+State: ready for review: the durability round's fixes (F1 strict bound, F2 witness test) are confirmed at strata:7214f27d; A1 (build-test, held by slow-once until now), A2 261123-235932-f57dc8 and CI run at the round's end (lead, 2026-11-24)
 Quest: .campaign/xapiand/quests/strata-journal-pin.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -29,12 +29,12 @@ hunt.md as its own follow-up, not this quest.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test (asserts on) 261123-232607-c47395 at strata:bb2f8a5a (queued) |
-| A2 | 261123-232610-a38bc7: group_tests, `ctest -R ^(group_|simulation_group_)` (queued) |
+| A1 | build-test (asserts on) at strata:7214f27d: `campaign verify` at the round's end |
+| A2 | 261123-235932-f57dc8: group_tests, `ctest -R ^(group_|simulation_group_)` at strata:7214f27d |
 | A3 | CI at the landed commit |
 | A4 | `docs/mechanisms/replication-group.md`: "opens a bounded group through" (section "A damaged turn log"); Result below |
-| A5 | standalone_turn_log t5 t5b 261123-232608-a429f8; mutants (--fails-without) bounded-as-stored 261123-232614-1c21f5, bounded-at-bound (now: lose at the bound) 261123-232616-f61ae7 |
-| A6 | group_lifetime_test bounded + bounded-witness 261123-232612-095f67; mutants bounded-created 261123-232618-2ba099, bounded-witness-created 261123-232621-02d526 |
+| A5 | standalone_turn_log t5 t5b 261123-235930-a76b46; fails without: bounded-as-stored 261123-194337-4c3177, 261123-235110-d0d366; bounded-at-bound (`<` to `<=`) 261124-000525-fb418d; earlier 261123-194339-539e7b |
+| A6 | group_lifetime_test bounded + bounded-witness 261123-235934-e3aa7b; fails without: bounded-created 261123-194341-31812e, 261124-000527-82a382; bounded-witness-created 261124-000529-7f92f7 |
 
 Review findings (strata-journal-pin-durability.md):
 - F1 (blocking): fix strata:bb2f8a5a; test job 261123-232608-a429f8 (at-bound and bound + 1 cases kept, below lost);
