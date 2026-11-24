@@ -54,10 +54,10 @@ independently, which is the parallel-work gain.
   class. It needs group-catalog, which edits catalog.hh now. High risk (concurrency): one
   correctness review, whose questions are a transition's ordering kept across headers, the
   policy's view of slot state at step 2, and pin lifetimes.
+- Lead, 2026-11-24 (contributor's R-nested): nested types stay declared in the class, as in
+  index-restructure (its R9) and SPLITTING.md; their multi-line members move out. docs/mechanisms/
+  catalog.md joins the file set for the `policy_mu_` rename (R6).
 
 ## May land early
 
 Step 1 on its own proof, before step 2 starts.
-- Lead, 2026-11-24 (contributor's R-nested): nested types stay declared in the class, as in
-  index-restructure (its R9) and SPLITTING.md; their multi-line members move out. docs/mechanisms/
-  catalog.md joins the file set for the `policy_mu_` rename (R6).
