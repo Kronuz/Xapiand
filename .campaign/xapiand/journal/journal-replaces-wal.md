@@ -329,7 +329,7 @@ strata: `group-catalog` (item 4), which `core` step c waits on.
 
 ## Blocked on
 
-10. (2026-11-23) Outside the file set: docs/src/content/docs/reference-guide/documents/get-api.md ("Volatile") and
+10. (2026-11-23, done: the lead added both pages to the set; Xapiand:074e8cc5c puts the text back) Outside the file set: docs/src/content/docs/reference-guide/documents/get-api.md ("Volatile") and
     reference-guide/search/search-api.md (the `volatile` row) still say `volatile` opens the index for writing. D4: it
     means read=linearizable. Edited, then reverted (Xapiand:6d6921068) to keep the set. Recommend: add both and I
     apply the reverted text (get: "`read=linearizable` (or `volatile`, which means it) waits until every write the node
