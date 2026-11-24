@@ -175,6 +175,7 @@ PUT /concepts/levels/1?ack=none
 <!-- e2e:begin
 ---
 description: ack=none answers 202 once the write is in the journal
+params: commit=false
 status: 202
 ---
 e2e:end -->
@@ -226,6 +227,7 @@ PUT /concepts/levels/3?ack=none&refresh=wait_for
 <!-- e2e:begin
 ---
 description: refresh=wait_for at ack=none answers 202 once applied
+params: commit=false
 status: 202
 ---
 e2e:end -->
