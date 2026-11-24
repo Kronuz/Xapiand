@@ -16333,6 +16333,42 @@
       "updated": "2026-11-24T00:54:30",
       "worktree": "../strata-wt/xapiand/index-restructure"
     },
+    "index-subobjects": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 45,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/strata/core/index.hh",
+        "include/strata/core/index_*.hh",
+        "include/strata/core/index/**",
+        "docs/source-layout.md",
+        "docs/mechanisms/index-layout.md",
+        "test/index/**",
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [
+        "index-restructure"
+      ],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "strata's basic_index: mechanisms with their own state become member classes (index-restructure's step 2)",
+      "updated": "2026-11-24T02:44:54"
+    },
     "install-own-files": {
       "accepted": {},
       "after": [],
