@@ -1,9 +1,47 @@
 # journal-replaces-wal: journal
 
-State: waiting on jobs 261124-063522-3016ad (targeted test_loop_yield cases at Xapiand:ff969606f; still queued after 10 min behind a strict hold), mutants 261124-063552-ee5bf1 (pending-off), 261124-063553-3e8972 (fill-off), 261124-063555-832e66 (same-id-unchecked), all after 3016ad; strict e2e timings 261124-063626-58ffbf (master afc0de180), 261124-063628-1d2c27 (before, Xapiand:f845c2966, 2 rounds), 261124-063629-1cf15b (after, Xapiand:ff969606f, after 3016ad). Branch pushed at Xapiand:0b56d765f (origin/master merged, campaign files only). Next: read them; if 3016ad passes, check its log-entry counts against the test bound (the "10 measured" comment was never measured), `campaign job rerun` the stale evidence, `campaign verify journal-replaces-wal`.
+State: blocked on the lead: plain RESTORE in chores 66.5 s -> ~3-4 s (master ~1.3-2.3 s); the rest is the journal's full flushes per entry. Code at Xapiand:2ea5d31e0, no evidence jobs queued (round not ready by the lead's bar). See Blocked on.
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
+
+Session 17 (2026-11-24), the plain RESTORE in chores (lead's message after 3016ad):
+
+1. 3016ad at ff969606f: updates fixed (400: 3 entries; 2,000 on the loop 8.95 s), plain in chores unchanged
+   (66.5 s) and test_loop_yield.cc:702 failed. Cause, from 3016ad's own counts: a plain run was written at the end
+   of each body chunk (~64 KB, ~6 objects of 10 KB): one command per chunk and shard plus the id counter's own,
+   ~3,000 entries for 2,000 objects into 5 shards (the 400-object case: 18 entries = its 18 chunks).
+2. Fix, write and fence path (for the durability reviewer):
+   - Xapiand:41893e8a6: prepared plain objects join `_pending` with the updates (one mechanism), kept across chunks;
+     written by `apply_pending` (apply_range: placement, per-shard restore_slice) at the bound, before an update of a
+     pending id or of an id a pending id-less object may take (`N` pending), before any other stored read or a schema
+     script's objects, and in `commit()` before the closing commit. The answer follows that commit: every
+     acknowledged write is applied (quorum) or placed (ack=none), as before; a crash before the answer loses only the
+     unacknowledged stream. A slice's last command carries the id counter's write (set_metadata), so the counter is
+     durable in the entry with the writes that moved it; `restore_results` answers document writes only (strata's
+     verdict lists document ops only); the counter's own proposal stays as the fallback when the last command failed.
+   - Xapiand:6d3b895ec: a slice prepares its whole sub-run (it stopped at the first closed command, so the closing
+     write went out alone and the rest as another slice: 3 entries per shard where 2 held it); the bound is 4 MiB of
+     document data per writing child (`children`), so each shard's share fills its entries.
+   - Nothing is applied before its entry is durable: every write still goes through the group's propose at its level.
+3. Tests: entries case adds numeric ids (counter must take no entry: numeric <= plain) and bounds each kind at 8 for
+   400 objects (2 measured each; 18 per-chunk); update case adds the id an id-less pending object takes (twin index
+   names it: /pending_new/2 merged). Docs Xapiand:89a406c7f.
+4. Measured (quiet light, load 10-50, worktree build; not evidence):
+   - test case, 2,000 x 10 KB into 5 shards: on the loop 3.98-6.3 s, in chores 3.25-3.5 s (was 66.5 s); loop CPU
+     ratio 0.11-0.14 (bound 0.2).
+   - e2e A/B interleaved against master's binary (afc0de180), same hold: on the loop fix 5.3-7.0 s vs master
+     6.8-8.2 s; in chores fix 4.0-4.3 s vs master 2.4-3.2 s. Node CPU fix 9.4-9.9 s vs master 22-23 s.
+   - Sync A/B (syncspy, windows per RESTORE, load 10-24): in chores master 1.32-1.45 s with 10 full flushes (0.3-0.4 s,
+     strata manifests) + barriers; fix 3.08-3.90 s with 88-89 full flushes summing 2.0-2.2 s: turn logs 41 (0.97 s),
+     group artifacts 24 (0.53 s), the journal directory 12 (0.27 s), strata manifests and dirs 10. ~31 entries of
+     ~1 MiB for 29 MB of commands. On the loop fix 3.65-3.81 s (90 full, 1.7-2.1 s) vs master 4.8-5.7 s.
+   The remaining gap in chores is the journal's full flushes per entry (~3 per 1 MiB entry: turn log, artifact,
+   directory), device-serialized across the 5 groups; master full-flushes only at commit (barrier ordering).
+5. Whole test_loop_yield (local, quiet light): 875 of 876 checks; test_each_chunk_of_a_streamed_restore_starts_light
+   saw one placement (the pending writes wait for the commit). Xapiand:2ea5d31e0 adds `seams.pending_bytes` (1: each
+   round written before the next) for that case: 9 of 9, every chunk's first slices light.
+6. Not ready for evidence (plain row above master's median): no jobs queued. Options under Blocked on.
 
 Session 16 (2026-11-24), the group-commit fix builds:
 
@@ -459,6 +497,21 @@ strata: `group-catalog` (item 4), which `core` step c waits on.
 
 ## Blocked on
 
+11. (2026-11-24, session 17) The plain RESTORE in chores is ~3-4 s at Xapiand:89a406c7f against master's ~1.3-2.3 s
+    (A/B same hold; master's strict median 2.26 s), so the round misses the lead's bar on that row; the update row
+    passes (3.7-7.0 s vs master 4.8-8.2 s, strict median 36.4 s). Of the fix's 3.1-3.9 s, 88-89 F_FULLFSYNC calls sum
+    2.0-2.2 s: ~31 entries of 1 MiB, each a turn-log flush (41), a group artifact (24) and the journal directory (12),
+    serialized at the device across 5 groups. Master flushes 10 times (strata manifests at commit). Options:
+    (a) accept the row: the journal pays full-flush durability per entry, master does not (barrier ordering by
+        default, `--full-flush-ordering` opt-in); measure like for like with that flag on master;
+    (b) I overlap the writes with the next objects' prepares (an in-flight writer joined before a stored read, a
+        schema offer and the commit): hides at most the prepare time (~1.3 s), bounded below by the ~2 s of flushes,
+        and touches the turn rules the schema offers rely on (larger change, its own review);
+    (c) journal side (lead/Detent): one flush per entry, or a turn shared by concurrent groups' entries; the 24
+        artifacts + 12 directory flushes for 31 entries suggest 1 MiB entries take the artifact path.
+    Recommend (a) now with (c) filed: the fix moves the row from 66.5 s to ~3.5 s and the rest is the flush policy;
+    (b) only if (c) is not coming.
+
 10. (2026-11-23, done: the lead added both pages to the set; Xapiand:074e8cc5c puts the text back) Outside the file set: docs/src/content/docs/reference-guide/documents/get-api.md ("Volatile") and
     reference-guide/search/search-api.md (the `volatile` row) still say `volatile` opens the index for writing. D4: it
     means read=linearizable. Edited, then reverted (Xapiand:6d6921068) to keep the set. Recommend: add both and I
@@ -617,3 +670,11 @@ Drafts, applied when the code lands; each names the contract it shapes (format-f
 41. A journal that cannot be recovered ends the start with EX_IOERR and one critical line naming the directory, the
     library's error and a finite file-size limit; it is reported in the manager (where set_journal runs), not wrapped
     in ShardGroups.
+42. A RESTORE's prepared plain objects and updates of an id share one pending set across body chunks, written at
+    4 MiB of document data per writing child, before a stored read that could see them, and at the commit; an
+    update waits for it when its id is pending or an id-less object is (it may take that id). Ruling 18 stands: each
+    command is still proposed after the one before it answers.
+43. A RESTORE slice's last command carries the id counter's write; `restore_results` answers its document writes
+    only. The counter's own proposal stays as the fallback when that command failed.
+44. A RESTORE slice prepares its whole sub-run (bounded by the pending set), not to its first closed command.
+
