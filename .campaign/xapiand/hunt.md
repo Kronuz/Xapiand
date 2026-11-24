@@ -496,3 +496,7 @@ quest fixes them (2 of 5 on 11-20).
 ## strata-journal-pin findings (2026-11-24)
 
 - A replica whose turn log is damaged has no path back: with journal's lost bound, `Host::open` keeps the group `bounded`; strata now routes `bounded` to `driver.recover` (strata:22ee0282), where journal's Store loses it durably and throws Corruption, and `create_group` refuses any status but none. So a damaged replica stays failed until an operator acts. Needs a design call: lose-then-create plus group-heal's image install (strata:group-install), or a repair entry point in journal. Also check that `lost` going to `create` (unchanged) is the intended path. Start in include/strata/group/group.hh, witness.hh, journal's Host::create_group. Durability, high; after strata-journal-pin lands (it holds the files).
+
+## consensus ASan simulation timeout (2026-11-24)
+
+- consensus `consensus_simulation` under linux-asan-ubsan runs 174, 279 and 174 s on main (CI runs 45310416625 and the two before) against its 300 s TIMEOUT; it timed out twice on quest/xapiand/netlab-consensus at 177548c0 (run 45319374410), whose diff adds only bench/netlab and docs. detent:consensus-simulation-asan-timeout owns the fix; netlab-consensus lands on green CI after it.
