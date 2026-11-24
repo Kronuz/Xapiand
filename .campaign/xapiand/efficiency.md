@@ -1142,3 +1142,9 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Correction: the "named-folder regression" (msg-55) was this campaign's tested_docs (docs/src/content/docs/**) voiding every job on page edits; decision to the owner (move it into the e2e check's --inputs; gate change, needs a yes).
 - Sidebar: 63 stale campaign-xapiand-* pills cleared from detent, campaign-v3 and site-core tabs; campaign-v3 quest sidebar-lead-only fixes the cause. I no longer set quest pills by hand.
 - Host: light slots 61%, runnable beside idle 40 min; load 19. Quota: weekly 37%, burn 1.52%/h.
+
+## 2026-11-24 06h
+
+- No landings. netlab-consensus: both VM sets green at the merged head 177548c0; ready except CI, whose linux-asan consensus_simulation timed out twice (main runs 174-279 s vs 300 s; detent:consensus-simulation-asan-timeout owns it); third rerun in progress, hunt row filed. strata-journal-pin: A5 + 2 mutants, A6 green; A6 mutant, CI (rerun after a cancel; docs-only head has no CI run) and the durability review (still running) remain.
+- journal-replaces-wal: A9 mutants (term, abort seal, ready point) killed; A5's journal_replay_check failed one assertion (no file-size error line in the log; behavior correct). Held for the contributor with the batch-pins probe.
+- Host: load 188 at 22:20 from detent's legacy-h light jobs (test_reader_switch 559% CPU, a 16-thread test; rust integration 285%); detent cancelled the stale one and gives those tests ctest PROCESSORS next round. Light slots 68%, runnable beside idle 34 min. Quota: weekly 37%, burn 1.46%/h.
