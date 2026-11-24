@@ -1,28 +1,68 @@
 # completion-flush-mode: journal
 
-State: waiting on jobs 261124-091906-a47141 261124-091911-31b2b6 261124-091915-b8aea1 261124-091919-537673 261124-091923-20e986 261124-091927-b0b7d9
+State: ready for review (fix round 1 at completion:b6f44b5, pushed); waiting on jobs 261124-110320-b7760e 261124-110324-f3f38e 261124-110328-fbd236 261124-110332-cae4a1 261124-110339-12e18b 261124-110342-c05f38 and the verify suite
 Quest: .campaign/xapiand/quests/completion-flush-mode.md (the lead's; never edit it)
 
 ## Doing
 
-Ready for review at completion:113cee9 (quest/xapiand/completion-flush-mode, pushed); only jobs
-remain: the five mutants and build-test, queued once at that commit. Local suite at 113cee9: 25 of
-25 CTest tests pass (macOS x86_64); the five mutants were each killed locally before queueing.
+Fix round 1 (durability review, CHANGES, F1-F7) at completion:b6f44b5. Local, under quiet light
+(macOS x86_64): sync_primitives, sync_calls and sync_files pass; f6-f9 each killed locally; the full
+build (all targets) compiles. Evidence queued once at b6f44b5.
 
 ## Next
 
-1. Jobs finish: paste `campaign brief`'s table; on all green, State "ready for review".
-2. Durability review (the lead launches it).
+1. Jobs finish: paste `campaign brief`'s table; then the lead confirms the findings
+   (`campaign accept ... --confirm F1=... F2=...`, the suite job).
 
 ## Blocked on
 
-Nothing. msg-326 (file set) answered by the lead: examples/**, bench/**, tools/** added.
+Nothing.
+
+## Fix round 1: findings
+
+| Finding | Fix (completion:39c1394 code+tests, 77356f1 docs, b6f44b5 mutants) | Test | Mutant (`--fails-without`) |
+|---|---|---|---|
+| F1 | `PosixIO::batch_fds`: a `PosixFile` whose mode the batch would weaken (`batch_weakens`: macOS, full file in a plain batch) syncs itself through `file->sync()` first, as a foreign file does; one helper for `sync_files` and `sync_staged` (both batches) | `sync_primitives_test` `cross_backend` | f6 (the old loop: every PosixFile batched, as at 113cee9) 261124-110320-b7760e |
+| F2 | none needed (code correct) | `sync_primitives_test` `reusable`, per mode: `make_closed_file` + `create_exclusive_into`, `open_existing_into`, `open_reclaim_candidate_into`, each `File::sync` and `sync_data` recorded | f7 (= reviewer's g6) 261124-110324-f3f38e; g6 also in 261124-110342-c05f38 |
+| F3 | `FlushMode::Value { plain = 1, full = 2 }`, no zero; `FlushMode(Value)` throws `invalid_argument` for any other value (constexpr: a constant one fails to compile); `PosixIO` refuses options whose mode bytes are neither | `sync_primitives_test` `flush_mode_values` (0, 3, 255; value-initialized; memset options) | f8 261124-110328-fbd236, f9 261124-110332-cae4a1 |
+| F4 | README table and CHANGELOG state plain's `F_FULLFSYNC` fallback and its failure | [artifact] completion `README.md`, `CHANGELOG.md` | - |
+| F5 | ARCHITECTURE: FreeBSD AIO syncs `Sync` (`aio_fsync(O_SYNC)`) and `SyncData` (`aio_fsync(O_DSYNC)`) natively, `DirectorySync` through `sync_directory`; the `sync_data` FreeBSD cell names `O_DSYNC` | [artifact] completion `ARCHITECTURE.md` | - |
+| F6 | `io.h` above `sync_files`: durable is the backend's promise; plain on macOS survives a crash, not a power loss | [artifact] completion `include/completion/io.h` | - |
+| F7 | `SyncCalls` = mode byte + one-byte index into `detail::sync_seams`, a process-wide table of interned seams (entries written once under a mutex, never changed); `static_assert(sizeof(SyncCalls) == 2)` and `static_assert(sizeof(PosixFile) == sizeof(void*) + 2 * sizeof(int))` | sizeof(PosixFile) on 64-bit: 16 (02ab67f) -> 48 (113cee9) -> 16 (b6f44b5), held by the static_asserts in every build | - |
+
+f1-f5 not rerun: the lines they replace (`sync_call`'s rows, `issue`'s `full_fsync` case) are
+byte-identical at b6f44b5, and the tests that killed them are unchanged (only added to).
+
+### F1's class: every path where a file is synced by something other than its own backend
+
+| Path | Before (113cee9) | Now | Value-checking test |
+|---|---|---|---|
+| `sync_files` (macOS `files_sync_devices`; Linux/other `files_sync`) | batching backend's mode | `batch_fds`: weakened file syncs itself | `cross_backend` final `sync_files` row, both directions |
+| `sync_files_and_directory` (macOS `sync_staged` durable; else `sync_files` + `sync_directory`) | batching mode | same helper | `cross_backend` SyncFiles via IO method |
+| `order_files_and_directory` (macOS `sync_staged` ordered) | batching mode | same helper | `cross_backend` OrderFiles via IO method |
+| `Sync` primitive (`io.sync_files`, operation.h:159) | batching mode | same helper | `cross_backend` Sync via drive_synchronously, native queue (macOS) |
+| `SyncFiles`, `OrderFiles` primitives | batching mode | same helper | `cross_backend` via drive_synchronously and native queue |
+| `SyncData` primitive / `sync_data_files` | file's own (`File::sync_data`) | unchanged | `cross_backend` SyncData rows |
+| Reuse: `make_closed_file` then `*_into` | backend's mode at make; another backend's `*_into` refused | unchanged | `reusable` (F2); refusal: `reuse_test.cc:212-216`, `create_into_test.cc:146` |
+| Reopen: `open_existing`, `open_reclaim_candidate`, read-only | the opener's mode (a new file) | unchanged | `call_sites`, `sequences` |
+| Moves (`unique_ptr`, `shared_ptr` of a File) | the object moves; no copy of a PosixFile exists | unchanged | n/a (PosixFile is not copyable: File's copy is deleted) |
+| Linux io_uring `Sync`/`SyncData`, FreeBSD AIO `Sync`/`SyncData` | kernel call, mode not read | unchanged; equal in both modes there | `table_rows` (Linux/other rows identical per mode, `batch_weakens` false off macOS) |
+
+### Probes
+
+The reviewer's probe scripts build against completion's `detail::` internals that F3 and F7
+change (P2 sets `SyncCalls::fsync_call`, P3 builds `FlushMode` from 0 expecting no throw, g5's
+replacement sets `fsync_call`). The jobs run a copy at
+`.scratch/xapiand/completion-flush-mode/probe/` (home) with three edits, nothing else:
+P2 sets `calls_for_mode.seam = intern_sync_seam({&rec_fsync, &rec_fcntl})`; P3 catches and prints
+the refusal; g5's replacement copies `sync_calls_` and sets `mode = plain`. Jobs:
+261124-110339-12e18b (P1-P5, P7), 261124-110342-c05f38 (P6, g1-g6).
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | mutants, `--fails-without`, at completion:113cee9: f1 plain keeps F_FULLFSYNC for File::sync_data (261124-091906-a47141, completion_sync_calls_test), f2 plain keeps F_FULLFSYNC in sync_directory (261124-091911-31b2b6, completion_sync_calls_test), f3 full issues fsync (261124-091915-b8aea1, completion_sync_files_test), f4 plain keeps F_FULLFSYNC for File::sync, owner.lock and batch devices (261124-091919-537673, completion_sync_files_test); suite in build-test 261124-091927-b0b7d9 |
+| A1 | fix round 1 at b6f44b5: f6-f9 (table above), verify suite; round 0: mutants, `--fails-without`, at completion:113cee9: f1 plain keeps F_FULLFSYNC for File::sync_data (261124-091906-a47141, completion_sync_calls_test), f2 plain keeps F_FULLFSYNC in sync_directory (261124-091911-31b2b6, completion_sync_calls_test), f3 full issues fsync (261124-091915-b8aea1, completion_sync_files_test), f4 plain keeps F_FULLFSYNC for File::sync, owner.lock and batch devices (261124-091919-537673, completion_sync_files_test); suite in build-test 261124-091927-b0b7d9 |
 | A2 | mutant f5, full falls back to fsync on ENOTSUP/EOPNOTSUPP/ENOTTY (261124-091923-20e986, completion_sync_calls_test `full_refusal`); existing tests in build-test 261124-091927-b0b7d9 |
 | A3 | 261124-091935-9baf66 (no `full_flush_ordering` in include, test, bench, examples, tools); every in-repo caller passes the mode (the build in 261124-091927-b0b7d9 compiles them; `PosixIO(dir)` does not compile); external callers below |
 | A4 | [artifact] completion `README.md` "Flush modes", `ARCHITECTURE.md` "Flush modes" (per site, per platform, per mode; power loss on macOS), `CHANGELOG.md` 2026-11-24, `docs/mechanisms/flush-mode.md` |
@@ -106,3 +146,17 @@ External callers to migrate (signature: `PosixIO(dir, options, artifact_mode = 0
   full flush in full mode (same calls as the durable batch, checked by `full_protocol`).
 - The mutants are rows f1-f5 of completion `tools/mutants.py`; m9 (owner.lock sync) now expects
   killed. Mutant commits: refs/mutants/completion-flush-mode/f1..f5 in the completion repo.
+- Fix round 1, F1: "stronger" is `batch_weakens(file, batch)`: the file is full and the host's
+  `sync_call(file)` differs between the modes (macOS only), so Linux and FreeBSD batches make
+  exactly today's calls. A plain file in a full batch stays batched (gets the stronger flush).
+- Fix round 1, F3: refusal at construction (constexpr throw; runtime `invalid_argument`) rather than
+  a compile error, which a runtime `Value` cannot get; `sync_call` keeps `mode == full` (g2/f3
+  anchors) since no invalid `FlushMode` is constructible and `PosixIO` checks raw bytes.
+- Fix round 1, F7: the seam is a one-byte index into a process-wide interned table (the lead's
+  "static"), not a per-file pointer: 16 bytes instead of 24, and files outliving their backend
+  stay valid because entries are never freed. 255 distinct seams per process; one more throws
+  `length_error`, so `replace_sync_calls` is no longer `noexcept`. Its lifecycle table is in
+  completion `docs/mechanisms/flush-mode.md` ("The seam table"); I judged it a data layout the
+  lead's ruling prescribed, not a new state machine needing a design check first.
+- Fix round 1: the F1-F3 tests live in `sync_primitives_test`, which has every route (IO method,
+  drive_synchronously, native queue) and per-platform logs; reviewer's run_mutants runs it.
