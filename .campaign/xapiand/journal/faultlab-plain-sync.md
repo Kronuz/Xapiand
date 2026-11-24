@@ -1,16 +1,19 @@
 # faultlab-plain-sync: journal
 
-State: ready for review; waiting on jobs 261124-084008-5de615
+State: waiting on jobs 261124-091409-a11424 261124-091412-7c4ab3 261124-091414-2d1c19
 Quest: .campaign/xapiand/quests/faultlab-plain-sync.md (the lead's; never edit it)
 
 ## Doing
 
-Nothing: the round is done, and only the mutant job remains.
+Fixing review findings F1 and N3 (correctness review on faultlab:eefba53). The fix is at
+faultlab:83fbde7 and its jobs are queued.
 
 ## Next
 
-1. Read 261124-084008-5de615: it must fail (the mutant is killed). If it passes, the mutant
-   survived: fix the test and do not rerun the same mutant.
+1. 261124-091409-a11424 (F1 mutant, faultlab:abb149e on `mutant/faultlab-plain-sync-f1`: order_pushed
+   walks every stray) must FAIL "full mode: a stray staged after another thread's directory sync
+   keeps its point's bytes ahead of a later write". 261124-091412-7c4ab3 (build-test at 83fbde7) and
+   261124-091414-2d1c19 (the reviewer's run.sh at 83fbde7, whose R4c row should drop o0 and oX) must pass.
 
 ## Blocked on
 
@@ -35,6 +38,16 @@ nothing. The default is full on the host, so users that set no mode see no chang
 model, policy, seeds, sector, recorder, scenario and the demo pass unchanged. Open: completion's
 own flush-mode enum. Once completion:flush-mode lands, journal-sync-mode maps it to
 faultlab's enum (R1).
+
+## Review findings
+
+- F1 (blocking, fixed at faultlab:83fbde7): order_pushed walked every stray, so a full-mode race stray got
+  an at_mark at an aliasing later point (states oX and o0). It now walks `pushed_`, the strays push()
+  staged, cleared wherever strays_ is. Test: model_test "full mode: a stray staged after another
+  thread's directory sync ...", which uses the reviewer's R4c injector. Mutant: 261124-091409-a11424. Probe: 261124-091414-2d1c19.
+- N3 (fixed): crash-model.md says the plain model holds only where F_BARRIERFSYNC orders (Apple SSDs).
+- N1: no change. N2: left to journal-sync-mode or the lead. N4: left (the lead filed it).
+- The lead's F1/N3 message: answered by the fix above.
 
 ## Rulings I made
 
