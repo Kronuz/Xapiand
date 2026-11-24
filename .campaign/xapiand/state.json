@@ -33026,18 +33026,55 @@
         }
       ],
       "journal": "../Xapiand-wt/xapiand/strata-journal-pin",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-24T00:32:49",
+          "ci": {
+            "commit": "7214f27d2fe92f2e1b71c406607fc2ecc071e688",
+            "runs": [
+              45351185385
+            ]
+          },
+          "commit": "7214f27d2fe92f2e1b71c406607fc2ecc071e688",
+          "criteria": {
+            "A1": "261124-002523-edd28e (the build-test check), 261124-002523-edd28e",
+            "A2": "261123-235932-f57dc8",
+            "A3": "CI green at 7214f27d2fe9",
+            "A4": "`docs/mechanisms/replication-group.md`: \"opens a bounded group through\" (section \"A damaged turn log\"); Result below",
+            "A5": "261123-235930-a76b46; fails without: 261123-194337-4c3177, 261123-194339-539e7b, 261123-235110-d0d366, 261124-000525-fb418d",
+            "A6": "261123-235934-e3aa7b; fails without: 261123-194341-31812e, 261124-000527-82a382, 261124-000529-7f92f7"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE=-O3 && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "7214f27d2fe92f2e1b71c406607fc2ecc071e688",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261124-002523-edd28e",
+              "level": "light",
+              "seconds": 232.1,
+              "state": "done",
+              "what": "strata-journal-pin check build-test at 7214f27d2fe9"
+            }
+          ],
+          "final": true,
+          "from": "e9f0fafde62ec06b329b8aa288ae91e2385f5407",
+          "reason": "",
+          "tested": "7214f27d2fe92f2e1b71c406607fc2ecc071e688"
+        }
+      ],
       "lenses": [
         "durability"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "strata builds against journal main (Host::delete_group)",
-      "updated": "2026-11-24T00:32:19",
+      "updated": "2026-11-24T00:35:39",
       "worktree": "../strata-wt/xapiand/strata-journal-pin"
     },
     "strata-nospace-position": {
