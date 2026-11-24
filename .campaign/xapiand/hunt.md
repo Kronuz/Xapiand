@@ -492,3 +492,7 @@ quest fixes them (2 of 5 on 11-20).
 |---|---|---|---|---|
 | group_catalog_failed_open fails once on main ("two pins opened the group and failed: 3") | strata main run 45204145143 at 93d10446; next run at 757c00ab green | test/group/group_catalog_test.cc:731 (strata-journal-pin holds test/group/**: after it lands) | strata | open |
 
+
+## strata-journal-pin findings (2026-11-24)
+
+- A replica whose turn log is damaged has no path back: with journal's lost bound, `Host::open` keeps the group `bounded`; strata now routes `bounded` to `driver.recover` (strata:22ee0282), where journal's Store loses it durably and throws Corruption, and `create_group` refuses any status but none. So a damaged replica stays failed until an operator acts. Needs a design call: lose-then-create plus group-heal's image install (strata:group-install), or a repair entry point in journal. Also check that `lost` going to `create` (unchanged) is the intended path. Start in include/strata/group/group.hh, witness.hh, journal's Host::create_group. Durability, high; after strata-journal-pin lands (it holds the files).
