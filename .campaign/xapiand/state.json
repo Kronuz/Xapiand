@@ -16329,9 +16329,9 @@
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "strata's index.hh: basic_index's 5,309-line class body split by mechanism",
-      "updated": "2026-11-24T02:57:03",
+      "updated": "2026-11-24T02:59:20",
       "worktree": "../strata-wt/xapiand/index-restructure"
     },
     "index-subobjects": {
