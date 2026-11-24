@@ -13579,10 +13579,10 @@
     "group-heal": {
       "accepted": {
         "durability": {
-          "at": "2026-11-23T13:18:16",
-          "base": "93d104461a79e17b0b9e43b93965a77d7ab711ed",
+          "at": "2026-11-23T16:19:42",
+          "base": "757c00ab4a0c03044394bd0dda87a138f5a98f9b",
           "blobs": {
-            "CMakeLists.txt": "100644:afa13d2ba3cf8d4e5ec7a47dcca5f3527a71ed6e",
+            "CMakeLists.txt": "100644:b57c5db263f5b291b1dd1fc286c4c9625cff843c",
             "docs/gates/phase-3r.md": "100644:c2e1230f7b6d1ed684c408343d35aa6c09b75ca5",
             "docs/mechanisms/group-install.md": "100644:3f23f3eb93ca595012ae6a6b3a8198e6c8cb49cb",
             "docs/mechanisms/replication-group.md": "100644:50f10ab6bd4e42ac68d21dfb929a2f474c5dc50d",
@@ -13625,10 +13625,10 @@
             "test/group/world.hh": "100644:03453d0e8178491a8cdf9256becb174beacd5745"
           },
           "by": "review",
-          "commit": "870ac9f57c12bcb0534e4c4f288d01dd0bd0984e",
+          "commit": "04e5231258028801d5fba3b333dbf0c673ddcec3",
           "criteria": "987c23accdcf1e4c",
           "diffs": {
-            "CMakeLists.txt": "4451978a73839a3e",
+            "CMakeLists.txt": "d981a1456c7c2673",
             "docs/gates/phase-3r.md": "097a54437ffdf624",
             "docs/mechanisms/group-install.md": "27f63326784a2f1e",
             "docs/mechanisms/replication-group.md": "878c7efc5f901062",
@@ -13672,8 +13672,8 @@
           },
           "findings": {},
           "note": "",
-          "review": "b2c3450e4416f8a1dc30a785e1bb2b311529c59c",
-          "reviewed": "870ac9f57c12bcb0534e4c4f288d01dd0bd0984e",
+          "review": "e86381a0b7a11f3e31529efd8a559f9268028fd7",
+          "reviewed": "04e5231258028801d5fba3b333dbf0c673ddcec3",
           "verdict": "APPROVE"
         }
       },
@@ -13862,7 +13862,7 @@
         }
       },
       "title": "Replication groups grow, heal and run in the simulator",
-      "updated": "2026-11-23T13:18:16",
+      "updated": "2026-11-23T16:19:42",
       "worktree": "../strata-wt/xapiand/group-heal"
     },
     "group-install": {

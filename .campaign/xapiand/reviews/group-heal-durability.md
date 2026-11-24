@@ -240,3 +240,31 @@ Not run (re-check):
   the group tests; any `RVW-PIN-DAMAGE` line is a sound source marked damaged) was queued behind
   the exclusive jobs 261123-005923-f76b83 and 261123-060708-4a7840. It is exit 0 when no false
   positive occurs; the lead can read its result when it runs.
+
+## Re-check
+
+Commit: strata:04e523125802
+Verdict: APPROVE
+
+Scope: does the code the group runs at strata:04e523125802 match strata:870ac9f5? No build or job;
+only diffs, because no library code the group runs changed.
+
+- Pin move. `git diff 870ac9f5 37813063` in the worktree is the one CMakeLists.txt line (consensus
+  8780e44 to 6e1122c).
+- Consensus. 59ae07f is an ancestor of 6e1122c. `git diff --stat 59ae07f 6e1122c` touches nine files,
+  none under include/ or src/ (`-- include src` is empty): CMakeLists.txt (sanitizer-gated mutants,
+  new mutants-apply tests, only under `CMAKE_SOURCE_DIR == CMAKE_CURRENT_SOURCE_DIR`, so not
+  strata's build), docs/mechanisms/rpc-lane.md, test/ and tools/. The Driver, core.h and the
+  Unavailable release my F7 and F13 notes cite (core.h:829, :1374) are byte-identical, and
+  `reinstall` is at the same lines in both.
+- Merge of strata main (04e52312). Against 870ac9f5, include/strata/group, src, sim, test/group and
+  core files.hh, format.hh and catalog.hh are unchanged (empty diff). Main's include/ changes are
+  four core headers: command.hh, index.hh, merge_policy.hh and turn_seal.hh, all the standalone
+  turn log and logged-transaction work (chunk records, checkpoint floor, a tolerant open of a
+  damaged logged index, cohort wait). The group sets no `log` and no `checkpoint_log_bytes`, so it
+  runs the unlogged index; repair.hh's damage detection reads files, format and the index's open
+  failure, which are not touched. None of my findings (F1 to F16) rests on a changed line.
+
+Not run: no build or sim at strata:04e52312. The pin and the merge are not exercised by any job
+here; CI at this head (which also answers the red `reinstall` compile at 870ac9f5) is the
+evidence, not this review.
