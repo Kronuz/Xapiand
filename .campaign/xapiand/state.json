@@ -17819,10 +17819,28 @@
         "CHANGELOG.md",
         "docs/mechanisms/**"
       ],
+      "history": [
+        {
+          "at": "2026-11-24T08:01:05",
+          "lenses": [
+            [
+              "correctness"
+            ],
+            [
+              "durability"
+            ]
+          ],
+          "reason": "high risk is durability: the skill's dominant-risk lens is durability, not correctness; Detent asked for one durability review at max (msg-323); no review or acceptance exists yet",
+          "voided": [],
+          "weakened": [
+            "lens correctness removed"
+          ]
+        }
+      ],
       "journal": "../Xapiand-wt/xapiand/journal-sync-mode",
       "landed": [],
       "lenses": [
-        "correctness"
+        "durability"
       ],
       "milestone": "Phase 7b",
       "needs": [],
@@ -17833,7 +17851,7 @@
       "risk": "high",
       "status": "active",
       "title": "journal: the caller chooses the sync mode at open (plain fsync or full flush on macOS)",
-      "updated": "2026-11-24T08:00:26",
+      "updated": "2026-11-24T08:01:05",
       "worktree": "../journal-wt/xapiand/journal-sync-mode"
     },
     "journal-turn-buffers": {
