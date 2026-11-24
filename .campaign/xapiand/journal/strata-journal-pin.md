@@ -38,9 +38,9 @@ hunt.md as its own follow-up, not this quest.
 
 Review findings (strata-journal-pin-durability.md):
 - F1 (blocking): fix strata:bb2f8a5a; test job 261123-235930-a76b46 (at-bound and bound + 1 cases kept, below lost);
-  mutant 261123-232616-f61ae7 (`<` to `<=` must fail t5b); the reviewer's probe at_bound.sh run at the
+  mutant 261124-000525-fb418d (`<` to `<=` must fail t5b); the reviewer's probe at_bound.sh run at the
   pre-fix strata:1cbb6e30, where it patches `<=` to `<` (it cannot patch the fixed commit): 261123-232624-4b30b6.
-- F2: witness route test 261123-235934-e3aa7b (bounded-witness), mutant 261123-232621-02d526.
+- F2: witness route test 261123-235934-e3aa7b (bounded-witness), mutant 261124-000529-7f92f7.
 - F3 hunt.md; F4 lost still goes to create (one-word follow-up); F5 index-delete's.
 
 ## Result
