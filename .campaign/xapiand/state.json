@@ -3876,6 +3876,319 @@
         "todo": "150e166b"
       },
       "text": "to do, critical path first:\ntodo: answer journal-replaces-wal (its journal waits on the lead: blocked on the lead: plain RESTORE in chores 66.5 s -> ~3-4 s (master ~1.3-2.3 s); the rest is the journal's full flushes per entry. Code at Xapiand:89a406c7f, no evidence jobs queued (round not ready by the lead's bar). See Blocked on.; it asks: 11. (2026-11-24, session 17) The plain RESTORE in chores is ~3-4 s at Xapiand:89a406c7f against master's ~1.3-2.3 s (A/B same hold; master's strict median 2.26 s), so the round misses the lead's bar on that row; the update row passes (3.7-7.0 s vs master 4.8-8.2 s, strict median 36.4 s). Of the fix\u2026; new): `campaign status journal-replaces-wal`, answer it (`campaign message journal-replaces-wal TEXT`), or park it with a reason\ntodo: finish index-restructure (nothing moved it for 5 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); listed 4 h): `campaign status index-restructure`"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T09:26:26",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T09:26:25",
+      "by": "lead",
+      "closed": "answered with probe 261124-092756-fa00e2: no Linux states lost (staged is durable at a Linux ordering point)",
+      "id": "msg-330",
+      "text": "Re msg-345: one check on faultlab:83fbde7's full-mode change (a full file sync settles other staged files). That's true of F_FULLFSYNC on macOS, which flushes the whole drive cache, but not of fsync or fdatasync on Linux and FreeBSD, where one file's sync persists only that file. Please confirm it applies only when sync_platform is macOS. Otherwise the crash model explores fewer states on Linux (R4a's {A,o} lost), and Detent's and journal's crash tests would get weaker without anyone seeing it. If it's macOS-only, nothing to do."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T09:49:24",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T09:49:23",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "noted: review-sweeps installed (agent-campaign:deeff81); already applied by hand",
+      "id": "msg-333",
+      "notice": "skill installed deeff8120ca3568c73345eac19a704101c91d772",
+      "text": "campaign skill: agent-campaign:deeff81 installed here, 8 commits: agent-campaign:b97af27 docs/v3: quests with nothing moving them, before and after lead-driver; agent-campaign:03aedc1 docs/v3: lead presence beside the idle hours; installs by window; agent-campaign:7b1e2b1 docs/v3: the lead-driver measurement script next to its page; agent-campaign:598db54 docs/v3: set usage-limit outages apart in the lead-driver measurement; agent-campaign:0f935e3 docs/v3: restate lead-driver's measurement with the outage set apart; agent-campaign:be73b75 review-sweeps: fix rounds sweep the class; failing probes stay blocking; agent-campaign:3222ea0 review-sweeps: a third fix round in the same mechanism runs; agent-campaign:deeff81 Prompts: fix rounds sweep a finding's class; lifecycle fixes get whole re-reviews"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T09:49:41",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T09:49:41",
+      "by": "kronuz",
+      "closed": "applied (memory third-fix-round); waiting for todo-mail-trust (parked quests keep files)",
+      "id": "msg-334",
+      "text": "campaign skill: agent-campaign:deeff81 installed (review-sweeps). The review rules from the legacy-h analysis now apply:\n1. A fix round that adds a mechanism or state machine starts with a lifecycle table (states x events), design-checked before code.\n2. Each finding's fix sweeps its class: every transition gets a value-checking test.\n3. A reviewer's failing probe stays blocking until root-caused to a finding with a fails-without; 'unreachable' is shown by a run, and the lead never relabels it.\n4. Once a finding lands in a lifecycle, the re-review covers the whole mechanism, not the diff.\n5. Every review of a critical quest, re-reviews included, launches at effort max.\n6. PLAN V5 (owner): when every earlier finding is fixed and the new one sits in the same mechanism, the lead runs the third fix round and informs the owner, without parking.\nNext to install: todo-mail-trust (a parked quest keeps its file set), then drain-yields and evidence-once."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T10:02:33",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T10:02:32",
+      "by": "campaign",
+      "closed": "journal-replaces-wal answered as msg-2 (its journal records it on the next round); index-restructure waits on the owner's members decision",
+      "id": "msg-335",
+      "settles": {
+        "todo": "8eb9c5b7"
+      },
+      "text": "to do, critical path first:\ntodo: answer journal-replaces-wal (its journal waits on the lead: blocked on the lead: plain RESTORE in chores 66.5 s -> ~3-4 s (master ~1.3-2.3 s); the rest is the journal's full flushes per entry. Code at Xapiand:89a406c7f, no evidence jobs queued (round not ready by the lead's bar). See Blocked on.; it asks: 11. (2026-11-24, session 17) The plain RESTORE in chores is ~3-4 s at Xapiand:89a406c7f against master's ~1.3-2.3 s (A/B same hold; master's strict median 2.26 s), so the round misses the lead's bar on that row; the update row passes (3.7-7.0 s vs master 4.8-8.2 s, strict median 36.4 s). Of the fix\u2026; listed 32 min): `campaign status journal-replaces-wal`, answer it (`campaign message journal-replaces-wal TEXT`), or park it with a reason\ntodo: finish index-restructure (nothing moved it for 5 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: check members is not green at cfa20b4191cc: failed (261124-025827-8a1219) (`campaign verify index-restructure`); listed 4 h): `campaign verify index-restructure`"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T10:29:29",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T10:29:29",
+      "by": "campaign",
+      "closed": "completion-flush-mode: fix round running after the durability review; journal-replaces-wal: answer recorded in its journal; index-restructure waits on the owner",
+      "id": "msg-336",
+      "settles": {
+        "todo": "172bf159"
+      },
+      "text": "to do, critical path first:\ntodo: resume completion-flush-mode (its journal waits on jobs 261124-091906-a47141, 261124-091911-31b2b6, 261124-091915-b8aea1, 261124-091919-537673, 261124-091923-20e986 and 261124-091927-b0b7d9, which passed 26 min ago; new): `campaign status completion-flush-mode`, read them, or park it with a reason\ntodo: answer journal-replaces-wal (its journal waits on the lead: blocked on the lead: plain RESTORE in chores 66.5 s -> ~3-4 s (master ~1.3-2.3 s); the rest is the journal's full flushes per entry. Code at Xapiand:2ea5d31e0, no evidence jobs queued (round not ready by the lead's bar). See Blocked on.; it asks: 11. (2026-11-24, session 17) The plain RESTORE in chores is ~3-4 s at Xapiand:89a406c7f against master's ~1.3-2.3 s (A/B same hold; master's strict median 2.26 s), so the round misses the lead's bar on that row; the update row passes (3.7-7.0 s vs master 4.8-8.2 s, strict median 36.4 s). Of the fix\u2026; listed 59 min): `campaign status journal-replaces-wal`, answer it (`campaign message journal-replaces-wal TEXT`), or park it with a reason\ntodo: finish index-restructure (nothing moved it for 6 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: check members is not green at cfa20b4191cc: failed (261124-025827-8a1219) (`campaign verify index-restructure`); listed 5 h): `campaign verify index-restructure`"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T11:01:33",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T11:01:33",
+      "by": "campaign",
+      "closed": "completion-flush-mode: fix round contributor running (journal not yet updated); index-restructure waits on the owner's members decision",
+      "id": "msg-337",
+      "settles": {
+        "todo": "01a6cc56"
+      },
+      "text": "to do, critical path first:\ntodo: resume completion-flush-mode (its journal waits on jobs 261124-091906-a47141, 261124-091911-31b2b6, 261124-091915-b8aea1, 261124-091919-537673, 261124-091923-20e986 and 261124-091927-b0b7d9, which passed 58 min ago; listed 32 min): `campaign status completion-flush-mode`, read them, or park it with a reason\ntodo: finish index-restructure (nothing moved it for 6 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: check members is not green at cfa20b4191cc: failed (261124-025827-8a1219) (`campaign verify index-restructure`); listed 5 h): `campaign verify index-restructure`"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T11:16:44",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T11:16:43",
+      "by": "kronuz",
+      "closed": "noted; journal-replaces-wal parked on journal-sync-mode now that parking keeps its files",
+      "id": "msg-338",
+      "text": "campaign skill: agent-campaign:4bbdcae installed (todo-mail-trust).\n1. A parked quest (status=blocked) with a branch now keeps its file set: parking on a dependency or the owner no longer frees its files to other quests. Only a planned or dropped quest frees them (xapiand msg-83, msg-71).\n2. The to-do mail is replaced at the next look whenever an item comes or goes, or its gap or command changes; a changing age or count alone does not resend. Expect one extra mail now: older mail records lack the new field.\n3. A quest with a worktree file changed in the last 15 min, or a commit after its last job ended, shows as working, not resume.\nKnown, next: set files= does not yet check overlaps (detent msg-87), and CI run ids in a journal read as ended jobs (detent msg-86)."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T11:16:50",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T11:16:50",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "noted: todo-mail-trust installed (agent-campaign:4bbdcae)",
+      "id": "msg-339",
+      "notice": "skill landed 4bbdcaec3769f7f0f71f4449f5b19d97331ece47",
+      "text": "campaign skill: 5 commits landed on agent-campaign's main, installed here: agent-campaign:2a1d6f8 todo-mail-trust: the to-do mail lists only what the lead can act on; agent-campaign:55e00c4 todo-mail-trust: read a branch head's commit time once per commit; agent-campaign:a6e2cb8 Merge branch 'main' into quest/campaign-v3/todo-mail-trust; agent-campaign:d48751d todo-mail-trust: commit after the job's end second in the A2 test; agent-campaign:4bbdcae Merge branch 'main' into quest/campaign-v3/todo-mail-trust"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T11:16:51",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T11:16:51",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "noted: todo-mail-trust installed (agent-campaign:4bbdcae)",
+      "id": "msg-340",
+      "notice": "skill installed 4bbdcaec3769f7f0f71f4449f5b19d97331ece47",
+      "text": "campaign skill: agent-campaign:4bbdcae installed here, 5 commits: agent-campaign:2a1d6f8 todo-mail-trust: the to-do mail lists only what the lead can act on; agent-campaign:55e00c4 todo-mail-trust: read a branch head's commit time once per commit; agent-campaign:a6e2cb8 Merge branch 'main' into quest/campaign-v3/todo-mail-trust; agent-campaign:d48751d todo-mail-trust: commit after the job's end second in the A2 test; agent-campaign:4bbdcae Merge branch 'main' into quest/campaign-v3/todo-mail-trust"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T11:17:36",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T11:17:36",
+      "by": "campaign",
+      "closed": "index-restructure waits on the owner's decision to drop its members check",
+      "id": "msg-341",
+      "settles": {
+        "todo": "0e746b29"
+      },
+      "text": "to do, critical path first:\ntodo: finish index-restructure (nothing moved it for 7 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: check members is not green at cfa20b4191cc: failed (261124-025827-8a1219) (`campaign verify index-restructure`); listed 6 h): `campaign verify index-restructure`"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T09:29:36",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T09:29:36",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-331",
+      "items": {
+        "index-delete": "frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete",
+        "more-like-this": "frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this"
+      },
+      "settles": {
+        "start": [
+          "index-delete",
+          "more-like-this"
+        ]
+      },
+      "text": "set journal-replaces-wal: unlocks frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete; frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T11:41:22",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T11:41:22",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-342",
+      "items": {
+        "index-delete": "frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete",
+        "journal-sync-mode": "journal-sync-mode (until completion-flush-mode, faultlab-plain-sync met: `campaign set journal-sync-mode status=active`)",
+        "more-like-this": "frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this"
+      },
+      "settles": {
+        "start": [
+          "index-delete",
+          "journal-sync-mode",
+          "more-like-this"
+        ]
+      },
+      "text": "completion-flush-mode landed: unlocks journal-sync-mode (until completion-flush-mode, faultlab-plain-sync met: `campaign set journal-sync-mode status=active`); frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete; frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T12:41:39",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T12:41:39",
+      "by": "lead",
+      "closed": "Xapiand already refreshes in waves (PLAN D45: audit, rewrite, one refresh per milestone close, final pass in release); the between-waves docs-check rule is a gate change, asked of the owner",
+      "id": "msg-344",
+      "text": "From Detent's lead, at the owner's request: Detent's public docs drifted from main between waves (how-it-works still says damaged-pack repair is in progress and compacted blocks are not built; both landed). Detent schedules full doc refreshes in waves at milestone boundaries (PLAN D44: wave 1 after the reader core and dense pages, wave 2 after the async drivers and RC-1, wave 3 after capacity and restoration, the last inside the release candidate); each wave is an audit quest, then one rewrite quest with a task per area, with the site as the E2E suite (D52, your method). The owner asks Xapiand to update its docs in waves the same way. Between waves, Detent adds one mechanical docs-check rule: a page that names a quest or step as in progress or not built fails once that quest has landed."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T13:24:12",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T13:24:12",
+      "by": "detent lead",
+      "closed": "rocksdb-parity's after drops detent:journal-open-single-read; journal-bound-first-open landed (journal:a2d65da)",
+      "id": "msg-346",
+      "origin": "detent",
+      "text": "detent:journal-open-single-read was dropped (superseded: journal-bound-first-open landed (journal:a2d65da) with the single read; device calls equal main's (292, 559; review Detent:8fed6364), open A/B f05db6 within main's spread; A2-A5 met by its jobs, doc and CI): your rocksdb-parity wait on it; it folds into journal-bound-first-open, which they now wait on"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T13:24:19",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T13:24:19",
+      "by": "lead",
+      "closed": "done: rocksdb-parity's after now journal-turn-sector-checks, journal-bound-first-open",
+      "id": "msg-347",
+      "text": "From Detent's lead: journal-open-single-read is dropped into journal-bound-first-open (landed journal:a2d65da, which already reads each log once: device calls equal main's). xapiand:rocksdb-parity's wait on it is satisfied by that landing."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T13:28:27",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T13:22:59",
+      "by": "lead",
+      "closed": "noted; journal-sync-mode lands with --merge-main after its durability review and CI",
+      "id": "msg-345",
+      "text": "From Detent's lead: journal-bound-first-open landed at journal:a2d65da (the verdict is durable before the open record; recovery reads each log once through TurnLogGroups::settle in turn_log.h). journal-sync-mode may land now; merge journal main first."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T14:16:39",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T14:16:39",
+      "by": "kronuz",
+      "closed": "noted: drain-yields installed (agent-campaign:5ab2eef); msg-318's hold on strict/exclusive lifted",
+      "id": "msg-348",
+      "text": "campaign skill: agent-campaign:5ab2eef installed (drain-yields). Exclusive and strict measurements may be queued again.\n1. A claimed drain no longer blocks light work while it waits for its quiet hold; once admitted it holds the machine as before.\n2. Drains are claimed one at a time in a lull; once drains fall due, every due one is claimed so a batch runs back to back.\n3. A priority -1 drain waits for a stretch with no queued work of higher priority.\nReplay of 2026-11-23/24 against main: idle light slot-minutes beside runnable work 2349 -> 2126 (-9.5%), drains over 60 min past due 2 -> 1 of 32, worst drain wait 76 -> 73 min. Modest, measured. Report any drain that waits far past its due time."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T14:16:47",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T14:16:47",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "noted: drain-yields installed (agent-campaign:5ab2eef)",
+      "id": "msg-349",
+      "notice": "skill landed 5ab2eef2c2a741d31b57d440fd5aa82833a51a42",
+      "text": "campaign skill: 9 commits landed on agent-campaign's main, installed here: agent-campaign:51faab2 Let light work run while a claimed drain waits for its turn; agent-campaign:048e9b0 Describe how a claimed drain waits for its turn; agent-campaign:2350013 Fill an overdue drain's wait only beside strict work; agent-campaign:95743f5 Give a due drain its turn ahead of strict work; agent-campaign:2d013b8 Hold far-running light work back while a drain holds the machine; agent-campaign:53bce4f Merge remote-tracking branch 'origin/main' into quest/campaign-v3/drain-yields; agent-campaign:a4bb8ac Start no light work while an admitted drain holds the machine; agent-campaign:7f29005 Merge remote-tracking branch 'origin/main' into quest/campaign-v3/drain-yields; agent-campaign:5ab2eef Claim every due drain while the first waits"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T14:16:48",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T14:16:48",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "noted: drain-yields installed (agent-campaign:5ab2eef)",
+      "id": "msg-350",
+      "notice": "skill installed 5ab2eef2c2a741d31b57d440fd5aa82833a51a42",
+      "text": "campaign skill: agent-campaign:5ab2eef installed here, 9 commits: agent-campaign:51faab2 Let light work run while a claimed drain waits for its turn; agent-campaign:048e9b0 Describe how a claimed drain waits for its turn; agent-campaign:2350013 Fill an overdue drain's wait only beside strict work; agent-campaign:95743f5 Give a due drain its turn ahead of strict work; agent-campaign:2d013b8 Hold far-running light work back while a drain holds the machine; agent-campaign:53bce4f Merge remote-tracking branch 'origin/main' into quest/campaign-v3/drain-yields; agent-campaign:a4bb8ac Start no light work while an admitted drain holds the machine; agent-campaign:7f29005 Merge remote-tracking branch 'origin/main' into quest/campaign-v3/drain-yields; agent-campaign:5ab2eef Claim every due drain while the first waits"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T14:29:38",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T14:29:38",
+      "by": "campaign",
+      "closed": "resumed: a fresh contributor runs the A3 memory fix round",
+      "id": "msg-351",
+      "settles": {
+        "todo": "029fc13c"
+      },
+      "text": "to do, critical path first:\ntodo: resume field-check-at-map (its journal waits on jobs 261124-122655-73d9cf, 261124-122659-a4de45, 261124-122702-df0b09, 261124-122705-fcbe11 and 261124-122723-cb483e, which ended (done, failed) 1 min ago; new): `campaign status field-check-at-map`, read them, or park it with a reason"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T11:50:31",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T11:50:31",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-343",
+      "items": {
+        "catalog-restructure": "frees docs/source-layout.md, CMakeLists.txt for catalog-restructure",
+        "field-check-at-map": "frees include/strata/core/index.hh, CMakeLists.txt for field-check-at-map",
+        "format-freeze": "frees test/** for format-freeze",
+        "index-delete": "frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete",
+        "more-like-this": "frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this",
+        "rocksdb-parity": "frees include/strata/core/**, test/**, docs/mechanisms/**, CMakeLists.txt for rocksdb-parity"
+      },
+      "settles": {
+        "start": [
+          "catalog-restructure",
+          "field-check-at-map",
+          "format-freeze",
+          "index-delete",
+          "more-like-this",
+          "rocksdb-parity"
+        ]
+      },
+      "text": "index-restructure landed: unlocks frees docs/source-layout.md, CMakeLists.txt for catalog-restructure; frees include/strata/core/index.hh, CMakeLists.txt for field-check-at-map; frees test/** for format-freeze; frees include/strata/core/**, test/**, docs/mechanisms/**, CMakeLists.txt for rocksdb-parity; frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete; frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this"
     }
   ],
   "quests": {
@@ -5142,22 +5455,57 @@
       "worktree": ""
     },
     "catalog-restructure": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-24T14:18:22",
+          "base": "cfa20b4191cc93ba7287d00e9b574f28ac31765b",
+          "blobs": {
+            "CMakeLists.txt": "100644:2986f67c0c9080090810760c82262a0012e176d2",
+            "docs/mechanisms/catalog-layout.md": "100644:b62f8b2b9eebb867fbd1f1d86058d532e54f0ee2",
+            "docs/source-layout.md": "100644:90ab5d3ce17bd8d6b59a1d8e208600a2afce4417",
+            "include/strata/core/catalog.hh": "100644:7fc4c81def61f2275939a258bde3c400ed84a758",
+            "include/strata/core/catalog_observe.hh": "100644:5ef9f4ae0dea07e08a5532936fcd1203914243e2",
+            "include/strata/core/catalog_pin.hh": "100644:efc1ae16a28a24cb454ccc5cb72828c926abe07a",
+            "include/strata/core/catalog_policy.hh": "100644:b1614617c3f4b7e7c07c917b12c1e2e77266129a",
+            "include/strata/core/catalog_s3fifo.hh": "100644:dba93a155ebc32708e216747cbe8387d11847f22",
+            "include/strata/core/catalog_table.hh": "100644:8167238fc8dce6c457f2c07405f8fcb31347af1b",
+            "include/strata/core/catalog_transitions.hh": "100644:9ec074ce0a5559d2e0c94515014e653a03214bd3",
+            "test/catalog_policy_test.cc": "100644:f35532ad5b420c3297568fcbf2e207ed5b893048"
+          },
+          "by": "review",
+          "commit": "218e92dba72e9cf57940bac75c64ba5ea803ff83",
+          "criteria": "33d7f95594a300b8",
+          "diffs": {
+            "CMakeLists.txt": "37364a86695f7c33",
+            "docs/mechanisms/catalog-layout.md": "fbbe8cd519cb094c",
+            "docs/source-layout.md": "d447b8870226d735",
+            "include/strata/core/catalog.hh": "f5dc6ebfe6a4c1cc",
+            "include/strata/core/catalog_observe.hh": "230a620e1f33c65f",
+            "include/strata/core/catalog_pin.hh": "4fabebdc3112522a",
+            "include/strata/core/catalog_policy.hh": "2aec2ed46759ffcc",
+            "include/strata/core/catalog_s3fifo.hh": "89582c4f3970cff1",
+            "include/strata/core/catalog_table.hh": "bcb395dca191ea62",
+            "include/strata/core/catalog_transitions.hh": "93ad1d0ef06a0dbd",
+            "test/catalog_policy_test.cc": "e215da9dbc41ad98"
+          },
+          "findings": {},
+          "note": "",
+          "review": "165adff38b4f463f0762bb183bac0e01e96dcd70",
+          "reviewed": "218e92dba72e9cf57940bac75c64ba5ea803ff83",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "split-check-members"
       ],
+      "base": "cfa20b4191cc93ba7287d00e9b574f28ac31765b",
+      "branch": "quest/xapiand/catalog-restructure",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
           "level": "light",
           "minutes": 45,
           "name": "build-test"
-        },
-        {
-          "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --members --base main include/strata/core",
-          "level": "light",
-          "minutes": 10,
-          "name": "members"
         }
       ],
       "consumes": [],
@@ -5167,8 +5515,44 @@
         "docs/source-layout.md",
         "docs/mechanisms/catalog-layout.md",
         "test/catalog_policy_test.cc",
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "docs/mechanisms/catalog.md"
       ],
+      "history": [
+        {
+          "at": "2026-11-24T12:43:46",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 45,
+                "name": "build-test"
+              },
+              {
+                "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --members --base main include/strata/core",
+                "level": "light",
+                "minutes": 10,
+                "name": "members"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 45,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "owner 2026-11-24 (D180, D178's rule): members proves step 1's pure move and passed there (261124-120328-f817d0 at strata:bb8f4834); step 2 changes moved bodies by design; step 2 is covered by build-test, TSan, the s3fifo unit cases and mutants, and the correctness review",
+          "voided": [],
+          "weakened": [
+            "gate check members removed"
+          ]
+        }
+      ],
+      "journal": "../Xapiand-wt/xapiand/catalog-restructure",
       "landed": [],
       "lenses": [
         "correctness"
@@ -5180,9 +5564,10 @@
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "review",
       "title": "strata's catalog: the 2,374-line class body by mechanism (pin protocol, slot transitions, eviction policy)",
-      "updated": "2026-11-21T22:24:11"
+      "updated": "2026-11-24T14:18:22",
+      "worktree": "../strata-wt/xapiand/catalog-restructure"
     },
     "catalog-stress-cap": {
       "accepted": {},
@@ -6099,7 +6484,7 @@
         "docs/status/closing-bench*.md",
         "docs/mechanisms/closing-harness.md",
         "docs/dev/testing.md",
-        "docs/src/content/docs/benchmarks.md",
+        "site/src/content/docs/benchmarks.md",
         "docs/perf/**",
         "CMakeLists.txt"
       ],
@@ -6118,7 +6503,7 @@
       "until": [
         "owner"
       ],
-      "updated": "2026-11-20T05:28:23"
+      "updated": "2026-11-24T12:41:18"
     },
     "cluster": {
       "accepted": {},
@@ -6192,14 +6577,14 @@
         "docs/mechanisms/cluster-membership.md",
         "docs/mechanisms/shard-groups.md",
         "docs/mechanisms/distributed-search.md",
-        "docs/src/content/docs/options.md",
-        "docs/src/content/docs/installation.md",
-        "docs/src/content/docs/architecture.md",
-        "docs/src/content/docs/faq.md",
-        "docs/src/content/docs/changelog.md",
-        "docs/src/content/docs/upgrade.md",
-        "docs/src/content/docs/reference-guide/**",
-        "docs/src/content/docs/tutorials/**",
+        "site/src/content/docs/options.md",
+        "site/src/content/docs/installation.md",
+        "site/src/content/docs/architecture.md",
+        "site/src/content/docs/faq.md",
+        "site/src/content/docs/changelog.md",
+        "site/src/content/docs/upgrade.md",
+        "site/src/content/docs/reference-guide/**",
+        "site/src/content/docs/tutorials/**",
         "CMakeLists.txt",
         "cmake/**",
         "docs/design/cluster-membership.md",
@@ -6507,7 +6892,7 @@
         "journal-replaces-wal",
         "consensus-join-v2"
       ],
-      "updated": "2026-11-24T01:16:08",
+      "updated": "2026-11-24T12:41:11",
       "worktree": "../Xapiand-wt/xapiand/cluster"
     },
     "cluster-api": {
@@ -7729,7 +8114,146 @@
       "updated": "2026-11-08T15:41:22"
     },
     "completion-flush-mode": {
-      "accepted": {},
+      "accepted": {
+        "durability": {
+          "at": "2026-11-24T11:40:48",
+          "base": "02ab67fd44f1f47eafe2e1eb8c4baf1576440a52",
+          "blobs": {
+            "ARCHITECTURE.md": "100644:547c9e78242a4db02efb30e5e0be43e87d68311f",
+            "CHANGELOG.md": "100644:d7476bd8552e87afa518322a4fdb0a948738b1b4",
+            "README.md": "100644:c4d5c52024a7604bd2968fa0ee98583be0b63735",
+            "bench/commit_probe.cc": "100644:66c37608236d76a7374c84ead3ba946ef2c8218a",
+            "bench/dirflush_probe.cc": "100644:6b0133be4279b490d5b61be3233ee5db899d776b",
+            "bench/lane_probe.cc": "100644:e75ec8d1799c38e60c0d1f0a3327f12ec52e5e0b",
+            "bench/sync_probe.cc": "100644:417545233f42b86e10cde5908918f30d35b93eb4",
+            "bench/unlink_probe.cc": "100644:3965b1fec0f4ba066d656faed3aaf92015c51c97",
+            "docs/PLATFORM_FINDINGS.md": "100644:063056afd57f601f1b3c09dfdf2c68327fc81fec",
+            "docs/mechanisms/barriers.md": "100644:4b97966dcb7a8cf121196853f6607e50ad7058b7",
+            "docs/mechanisms/commit-barriers.md": "100644:d652270c37e240afd5680e370701ea1d29df30a6",
+            "docs/mechanisms/flush-mode.md": "100644:2e4464c0841dcee7ceda508ab463acbf51584b7e",
+            "docs/mechanisms/sync-files.md": "100644:8b4a11e88f27fb07e4bdfadc91b240c3e2f02666",
+            "docs/source-layout.md": "100644:dc4506a3cf8c6f51d4e125eab84381e5a453f956",
+            "examples/demo.cc": "100644:b17f729328ab767a59c3c1b65118fbabdeac0fc6",
+            "include/completion/api.h": "100644:10e2c36d412c679304b994ab18f73b42863c49eb",
+            "include/completion/io.h": "100644:3353df6c5553220b6c9fb47a177162cd4ab8fd73",
+            "include/completion/posix.h": "100644:294b81439ea9b1bc66ce6567377dcedca57f2ca6",
+            "include/completion/posix_file.h": "100644:ee66ba14f78de41f87dabc05a3c9f54cd64ee9be",
+            "include/completion/posix_sync.h": "100644:2786783c9d7a90af66ead184a07888b7465cb60a",
+            "test/asio_extension_test.cc": "100644:20dbc36907d8200280a32e666390a411a52fa54e",
+            "test/check_seam.py": "100644:b74e6c1eb9ce5529f182e96ca4efd15d89ac6b61",
+            "test/core_test.cc": "100644:ca5de872a806a3db6d2d407c86d108e9740f379a",
+            "test/create_into_test.cc": "100644:9eaebbb14cc1f728e746d2a05655b11a535abc9b",
+            "test/cursor_close_test.cc": "100644:67dbb3591acc4458137d8cacc53c5d2dbdc09b7f",
+            "test/dir_lock_test.cc": "100644:d0d4f98d41d8fe7be1ecfcb74297da4c2a70b715",
+            "test/dir_trust_test.cc": "100644:23bad73d710fc39cea19a0ab9731f3101bf098de",
+            "test/image_close_test.cc": "100644:3f08245f23d724b209bfd43ba0d50c113a74259e",
+            "test/inspection_test.cc": "100644:a0bed8c690159363439a52792c793dbb40108163",
+            "test/map_test.cc": "100644:334bf7a276cf6d278451fb443d931a6e218fd63f",
+            "test/owner_lock_test.cc": "100644:6c411194237740e57b5eee6044e1bb20a2fd3d91",
+            "test/posix_resource_test.cc": "100644:2101854d2207c5b88edc41f5d556ef3b8a007936",
+            "test/reuse_test.cc": "100644:16022250bf4273fa29b79db060e928af456affcc",
+            "test/scan_test.cc": "100644:9007cd01098b23959eed7c79f0e9bf477ebe64ee",
+            "test/sync_calls_test.cc": "100644:9ace4b51c840c0199df24011ba4b8c03da4363b8",
+            "test/sync_data_test.cc": "100644:f7c76cb1ae3abdfd3f9bf8d3d265dc0ed5c3193a",
+            "test/sync_files_test.cc": "100644:0c7dda45f392e7a73840a9a7c134c96ff9a2fa88",
+            "test/sync_primitives_test.cc": "100644:d260d72b7875ad41b1448d6b85ba98bd2bd525e4",
+            "test/sync_seam_test.cc": "100644:055a10be7815732245f15e21cf9e097f01804b24",
+            "tools/mutants.py": "100644:7c36864c69a1d0c41d12688acb02d5af64b54b78"
+          },
+          "by": "review",
+          "commit": "b4600a82a8d30d4f63541d9c322a4ac5eceaee95",
+          "criteria": "2461652ed28d2d5e",
+          "diffs": {
+            "ARCHITECTURE.md": "f7832ce9eae17672",
+            "CHANGELOG.md": "2524519172fdf885",
+            "README.md": "926368b2cb7fdd54",
+            "bench/commit_probe.cc": "2870f9ef6526bbd0",
+            "bench/dirflush_probe.cc": "6a800d8d76a0a967",
+            "bench/lane_probe.cc": "457402f282e310bb",
+            "bench/sync_probe.cc": "11d6a73bbc6a19f9",
+            "bench/unlink_probe.cc": "05cc2db01e6b9603",
+            "docs/PLATFORM_FINDINGS.md": "3746648187bfefce",
+            "docs/mechanisms/barriers.md": "626c35bda859fed0",
+            "docs/mechanisms/commit-barriers.md": "29ecb979d767446d",
+            "docs/mechanisms/flush-mode.md": "369a34513c55209d",
+            "docs/mechanisms/sync-files.md": "3087eb30e5a94282",
+            "docs/source-layout.md": "dbe26d668b5cbe8e",
+            "examples/demo.cc": "cb766f44596f81ac",
+            "include/completion/api.h": "bad9cce679d4c837",
+            "include/completion/io.h": "9f4caf90cbdcbee9",
+            "include/completion/posix.h": "b5858060c0fc2a77",
+            "include/completion/posix_file.h": "34f28692c2da4be1",
+            "include/completion/posix_sync.h": "e8720d3b0e217b4d",
+            "test/asio_extension_test.cc": "e1cf95be5b94be04",
+            "test/check_seam.py": "00f3775171ed1d60",
+            "test/core_test.cc": "78dc1b9ee661d820",
+            "test/create_into_test.cc": "2f7c9b98b797635d",
+            "test/cursor_close_test.cc": "d05272e369af3995",
+            "test/dir_lock_test.cc": "440294e2a6b189de",
+            "test/dir_trust_test.cc": "3ac3cf913c2a1b96",
+            "test/image_close_test.cc": "426267b66cddd1d4",
+            "test/inspection_test.cc": "e7f0bc83b0ad3fce",
+            "test/map_test.cc": "33e4d0f1d3ee3798",
+            "test/owner_lock_test.cc": "c5eef3f4cd955a79",
+            "test/posix_resource_test.cc": "68f5ac2e826d64ec",
+            "test/reuse_test.cc": "58615a8e42a69e0a",
+            "test/scan_test.cc": "bbde0726c91cef44",
+            "test/sync_calls_test.cc": "ae3119ffc6eb78f1",
+            "test/sync_data_test.cc": "b0fbd58b9acc4f7a",
+            "test/sync_files_test.cc": "15775f59582eb101",
+            "test/sync_primitives_test.cc": "0880c33cdc7e7bf4",
+            "test/sync_seam_test.cc": "ebaaae318e0432ce",
+            "tools/mutants.py": "ad651caf935416a9"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "sh /Users/kronuz/code/Kronuz/Xapiand/.scratch/xapiand/review-completion-flush-mode-durability-r2/fresh_suite.sh",
+                  "commit": "b4600a82a8d30d4f63541d9c322a4ac5eceaee95",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261124-112648-36eb3f",
+                  "level": "light",
+                  "seconds": 115.2,
+                  "state": "done",
+                  "what": "durability re-review R2: fresh suite at b4600a8 with task and asio ON (25 tests, not the slot's 22)"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "F2": {
+              "jobs": [
+                {
+                  "cmd": "sh /Users/kronuz/code/Kronuz/Xapiand/.scratch/xapiand/review-completion-flush-mode-durability-r2/fresh_suite.sh",
+                  "commit": "b4600a82a8d30d4f63541d9c322a4ac5eceaee95",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261124-112648-36eb3f",
+                  "level": "light",
+                  "seconds": 115.2,
+                  "state": "done",
+                  "what": "durability re-review R2: fresh suite at b4600a8 with task and asio ON (25 tests, not the slot's 22)"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "fix_scope": {
+            "paths": [
+              "include/completion/io.h",
+              "test/check_seam.py"
+            ],
+            "reason": "the fix adds batch_fds and the seam table; the whole mechanism was re-reviewed at b4600a8 and approved in reviews/completion-flush-mode-durability-r2.md; F1/F2 tests (cross_backend, reusable) run in the full 25-test suite at b4600a8; the reviewer probes passed at b6f44b5 (12e18b, c05f38)"
+          },
+          "note": "",
+          "review": "8759cd29fbe12ad8189c23bc9437cb60340f838f",
+          "reviewed": "113cee91991e567729554d14f5716fa226e46e68",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "02ab67fd44f1f47eafe2e1eb8c4baf1576440a52",
       "branch": "quest/xapiand/completion-flush-mode",
@@ -7778,9 +8302,64 @@
         }
       ],
       "journal": "../Xapiand-wt/xapiand/completion-flush-mode",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-24T11:41:20",
+          "ci": {
+            "commit": "b4600a82a8d30d4f63541d9c322a4ac5eceaee95",
+            "runs": [
+              45468242235
+            ]
+          },
+          "commit": "b4600a82a8d30d4f63541d9c322a4ac5eceaee95",
+          "criteria": {
+            "A1": "261124-111516-8fc497; fails without: 261124-091906-a47141, 261124-091911-31b2b6, 261124-091915-b8aea1, 261124-091919-537673, 261124-110320-b7760e, 261124-110324-f3f38e, 261124-110328-fbd236, 261124-110332-cae4a1",
+            "A2": "261124-111516-8fc497; fails without: 261124-091923-20e986",
+            "A3": "261124-111527-641d3d",
+            "A4": "[artifact] completion `README.md` \"Flush modes\", `ARCHITECTURE.md` \"Flush modes\" (per site, per platform, per mode; power loss on macOS), `CHANGELOG.md` 2026-11-24, `docs/mechanisms/flush-mode.md`",
+            "A5": "ci:linux-asan-ubsan; `ci:linux-asan-ubsan` (CI on the pushed branch)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "b4600a82a8d30d4f63541d9c322a4ac5eceaee95",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261124-111516-8fc497",
+              "level": "light",
+              "seconds": 36.4,
+              "state": "done",
+              "what": "completion-flush-mode check build-test at b4600a82a8d3"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "b4600a82a8d30d4f63541d9c322a4ac5eceaee95",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "02ab67fd44f1f47eafe2e1eb8c4baf1576440a52",
+          "reason": "",
+          "tested": "b4600a82a8d30d4f63541d9c322a4ac5eceaee95"
+        }
+      ],
       "lenses": [
         "durability"
+      ],
+      "messages": [
+        {
+          "announced": {
+            "at": "2026-11-24T08:51:36",
+            "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+            "why": ""
+          },
+          "answered": "b4600a82a8d3",
+          "at": "2026-11-24T08:51:36",
+          "by": "xapiand-lead",
+          "id": "msg-1",
+          "text": "From the lead: faultlab-plain-sync (faultlab:eefba53) added faultfs's own flush_mode enum and a per-platform call table (call_for, persists in faultlab types.h) mirroring PosixIO's. Keep your mode enum and call choice in one obvious place in completion (one function from mode+site to call) and name it in your journal, so faultlab can adopt it in a follow-up instead of keeping a copy."
+        }
       ],
       "milestone": "Phase 7b",
       "needs": [],
@@ -7789,9 +8368,9 @@
       ],
       "repo": "../completion",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "completion: PosixIO takes a required flush mode (plain or full) for every sync it issues",
-      "updated": "2026-11-24T09:23:58",
+      "updated": "2026-11-24T11:41:22",
       "worktree": "../completion-wt/xapiand/completion-flush-mode"
     },
     "completion-task-pin": {
@@ -12885,6 +13464,8 @@
     "field-check-at-map": {
       "accepted": {},
       "after": [],
+      "base": "cfa20b4191cc93ba7287d00e9b574f28ac31765b",
+      "branch": "quest/xapiand/field-check-at-map",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -12900,8 +13481,12 @@
         "test/field_check_map_test.cc",
         "test/CMakeLists.txt",
         "CMakeLists.txt",
-        "docs/mechanisms/field-check.md"
+        "docs/mechanisms/field-check.md",
+        "include/strata/core/index_open.hh",
+        "bench/eager_open/**",
+        "docs/perf/eager-open.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/field-check-at-map",
       "landed": [],
       "lenses": [
         "correctness"
@@ -12911,9 +13496,10 @@
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "strata checks a segment's field ids wherever it maps",
-      "updated": "2026-11-21T11:43:36"
+      "updated": "2026-11-24T12:38:17",
+      "worktree": "../strata-wt/xapiand/field-check-at-map"
     },
     "field-table": {
       "accepted": {},
@@ -16972,7 +17558,7 @@
     "index-restructure": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-24T03:14:20",
+          "at": "2026-11-24T11:50:00",
           "base": "7a4284c4cdb2511d9a69613acd73ed6be36b8335",
           "blobs": {
             "CMakeLists.txt": "100644:e84313f49ac7f65bb00002ca61faf6099b643947",
@@ -16998,7 +17584,7 @@
           },
           "by": "review",
           "commit": "cfa20b4191cc93ba7287d00e9b574f28ac31765b",
-          "criteria": "7c2de09e855b3942",
+          "criteria": "3c36bf00acdc55d0",
           "diffs": {
             "CMakeLists.txt": "626352b52f924694",
             "docs/mechanisms/index-layout.md": "c1389ab3beb5c9f3",
@@ -17041,12 +17627,6 @@
           "level": "light",
           "minutes": 45,
           "name": "build-test"
-        },
-        {
-          "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --members --base main include/strata/core",
-          "level": "light",
-          "minutes": 10,
-          "name": "members"
         }
       ],
       "consumes": [],
@@ -17090,23 +17670,91 @@
           "reason": "",
           "voided": [],
           "weakened": []
+        },
+        {
+          "at": "2026-11-24T11:48:37",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 45,
+                "name": "build-test"
+              },
+              {
+                "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --members --base main include/strata/core",
+                "level": "light",
+                "minutes": 10,
+                "name": "members"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 45,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "owner 2026-11-24 (took the lead's recommendation): members proves step 1 is a pure move against main; step 2 changes moved bodies by design (ledger_ extraction), so it cannot pass at the quest head. A2 keeps its evidence at step 1's commit strata:351eebc5 (261124-020132-e99917: 202 definitions moved, 0 warnings); step 2 is covered by build-test, the subobject tests and mutants (A3) and the correctness review",
+          "voided": [
+            "correctness"
+          ],
+          "weakened": [
+            "gate check members removed"
+          ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/index-restructure",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-24T11:50:19",
+          "ci": {
+            "commit": "cfa20b4191cc93ba7287d00e9b574f28ac31765b",
+            "runs": [
+              45379651676
+            ]
+          },
+          "commit": "cfa20b4191cc93ba7287d00e9b574f28ac31765b",
+          "criteria": {
+            "A1": "261124-025827-57b6da (the build-test check), 261124-025827-57b6da",
+            "A2": "D178 (step 1's members, fnsizes and selfcontained proofs at strata:351eebc5 are listed there)",
+            "A3": "261124-034954-48d9cb; fails without: 261124-025159-f8ed6f, 261124-025203-ff830f, 261124-025207-4882f1, 261124-025211-9ae8da",
+            "A4": "strata docs/source-layout.md, docs/mechanisms/index-layout.md (strata:3db2a49e)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "cfa20b4191cc93ba7287d00e9b574f28ac31765b",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261124-025827-57b6da",
+              "level": "light",
+              "seconds": 1892.4,
+              "state": "done",
+              "what": "index-restructure check build-test at cfa20b4191cc"
+            }
+          ],
+          "final": true,
+          "from": "7a4284c4cdb2511d9a69613acd73ed6be36b8335",
+          "reason": "",
+          "tested": "cfa20b4191cc93ba7287d00e9b574f28ac31765b"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
-      "reason": "",
       "repo": "../strata",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "strata's index.hh: basic_index's 5,309-line class body split by mechanism",
-      "updated": "2026-11-24T04:35:03",
-      "worktree": "../strata-wt/xapiand/index-restructure"
+      "updated": "2026-11-24T11:50:31",
+      "worktree": ""
     },
     "index-subobjects": {
       "accepted": {},
@@ -17667,7 +18315,7 @@
         "tests/test_journal_replay.cc",
         "harness/journal_replay_check.sh",
         "src/database/command.h",
-        "docs/src/content/docs/tests/coverage.md",
+        "site/src/content/docs/tests/coverage.md",
         "src/xapiand_scheduler_trace.h",
         "src/logger_fwd.h",
         "src/debounce_or_run.h",
@@ -17676,10 +18324,10 @@
         "config.h.in",
         "AGENTS.md",
         "README.md",
-        "docs/src/content/docs/building.md",
-        "docs/src/content/docs/options.md",
-        "docs/src/content/docs/architecture.md",
-        "docs/src/content/docs/changelog.md",
+        "site/src/content/docs/building.md",
+        "site/src/content/docs/options.md",
+        "site/src/content/docs/architecture.md",
+        "site/src/content/docs/changelog.md",
         "src/log.h",
         "src/metrics.h",
         "src/metrics.cc",
@@ -17694,19 +18342,19 @@
         "tests/test_engine_replay.cc",
         "tests/test_quarantine.cc",
         "tests/test_coverage_database.cc",
-        "docs/src/content/docs/reference-guide/wal.md",
-        "docs/src/content/docs/reference-guide/api.md",
-        "docs/src/content/docs/about.md",
-        "docs/src/content/docs/basics.md",
-        "docs/src/content/docs/manipulation.md",
-        "docs/src/content/docs/reference-guide/indexes/backups.md",
-        "docs/src/content/docs/architecture/dependencies.md",
-        "docs/src/content/docs/architecture/internals.md",
+        "site/src/content/docs/reference-guide/wal.md",
+        "site/src/content/docs/reference-guide/api.md",
+        "site/src/content/docs/about.md",
+        "site/src/content/docs/basics.md",
+        "site/src/content/docs/manipulation.md",
+        "site/src/content/docs/reference-guide/indexes/backups.md",
+        "site/src/content/docs/architecture/dependencies.md",
+        "site/src/content/docs/architecture/internals.md",
         "docs/mechanisms/wal-replay.md",
         "harness/stored_stream.sh",
         "src/server/search_views.h",
-        "docs/astro.config.*",
-        "docs/src/sidebar*",
+        "site/astro.config.*",
+        "site/src/sidebar*",
         "docs/dev/cr1-replay.md",
         "docs/dev/docs-site-audit.md",
         "docs/dev/testing.md",
@@ -17727,8 +18375,8 @@
         "ARCHITECTURE.md",
         "src/xapiand_storage_trace.h",
         "assets/runtime.svg",
-        "docs/src/content/docs/reference-guide/documents/get-api.md",
-        "docs/src/content/docs/reference-guide/search/search-api.md",
+        "site/src/content/docs/reference-guide/documents/get-api.md",
+        "site/src/content/docs/reference-guide/search/search-api.md",
         "docs/dev/agent-codebase.md",
         "src/database/data.*"
       ],
@@ -17934,6 +18582,20 @@
       "lenses": [
         "durability"
       ],
+      "messages": [
+        {
+          "announced": {
+            "at": "2026-11-24T09:30:12",
+            "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+            "why": ""
+          },
+          "at": "2026-11-24T09:30:12",
+          "by": "xapiand-lead",
+          "closed": "recorded in its journal by the lead",
+          "id": "msg-2",
+          "text": "From the lead, answer to Blocked on 11: (a) with (c). Owner decision D177 makes the journal open plain (fsync) on macOS like master; it lands as completion-flush-mode -> journal-sync-mode, and this quest is ordered after journal-sync-mode. The bar is measured like for like after that pin moves. Not (b). The 2-flushes-per-proposal and artifact-path findings are hunt rows for Detent's review. docs/dev/agent-codebase.md and src/database/data.* are now in the file set (items 6 and 7). Next round: a fresh contributor after journal-sync-mode lands bumps the pins, does items 6 and 7, and queues evidence once."
+        }
+      ],
       "milestone": "Phase 7b",
       "needs": [
         "cluster-harness",
@@ -17946,9 +18608,10 @@
         "xapiand:restore-batch",
         "xapiand:ack-read-levels"
       ],
+      "reason": "fix at Xapiand:162631658; plain RESTORE gap is the journal's full flushes; measured like for like after journal-sync-mode (D177 plain mode); a fresh contributor then bumps pins, reruns test_loop_yield, does items 6-7, queues evidence once",
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "blocked",
       "tasks": {
         "chunks": {
           "base": "7e232b1f71688995bd97437c563b254d5a8e5b34",
@@ -17984,7 +18647,10 @@
         }
       },
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-24T09:29:50",
+      "until": [
+        "journal-sync-mode"
+      ],
+      "updated": "2026-11-24T12:41:04",
       "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal"
     },
     "journal-seal-repeat": {
@@ -18085,7 +18751,72 @@
       "worktree": ""
     },
     "journal-sync-mode": {
-      "accepted": {},
+      "accepted": {
+        "durability": {
+          "at": "2026-11-24T14:31:39",
+          "base": "4eb8165a4311a3ffe1307c07dd0df35321d4f91f",
+          "blobs": {
+            "ARCHITECTURE.md": "100644:f6fd84133c7cb3f97e933529dd7d65f5f8f9e2fb",
+            "CHANGELOG.md": "100644:8e1de61e8dde3b95a2ccb7e9d828d4aee6ba9d4e",
+            "CMakeLists.txt": "100644:b8dcb02292209632b1e1a6c91a634c871db2efd9",
+            "README.md": "100644:c0fefba718eab5ebb68848f59362ad8d187c8194",
+            "bench/bench.cc": "100644:12fbad982be38cdf3e1006ef5e3a59c7923627e0",
+            "bench/checkpoint_bench.cc": "100644:c886887ca23f14957ad13bc37e37c6e0e8e01e25",
+            "bench/completion_bench.cc": "100644:663e19420ee0e538d46000d84609eeebacb352ac",
+            "bench/flush_mode_ab.sh": "100755:430f96b932f1a288d2f42d3a3e1e717a81fd7c6f",
+            "bench/idle_cost.cc": "100644:418799e3f448b5885c57cec0e05ed281cfbc24f3",
+            "bench/reclaim_bench.cc": "100644:6ead574fc0905543a40c509041c537f956515420",
+            "bench/turn_bench.cc": "100644:8819a8ceac0fdc23bdfd18c9b249f02ef19cac43",
+            "docs/mechanisms/sync-mode.md": "100644:c4a02964473dfe7af569dee5948f108933bc1063",
+            "examples/demo.cc": "100644:e2834fc03d7952e6f6070ce83a196d771a7edd4e",
+            "test/completion_test.cc": "100644:da4943336f58f349c84072637b8d29158152d899",
+            "test/crc_fixture_test.cc": "100644:1e5d34e1f21602f5f2b6cd9c74df8447eb248c14",
+            "test/host_test.cc": "100644:a6536647fa18a5d5411fc17196ebcced7aca41f6",
+            "test/inventory_test.cc": "100644:f8d6e8e46a0474b8454ae45bc8bb9fc0760fb1ea",
+            "test/journal_test.cc": "100644:80dff027cf56490a058bebca6556efdd5d1d5c06",
+            "test/linux_completion_test.cc": "100644:52911ba4c4ebafc460e028dea69b9e46d32eb293",
+            "test/sync_mode_test.cc": "100644:90b4d51c1569da6b425791501d7037485be7f0b9",
+            "test/sync_seam_test.cc": "100644:5978d903880590ecc4785512227d2630e76a33a1",
+            "test/turn_log_power_test.cc": "100644:548c16286d2a1a6659fe2b1ab65b9d849ac254ba",
+            "test/turn_log_test.cc": "100644:04aff96c67a9f22d8f12fcad42a88325a6108534",
+            "test/turn_seal_test.cc": "100644:151f3807c9bf452d1ae8712867df9c705935a95a"
+          },
+          "by": "review",
+          "commit": "fe050d1fdfa59512a3455eb1e1c51e4808da6167",
+          "criteria": "87bf92608daa9c2e",
+          "diffs": {
+            "ARCHITECTURE.md": "45f7013aec0ad392",
+            "CHANGELOG.md": "3bbafc6e30267368",
+            "CMakeLists.txt": "f4bc8a1b3f93743b",
+            "README.md": "b82622211788d1a7",
+            "bench/bench.cc": "7dddb92244b9effe",
+            "bench/checkpoint_bench.cc": "0396e8488f651775",
+            "bench/completion_bench.cc": "e0d11e32c0b63316",
+            "bench/flush_mode_ab.sh": "23edbd9abf9ead90",
+            "bench/idle_cost.cc": "f2926f72f2b9e344",
+            "bench/reclaim_bench.cc": "0d0e39b2725a6b6b",
+            "bench/turn_bench.cc": "18d614e5d7d515c2",
+            "docs/mechanisms/sync-mode.md": "97c83fea8089ecbd",
+            "examples/demo.cc": "2348932e797fc648",
+            "test/completion_test.cc": "77e717267f2067c5",
+            "test/crc_fixture_test.cc": "c9b0aed3105532e4",
+            "test/host_test.cc": "cd96c755a678365a",
+            "test/inventory_test.cc": "48124d9ce03f4547",
+            "test/journal_test.cc": "8a33ea173eef28c1",
+            "test/linux_completion_test.cc": "ba9f073b2482adf0",
+            "test/sync_mode_test.cc": "e47cb2fbee79125d",
+            "test/sync_seam_test.cc": "4c70dd0fea56f775",
+            "test/turn_log_power_test.cc": "c41b88fac2ca0b21",
+            "test/turn_log_test.cc": "5a65fbade717f55f",
+            "test/turn_seal_test.cc": "07bab4e278a58d21"
+          },
+          "findings": {},
+          "note": "",
+          "review": "56927221a40bb0c24dc78bdb23827fa7587d1efd",
+          "reviewed": "fe050d1fdfa59512a3455eb1e1c51e4808da6167",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "completion-flush-mode",
         "faultlab-plain-sync",
@@ -18139,25 +18870,59 @@
         }
       ],
       "journal": "../Xapiand-wt/xapiand/journal-sync-mode",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-24T15:43:26",
+          "ci": {
+            "carried": true,
+            "commit": "fe050d1fdfa59512a3455eb1e1c51e4808da6167",
+            "runs": [
+              45480924916
+            ]
+          },
+          "commit": "fc5c59b492ff8275ab8be4aa9599c6ca2ae97859",
+          "criteria": {
+            "A1": "261124-153310-8264e0; fails without: 261124-122720-bcba79",
+            "A2": "261124-153311-ff7f0e; fails without: 261124-122716-1b2259",
+            "A3": "261124-153310-8264e0",
+            "A4": "[artifact] journal:3d7481e README.md (Highlights, \"Flush modes\"), ARCHITECTURE.md (\"POSIX backend and the durability model\"), CHANGELOG.md 2026-11-24, docs/mechanisms/sync-mode.md",
+            "A5": "261124-153311-6472f1",
+            "A6": "261124-153310-8264e0"
+          },
+          "evidence": [
+            {
+              "check": "suite",
+              "ci": "ci:macos-arm64",
+              "commit": "fe050d1fdfa59512a3455eb1e1c51e4808da6167",
+              "state": "done"
+            },
+            {
+              "check": "ci",
+              "ci": "ci:ci",
+              "commit": "fe050d1fdfa59512a3455eb1e1c51e4808da6167",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "a2d65da45e72f142695934bd605910e60fd1d3cd",
+          "reason": "",
+          "tested": "fc5c59b492ff8275ab8be4aa9599c6ca2ae97859"
+        }
+      ],
       "lenses": [
         "durability"
       ],
+      "messages": [],
       "milestone": "Phase 7b",
       "needs": [],
       "provides": [
         "journal:sync-mode"
       ],
-      "reason": "re-scoped: completion issues every sync and faultlab models it; this quest wires them after both land",
       "repo": "/Users/kronuz/code/Kronuz/journal",
       "risk": "high",
-      "status": "blocked",
+      "status": "landed",
       "title": "journal: the caller chooses the sync mode at open (plain fsync or full flush on macOS)",
-      "until": [
-        "completion-flush-mode",
-        "faultlab-plain-sync"
-      ],
-      "updated": "2026-11-24T08:10:31",
+      "updated": "2026-11-24T15:43:29",
       "worktree": "../journal-wt/xapiand/journal-sync-mode"
     },
     "journal-turn-buffers": {
@@ -28663,8 +29428,7 @@
       "accepted": {},
       "after": [
         "detent:journal-turn-sector-checks",
-        "detent:journal-bound-first-open",
-        "detent:journal-open-single-read"
+        "detent:journal-bound-first-open"
       ],
       "checks": [
         {
@@ -28701,7 +29465,7 @@
       "risk": "high",
       "status": "planned",
       "title": "strata matches or beats RocksDB on every gate row",
-      "updated": "2026-11-24T06:48:52"
+      "updated": "2026-11-24T13:24:26"
     },
     "rocksdb-spec": {
       "accepted": {},

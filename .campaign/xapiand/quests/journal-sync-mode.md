@@ -57,6 +57,13 @@ mode at open. All callers are ours: Detent and Xapiand migrate in their own ques
 - Lead: the separate finding that a lone voter makes two full flushes per proposal (hunt list) is
   not in this quest; it touches the turn log's commit protocol and gets its own quest.
 
+- Lead, 2026-11-24 (session 2's finding): the mode lives where completion put it, in
+  `PosixIOOptions`, and a Host follows its IO; host.h does not change. msg-325's premise that Detent
+  never builds a PosixIO is false: Detent builds them in src/detent_authority/service.cc:1835-1851,
+  src/detent_local/disk_store.cc:467, src/detent_relay/mirror_service.cc:364, benchmarks and
+  consensus's bench/netlab/node.cc:211. One mechanism, one place: a second mode at host open could
+  disagree with its IO's. Detent's lead is told with the call shape before landing.
+
 ## May land early
 
 Nothing: the API change and the durability model land together.

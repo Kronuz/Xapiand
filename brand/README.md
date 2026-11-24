@@ -1,7 +1,7 @@
 # Brand
 
 `logo.svg` is the vector Xapiand logo: a green rounded hexagon with three stacked white layers,
-inside a white rim. It redraws the 180×230 raster `docs/src/assets/logo.png` as exact geometry,
+inside a white rim. It redraws the 180×230 raster `site/src/assets/logo.png` as exact geometry,
 measured from that raster's pixels, in three paths: `rim`, `hexagon` and `layers`. Its origin is
 the hexagon's center, in the raster's pixel units.
 
@@ -33,5 +33,5 @@ every variant from the master into `variants/<name>/`, rasterizing each PNG once
 | `dark` | No rim, so no white halo on a dark page; tiles `#1a1a1a` | Dark pages |
 
 `light` is the live logo. The docs site serves its logo, favicons and touch icons
-(`docs/src/assets/logo-light.svg`, `docs/public/`), and `dark`'s logo on dark pages
-(`docs/src/assets/logo-dark.svg`); copy them again after `build-icons.mjs` changes a variant.
+(`site/src/assets/logo-light.svg`, `site/public/`), and `dark`'s logo on dark pages
+(`site/src/assets/logo-dark.svg`); copy them again after `build-icons.mjs` changes a variant.

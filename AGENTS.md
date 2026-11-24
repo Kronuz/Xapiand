@@ -54,10 +54,10 @@ Other agents and benchmarks run on this machine; a compile during a measurement 
   (`src/manager.*`). Library seams are `src/xapiand_*_trace.h`.
 - `docs/dev/` holds developer pages; [docs/dev/agent-codebase.md](docs/dev/agent-codebase.md) has the code
   map, conventions, load-bearing invariants and traps. `docs/design/` and `docs/reviews/` hold designs
-  and their reviews; `docs/src/content/docs/` is the user-facing site and feeds the docs-as-E2E suite.
-- `docs/discussions/` is a vendored copy of the Kronuz Discussions package, byte-identical with
-  `~/code/KronuzBlog/Kronuz.github.io/discussions` and `~/code/KronuzBlog/gmendezb-pages/discussions`.
-  Change one source tree, sync the whole directory, verify all three copies.
-- The docs site uses the pinned `@kronuz/starlight-core` package for shared chrome, plugins, and styles. Its reading controls (text size, search, image zoom, editor links) are described in
+  and their reviews; `site/src/content/docs/` is the user-facing site and feeds the docs-as-E2E suite.
+- [Kronuz Discussions](https://github.com/Kronuz/discussions) owns the comment
+  component and Worker. Xapiand does not mount comments.
+- The site in `site/` uses the pinned `@kronuz/starlight-core` package for shared
+  chrome, plugins, and styles. Its reading controls are described in
   [docs/dev/agent-docs-site.md](docs/dev/agent-docs-site.md).
-- The changelog is `docs/src/content/docs/changelog.md` (`CHANGELOG` links to it), curated and user-facing.
+- The changelog is `site/src/content/docs/changelog.md` (`CHANGELOG` links to it), curated and user-facing.

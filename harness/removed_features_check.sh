@@ -29,7 +29,7 @@ for ENG in strata; do
   "$BIN" --port $PORT --name rf -D "$D/$ENG" >"$D/$ENG.log" 2>&1 & P=$!
   for _ in $(seq 60); do curl -s -m2 -o /dev/null localhost:$PORT/ && break; sleep .5; done
   U=localhost:$PORT
-  curl -s -o /dev/null -XRESTORE "$U/bank/" -H 'Content-Type: application/x-ndjson' --data-binary @"$HERE/docs/public/assets/accounts.ndjson"
+  curl -s -o /dev/null -XRESTORE "$U/bank/" -H 'Content-Type: application/x-ndjson' --data-binary @"$HERE/site/public/assets/accounts.ndjson"
   curl -s -o /dev/null -XPOST "$U/bank/:commit"
   code() { curl -s -o "$D/out" -w '%{http_code}' "$@"; }
   chk() { if [ "$2" = "$3" ]; then echo "ok   $ENG $1"; else echo "FAIL $ENG $1: got $3, want $2"; rc=1; fi; }

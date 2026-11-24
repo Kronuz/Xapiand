@@ -117,7 +117,7 @@ Throughput units ran one at a time under `quiet exclusive`; the other rows under
    match (`engine::CHECK_ALL`). Base counted only the documents its match spy was shown and reports `total` as a match estimate; ours checks all
    matches, so `_doc_count` and `total` are the true count where they changed.
 5. The bank estimate, `_and [gender female, age 20..30]`: base `total` 459 (run 1 ours 400), now 232 with `_doc_count` 232.
-   A brute-force count over `docs/public/assets/accounts.ndjson` gives 232 (953 rows), so 232 is the true match count and the
+   A brute-force count over `site/public/assets/accounts.ndjson` gives 232 (953 rows), so 232 is the true match count and the
    old 459 and 400 were estimates. Unchanged requests (`_doc_count` 349, 211, 461, 232 on both) confirm the base is exact
    when the query's matches are all checked.
 

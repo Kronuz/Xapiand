@@ -1,6 +1,6 @@
 import sys, os, time, shutil, subprocess, http.client, resource
 repo = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip()
-lines = [l for l in open(os.path.join(repo, 'docs/public/assets/accounts.ndjson'), 'rb').read().split(b'\n') if l.strip()]
+lines = [l for l in open(os.path.join(repo, 'site/public/assets/accounts.ndjson'), 'rb').read().split(b'\n') if l.strip()]
 body = b'\n'.join(lines * 20) + b'\n'
 out = sys.argv[1]; port = 18990
 for r in range(int(sys.argv[2])):

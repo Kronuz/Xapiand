@@ -57,6 +57,6 @@ NODE=$!
 cleanup() { kill "$NODE" 2>/dev/null; wait "$NODE" 2>/dev/null; rm -rf "$DATA"; }
 trap cleanup EXIT
 for _ in $(seq 1 120); do curl -s "localhost:18993/" > /dev/null && break; sleep 0.5; done
-python3 "$HERE/loadtest.py" --target localhost:18993 --dataset "$REPO/docs/public/assets/accounts.ndjson" --replicate 20 \
+python3 "$HERE/loadtest.py" --target localhost:18993 --dataset "$REPO/site/public/assets/accounts.ndjson" --replicate 20 \
 	--concurrency 16 --duration 8 --trials 3 --datadir "$DATA" --out "$OUT/loadtest.json" > "$OUT/loadtest.log" 2>&1; echo "exit $? in $(( $(T) - t0 )) s"
 echo finished

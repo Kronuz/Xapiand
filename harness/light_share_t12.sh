@@ -36,7 +36,7 @@ for arm in "$@"; do
 	D="$OUT/lt.data"; rm -rf "$D"; mkdir -p "$D"
 	"$b" --port 18993 --name bench -D "$D" > "$OUT/lt-$i-$arm.node.log" 2>&1 & N=$!
 	for _ in $(seq 120); do curl -s localhost:18993/ > /dev/null && break; sleep 0.5; done
-	python3 "$HERE/loadtest.py" --target localhost:18993 --dataset "$REPO/docs/public/assets/accounts.ndjson" --replicate 20 \
+	python3 "$HERE/loadtest.py" --target localhost:18993 --dataset "$REPO/site/public/assets/accounts.ndjson" --replicate 20 \
 		--concurrency 16 --duration 8 --trials 1 --datadir "$D" --label "$arm" --out "$OUT/lt-$i-$arm.json" > "$OUT/lt-$i-$arm.log" 2>&1
 	rc=$?; echo "arm $i $arm rc $rc"; [ $rc -eq 0 ] || FAILED=1; grep -h "\[index\]\|\[query\]" "$OUT/lt-$i-$arm.log"
 	kill $N 2>/dev/null; wait $N 2>/dev/null

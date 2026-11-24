@@ -21,7 +21,7 @@
 
 """sort_range_identity.py OLD NEW ASSETS FILES SHA256: the switch keeps every sort and range answer (design T5).
 
-Restores accounts and cities (ASSETS, docs/public/assets) and the frozen file-metadata corpus FILES (a gzipped
+Restores accounts and cities (ASSETS, site/public/assets) and the frozen file-metadata corpus FILES (a gzipped
 ndjson whose content must have sha256 SHA256) on each binary, then runs, with a fixed seed, ascending and
 descending sorts of every numeric and datetime field, 1,000 ranges over them (bounds drawn from the values and
 between them, integer and float bounds on every numeric type) and a geo set over cities (circles, and sorts
@@ -30,7 +30,7 @@ by distance). An answer is the hit ids in order (a sort) or as a set (a range).
 Each NEW answer must equal the OLD one, or differ only where brute force says OLD was wrong and NEW is right;
 geo answers have no brute force here and must be equal. Prints the counts and exits 1 on any other answer.
 
-  python3 tests/sort_range_identity.py old/bin/xapiand build/bin/xapiand docs/public/assets files.ndjson.gz SHA
+  python3 tests/sort_range_identity.py old/bin/xapiand build/bin/xapiand site/public/assets files.ndjson.gz SHA
 """
 
 from __future__ import annotations

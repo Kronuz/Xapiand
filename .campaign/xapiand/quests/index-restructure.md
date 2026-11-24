@@ -32,7 +32,7 @@ Two steps, each landable alone:
 
 - A1 The suite passes at each step's head: the `build-test` check, plus CI on every platform with
   sanitizers ([ci])
-- A2 Step 1 changes no code: the `members` check (split_check's member mode, from quest
+- A2 [decision] Step 1 changes no code: the `members` check (split_check's member mode, from quest
   split-check-members) passes, and the journal answers each warning. A
   Release+LTO `tools/fnsizes.sh` diff of strata's test binaries, base against step 1, shows no
   function whose size changed, or each difference explained in the journal

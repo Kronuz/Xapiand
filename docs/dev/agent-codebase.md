@@ -6,8 +6,8 @@ Detail moved out of AGENTS.md: where code lives, conventions, invariants and tra
 
 Documentation outside the root's README, AGENTS, and ARCHITECTURE goes under `docs/`:
 designs in `docs/design/`, their architect reviews in `docs/reviews/`, and developer guides
-(testing) in `docs/dev/`. The user-facing site is `docs/src/`, and only
-`docs/src/content/docs/` feeds the docs-as-E2E suite.
+(testing) in `docs/dev/`. The user-facing site is `site/src/`, and only
+`site/src/content/docs/` feeds the docs-as-E2E suite.
 
 | You're touching… | Start in |
 |---|---|

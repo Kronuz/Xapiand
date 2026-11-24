@@ -1,20 +1,18 @@
 name: Deploy Docs to Pages
 
-# Build the Astro/Starlight docs site (docs/) and deploy it to GitHub Pages. This
-# replaces GitHub's automatic Jekyll build (the old docs/ was Jekyll; it now holds the
-# Astro project). NOTE: this requires the repo's Pages "Source" to be set to
-# "GitHub Actions" (Settings -> Pages) instead of "Deploy from a branch".
+# Build the Astro/Starlight site in site/ and deploy it to GitHub Pages.
+# Pages Source is set to GitHub Actions in repository settings.
 on:
   push:
     branches: [master]
     paths:
-      - 'docs/**'
+      - 'site/**'
       - '.github/workflows/pages.yml'
       # The header version badge is read from PACKAGE_VERSION in the root CMakeLists.txt
       # at build time, so a release (the `chore: cut vX` bump) must redeploy the docs or
-      # the badge goes stale. A bump-only commit touches nothing under docs/, hence this
+      # the badge goes stale. A bump-only commit touches nothing under site/, hence this
       # path. (A `tags: [v*]` trigger wouldn't help: push tags AND paths are AND-ed, so a
-      # bump-only tag push is filtered out by the docs/** path anyway.)
+      # bump-only tag push is filtered out by the site/** path anyway.)
       - 'CMakeLists.txt'
   workflow_dispatch:
 
@@ -37,10 +35,10 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: docs/package-lock.json
+          cache-dependency-path: site/package-lock.json
       - name: Install dependencies
         run: npm ci
-        working-directory: docs
+        working-directory: site
       - name: Install D2 (build-time diagram renderer)
         # The architecture docs render ```d2 fences to SVG at build time by shelling
         # out to the d2 CLI through starlight-core. Without it, those pages build
@@ -57,11 +55,11 @@ jobs:
           d2 --version
       - name: Build site
         run: npm run build
-        working-directory: docs
+        working-directory: site
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/dist
+          path: site/dist
 
   deploy:
     needs: build

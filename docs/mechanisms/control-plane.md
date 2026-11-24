@@ -72,7 +72,7 @@ threads use. A write that was not acknowledged was never promised to be durable;
 
 A second SIGINT or SIGTERM from the start of `join()` on (`XapiandManager::shutdown_signals`, counted by the signal handler) ends the wait and the registry's at once, with the same report and exit.
 The worst case after the graceful wait for clients is the one bound, 35 s, and the flush of the logs, which has no limit of its own. The control tasks' and the autocommits' drains end by the same deadline.
-`docs/src/content/docs/options.md` ("Stopping the node") tells operators.
+`site/src/content/docs/options.md` ("Stopping the node") tells operators.
 
 ## Limits
 

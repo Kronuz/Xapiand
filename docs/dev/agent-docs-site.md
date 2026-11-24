@@ -9,7 +9,7 @@ Expressive Code's `--ec-codeFontSize`, and the edit link serves any docs
 entry. The local-editor URL inserts a slash after Astro's `/Xapiand`
 base path. The existing sidebar already gives each page one filled link, so the
 blog's ancestor hint is unnecessary here. The Xapiand editor base URL
-uses the tracked `docs/` directory.
+uses the tracked `site/` directory.
 
 - **One filled sidebar link.** The existing sidebar gives `aria-current="page"`
   only to the current page; its custom sublist needs no ancestor conversion.

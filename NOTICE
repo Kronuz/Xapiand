@@ -24,7 +24,7 @@ THIRD-PARTY-NOTICES.
 Google Maps
 -----------
 
-docs/public/assets/el_cerrito.png is a Google Maps screenshot ("Map data
+site/public/assets/el_cerrito.png is a Google Maps screenshot ("Map data
 ©2019 Google", under Google's terms) with Xapiand's HTM trixels drawn over it;
 the trixel overlay is Xapiand's, and the image as a whole is not MIT.
 
@@ -35,6 +35,6 @@ The Python client in contrib/python/xapiand-py is a fork of elasticsearch-py,
 Copyright (c) 2017 Elasticsearch, licensed under the Apache License, Version
 2.0 (see contrib/python/xapiand-py/LICENSE). It is not part of any package.
 
-The documentation in docs/src/content/docs is heavily based upon Elasticsearch's
+The documentation in site/src/content/docs is heavily based upon Elasticsearch's
 documentation, whose code samples and text were licensed under the Apache
 License, Version 2.0. That attribution stays with the docs.

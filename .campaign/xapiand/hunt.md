@@ -546,3 +546,25 @@ quest fixes them (2 of 5 on 11-20).
 ## journal-replaces-wal RESTORE, session 17 (2026-11-24)
 
 - journal (Detent reviews): a 2,000-object plain RESTORE's ~31 entries of 1 MiB cost 88-89 F_FULLFSYNC (41 turn-log, 24 group artifact, 12 journal directory), serialized at the device across 5 groups; 1 MiB entries seem to take the artifact path. With the 2-flushes-per-proposal row: one flush per entry, or one turn shared by concurrent groups' entries. Measure after journal-sync-mode (plain mode) lands; performance, high.
+
+## completion-flush-mode re-review notes (2026-11-24, reviews/completion-flush-mode-durability-r2.md)
+
+- completion docs (N3): completion-seam.md:17,27 and sync-files.md:12,15 are stale after the flush-mode landing; docs, low.
+- completion seam table (N2): interned per image, not per process; two shared libraries each hand out index 1 for different seams. Test seams only; note it in flush-mode.md or key by address; low.
+- Gate checks (N1, sent to campaign-v3 as msg-91): the slot build-test ran 22 of 25 tests because earlier mutant jobs left task and asio OFF in the slot's CMake cache. Until fixed, confirm findings with a fresh-build job or CI.
+
+## catalog-restructure review notes (2026-11-24, reviews/catalog-restructure-correctness.md)
+
+- strata docs/mechanisms/catalog.md:230,248 still name `policy_mu_`; the fix is ready as a patch (~/.scratch/xapiand/lead/0001-Name-the-policy-subobject-s-mutex-in-catalog.md.patch); the lead applies it on main after the landing.
+- catalog_table.hh is a leftover bucket and catalog_observe.hh (117 lines) sits near the ~100-line floor (N2): revisit at the next catalog change; low.
+- catalog_s3fifo.hh comment "links this class alone writes" omits that q_next doubles as the free-list link (N3); docs, low.
+- The ghost-hit counter is now taken after the unlock (N4): stats only; check it is atomic or say why a torn read is fine; low.
+
+## journal-sync-mode durability review notes (2026-11-24, reviews/journal-sync-mode-durability.md)
+
+- journal recovery (D4, owner's call pending): when a segment file vanishes, `missing_between` (turn_log.h:1034-1042) charges missing turns only to gaps it finds, so a group can come back behind its acknowledged records unreported (T9 plain torn point: group 1 keeps 1:1, 6 acked records behind). Reachable in full mode by real damage that loses a segment. Lead's recommendation: treat turns a vanished segment may have held as unknown (every group lost), with the T9 point as a fails-without test. Detent reviews journal recovery.
+- journal T9 plain never checks bounded groups (D1); README implies plain losses are reported, about half are silent (D2); sync-mode.md wording (D3, D5: FreeBSD's AIO barrier is aio_fsync(O_DSYNC)). docs and test, low.
+
+## field-check-at-map fix round notes (2026-11-24)
+
+- prospect `fielddict::reader::check_fields` caches the pool reader for 400 B per segment (main too); scanning through a reader of its own saves 1.6 KB (d1000s4) and 4.0 KB (d1000s10) per open index (7% of heap), same hashes and refusals. Patch kept at ~/.scratch/xapiand/field-check-at-map/src/prospect-fix (commit it to a branch before any cleanup). Many-indexes workload: high value, small change; its own quest after field-check-at-map lands.

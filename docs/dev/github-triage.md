@@ -64,7 +64,7 @@ Reply:
 
 > The documentation now lives at https://kronuz.github.io/Xapiand/ and has been rewritten around the engine as it is today. We audited all 128 pages against the code; the pages that are still stale or incomplete are listed in docs/dev/docs-site-audit.md in the repository, and a full rewrite of the site is planned. The request examples on the pages run as end-to-end tests. Corrections and new pages are welcome as pull requests; see the contributing guide on the site. Closing this as the original question is answered.
 
-Cites: `docs/dev/docs-site-audit.md` "Summary" (128 pages, 45 current), `.campaign/xapiand/PLAN.md` D45 and D47, `docs/src/content/docs/contributing.md`. Not run: the site's "Improve this page" link points at a directory that does not exist (audit "Summary" item 4); the reply does not mention it.
+Cites: `docs/dev/docs-site-audit.md` "Summary" (128 pages, 45 current), `.campaign/xapiand/PLAN.md` D45 and D47, `site/src/content/docs/contributing.md`. Not run: the site's "Improve this page" link points at a directory that does not exist (audit "Summary" item 4); the reply does not mention it.
 
 Detent: no.
 
@@ -76,7 +76,7 @@ Reply:
 
 > Every release now carries a .deb for amd64 and arm64 (v1.0.0-alpha.9 has xapiand_1.0.0.alpha.9_amd64.deb and the arm64 one), built by the release workflow. It targets Debian 13 and Ubuntu 24.04 or newer, and installs with `sudo dpkg -i xapiand_*_amd64.deb`. RPMs, a FreeBSD package, a Homebrew formula and a Docker image (ghcr.io/kronuz/xapiand) ship the same way. Getting it into the Debian archive or an apt repository is not planned. See the Installation page.
 
-Cites: `.github/workflows/release.yml:195-253` (deb job), `docs/src/content/docs/installation.md:35-50` (Linux), release v1.0.0-alpha.9 assets (`gh release view`). The archive and apt-repository statement is a plan statement: owner confirms.
+Cites: `.github/workflows/release.yml:195-253` (deb job), `site/src/content/docs/installation.md:35-50` (Linux), release v1.0.0-alpha.9 assets (`gh release view`). The archive and apt-repository statement is a plan statement: owner confirms.
 
 Detent: yes. The release pipeline (fpm for rpm and deb, bottles, a multi-arch image) packages one binary; a replicated system needs the same packages plus a service unit and a data-directory layout per node.
 
@@ -100,7 +100,7 @@ Reply:
 
 > Xapiand does not generate n-grams for ordinary text. For your example, a fuzzy term finds it: `message:storaeg~` matches `storage` within the default edit distance of 2, and `stor*` matches by prefix; see the Fuzzy and Wildcard pages under Text Queries. A `_cjk_ngram` option exists for CJK text only. The `_ngram` schema property is accepted and does nothing today. N-gram analysis is planned, with no date. Until then, send n-grams as a keyword array from the client.
 
-Cites: `src/query_dsl.cc:74` (`DEFAULT_FUZZY_EDIT_DISTANCE 2`), `docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries/fuzzy.md` and `wildcard.md`, `docs/src/content/docs/tests/querydsl/fuzzy.md` (`unserten~3` finds `uncertain`), `src/multivalue/generate_terms.cc:521-540` (only `cjk_ngram` reaches the term generator), `src/database/schema.cc:5631,5663,5673` (the callers pass `cjk_ngram`, never `ngram`), `src/database/schema.cc:7018` (`_ngram` read into `flags.ngram`; elsewhere only echoed at `:4983` and compared in the change check at `:8510`). Not run: that `storaeg~` matches `storage` (the edit distance is Levenshtein-or-better, two substitutions; the E2E fuzzy page covers `unserten~3`).
+Cites: `src/query_dsl.cc:74` (`DEFAULT_FUZZY_EDIT_DISTANCE 2`), `site/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries/fuzzy.md` and `wildcard.md`, `site/src/content/docs/tests/querydsl/fuzzy.md` (`unserten~3` finds `uncertain`), `src/multivalue/generate_terms.cc:521-540` (only `cjk_ngram` reaches the term generator), `src/database/schema.cc:5631,5663,5673` (the callers pass `cjk_ngram`, never `ngram`), `src/database/schema.cc:7018` (`_ngram` read into `flags.ngram`; elsewhere only echoed at `:4983` and compared in the change check at `:8510`). Not run: that `storaeg~` matches `storage` (the edit distance is Levenshtein-or-better, two substitutions; the E2E fuzzy page covers `unserten~3`).
 
 Detent: no.
 
@@ -112,7 +112,7 @@ Reply:
 
 > Text queries are parsed by the queryparser library; the operators are on the Text Queries pages of the site and in the library's README. A query is capped at 100 nested operator levels and 4096 terms and operators, and a larger one answers 400. There is no execution-time limit today. A search does stop at its next window boundary when the client disconnects or the service stops, so a time limit is a matter of arming that cancellation from a timer. I'm adding it to the list of work to do.
 
-Cites: `docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries.md` (operators), `docs/src/content/docs/changelog.md:163-168` (size limits), `src/engine/search.h:91-93` (budget cancels at window boundaries), `src/server/search_views.cc:2321,3132,3200-3203` (the request's token; a cancelled request answers 503). No `timeout` option or parameter in `src/opts.cc` or `src/server/search_views.cc` (grep).
+Cites: `site/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries.md` (operators), `site/src/content/docs/changelog.md:163-168` (size limits), `src/engine/search.h:91-93` (budget cancels at window boundaries), `src/server/search_views.cc:2321,3132,3200-3203` (the request's token; a cancelled request answers 503). No `timeout` option or parameter in `src/opts.cc` or `src/server/search_views.cc` (grep).
 
 Detent: yes. A search that fans out over shards needs one deadline that every leg inherits and cancels on; the cancellation token and budget are the shared pieces (PLAN.md D20 gives task's cancellation design to Detent's lead).
 
@@ -124,7 +124,7 @@ Reply:
 
 > Highlighting is not supported. The issue names Xapian's MSet::snippet, and Xapiand no longer uses Xapian, so there is nothing to expose. Elasticsearch, Tantivy and Quickwit all offer it and it would fit the engine, since a field's stored text can be re-run through the same analyzers to find the matched words. Highlighting is planned, with no date.
 
-Cites: no `highlight` or `snippet` in `src/` outside a JSON error excerpt (`src/database/utils.cc:214`, grep), `docs/src/content/docs/changelog.md:244-246` (strata is the only engine). The peers' support is from memory and unchecked here; D40's test for bringing a feature back is "Elasticsearch, Quickwit or peers serve it and it fits naturally" (PLAN.md D40).
+Cites: no `highlight` or `snippet` in `src/` outside a JSON error excerpt (`src/database/utils.cc:214`, grep), `site/src/content/docs/changelog.md:244-246` (strata is the only engine). The peers' support is from memory and unchecked here; D40's test for bringing a feature back is "Elasticsearch, Quickwit or peers serve it and it fits naturally" (PLAN.md D40).
 
 Detent: no.
 
@@ -136,7 +136,7 @@ Reply:
 
 > This release runs on a single node. The cluster is removed: node discovery, replication, primary election and distributed search are gone, along with `--cluster`, `--discovery-*` and the other cluster options, so two instances do not replicate or sync. Shards remain, as the pieces one index is split into on one node. A glossary of cluster terms would describe nothing that exists, so I'm closing this as not planned.
 
-Cites: `docs/src/content/docs/changelog.md:247-252` (cluster removed, with the option list), `src/opts.cc` (no cluster, discovery or replica options; grep), PLAN.md D9 (the single-node release has no cluster). The word "shards" as per-node pieces: `docs/src/content/docs/reference-guide/indexes/create-api.md` (`number_of_shards`) and `src/index_resolver_lru.cc:590-596`.
+Cites: `site/src/content/docs/changelog.md:247-252` (cluster removed, with the option list), `src/opts.cc` (no cluster, discovery or replica options; grep), PLAN.md D9 (the single-node release has no cluster). The word "shards" as per-node pieces: `site/src/content/docs/reference-guide/indexes/create-api.md` (`number_of_shards`) and `src/index_resolver_lru.cc:590-596`.
 
 Owner: "not planned".
 
@@ -150,7 +150,7 @@ Reply:
 
 > Traffic can be encrypted: start with `--tls-cert` and `--tls-key` to serve the API over HTTPS (Options page). Data at rest is not encrypted by Xapiand, and index terms are in the engine's files too, so the answer is still to encrypt the volume (LUKS, dm-crypt, FileVault). To index a field without keeping its value in the stored document, set `_store` to false on it. Accents are not folded: `poeme` will not match `poème`. Closing the at-rest part as not planned.
 
-Cites: `docs/src/content/docs/options.md:108-119` (HTTPS), `src/opts.cc:200-202`, `src/database/schema.cc:7209-7216` (`feed_store`) and `:3016,3029` (a field with `store` false is not inserted into the document data), no `encrypt` in `src/` (grep). Accents: `~/code/Kronuz/analysis/README.md:10` lists case folding only and `analysis.hh` has no accent filter (grep); not run. `_store` is on no docs page (hunt row H6).
+Cites: `site/src/content/docs/options.md:108-119` (HTTPS), `src/opts.cc:200-202`, `src/database/schema.cc:7209-7216` (`feed_store`) and `:3016,3029` (a field with `store` false is not inserted into the document data), no `encrypt` in `src/` (grep). Accents: `~/code/Kronuz/analysis/README.md:10` lists case folding only and `analysis.hh` has no accent filter (grep); not run. `_store` is on no docs page (hunt row H6).
 
 Owner: "not planned" for encryption at rest.
 
@@ -164,7 +164,7 @@ Reply:
 
 > There is no cluster in this release, with or without multicast: discovery, replication and distributed search are removed, and so are the `--cluster` and `--discovery-*` options. It runs as a single node. Closing as not planned.
 
-Cites: `docs/src/content/docs/changelog.md:247-252`, `src/opts.cc` (no discovery options), PLAN.md D9 (cluster work parked after the release as 7b).
+Cites: `site/src/content/docs/changelog.md:247-252`, `src/opts.cc` (no discovery options), PLAN.md D9 (cluster work parked after the release as 7b).
 
 Owner: "not planned".
 
@@ -216,7 +216,7 @@ Reply:
 
 > Releases up to v1.0.0-alpha.10 link Xapian, which is GPL, so treat those binaries as GPL. The development tree no longer uses Xapian: the engine is strata (MIT). Two files derived from Xapian, `src/sortable_serialise.{cc,h}` and the Python client's `sortable.py`, are still GPL and are being replaced; the first release without them will be fully MIT. An application that only talks to the server over HTTP does not link it, but I can't give legal advice; ask your counsel.
 
-Cites: `docs/src/content/docs/changelog.md:244-246` (Xapian engine removed), `CMakeLists.txt` (no Xapian; grep), `docs/status/license-audit.md` "Summary" (blockers 1 and 2), `README.md:127-129`, `docs/src/content/docs/copyright.md` (the note on `sortable_serialise`), PLAN.md D44 (sortable-encoding) and the quest `license-closure`. The reply posts as drafted with alpha.10 (owner, D48).
+Cites: `site/src/content/docs/changelog.md:244-246` (Xapian engine removed), `CMakeLists.txt` (no Xapian; grep), `docs/status/license-audit.md` "Summary" (blockers 1 and 2), `README.md:127-129`, `site/src/content/docs/copyright.md` (the note on `sortable_serialise`), PLAN.md D44 (sortable-encoding) and the quest `license-closure`. The reply posts as drafted with alpha.10 (owner, D48).
 
 Detent: yes. Detent shares the MIT libraries; the license audit's notice work (a `THIRD-PARTY-NOTICES` file installed with each package) applies to its binaries too.
 
@@ -228,7 +228,7 @@ Reply:
 
 > There is no plan to upgrade Xapian: it has been removed from the development tree, where the search engine is now strata, and Xapian databases are no longer read. A final release of the Xapian-based line will be cut from the `xapiand` branch with long-standing bug fixes backported; it keeps the Xapian it vendors. After that release, upgrading means dumping with it and restoring into the new version. Closing as not planned.
 
-Cites: `docs/src/content/docs/changelog.md:244-246` ("Databases in Xapian's format are not read: dump them with the final Xapian-only release"), `CMakeLists.txt` (no Xapian), `.campaign/xapiand/quests/xapiand-final-release.md` Outcome, PLAN.md D34. Which Xapian version the `xapiand` branch vendors was not checked.
+Cites: `site/src/content/docs/changelog.md:244-246` ("Databases in Xapian's format are not read: dump them with the final Xapian-only release"), `CMakeLists.txt` (no Xapian), `.campaign/xapiand/quests/xapiand-final-release.md` Outcome, PLAN.md D34. Which Xapian version the `xapiand` branch vendors was not checked.
 
 Owner: "not planned".
 
@@ -242,7 +242,7 @@ Reply:
 
 > `DELETE` on an index path still answers 501 Not Implemented, as in your report; the docs page for it says so. A fix is planned: deleting a whole index over HTTP, since the engine can drop an index. Until then, delete documents by id; there is no delete-by-query.
 
-Cites: `src/server/search_views.cc:1478-1491` (`delete_database_view` answers 501 with a path, 405 without), `docs/src/content/docs/reference-guide/indexes/delete-api.md` (the banner and the 501 E2E), `.campaign/xapiand/hunt.md:28` (the row), `docs/design/xapiand-on-strata.md:97` (delete by query: Xapiand never calls it). The reply offers no workaround beyond deleting by id (`DELETE /index/type/id`, `docs/src/content/docs/reference-guide/documents/delete-api.md`); not run.
+Cites: `src/server/search_views.cc:1478-1491` (`delete_database_view` answers 501 with a path, 405 without), `site/src/content/docs/reference-guide/indexes/delete-api.md` (the banner and the 501 E2E), `.campaign/xapiand/hunt.md:28` (the row), `docs/design/xapiand-on-strata.md:97` (delete by query: Xapiand never calls it). The reply offers no workaround beyond deleting by id (`DELETE /index/type/id`, `site/src/content/docs/reference-guide/documents/delete-api.md`); not run.
 
 Detent: yes. Dropping an index on every replica (tombstone, then reclaim) and keeping the drop from racing in-flight writes is the replicated store's index-drop path.
 
@@ -254,7 +254,7 @@ Reply:
 
 > No. Development is active: the tree has had several hundred commits in the last month, and the v1.0.0-alpha.9 release was on 2026-10-17. The search engine was replaced with strata and Xapian removed, the Linux, macOS and FreeBSD builds and packages are in CI, and the docs are being rewritten. The next release is the first on the new engine; it has no date. Questions and bug reports here are welcome.
 
-Cites: `git log master --since=2026-10-10 --oneline | wc -l` is 938 (it counts campaign bookkeeping commits, so "several hundred" is conservative on code), `gh release list` (alpha.9, 2026-10-17), `docs/src/content/docs/changelog.md:244`, `.github/workflows/ci.yml`, `.github/workflows/freebsd.yml`.
+Cites: `git log master --since=2026-10-10 --oneline | wc -l` is 938 (it counts campaign bookkeeping commits, so "several hundred" is conservative on code), `gh release list` (alpha.9, 2026-10-17), `site/src/content/docs/changelog.md:244`, `.github/workflows/ci.yml`, `.github/workflows/freebsd.yml`.
 
 Detent: no.
 
@@ -269,7 +269,7 @@ For the lead to file in `.campaign/xapiand/hunt.md`. Format: target, evidence, s
 | H3 (#21): result highlighting (re-run a stored text field through its analyzers to mark the matched words); an owner scope call under D40 (peers serve it, it fits the engine) | no `highlight` or `snippet` in `src/`; the Xapian snippet call the issue names is gone | `src/server/search_views.cc` response build, analysis `term_generator` | Xapiand, analysis |
 | H4 (#35): serve `DELETE /index/` (and decide on delete by query) | `src/server/search_views.cc:1478-1491` answers 501; already filed at `.campaign/xapiand/hunt.md:28`, so no new row unless delete by query is wanted | `src/server/search_views.cc:1478-1491`, `src/database` | Xapiand |
 | H5 (#25 comment): an accent-folding option for text fields (`poeme` finds `poème`); Elasticsearch's `asciifolding` and Tantivy's `AsciiFoldingFilter` do it (peers from memory, unchecked) | the reporter's comment; `analysis/README.md:10` lists case folding only and `analysis.hh` has no accent filter | analysis `term_generator`, `src/multivalue/generate_terms.cc` | analysis |
-| H6 (#25): document `_store` (index a field without keeping its value) with E2E blocks | `feed_store` exists (`src/database/schema.cc:7209`); no docs page mentions `_store` (grep); D47 requires a page and tests for every served feature | `docs/src/content/docs/reference-guide/schemas/` | Xapiand |
+| H6 (#25): document `_store` (index a field without keeping its value) with E2E blocks | `feed_store` exists (`src/database/schema.cc:7209`); no docs page mentions `_store` (grep); D47 requires a page and tests for every served feature | `site/src/content/docs/reference-guide/schemas/` | Xapiand |
 
 ## Owner calls
 

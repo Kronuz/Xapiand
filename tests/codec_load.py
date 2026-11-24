@@ -31,7 +31,7 @@ Runs each build on a fresh data directory, interleaved old, new, new, old, ... f
 Prints one JSON line per run, then each measure's median per build, new/old, and the A/A band (the old runs'
 spread over their median). Exits 1 when a measure is slower than old by more than the band.
 
-  python3 tests/codec_load.py build-old/bin/xapiand build/bin/xapiand docs/public/assets \
+  python3 tests/codec_load.py build-old/bin/xapiand build/bin/xapiand site/public/assets \
       docs/design/sortable-encoding/files.ndjson.gz 27dfeab6...
 """
 
