@@ -1,25 +1,38 @@
 # index-restructure: journal
 
-State: waiting on jobs 261121-221903-f4df46 261121-221904-8d6ee6 261121-221906-8a1ce9
+State: step 1 merged with main at strata:351eebc5 (pushed); jobs 261124-004344-c5b586 (members),
+261124-004345-fff00d (fnsizes), 261124-004354-380c9b (selfcontained) queued; step 2 starting
 Quest: .campaign/xapiand/quests/index-restructure.md (the lead's; never edit it)
 
 Code: strata worktree /Users/kronuz/code/Kronuz/strata-wt/xapiand/index-restructure, branch
-quest/xapiand/index-restructure. Step 1 (the move) at strata:a7448b3f.
+quest/xapiand/index-restructure.
 
 ## Doing
 
-Step 1 done and committed; its evidence jobs are queued.
+Step 2 (subobjects): choosing the first extraction from the candidates below.
 
 ## Next
 
-1. Read the three jobs. build-test or selfcontained red: fix the mover (not the output by hand),
-   rerun it over main's index.hh, recommit. fnsizes red: explain each changed row here (A2).
-2. After split-check-members lands: rerun `members` (`campaign verify index-restructure`) and
-   answer each warning here.
-3. After turn-log-parity lands (lead's call): merge main, restore main's index.hh, rerun the mover
-   (`move_members.py apply include/strata/core/index.hh .scratch/index-restructure/map.txt`), map
-   any new member, re-verify.
-4. Step 2 (subobjects), from the candidates below, once step 1 lands.
+1. Read the three jobs at 351eebc5. members red: fix the map, not the output by hand.
+2. Step 2: one subobject at a time, each with its own unit tests and a mutant per invariant (A3).
+3. build-test reruns at the round's end (`campaign verify` holds it until ready for review).
+
+## Merge of main (2026-11-24, strata:351eebc5)
+
+main (strata:7214f27d) changed index.hh in 16 commits, among them strata-journal-pin's bounded
+group status in attach_log (lost only when `cur_.applied.index < bound`). The resolution took
+main's index.hh whole and reran the move with cpp-libraries' tools/outline.py (bc16496) instead of
+the .scratch mover (graduated, per the lead's 11-21 decision): the pieces differ from step 1's only
+by main's edits (diff against a7448b3f: turns +116/-27, commit +11, apply -5, flush +1,
+checkpoint +1). attach_log's `bounded && cur_.applied.index < opts_.log->bound(g)` is at
+index_turns.hh:40. New members mapped: replay_one, log_due, count_writing, join_chunks,
+await_sealed to index_turns.hh; commit_empty to index_commit.hh. outline.py matches a bare key
+against nested classes' members too (snapshot::get, reading::scan, view::get, reader_handle::live,
+merge_spill::drain), so those keys are pinned by line (`get@2066`) and nested members stay in the
+class as in step 1. Local dry run of `split_check.py --members --base origin/main`: 202 member
+definitions moved, 0 errors, 0 warnings. The map is in the merge commit's message (and
+~/.scratch/xapiand/index-restructure/index.map). .scratch/index-restructure/* left the branch
+(git rm --cached). class body: 5,413 lines on main, 2,100 at 351eebc5; index.hh 6,267 -> 2,967.
 
 ## The map (step 1)
 
@@ -106,4 +119,7 @@ Also: selfcontained.sh over index.hh and index_*.hh: 261121-221904-8d6ee6 (queue
 - R7 The namespace-scope types (~830 lines: io_spill, file_sink, lent_frame, ...) stay in
   index.hh; the quest's outcome is the class body.
 - R8 The mover and the fnsizes job script are committed under .scratch/index-restructure/
-  (git add -f) for the rerun after turn-log-parity; drop them before landing.
+  (git add -f) for the rerun after turn-log-parity; drop them before landing. Done at the main
+  merge: outline.py replaces the mover, the scripts live in ~/.scratch/xapiand/index-restructure/.
+- R9 Nested-class members stay in the class (as in step 1): outline.py keys that would also
+  match them are pinned by line. Moving them is step 2's call, per mechanism.
