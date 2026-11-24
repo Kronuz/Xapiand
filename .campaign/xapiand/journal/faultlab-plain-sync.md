@@ -1,19 +1,15 @@
 # faultlab-plain-sync: journal
 
-State: waiting on jobs 261124-091409-a11424 261124-091412-7c4ab3 261124-091414-2d1c19
+State: ready for review
 Quest: .campaign/xapiand/quests/faultlab-plain-sync.md (the lead's; never edit it)
 
 ## Doing
 
-Fixing review findings F1 and N3 (correctness review on faultlab:eefba53). The fix is at
-faultlab:83fbde7 and its jobs are queued.
+Nothing: F1 and N3 are fixed at faultlab:83fbde7 and every job is done.
 
 ## Next
 
-1. 261124-091409-a11424 (F1 mutant, faultlab:abb149e on `mutant/faultlab-plain-sync-f1`: order_pushed
-   walks every stray) must FAIL "full mode: a stray staged after another thread's directory sync
-   keeps its point's bytes ahead of a later write". 261124-091412-7c4ab3 (build-test at 83fbde7) and
-   261124-091414-2d1c19 (the reviewer's run.sh at 83fbde7, whose R4c row should drop o0 and oX) must pass.
+1. The lead: re-review or land. CI at faultlab:83fbde7 is running.
 
 ## Blocked on
 
@@ -23,8 +19,8 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261124-084008-5de615 (mutant `mutant/faultlab-plain-sync`, faultlab:f0426b2: `persists(fsync)` is true on macOS, a plain sync treated as full; "macOS fsync (plain): a kill keeps the synced bytes, a crash may drop them" in test/model_test.cc must FAIL), running; value cases green locally at faultlab:eefba53 |
-| A2 | 261124-084011-18ae99 (build-test at faultlab:eefba53): one case per call: fsync, F_FULLFSYNC, F_BARRIERFSYNC (macOS), fsync and fdatasync (Linux, both modes, unchanged), FreeBSD/other fsync |
+| A1 | 261124-091412-7c4ab3 (build-test at faultlab:83fbde7); fails without: 261124-084008-5de615 (plain treated as full, faultlab:f0426b2: the named macOS fsync case FAILs, plus 6 more), 261124-091409-a11424 (F1: order_pushed over every stray, faultlab:abb149e: only "full mode: a stray staged after another thread's directory sync ..." FAILs, 16 checks) |
+| A2 | 261124-091412-7c4ab3 |
 | A3 | `docs/mechanisms/crash-model.md` (Plain and full syncs), `docs/api.md`, `README.md`, `include/faultlab/faultfs.h`, `CHANGELOG.md` (2026-11-24) at faultlab:eefba53 |
 
 ## Result
@@ -44,7 +40,7 @@ faultlab's enum (R1).
 - F1 (blocking, fixed at faultlab:83fbde7): order_pushed walked every stray, so a full-mode race stray got
   an at_mark at an aliasing later point (states oX and o0). It now walks `pushed_`, the strays push()
   staged, cleared wherever strays_ is. Test: model_test "full mode: a stray staged after another
-  thread's directory sync ...", which uses the reviewer's R4c injector. Mutant: 261124-091409-a11424. Probe: 261124-091414-2d1c19.
+  thread's directory sync ...", which uses the reviewer's R4c injector. Mutant: 261124-091409-a11424. Probe: 261124-091414-2d1c19 at 83fbde7. R4c now reaches only `A A0 AX o`, as on main (no o0/oX). The default-mode differential is identical to main, and the plain property shows 0 O and 0 L violations over 192000 crashes.
 - N3 (fixed): crash-model.md says the plain model holds only where F_BARRIERFSYNC orders (Apple SSDs).
 - N1: no change. N2: left to journal-sync-mode or the lead. N4: left (the lead filed it).
 - The lead's F1/N3 message: answered by the fix above.
