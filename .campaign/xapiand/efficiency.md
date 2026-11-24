@@ -1127,3 +1127,10 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Agent runs: strata-journal-pin contributor launched (Sonnet, medium): re-pin journal to main, now the file-set holder of 5 quests incl. file-set-seal-streaming.
 - journal-replaces-wal: compile check ran after 90 min queued (priority inversion, campaign-v3 msg-51); A1/A4/A9, A2 + mutant, A3 x2, A8 green at 6d6921068; crash gate test_node batch-pins hang 2 of 2 under load.
 - Host: light slots 59% used, runnable beside idle 48 min (down from 55). Quota: weekly 35%, burn 1.57%/h.
+
+## 2026-11-24 04h
+
+- No landings. strata-journal-pin contributor finished (180k, Sonnet): journal pinned at 9c7e31c; bounded groups fixed in attach_log (at-or-below the bound loses, test t5b, 2 mutants) and group.hh/witness.hh (route to recover, 1 mutant); A1 green at 22ee0282. Found: a damaged replica has no path back (hunt row). Durability reviewer launched (Opus), running (154k so far).
+- journal-replaces-wal: A4 and its mutant, d1, d2, d3 mutants all killed; only the batch-pins hang and file-set-seal-streaming remain before its final-commit set.
+- Tool: fff3dc7's named-folder rule treats `-S .` as naming the whole repo, so prose-only commits void every cmake job (6 jrw jobs, ~2.5 run-hours); reported to campaign-v3 (msg-55). Owner V4 (slow runs once per round) noted: 118 of 278 run-hours in 72h were reruns.
+- Host: light slots 48%, runnable beside idle 54 min; load 57 (a detent legacy-h light job at 7.1 cores, 3.5 slots). Quota: weekly 36%, burn 1.54%/h.
