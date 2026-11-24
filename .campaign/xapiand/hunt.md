@@ -464,7 +464,7 @@ quest fixes them (2 of 5 on 11-20).
 - R2 (test nit) the install sweep checks the installed documents, not the applied position.
 - (group-heal, after first-commit-crash landed at strata:4955a679) install() now takes commit_empty() itself: remove group-heal's redundant caller guard (its F2 fix at strata:a1e786f4) when group-heal next merges main.
 - (group-heal durability re-review; strata-journal-pin finding 2026-11-23) include/strata/group/group.hh:214 sends a journal GroupStatus::bounded group to driver.create; what consensus does with a replica whose log lost records behind a bound is unverified. Decide: refuse, reinstall, or create.
-- (master CI, 2026-11-23) pages.yml installs D2 with `curl https://d2lang.com/install.sh | sh`, which calls the GitHub API unauthenticated; run 45209633838 failed on three 403s (rate limit). Pin a d2 release tarball (version and sha256) instead; a CI change, needs the owner's yes.
+- (master CI, 2026-11-23) (done: pages.yml pins d2 v0.9.0 with its sha256) pages.yml installs D2 with `curl https://d2lang.com/install.sh | sh`, which calls the GitHub API unauthenticated; run 45209633838 failed on three 403s (rate limit). Pin a d2 release tarball (version and sha256) instead; a CI change, needs the owner's yes.
 - ARCHITECTURE.md's scheduler/threadpool text and docs/dev/dependencies.md's dependency tree are stale on master (11-23, journal-replaces-wal step h): rewrite both from the code; documentation, economical; after journal-replaces-wal lands (it holds ARCHITECTURE.md).
 
 ## group-heal durability re-check follow-ups (2026-11-23, APPROVE at strata:870ac9f5; full text in reviews/group-heal-durability.md)
@@ -485,3 +485,10 @@ quest fixes them (2 of 5 on 11-20).
 | JoinService::take scans the whole source map under its mutex past 256 addresses (S2) | review S2: an IPv6 /64 flood keeps ~1 entry per connection per second; each accept pays the scan | consensus `admission_join.h`, JoinService::take | join admission, rate and slot behavior |
 | Stalled joiners hold all 64 join slots and newcomers are refused (S3) | review S3: 8 addresses or one /64 make joining unavailable for the flood | consensus join slots, slot deadline | established nodes unaffected (A3) |
 | Xapiand's issuer hook relays every well-formed request to the root's leader (S5) | review S5: one relay per unauthenticated request | Xapiand cluster issuer hook | consensus unchanged |
+
+## strata main flakes (2026-11-24)
+
+| Target | Evidence | Start in | Repo | Status |
+|---|---|---|---|---|
+| group_catalog_failed_open fails once on main ("two pins opened the group and failed: 3") | strata main run 45204145143 at 93d10446; next run at 757c00ab green | test/group (group-heal holds it: after group-heal lands) | strata | open |
+

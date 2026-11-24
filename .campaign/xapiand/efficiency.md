@@ -1098,3 +1098,15 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - htm: per-TU initializers removed: two users + htm.o go from 3 initializers (576 B) to 1 (192 B) (jobs 885328, 9f4fa2); written up in htm docs/start-tables.md.
 - No explorer batch: seven quests wait on the lead to land and 66 jobs are queued; review and landing are the limit, not ideas.
 - Quota: weekly 31% (1.60%/h; exhaustion in about 43 h at this burn, reset 2026-11-30). Host: load 9 (17 over 5 min), light slots 67% used last hour, 280 GiB free.
+
+## 2026-11-24 01h
+
+- Landed: hunt-htm-constexpr-start (htm:6fff441), stox-no-libc (strict-stox:aebfcd9), hunt-soundex-one-definition (soundex:5ed383c, after merging soundex main's ci.yml commit), uinteger-radix-family (uinteger_t:88e41ad; macos-arm64 finally acquired).
+- journal-replaces-wal: contributor (Opus, 329k, 1h19m) found test_node's cause: join() cleared the control loop before draining it, so an autocommit ran in place and deadlocked on a turn held by a task of that loop (hung 6 of 30 at c4d06c80d); fix Xapiand:6686f9ffc with test and mutant; 30x and 10x reruns queued. loop_yield baseline on master: chores 169-175 ms against 2,752-3,076 ms on the loop (about 6%, bound 20%); head probe pending.
+- group-heal: 24 mutants killed in all (A1 skip-file-set; A3 22 of 22); simulator rows pass at the merged head; suite rerun and CI pending.
+- netlab-consensus (no contributor): lead merged consensus main (rpc_host_fetch flake fix), requeued VM rows (the 5-node failure was the VM's GitHub fetch), swapped 5 stale citations.
+- consensus-join-v2: fuzz token, join and hello all clean (ASan+UBSan, 2x16 min each).
+- Reuse audit (campaign-v3's docs-script bug): 180 reused rows, 18 with non-prose docs changes, 1 real (restore-free-off-loop e2e read a regenerated accounts.ndjson); master CI 57f736336 passed it, no claim changes.
+- Lead slips: the single-flight check named a nonexistent target and lacked -DBUILD_TESTS=ON (2 failed jobs, 2 weakening records).
+- Explorer launched (Sonnet medium): hunt-manifest-log-wallclock (strata test bound by wall-clock).
+- Quota: weekly 33% (1.62%/h; exhaustion in about 41 h at this burn, reset 2026-11-30). Host: load 22 (14 over 5 min), light slots 46% used last hour with 46 min of runnable work beside idle slots, 110 jobs queued, 279 GiB free.
