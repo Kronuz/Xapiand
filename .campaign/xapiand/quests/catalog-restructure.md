@@ -15,8 +15,9 @@ mechanisms with their own invariants:
 - the S3-FIFO eviction policy: `policy_pass` and `evict`;
 - observation: the reports the tests, the sweep and T4 read.
 
-Step 1: the nested types (`slot`, `host`, `pin`, `pin_awaiter`, `shutdown_awaiter`) are defined
-outside the class body (`class catalog::pin { ... }`), and member definitions move out of it into
+Step 1: the nested types (`slot`, `host`, `pin`, `pin_awaiter`, `shutdown_awaiter`) stay declared in
+the class with their multi-line members moved out (cpp-libraries docs/SPLITTING.md; split_check's
+members mode proves only that shape), and member definitions move out of the class into
 one header per mechanism (`catalog_pin.hh`, `catalog_transitions.hh`, `catalog_policy.hh`,
 `catalog_observe.hh`, or the cut its reading supports). The transitions stay whole in one header,
 because they are one state machine. `catalog.hh` stays the include callers name. Moved with
@@ -57,3 +58,6 @@ independently, which is the parallel-work gain.
 ## May land early
 
 Step 1 on its own proof, before step 2 starts.
+- Lead, 2026-11-24 (contributor's R-nested): nested types stay declared in the class, as in
+  index-restructure (its R9) and SPLITTING.md; their multi-line members move out. docs/mechanisms/
+  catalog.md joins the file set for the `policy_mu_` rename (R6).
