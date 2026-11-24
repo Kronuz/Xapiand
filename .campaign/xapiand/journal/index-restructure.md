@@ -1,8 +1,7 @@
 # index-restructure: journal
 
-State: blocked on test/reclaim_bg_test.cc (Blocked on 1); waiting on jobs 261124-025207-4882f1
-261124-025211-9ae8da (mutants post-keeps-file, unpost-keeps-flight) at strata:3db2a49e (not pushed:
-the full build fails until the blocker is ruled)
+State: ready for review at strata:cfa20b41 (pushed); build-test reruns at this head (held by verify
+until this state), members 261124-025756-a4f2ac at the head is expected red (step 2 changes code)
 Quest: .campaign/xapiand/quests/index-restructure.md (the lead's; never edit it)
 
 Code: strata worktree /Users/kronuz/code/Kronuz/strata-wt/xapiand/index-restructure, branch
@@ -10,15 +9,11 @@ quest/xapiand/index-restructure.
 
 ## Doing
 
-Step 2: the file ledger is built and committed (strata:3db2a49e); its jobs are queued.
+Nothing: ready for review.
 
 ## Next
 
-1. Once Blocked on 1 is granted: apply ~/.scratch/xapiand/index-restructure/reclaim_bg_test.patch
-   (5 lines), commit, push, `campaign verify index-restructure --for A1,A2` (build-test, members)
-   at the new head, plus CI.
-2. Read the five ledger jobs; a surviving mutant means a missing check in its named case.
-3. Then State "ready for review".
+1. Review findings, by id.
 
 ## Lead's rulings (2026-11-24)
 
@@ -102,13 +97,8 @@ State and invariants that stand apart, each judged on maintenance when step 2 ru
 
 ## Blocked on
 
-1. test/reclaim_bg_test.cc is outside the file set and reads the removed members through
-   index_test_access (ix.on_disk_, ix.inflight_, ix.files_, ix.posted_, ix.unlinked_). It needs
-   five one-line edits to `ix.ledger_.on_disk()` etc.: the patch is
-   ~/.scratch/xapiand/index-restructure/reclaim_bg_test.patch. Options: (a) grant that file
-   (recommended: it is the end-to-end check of the same invariant, and it keeps it); (b) give
-   file_ledger's old names back to basic_index as accessors (adds the forwarders the extraction
-   removed). Until then the full build at 3db2a49e fails at reclaim_bg_test, so nothing is pushed.
+Nothing. test/reclaim_bg_test.cc granted (lead, 2026-11-24); its five accessors read ledger_ at
+strata:cfa20b41.
 
 ## Step 2 design (ready to build once 1 is ruled)
 
@@ -135,15 +125,31 @@ permit and reclaim-pacing figures, not a file's state. Candidates 2-7 judged aft
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261124-020132-30df0e and CI 45358702484 at strata:351eebc5 (step 1); step 2's head after Blocked on 1 |
-| A2 | members 261124-020132-e99917, fnsizes 261124-004345-fff00d, selfcontained 261124-015755-58916c, at strata:351eebc5 (step 1's commits, unchanged) |
-| A3 | ledger test 261124-025155-288e60 (passed); mutants killed: 261124-025159-f8ed6f (track-adds: build, then `track` 3 failures), 261124-025203-ff830f (forget-drops); pending: 261124-025207-4882f1 (post-keeps-file), 261124-025211-9ae8da (unpost-keeps-flight) |
+| A1 | step 1 at strata:351eebc5: build-test 261124-020132-30df0e, CI 45358702484; step 2 at strata:cfa20b41: build-test reruns at this head (verify holds it until ready for review), CI on the push of cfa20b41 |
+| A2 | step 1's proof, at strata:351eebc5 (step 1's commits, unchanged on the branch): members 261124-020132-e99917 (202 definitions moved, 0 warnings), fnsizes 261124-004345-fff00d, selfcontained 261124-015755-58916c. These stay at 351eebc5: members and fnsizes compare against main and step 2 changes code by design, so at the head members fails (261124-025756-a4f2ac; local run: 103 errors, all in the ledger's edits: index_ledger.hh's new lines and the 20 changed members) and fnsizes would differ |
+| A3 | ledger test 261124-025155-288e60 (passed, every case and the model at 1.2M steps); mutants killed, each by a full build then its named case failing: 261124-025159-f8ed6f (track-adds, `track`), 261124-025203-ff830f (forget-drops, `forget`), 261124-025207-4882f1 (post-keeps-file, `post`), 261124-025211-9ae8da (unpost-keeps-flight, `unpost`) |
 | A4 | strata docs/source-layout.md, docs/mechanisms/index-layout.md (strata:3db2a49e) |
 
 ## Result
 
-Step 1 rerun over main 7214f27d with cpp-libraries' outline.py: basic_index's body 5,413 -> 2,100
-lines, index.hh 6,267 -> 2,967, 202 definitions in 11 mechanism headers; docs above.
+Step 1 (strata:88058f27..351eebc5): basic_index's member definitions moved out of the class body
+into 11 mechanism headers with cpp-libraries' outline.py; body 5,413 -> 2,100 lines, index.hh
+6,267 -> 2,967; no function changed size (fnsizes, Release+LTO).
+
+Step 2 (strata:3db2a49e, cfa20b41): `index_detail::file_ledger` (index_ledger.hh) replaces five
+members and 11 hand-kept update sites with named transitions and one stated invariant; tests and
+four killed mutants in test/index/. Docs: docs/mechanisms/index-layout.md (Subobjects, and why
+each other candidate stays), docs/source-layout.md.
+
+For the reviewer, two sites change shape, not result:
+1. Open's two `files_[manifest_name(chosen)]` reads (index_open.hh, rollover_owed_ and `newest`)
+   were operator[], which inserts a 0-byte entry for a missing name; `ledger_.size_of()` returns 0
+   without inserting. The directory scan tracks every file before these reads, so the entry always
+   exists.
+2. Commit's roll-over rename was `files_.erase(tmp); files_[name] = bytes.size()`; it is
+   `ledger_.rename(tmp, name)`, which moves tmp's tracked bytes to `name` (and would drop bytes a
+   previous `name` held). write_unsynced tracked tmp at exactly bytes.size(), and the new
+   generation's name is above every name on disk (D3), so the figures are the same.
 
 ## Rulings I made
 
