@@ -39,6 +39,7 @@
 #include <new>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <time.h>
 #include <vector>
@@ -1295,30 +1296,38 @@ static void test_a_restores_objects_are_freed_off_its_loop() {
 #endif
 }
 
-int main() {
+// Runs every case, or the one its argument names.
+int main(int argc, char** argv) {
+	const std::string_view only = argc > 1 ? argv[1] : "";
+	const auto run = [&](std::string_view name, void (*test)()) {
+		if (only.empty() || only == name) {
+			test();
+		}
+	};
+#define RUN(test) run(#test, test)
 	RunningNode node;
 	if (!node.ready()) {
 		std::fprintf(stderr, "FAIL: the node did not become ready\n");
 		return 1;
 	}
-	test_a_search_of_many_hits_yields_its_loop_between_hits();
-	test_a_restored_record_is_compressed_once_and_reads_back();
-	test_a_restore_prepares_and_writes_its_objects_off_its_loop();
-	test_a_restores_writes_share_their_log_entries();
-	test_a_sharded_restore_matches_its_serial_model();
-	test_new_numeric_ids_match_their_serial_model();
-	test_a_write_missed_since_placement_is_placed_afresh();
-	test_a_miss_defers_every_later_write_of_its_id();
-	test_a_throwing_apply_slice_fails_one_write_and_restores_the_engines_chores();
-	test_a_stale_marking_failure_ends_its_slice();
-	test_a_failed_placement_read_defers_its_terms_to_the_serial_path();
-	test_an_update_sees_the_earlier_objects_of_its_stream();
-	test_schema_changes_commit_in_input_order();
-	test_a_light_request_runs_ahead_of_heavy_turns();
-	test_a_request_after_a_heavy_one_starts_light();
-	test_each_chunk_of_a_streamed_restore_starts_light();
-	test_a_restores_results_are_freed_as_one_buffer();
-	test_a_restores_objects_are_freed_off_its_loop();
+	RUN(test_a_search_of_many_hits_yields_its_loop_between_hits);
+	RUN(test_a_restored_record_is_compressed_once_and_reads_back);
+	RUN(test_a_restore_prepares_and_writes_its_objects_off_its_loop);
+	RUN(test_a_restores_writes_share_their_log_entries);
+	RUN(test_a_sharded_restore_matches_its_serial_model);
+	RUN(test_new_numeric_ids_match_their_serial_model);
+	RUN(test_a_write_missed_since_placement_is_placed_afresh);
+	RUN(test_a_miss_defers_every_later_write_of_its_id);
+	RUN(test_a_throwing_apply_slice_fails_one_write_and_restores_the_engines_chores);
+	RUN(test_a_stale_marking_failure_ends_its_slice);
+	RUN(test_a_failed_placement_read_defers_its_terms_to_the_serial_path);
+	RUN(test_an_update_sees_the_earlier_objects_of_its_stream);
+	RUN(test_schema_changes_commit_in_input_order);
+	RUN(test_a_light_request_runs_ahead_of_heavy_turns);
+	RUN(test_a_request_after_a_heavy_one_starts_light);
+	RUN(test_each_chunk_of_a_streamed_restore_starts_light);
+	RUN(test_a_restores_results_are_freed_as_one_buffer);
+	RUN(test_a_restores_objects_are_freed_off_its_loop);
 	if (testh::failures != 0) {
 		std::fprintf(stderr, "%d of %d checks FAILED\n", testh::failures, testh::checks);
 		return 1;
