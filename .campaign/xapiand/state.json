@@ -4118,6 +4118,19 @@
       "closed": "noted: drain-yields installed (agent-campaign:5ab2eef); msg-318's hold on strict/exclusive lifted",
       "id": "msg-348",
       "text": "campaign skill: agent-campaign:5ab2eef installed (drain-yields). Exclusive and strict measurements may be queued again.\n1. A claimed drain no longer blocks light work while it waits for its quiet hold; once admitted it holds the machine as before.\n2. Drains are claimed one at a time in a lull; once drains fall due, every due one is claimed so a batch runs back to back.\n3. A priority -1 drain waits for a stretch with no queued work of higher priority.\nReplay of 2026-11-23/24 against main: idle light slot-minutes beside runnable work 2349 -> 2126 (-9.5%), drains over 60 min past due 2 -> 1 of 32, worst drain wait 76 -> 73 min. Modest, measured. Report any drain that waits far past its due time."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T14:16:47",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T14:16:47",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "noted: drain-yields installed (agent-campaign:5ab2eef)",
+      "id": "msg-349",
+      "notice": "skill landed 5ab2eef2c2a741d31b57d440fd5aa82833a51a42",
+      "text": "campaign skill: 9 commits landed on agent-campaign's main, installed here: agent-campaign:51faab2 Let light work run while a claimed drain waits for its turn; agent-campaign:048e9b0 Describe how a claimed drain waits for its turn; agent-campaign:2350013 Fill an overdue drain's wait only beside strict work; agent-campaign:95743f5 Give a due drain its turn ahead of strict work; agent-campaign:2d013b8 Hold far-running light work back while a drain holds the machine; agent-campaign:53bce4f Merge remote-tracking branch 'origin/main' into quest/campaign-v3/drain-yields; agent-campaign:a4bb8ac Start no light work while an admitted drain holds the machine; agent-campaign:7f29005 Merge remote-tracking branch 'origin/main' into quest/campaign-v3/drain-yields; agent-campaign:5ab2eef Claim every due drain while the first waits"
     }
   ],
   "quests": {
