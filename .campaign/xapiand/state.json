@@ -17931,10 +17931,9 @@
         "xapiand:restore-batch",
         "xapiand:ack-read-levels"
       ],
-      "reason": "fix at Xapiand:89a406c7f: updates 3.7-7.0 s (master 4.8-8.2), plain in chores ~3.5 s (master 1.3-2.3) of which 2.0-2.2 s is 88-89 F_FULLFSYNC; D177's plain mode (journal-sync-mode) removes that gap; measure like for like and queue evidence once after the journal pin moves",
       "repo": ".",
       "risk": "high",
-      "status": "blocked",
+      "status": "active",
       "tasks": {
         "chunks": {
           "base": "7e232b1f71688995bd97437c563b254d5a8e5b34",
@@ -17970,10 +17969,7 @@
         }
       },
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "until": [
-        "journal-sync-mode"
-      ],
-      "updated": "2026-11-24T09:29:36",
+      "updated": "2026-11-24T09:29:50",
       "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal"
     },
     "journal-seal-repeat": {
