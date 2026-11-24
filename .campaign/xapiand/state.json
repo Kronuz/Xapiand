@@ -3547,6 +3547,21 @@
         "todo": "f2d2c179"
       },
       "text": "to do, critical path first:\ntodo: resume netlab-consensus (its journal waits on jobs 261122-211901-cc23ef, 261122-211904-f193f9, 261122-211907-bb83b9 and 261123-192508-9b2efc, which ended (done, failed) 7 h ago; new): `campaign status netlab-consensus`, read them, or park it with a reason"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T05:20:38",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T05:20:38",
+      "by": "campaign",
+      "closed": "resumed: a fresh contributor is on the linux-asan boot relink failure at 7e12650; it updates the journal",
+      "id": "msg-307",
+      "settles": {
+        "todo": "d50daf1b"
+      },
+      "text": "to do, critical path first:\ntodo: resume consensus-join-v2 (its journal waits on jobs 261124-013122-ade4a2, 261124-013129-65e51c, 261124-013129-d849ad and 261124-013130-531f9c, which passed 3 h ago; new): `campaign status consensus-join-v2`, read them, or park it with a reason"
     }
   ],
   "quests": {
