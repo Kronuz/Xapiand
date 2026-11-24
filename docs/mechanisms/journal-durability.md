@@ -107,11 +107,18 @@ directory and index (strata's group-catalog, D169):
    volume of its own, then the document as the upload's final entry, proposed once; a failure before it proposes
    the upload's abort. A read opens the record's volume through the slot's directory (`read_stored`): a document
    names only records its entry wrote before it was visible.
-5. **RESTORE.** `Shard::apply_slice` on an index with a group (`restore_slice`): in the turn, a chore prepares
-   the slice's writes, each an unconditional replace by key (`do_replace_term` leaves its `CommandWrite`, proposing
-   nothing), into `RestoreBatcher`'s commands of as many writes as fit one entry; each command is proposed at
-   `quorum` in input order, and `restore_results` reads its writes' docids and versions from the verdict. A write
-   whose document left its placed shard is missed, as before, and takes the serial path.
+5. **RESTORE.** `Shard::apply_slice` on an index with a group (`restore_slice`): in the turn, chores of 1 ms each
+   prepare the slice's writes, each an unconditional replace by key (`do_replace_term` leaves its `CommandWrite`,
+   proposing nothing), into `RestoreBatcher`'s commands of as many writes as fit one entry, until a command closes
+   or the shard's run ends; each command is proposed at `quorum` in input order, and `restore_results` reads its
+   writes' docids and versions from the verdict. Each proposal waits for its entry's syncs (two turn-log full
+   flushes on macOS, ~25 ms each), so a proposal carries an entry's worth of writes, not a chore's. A write whose
+   document left its placed shard is missed, as before, and takes the serial path. An update of an id (`update`,
+   `merge`, `patch`, no script or schema) reads its stored document on the loop after the earlier writes of that
+   id, not after every earlier write: the prepared updates stay pending (`DocIndexer::_pending`) and are written as
+   a plain run is, before a later object of the same id, a plain run or any other stored read, past 4 MiB of
+   records, and at the closing commit; the answer follows that commit, so every acknowledged write is applied and
+   durable.
 6. **Commit.** A request's commit (`COMMIT`, a RESTORE's closing commit, the autocommit) awaits the group's
    checkpoint (`commit_group`): its bundle covers what the writes before it applied, and the group truncates its
    log behind it; the engine's view is then refreshed past anything applied since the capture. The catalog's
@@ -151,7 +158,9 @@ nothing more of its closing commit, which refreshes.
   back after `kill -9` by the next process. `test_stored_blobs_survive_a_kill`: stored blobs, compressed and
   not, and an upload's blob read back byte-equal after `kill -9` with no commit and no close.
   `test_a_restore_slice_is_batch_commands`: 200 RESTORE writes take a handful of log entries, and each write's
-  docid and version are its batch verdict's. `test_a_commit_is_the_groups_checkpoint`,
+  docid and version are its batch verdict's. `tests/test_loop_yield.cc` (`test_a_restores_writes_share_their_log_entries`):
+  400 updates and 400 plain objects of a RESTORE take at most 20 entries each, where one per update was 400;
+  `test_an_update_sees_the_earlier_objects_of_its_stream`: a pending update's id read again sees it. `test_a_commit_is_the_groups_checkpoint`,
   `test_the_id_counter_is_in_the_log` (issued ids survive `kill -9` with no commit) and
   `test_a_reopen_aborts_an_upload_left_open` (A9's ready point). `test_a_cold_pin_reads_what_the_log_replays`,
   `test_a_fenced_index_is_replaced_and_replays_its_log` and `test_the_id_counter_persists_replays_and_advances`:
