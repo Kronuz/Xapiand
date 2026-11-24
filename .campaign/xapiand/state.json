@@ -3619,6 +3619,21 @@
         "todo": "de424f20"
       },
       "text": "to do, critical path first:\ntodo: finish index-restructure (nothing moved it for 2 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); listed 48 min): `campaign status index-restructure`"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T06:45:18",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T06:45:18",
+      "by": "campaign",
+      "closed": "consensus-join-v2 landed at 5e22cf0; index-restructure waits on the owner",
+      "id": "msg-312",
+      "settles": {
+        "todo": "e84fe803"
+      },
+      "text": "to do, critical path first:\ntodo: resume consensus-join-v2 (its journal waits on jobs 261124-052541-de01a8, 261124-052543-c2eb2f and 261124-052545-d8b64d, which passed 63 min ago; new): `campaign status consensus-join-v2`, read them, or park it with a reason\ntodo: finish index-restructure (nothing moved it for 2 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); listed 63 min): `campaign status index-restructure`"
     }
   ],
   "quests": {
