@@ -1,6 +1,6 @@
 # journal-replaces-wal: journal
 
-State: waiting on jobs at Xapiand:a7b187c56 (not yet pushed: pushed once the drain 30x shows the build): drain probe 261124-033015-701cc3 (b2be5cac8), drain 30x 261124-033019-2a8cd9, drain mutant 261124-033023-f97bf7 (mutant/jrw-drain-destroy), replay check 261124-033415-7ce077, replay mutant 261124-033419-5c1d14 (mutant/jrw-recovery-report); still queued from session 13: R2 mutant 261124-021321-9231e2. Next: read them, push, rerun the evidence set at the head, `campaign verify`, then State "ready for review".
+State: waiting on jobs at Xapiand:2305b1335 (code round done; push and the evidence rerun at the head next): drain 30x 261124-034435-22beb7, drain mutants 261124-034439-e01d6b and 261124-034443-5d5f29, replay mutant 261124-033419-5c1d14, R2 mutant 261124-021321-9231e2. Done: drain probe 701cc3 (failed as it showed), drain mutant 11605e (killed at 016207516), sync probe 23729b, R2 test 0b04e0 (passed at 016207516). Replay check 7ce077 cancelled: rerun at the head with the set.
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
@@ -8,15 +8,19 @@ Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit 
 Session 14 (2026-11-24), the drain case's missing warning and the lead's replay-check message:
 
 1. The drain case (015dd1385's test) missed only its warning (local 742fba run 1, CI TSan and ASan+UBSan; exit 75 in
-   its bound). Cause by reading: the child slept 800 ms and assumed the first write's autocommit (200 ms after it)
-   was suspended in a checkpoint behind the chore it then held; under load or a sanitizer the endpoints lookup and
-   pin outlast 200 ms, the autocommit checkpoints first, so no control task is left at the deadline and Stop 3's
-   close abandons instead (same exit, no warning). The code's path is right; the test's precondition was a race.
-   Probe 701cc3 (Xapiand:b2be5cac8) logs the detached count as the shutdown starts and prints the child's log on a
-   miss: a failing run must show 0. Fix Xapiand:cae4f2900: the child waits for the first autocommit to end, holds
-   the chore (entered), writes at ack=none (202: placed, apply held, index modified), and starts the shutdown once
-   detached() != 0, so the autocommit is in the held checkpoint whatever the timing. 30x 2a8cd9; mutant f97bf7
-   (Xapiand:4dcc14fbd, 015dd1385's check off) must fail it.
+   its bound). First hypothesis (the write's autocommit checkpointed before the hold) REFUTED by probe 701cc3
+   (Xapiand:b2be5cac8, failed on run 4): DETACHED_AT_SHUTDOWN 3, then the first drain ran the control loop to the
+   deadline (the autocommit waits in the held checkpoint and cannot end), Stop 1 started 2,022 ms after the shutdown
+   with 1 ms left, the HTTP stop was abandoned ("Shutdown abandoned 2 unfinished items after waiting 1 ms"), and
+   that abandon skipped the control loop's check. Whether a 1 ms HTTP stop finished decided the warning: always
+   missed under the sanitizers, sometimes here. Cause: the stop's order (master's too), any detached task that
+   cannot end took the requests' whole budget. Fix Xapiand:2305b1335: the drain before the HTTP stop ends where the
+   stop's two graces are what is left (2 x http_shutdown_grace(bound)); Stop 2 drains the control tasks with the
+   autocommits to the deadline; control-plane.md items 1 and 3 say so. The case also checks Stop 1 starts by
+   1,800 ms (old order: never before 2,000). Xapiand:cae4f2900 (no sleep: hold the chore, write at ack=none, wait
+   for detached() != 0) was built on the refuted hypothesis; kept, since it builds the precondition from observed
+   state. Jobs: 30x 22beb7; mutants e01d6b (Xapiand:8ff8ddcd4, the first drain to the deadline) and 5d5f29
+   (Xapiand:7c744b176, 015dd1385's check off). Superseded unrun or stale: 2a8cd9, f97bf7 (cancelled).
 2. Batch-pins verdict (probe 23729b): the case took 21.4 s at load 14, of which 886 F_FULLFSYNC calls took 22.2 s
    (per index ~37: the turns log 252, the journal directory 217, artifacts 192, the index's own 72+24+27+26). The
    hang under the crash gate was these flushes past the 40 s default watchdog, not a pin. Xapiand:bb8036409 gives the
@@ -546,8 +550,9 @@ Drafts, applied when the code lands; each names the contract it shapes (format-f
     detached task never runs synchronously on the thread that drains that loop; finish() leaves the control to its
     owner; DatabasePool::stop_names() stops the names' build up front, as set_control(nullptr) did.
 38. test_node's Watchdog samples every thread on a hang (sample on macOS, gdb where installed): a diagnostic, not a fix.
-39. The drain case's fix is the test's, not the code's: 015dd1385's abandon is right; the case now builds its
-    precondition (an autocommit in a held checkpoint) from observed state, never a sleep.
+39. The shutdown's first drain ends where the HTTP stop's two graces are what is left of the bound; Stop 2 drains
+    the control tasks with the autocommits to the deadline. The drain case builds its precondition (an autocommit
+    in a held checkpoint) from observed state, never a sleep.
 40. The batch-pins case's watchdog is 120 s, named by its flush count; fewer flushes are the journal library's.
 41. A journal that cannot be recovered ends the start with EX_IOERR and one critical line naming the directory, the
     library's error and a finite file-size limit; it is reported in the manager (where set_journal runs), not wrapped
