@@ -7681,6 +7681,9 @@
       "files": [
         "include/completion/**",
         "test/**",
+        "examples/**",
+        "bench/**",
+        "tools/**",
         "README.md",
         "ARCHITECTURE.md",
         "CHANGELOG.md",
@@ -7718,7 +7721,7 @@
       "risk": "high",
       "status": "active",
       "title": "completion: PosixIO takes a required flush mode (plain or full) for every sync it issues",
-      "updated": "2026-11-24T08:09:20",
+      "updated": "2026-11-24T08:20:07",
       "worktree": "../completion-wt/xapiand/completion-flush-mode"
     },
     "completion-task-pin": {
