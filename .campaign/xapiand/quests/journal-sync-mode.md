@@ -45,8 +45,10 @@ mode at open. All callers are ours: Detent and Xapiand migrate in their own ques
 - Lead, 2026-11-24: re-scoped after the contributor found the journal issues no sync itself:
   every call is completion's PosixIO, and the crash model is faultlab's. The mode lives in
   `completion-flush-mode`; faultfs's model in `faultlab-plain-sync`; this quest wires them, runs
-  the sweep in both modes, and documents and measures them. host.h may not change, so it no longer
-  waits for detent:journal-bound-first-open (it still merges main when that lands).
+  the sweep in both modes, and documents and measures them.
+- Detent's lead (msg-325): Detent opens journal hosts and never builds a PosixIOOptions, so the mode
+  is a required parameter where a host is opened (host.h), with no default; this quest lands after
+  detent:journal-bound-first-open, and the lead sends Detent that call's exact shape before landing.
 - Lead: the separate finding that a lone voter makes two full flushes per proposal (hunt list) is
   not in this quest; it touches the turn log's commit protocol and gets its own quest.
 
