@@ -1087,3 +1087,14 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - htm explorer: extern table in htm.cc (htm:e51e63e), CI green; probes queued. soundex: A3 sizes in docs/TABLES.md (soundex:ba10f53). stox-no-libc: lead's header comment (strict-stox:aebfcd9). Both wait on macOS arm64 CI (runner shortage; uinteger_t's attempt 7).
 - Tool bug to campaign-v3 (msg-47): artifact rows with backticks or two files stay pending silently (~6 edits, ~40k lead tokens).
 - Quota: weekly 29% (1.58%/h; exhaustion in about 45 h at this burn, reset 2026-11-30). Host: load 42 (52 over 5 min) on 16 CPUs, 113 jobs queued, 284 GiB free.
+
+## 2026-11-24 00h30
+
+- Landed: none. Close: hunt-htm-constexpr-start (all evidence, CI at htm:6fff441), group-heal (reruns at the merged head strata:04e523125802 and CI), stox-no-libc and soundex (macos-arm64 runner).
+- test_node (owner asked): fails only on journal-replaces-wal, three different cases since 11:33 (576cc8 hang, d17a82 shutdown-abandon :992-:1003, CI 45220356167 flush/revision); 11 of 11 local runs on other quests and every master CI passed it. Lead had called the hang load: wrong. Contributor told to find one cause first, 10x proof. test_loop_yield.cc:693 failed CI 3x, also only on this quest.
+- hunt-single-flight-race: master's flake (CI 45242486008) is a test race, B counts its cancellation inside its task; lead fix Xapiand:82389d31b, 300-run job queued.
+- group-heal: 14 of 14 A3 mutants killed; lead merged strata main (41 files), fixed A6's row and 16 task citations; durability re-check (Sonnet, 67k, 41 s) APPROVE at 04e523125802 (consensus 59ae07f..6e1122c changes no include/ or src/).
+- consensus-join-v2: S1 probe at the fix, forged RSA-16384 and DSA requests refused at 0.032 ms against 0.126 ms for a real P-256 one (was 10.1 ms); join-no-cap, join-no-rate, skip-boot-check, redial-at-deadline mutants killed; token fuzz 2x16 min clean.
+- htm: per-TU initializers removed: two users + htm.o go from 3 initializers (576 B) to 1 (192 B) (jobs 885328, 9f4fa2); written up in htm docs/start-tables.md.
+- No explorer batch: seven quests wait on the lead to land and 66 jobs are queued; review and landing are the limit, not ideas.
+- Quota: weekly 31% (1.60%/h; exhaustion in about 43 h at this burn, reset 2026-11-30). Host: load 9 (17 over 5 min), light slots 67% used last hour, 280 GiB free.
