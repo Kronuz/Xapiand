@@ -1,6 +1,6 @@
 # strata-journal-pin: journal
 
-State: ready for review: the durability round's fixes (F1 strict bound, F2 witness test) are confirmed at strata:7214f27d; A1 (build-test, held by slow-once until now), A2 261123-235932-f57dc8 and CI run at the round's end (lead, 2026-11-24)
+State: ready to land: durability fixes confirmed, every criterion green at strata:7214f27d (lead, 2026-11-24)
 Quest: .campaign/xapiand/quests/strata-journal-pin.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -29,9 +29,9 @@ hunt.md as its own follow-up, not this quest.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test (asserts on) at strata:7214f27d: `campaign verify` at the round's end |
+| A1 | build-test (asserts on) 261124-002523-edd28e at strata:7214f27d |
 | A2 | 261123-235932-f57dc8: group_tests, `ctest -R ^(group_|simulation_group_)` at strata:7214f27d |
-| A3 | CI at the landed commit |
+| A3 | ci:45351185385 (strata CI at 7214f27d, green) |
 | A4 | `docs/mechanisms/replication-group.md`: "opens a bounded group through" (section "A damaged turn log"); Result below |
 | A5 | standalone_turn_log t5 t5b 261123-235930-a76b46; fails without: bounded-as-stored 261123-194337-4c3177, 261123-235110-d0d366; bounded-at-bound (`<` to `<=`) 261124-000525-fb418d; earlier 261123-194339-539e7b |
 | A6 | group_lifetime_test bounded + bounded-witness 261123-235934-e3aa7b; fails without: bounded-created 261123-194341-31812e, 261124-000527-82a382; bounded-witness-created 261124-000529-7f92f7 |
