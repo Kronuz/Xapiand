@@ -4082,6 +4082,18 @@
       "id": "msg-346",
       "origin": "detent",
       "text": "detent:journal-open-single-read was dropped (superseded: journal-bound-first-open landed (journal:a2d65da) with the single read; device calls equal main's (292, 559; review Detent:8fed6364), open A/B f05db6 within main's spread; A2-A5 met by its jobs, doc and CI): your rocksdb-parity wait on it; it folds into journal-bound-first-open, which they now wait on"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T13:24:19",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T13:24:19",
+      "by": "lead",
+      "closed": "done: rocksdb-parity's after now journal-turn-sector-checks, journal-bound-first-open",
+      "id": "msg-347",
+      "text": "From Detent's lead: journal-open-single-read is dropped into journal-bound-first-open (landed journal:a2d65da, which already reads each log once: device calls equal main's). xapiand:rocksdb-parity's wait on it is satisfied by that landing."
     }
   ],
   "quests": {
