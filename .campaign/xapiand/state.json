@@ -14982,18 +14982,63 @@
         "docs/**",
         "ARCHITECTURE.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/hunt-htm-constexpr-start",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-23T16:52:37",
+          "ci": {
+            "commit": "6fff441baa6a5620f0633281d226cb92bc9b77e7",
+            "runs": [
+              45294506377
+            ]
+          },
+          "commit": "6fff441baa6a5620f0633281d226cb92bc9b77e7",
+          "criteria": {
+            "A1": "261123-135645-812a48 (the build-test check), 261123-135645-812a48 (passed at e51e63e43d72; ignores docs-only ARCHITECTURE.md, docs/start-tables.md)",
+            "A2": "`docs/start-tables.md`: \"576 B, 3 initializers\"",
+            "A3": "261123-135647-01d709 (passed at e51e63e43d72; ignores docs-only ARCHITECTURE.md, docs/start-tables.md)",
+            "A4": "CI green at 6fff441baa6a"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "e51e63e43d7290a9c1830aa88a91e535bb6d4335",
+              "docs": [
+                "ARCHITECTURE.md",
+                "docs/start-tables.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-135645-812a48",
+              "level": "light",
+              "seconds": 29.5,
+              "state": "done",
+              "what": "hunt-htm-constexpr-start check build-test at e51e63e43d72"
+            },
+            {
+              "check": "ci",
+              "ci": "ci:ci",
+              "commit": "6fff441baa6a5620f0633281d226cb92bc9b77e7",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "c4577b702aed9bfdecc837e8a9b309e2b267c48f",
+          "reason": "",
+          "tested": "6fff441baa6a5620f0633281d226cb92bc9b77e7"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../htm",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "htm start tables constant-initialized",
-      "updated": "2026-11-23T16:07:01",
-      "worktree": "../htm-wt/xapiand/hunt-htm-constexpr-start"
+      "updated": "2026-11-23T16:52:43",
+      "worktree": ""
     },
     "hunt-lua-fetch": {
       "accepted": {},
