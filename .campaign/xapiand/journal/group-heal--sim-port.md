@@ -24,7 +24,7 @@ Nothing.
 | sim tests at head | ci:macos-arm64 (plus ci:linux-asan-ubsan, ci:linux-tsan), strata CI run 44853762979 at strata:6d870c05, pending. Local suite jobs 1bb70e and 28e256 cancelled per the coordinator's D57 correction: CI runs the same ctest |
 | planted fault rejected | 261120-180342-65db6c done exit 0 at strata:6d870c05: seeds 1-5 linearizable; with --plant lost-write each a violation (keys 5, 1, 6, 5, 13), plain run exits 1 |
 | one seed, one history | 261120-180334-1b82c5 done exit 0: seed 7 twice, sha256 8eacc64c... (132,121 B); seed 11 twice, sha256 75961460... (102,096 B) |
-| sizing | probe 261120-175321-108824: 16 keys/100 ms checks in <0.1 s per seed; 8 keys/200 ms took ~17 s (2.2M nodes) |
+| sizing | probe 261120-232059-b57cfe: 16 keys/100 ms checks in <0.1 s per seed; 8 keys/200 ms took ~17 s (2.2M nodes) |
 
 ## Result
 

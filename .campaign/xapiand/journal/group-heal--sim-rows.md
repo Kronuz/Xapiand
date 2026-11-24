@@ -1,6 +1,6 @@
 # group-heal--sim-rows: journal
 
-State: waiting on jobs 261123-053444-c51484 261123-053447-2bfa62 261123-053450-58e6b8 (not pushed: GitHub unreachable; strata:18525c5f and the journal are committed locally)
+State: waiting on jobs 261123-083548-5b2a74 261123-053447-2bfa62 261123-053450-58e6b8 (not pushed: GitHub unreachable; strata:18525c5f and the journal are committed locally)
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -59,7 +59,7 @@ for task `repair` (on consensus-request-install).
 
 | Criterion | Evidence |
 |---|---|
-| A5 | pending: 261123-053444-c51484 (barriers wait on first-commit-crash); fails without: 261123-053422-5df6d3, 261123-053425-7d40db, 261123-053427-f9a12e; recovery-as-found probe 261123-053450-58e6b8 (scratch merge) |
+| A5 | pending: 261123-083548-5b2a74 (barriers wait on first-commit-crash); fails without: 261123-053422-5df6d3, 261123-053425-7d40db, 261123-053427-f9a12e; recovery-as-found probe 261123-053450-58e6b8 (scratch merge) |
 
 ## Result
 

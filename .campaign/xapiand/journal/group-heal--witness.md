@@ -51,7 +51,7 @@ jobs no journal names), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A4 | plain 261121-214745-036576 queued; fails without: 261121-214749-38a541, 261121-214752-5dffc3 queued (82aca9 superseded at c7f3dedc) |
+| A4 | plain 261123-083547-bac411 queued; fails without: 261123-021427-94e042, 261123-021429-dfeb44 queued (82aca9 superseded at c7f3dedc) |
 | <A1> | <from `campaign brief`> |
 
 ## Result
