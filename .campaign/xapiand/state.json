@@ -16363,11 +16363,15 @@
         "index-restructure"
       ],
       "provides": [],
+      "reason": "split proposal pending the owner: index-restructure step 1 landing alone as low risk was denied as weakening; default keeps step 2 inside index-restructure",
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "blocked",
       "title": "strata's basic_index: mechanisms with their own state become member classes (index-restructure's step 2)",
-      "updated": "2026-11-24T02:44:54"
+      "until": [
+        "owner"
+      ],
+      "updated": "2026-11-24T02:46:19"
     },
     "install-own-files": {
       "accepted": {},
