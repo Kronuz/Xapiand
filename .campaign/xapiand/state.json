@@ -21042,18 +21042,52 @@
         "bench/netlab/**",
         "docs/perf/netlab*"
       ],
-      "journal": "../Xapiand-wt/xapiand/netlab-consensus",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-24T06:29:24",
+          "ci": {
+            "commit": "1127f695fc06a3d01a120305a062cca39851887b",
+            "runs": [
+              45373952149
+            ]
+          },
+          "commit": "1127f695fc06a3d01a120305a062cca39851887b",
+          "criteria": {
+            "A1": "261122-211901-cc23ef (passed at e534d6c0df88; only 3 merges from main since, none touching its files), 261124-044935-2caebf; fails without: 261121-155541-b33da6, 261122-211904-f193f9",
+            "A2": "261124-044935-2caebf",
+            "A3": "`docs/perf/netlab-consensus.md` at consensus:c1a2138: tables per node count with job ids, calibration, hunt rows, 8 findings"
+          },
+          "evidence": [
+            {
+              "cmd": "python3 -I bench/netlab/selftest.py",
+              "commit": "e534d6c0df88215d5ce176e5d0f580ef008f4f25",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261122-211901-cc23ef",
+              "level": "light",
+              "seconds": 7.5,
+              "state": "done",
+              "what": "selftest at alternating rounds"
+            }
+          ],
+          "final": true,
+          "from": "512e3ef46c9d17f55d725de33cd808e6264144d2",
+          "reason": "",
+          "tested": "1127f695fc06a3d01a120305a062cca39851887b"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../consensus",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "consensus measured on a realistic network: netlab delay, loss, reorder and partitions",
-      "updated": "2026-11-20T20:20:36",
-      "worktree": "../consensus-wt/xapiand/netlab-consensus"
+      "updated": "2026-11-24T06:29:28",
+      "worktree": ""
     },
     "newman-pin": {
       "accepted": {},
