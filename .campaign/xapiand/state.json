@@ -3227,6 +3227,19 @@
       "id": "msg-285",
       "notice": "skill installed fff3dc76a0361c8c4742a1ff64eeadcca06d9ed7",
       "text": "campaign skill: agent-campaign:fff3dc7 installed here, 3 commits: agent-campaign:1dd2d49 Close two evidence holes: inputs follow named_code, empty runs fail; agent-campaign:277491e Count .mdx and .rst as prose in any folder, .txt also under site/; agent-campaign:fff3dc7 source-layout: fix the test line counts"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T21:17:42",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T21:17:42",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "noted: ci-owns-sanitizers landed, not installed yet",
+      "id": "msg-286",
+      "notice": "skill landed 47778ac9f8ff5e01dabebdef3f4e9a5581ee70dc",
+      "text": "campaign skill: 5 commits landed on agent-campaign's main, not installed here yet: agent-campaign:12494a0 Flag a local sanitizer gate check that CI already builds; agent-campaign:ea5c549 Refuse a CI-owned local sanitizer check in new and set --check; agent-campaign:062aba0 Merge branch 'main' into quest/campaign-v3/ci-owns-sanitizers; agent-campaign:6c13700 Keep the gate paragraph's edit to its sanitizer sentence; agent-campaign:47778ac Prove a ci: check unflagged by adding one, not changing one"
     }
   ],
   "quests": {
