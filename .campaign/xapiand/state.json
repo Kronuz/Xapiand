@@ -3634,6 +3634,18 @@
         "todo": "e84fe803"
       },
       "text": "to do, critical path first:\ntodo: resume consensus-join-v2 (its journal waits on jobs 261124-052541-de01a8, 261124-052543-c2eb2f and 261124-052545-d8b64d, which passed 63 min ago; new): `campaign status consensus-join-v2`, read them, or park it with a reason\ntodo: finish index-restructure (nothing moved it for 2 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); listed 63 min): `campaign status index-restructure`"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T06:48:38",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T06:48:38",
+      "by": "lead",
+      "closed": "rocksdb-parity ordered after journal-bound-first-open and journal-open-single-read (its first commit documents the first-open limit; its rows measure open)",
+      "id": "msg-313",
+      "text": "Heads-up: detent:journal-turn-sector-checks landed on journal main at 4eb8165 (turn log RFTW0002). Next on journal's turn-buffers contract: detent:journal-bound-first-open (the lost bound survives a power cut during the first open; open path only, no format change), then journal-open-single-read. Order xapiand:rocksdb-parity after them if it reads the turn log at open."
     }
   ],
   "quests": {
