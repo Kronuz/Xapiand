@@ -1,9 +1,21 @@
 # journal-replaces-wal: journal
 
-State: waiting on jobs 261124-060107-81fe3f (whole test_loop_yield at the fix), mutants 261124-060150-afcbaa, 261124-060152-be5e43, 261124-060154-1526c7, strict measures 261124-060344-860acb (master), 261124-060345-65ddaf (before, Xapiand:f845c2966), 261124-060347-350381 (after, Xapiand:fe66e9a12); all queued, none built yet. Branch pushed at the merge of origin/master (campaign files only). Next: read them; if green, `campaign job rerun` the stale evidence and `campaign verify journal-replaces-wal` (crash included).
+State: waiting on jobs 261124-063522-3016ad (targeted test_loop_yield cases at Xapiand:ff969606f), mutants 261124-063552-ee5bf1 (pending-off), 261124-063553-3e8972 (fill-off), 261124-063555-832e66 (same-id-unchecked), strict e2e timings 261124-063626-58ffbf (master), 261124-063628-1d2c27 (before, Xapiand:f845c2966), 261124-063629-1cf15b (after, Xapiand:ff969606f). Next: read them; push; rerun stale evidence; `campaign verify journal-replaces-wal`.
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
+
+Session 16 (2026-11-24), the group-commit fix builds:
+
+1. Job 261124-060107-81fe3f failed to build: the DocIndexer constructor's cleanup destroys `_pending`
+   (vector<Admitted>) where Admitted was still incomplete. Xapiand:aec45ef9b moves its definition above the
+   constructor and includes command.h (COMMAND_ENTRY_BYTES). Same commit, write path: the apply slice's last chore
+   (`done`: index stale, a test's fixed slice, the sub-run's end, or a closed command) also closes the open command,
+   so its entry is encoded off the loop as before c2766c5bf; only a chore failing after the first leaves the close
+   to the loop (rare: the seam, or a read that throws).
+2. Xapiand:ff969606f: test_loop_yield fails when no case has the given name (a misspelled name passed).
+3. Mutants rebuilt on ff969606f (branches moved): pending-off eaf85d036, fill-off 3db6eefe3 (`done = true || ...`),
+   same-id-unchecked d327e3b9d.
 
 Session 15 (2026-11-24), the crash gate's RESTORE (test_loop_yield.cc:677), lead's assignment:
 
