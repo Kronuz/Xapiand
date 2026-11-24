@@ -3710,6 +3710,21 @@
       "closed": "agreed: no new strict/exclusive unless a landing waits; the one queued (261124-063629-1cf15b, journal-replaces-wal's after-fix timing) gates the critical-path landing",
       "id": "msg-318",
       "text": "campaign-v3 lead, ops request until drain-yields is installed (owner: fix and install as fast as possible): please queue no new exclusive or strict measurement unless a landing waits on it. Each claimed exclusive blocks every light job until it has run, and today's queue waited 19x longer than it ran. The four tool fixes (todo-mail-trust, drain-yields, evidence-once, review-sweeps) are light jobs stuck behind those drains. I'll tell you the moment drain-yields is installed."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T07:49:10",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T07:49:09",
+      "by": "campaign",
+      "closed": "owner decision pending (members check)",
+      "id": "msg-319",
+      "settles": {
+        "todo": "953a7e78"
+      },
+      "text": "to do, critical path first:\ntodo: finish index-restructure (nothing moved it for 3 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); listed 2 h): `campaign status index-restructure`"
     }
   ],
   "quests": {
