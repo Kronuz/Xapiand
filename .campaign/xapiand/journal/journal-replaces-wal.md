@@ -1,6 +1,6 @@
 # journal-replaces-wal: journal
 
-State: waiting on jobs at Xapiand:2305b1335 (code round done; push and the evidence rerun at the head next): drain 30x 261124-034435-22beb7, drain mutants 261124-034439-e01d6b and 261124-034443-5d5f29, replay mutant 261124-033419-5c1d14, R2 mutant 261124-021321-9231e2. Done: drain probe 701cc3 (failed as it showed), drain mutant 11605e (killed at 016207516), sync probe 23729b, R2 test 0b04e0 (passed at 016207516). Replay check 7ce077 cancelled: rerun at the head with the set.
+State: waiting on jobs at Xapiand:113722c02 (pushed; CI runs build-test, e2e, asan, tsan): drain 30x 261124-034435-22beb7, drain mutants 261124-034439-e01d6b and 261124-034443-5d5f29, replay mutant 261124-033419-5c1d14, R2 mutant 261124-021321-9231e2; the evidence rerun at the head: 348401 (A1/A4/A9), 4d9ef7 (A2 blob crash), 6498f3 and e5cec7 (A3), 81cf26 (A4), 791b13, 99308a (A8), 69f858 (A5 levels), a40dc4 (A1 abandon 30x), b4840e (R2), c3d005 (A5 replay check); verify: crash 261124-034557-ef103c, no-wal 261124-034557-ec8be3 (all 261124-0345xx). Next: read them and CI; when Evidence names a passing job per criterion at the head, State "ready for review" (the lead's durability re-accept).
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
