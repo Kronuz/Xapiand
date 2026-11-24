@@ -50,3 +50,14 @@ host is opened). Changes journal's public API: every caller passes a mode. All c
 ## May land early
 
 Nothing: the API change and the durability model land together.
+
+## Review
+
+One `durability` review, strong tier at effort max, on Detent's behalf (msg-323); Detent's lead reads it
+for its acceptance. Its questions:
+1. Can any path reach a plain sync while the caller asked for full: defaults, reopen, the host's
+   sync_files, the artifact or mutation phases, directory barriers?
+2. Does the full-mode refusal path still fail and never degrade, shown by a run?
+3. Does faultfs drop the drive-cache writes in plain mode at a power cut, and does a mutant that maps
+   full to plain fail the crash model?
+4. Is the README's per-mode claim true on Linux and FreeBSD, where plain already makes the full call?
