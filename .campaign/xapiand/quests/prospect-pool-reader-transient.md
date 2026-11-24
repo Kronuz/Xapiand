@@ -5,32 +5,45 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+`fielddict::reader::check_fields` scans the field pool through a reader it builds and drops, read
+through open_at's checksum verifier, instead of `pool()`, which caches a pool reader for the life of
+the open dictionary. An index that is opened and checked but never queried keeps no pool reader:
+about 400 B per segment less (field-check-at-map's contributor measured 1.6 KB per index at 1,000
+segments with 4 fields and 4.0 KB with 10, about 7% of the heap per open index, on main too). A
+query that needs the pool still caches it through `pool()` as before. Refusals and results are
+unchanged. The many-indexes workload (millions of open indexes per host) is why it matters.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 A test shows by value that `check_fields` leaves the pool reader uncached (heap or a cache
+  probe, before and after the check), that a later query caches it as before, and that a corrupt
+  pooled field id is still refused with the same error. A mutant that scans through `pool()` again
+  is killed by the named test (`--fails-without`).
+- A2 The suite passes: the `build-test` check, and CI on every platform. [ci] for the platforms.
+- A3 Heap per open index before and after at named commits on prospect's own open-only bench (or a
+  harness the quest adds), with an A/A, `strict`: the saving per segment and per index at 4 and 10
+  fields, the honest magnitude, in `docs/perf/fielddict-pool-reader.md`; open time stays within the
+  A/A band.
+- A4 [artifact] `CHANGELOG.md` names the change.
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None changed: `fielddict::reader`'s public API and the bytes on disk are unchanged.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 2026-11-24: from field-check-at-map's fix round (hunt list); its contributor's patch is at
+  ~/.scratch/xapiand/field-check-at-map/src/prospect-fix (include/prospect/fielddict.hh, a
+  `transient` reader factored out of `dictionary`). Start from it; it was measured through strata's
+  eager_open counting build only.
+- Lead: risk normal (no format, no concurrency, no decoder change: the verifier path is the same);
+  one `correctness` review.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+Nothing: the change is one function and its test.
 
-## Tasks
+## Review
 
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+One `correctness` review: does every path that reads the pool after the check still get a verified
+reader; can the transient reader outlive `ctx` or the blocks it views; is the refusal unchanged.
