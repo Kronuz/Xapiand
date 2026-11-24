@@ -1,12 +1,36 @@
 # consensus-join-v2: journal
 
-State: waiting on jobs 261124-013122-ade4a2 261124-013129-65e51c 261124-013129-d849ad 261124-013130-531f9c, and CI (suite, asan, tsan) at consensus:f01607b
+State: waiting on jobs 261124-052541-de01a8 261124-052543-c2eb2f 261124-052545-d8b64d, and CI at consensus:d42a7d1
 Quest: .campaign/xapiand/quests/consensus-join-v2.md (the lead's; never edit it)
 
 Code: consensus worktree `../consensus-wt/xapiand/consensus-join-v2`, branch
 `quest/xapiand/consensus-join-v2`, base consensus:6e1122c.
 
 ## Doing
+
+2026-11-24, boot relink (CI 45391304329 at consensus:7e12650, linux-asan-ubsan:
+`boot` "as the admitted boot, node 2 links and calls" FAILED, whole test 1.68 s; the other
+failure there, `consensus_liveness` Timeout, is detent:consensus-liveness-asan-timeout's).
+Cause, from the code: node 2 (acceptor, no check of its own) starts a link at its reply
+(links.h adopt: reserve, write_hello, start). Node 1's last dial of the refusal phase was in
+flight across `two.transport->boot(B)`: its reply hello carried C, node 2 had started the link,
+`two.echoes(1)` bound its call there (host_transport.h call: `peer.lane` exists), node 1's
+dialer check then refused C and aborted, and the call ended `connection_aborted` at once
+(rpc.h Lane::close). Ruling: the test raced; the product keeps its contract (below). Fix at
+consensus:d42a7d1 (test + hello.md only): node 1's check holds a dial on boot C (a gate) until
+node 2 has switched to B and bound a call to the link it started; that call must end fast
+(`connection_aborted`/`not_processed`, under 2 s of a 6 s deadline), node 1's redial must link
+to B, then the original one-shot echoes run on the settled link. The old claim at the forced
+interleaving: probe consensus:6719b63 (ref refs/probes/boot-old-claim, on d42a7d1; expects that
+call `ok`) must fail. Jobs: 261124-052541-de01a8 (boot x10, Debug), 261124-052543-c2eb2f
+(probe, fails-without), 261124-052545-d8b64d (boot x30 under ASan+UBSan, llvm clang).
+
+What it touches, for the security reviewer's call: test/transport/admission_nodes_test.cc
+(boot_case only) and docs/mechanisms/hello.md (one paragraph, one test line). No header, no
+product code, no wire change. Evidence to rerun at the new head: CI (all platforms); the A5
+mutant skip-boot-check (cherry-pick; it still fails `boot` in phase 1); the other six mutants
+touch other cases and need only the rebuild. Groups (A1), forged/issue (S1) and the fuzzers
+(A6) cover files this commit did not change.
 
 msg-291 answered: the lead granted test/transport/groups_test.cc. Fix committed and pushed at
 consensus:f01607b (`pin_of` returns `key_pin(leaf.get())`; test-only, no mechanism changes).
@@ -87,6 +111,14 @@ issue at the fix 261123-154016-cd7eae. S2-S5 are the lead's (not fixed).
 
 ## Rulings I made
 
+- Boot relink (CI 45391304329): the fast failure is the contract. A call is bound to its
+  connection and ends with it, at most once (rpc-lane.md: `connection_aborted` on close,
+  `not_processed` if it never left); the transport never sends it again, since only the caller
+  knows whether it is safe to repeat. A dialer that refuses the acceptor's boot aborts a link the
+  acceptor already started (two-message hello), and that window is inherent: closing it needs a
+  third hello message, a wire change outside this quest. It hits only the refused (stale) boot's
+  own calls, never the admitted node's: the dialer refuses before it starts. Test fixed, not the
+  transport; hello.md states the window.
 - Peers and session.h keep the DER certificate fingerprint (Detent's operator config pins it);
   NodePins alone moves to key pins. Peers goes with worker-pump-removal.
 - Token v2 text: "DTJT0002" and hex of cluster (16), CA key pin (32), secret (32): 168
