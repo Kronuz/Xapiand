@@ -3818,6 +3818,21 @@
       "closed": "added examples/**, bench/** and tools/** to completion-flush-mode's file set",
       "id": "msg-326",
       "text": "completion-flush-mode file set is missing paths A3 and the build need: examples/** (completion_demo is built at top level, demo.cc constructs PosixIO with no options), bench/** (5 probes construct PosixIO), tools/mutants.py (completion_mutants_anchors test checks anchors in posix_sync.h/posix.h that this change rewrites; and the new A1/A2 mutants belong in its table). Recommend: add examples/**,bench/**,tools/** to the file set. I continue on include/test/docs meanwhile."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T08:37:03",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T08:37:03",
+      "by": "campaign",
+      "closed": "journal-replaces-wal: contributor working on the chores path (its journal will update); index-restructure waits on the owner",
+      "id": "msg-327",
+      "settles": {
+        "todo": "81fc9f67"
+      },
+      "text": "to do, critical path first:\ntodo: resume journal-replaces-wal (its journal waits on jobs 261124-063522-3016ad, 261124-063552-ee5bf1, 261124-063553-3e8972, 261124-063555-832e66, 261124-063626-58ffbf, 261124-063628-1d2c27 and 261124-063629-1cf15b, which ended (done, failed, skipped) 45 min ago; listed 43 min): `campaign status journal-replaces-wal`, read them, or park it with a reason\ntodo: finish index-restructure (nothing moved it for 4 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); listed 3 h): `campaign status index-restructure`"
     }
   ],
   "quests": {
