@@ -1174,3 +1174,11 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Host: load 38-49 (legacy-h fnsizes LTO at 4.6 cores); light slots 70%, runnable beside idle 29 min. Quota: weekly 40%, burn 1.41%/h.
 
 - 01:50 landing: file-set-seal-streaming at strata:7a4284c4 (contributor 117k, reviewer 104k, APPROVE with no blockers; reviewer ran in parallel with the suite and CI, ~40 min from start to land). journal-replaces-wal resumed with a fresh Opus contributor (the old one ~360k): bump strata to 7a4284c4 (closes R2), merge master, the drain abort, batch-pins' ~850 full flushes, the replay log line, CI's failures. consensus-join-v2: fixture fix f01607b + lead's merge of main 81ada17 (Detent's fetch-alongside-flake landed at consensus:512e3ef); token fuzzer green. Lead's reader had filtered `- ` to-do lines for 16 h (fixed; campaign-v3 adds a `todo: ` prefix).
+
+## 2026-11-24 10h
+
+- Landed: file-set-seal-streaming at strata:7a4284c4 (01:50). Detent's consensus-fetch-alongside-flake landed at consensus:512e3ef, unblocking consensus-join-v2.
+- consensus-join-v2: lead merged consensus main at 81ada17 (Detent's groups_test edits; key-pin fix kept); groups cases 4f9f47 and S1 990ebf green there; token/join/hello fuzzers green at f01607b, rerun at 81ada17 (the merge touched a file in the set). CI queued. Detent ordered follower-read and rpc-host-stream-gap after it.
+- index-restructure step 1: members, fnsizes fff00d, selfcontained 58916c (rerun fresh: the slot's build-sc held journal 9e11713, hunt row filed) and CI 45358702484 green at 351eebc5; build-test 30df0e running, then the early landing.
+- journal-replaces-wal (fresh Opus, 259k so far): restored the get/search API pages, bumped strata, found the drain abort (shutdown destroyed the control loop's roots under index work); churns jobs (17 cancelled this hour, several with flags quoted into one word, caught before running).
+- Host: load 43-51; light slots 64%, runnable beside idle 36 min. Quota: weekly 42%, burn 1.43%/h, exhaustion ~40 h.
