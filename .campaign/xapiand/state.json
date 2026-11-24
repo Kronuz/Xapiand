@@ -3381,6 +3381,24 @@
         "quest": "detent:consensus-liveness-asan-timeout"
       },
       "text": "detent:consensus-liveness-asan-timeout started and changes contract consensus:node-admission, which your consensus-join-v2 consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T01:34:10",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T01:34:09",
+      "by": "campaign detent",
+      "closed": "contract-only overlap; covered by msg-302 (build against consensus-join-v2's brief)",
+      "id": "msg-297",
+      "settles": {
+        "ours": [
+          "consensus-join-v2"
+        ],
+        "quest": "detent:consensus-driver-pipelined-sim"
+      },
+      "text": "detent:consensus-driver-pipelined-sim started and changes contract consensus:node-admission, which your consensus-join-v2 consumes"
     }
   ],
   "quests": {
