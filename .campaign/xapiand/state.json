@@ -12248,7 +12248,28 @@
       "updated": "2026-11-08T15:39:37"
     },
     "file-set-seal-streaming": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-24T01:35:01",
+          "base": "7214f27d2fe92f2e1b71c406607fc2ecc071e688",
+          "blobs": {
+            "include/strata/group/file_set.hh": "100644:b2be793371dfed82a68f1c881d2def9d343e24a2",
+            "test/group/file_set_test.cc": "100644:c4b4b08a493465aa0a6ce9b16333d82d42df3183"
+          },
+          "by": "review",
+          "commit": "7a4284c4cdb2511d9a69613acd73ed6be36b8335",
+          "criteria": "d6caf2a3084a2d20",
+          "diffs": {
+            "include/strata/group/file_set.hh": "3c207a1500406320",
+            "test/group/file_set_test.cc": "8e9fe041b1171a8a"
+          },
+          "findings": {},
+          "note": "",
+          "review": "53841b8fefb0b68370aa32f519078c6ea9e76b23",
+          "reviewed": "7a4284c4cdb2511d9a69613acd73ed6be36b8335",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "group-heal",
         "placement"
@@ -12280,7 +12301,7 @@
       "risk": "high",
       "status": "active",
       "title": "file_set::seal checksums a volume streaming, as verify does",
-      "updated": "2026-11-24T00:37:07",
+      "updated": "2026-11-24T01:35:01",
       "worktree": "../strata-wt/xapiand/file-set-seal-streaming"
     },
     "first-commit-crash": {
