@@ -4011,6 +4011,28 @@
         "todo": "0e746b29"
       },
       "text": "to do, critical path first:\ntodo: finish index-restructure (nothing moved it for 7 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: check members is not green at cfa20b4191cc: failed (261124-025827-8a1219) (`campaign verify index-restructure`); listed 6 h): `campaign verify index-restructure`"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T09:29:36",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T09:29:36",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-331",
+      "items": {
+        "index-delete": "frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete",
+        "more-like-this": "frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this"
+      },
+      "settles": {
+        "start": [
+          "index-delete",
+          "more-like-this"
+        ]
+      },
+      "text": "set journal-replaces-wal: unlocks frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete; frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this"
     }
   ],
   "quests": {
@@ -8052,9 +8074,64 @@
         }
       ],
       "journal": "../Xapiand-wt/xapiand/completion-flush-mode",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-24T11:41:20",
+          "ci": {
+            "commit": "b4600a82a8d30d4f63541d9c322a4ac5eceaee95",
+            "runs": [
+              45468242235
+            ]
+          },
+          "commit": "b4600a82a8d30d4f63541d9c322a4ac5eceaee95",
+          "criteria": {
+            "A1": "261124-111516-8fc497; fails without: 261124-091906-a47141, 261124-091911-31b2b6, 261124-091915-b8aea1, 261124-091919-537673, 261124-110320-b7760e, 261124-110324-f3f38e, 261124-110328-fbd236, 261124-110332-cae4a1",
+            "A2": "261124-111516-8fc497; fails without: 261124-091923-20e986",
+            "A3": "261124-111527-641d3d",
+            "A4": "[artifact] completion `README.md` \"Flush modes\", `ARCHITECTURE.md` \"Flush modes\" (per site, per platform, per mode; power loss on macOS), `CHANGELOG.md` 2026-11-24, `docs/mechanisms/flush-mode.md`",
+            "A5": "ci:linux-asan-ubsan; `ci:linux-asan-ubsan` (CI on the pushed branch)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "b4600a82a8d30d4f63541d9c322a4ac5eceaee95",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261124-111516-8fc497",
+              "level": "light",
+              "seconds": 36.4,
+              "state": "done",
+              "what": "completion-flush-mode check build-test at b4600a82a8d3"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "b4600a82a8d30d4f63541d9c322a4ac5eceaee95",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "02ab67fd44f1f47eafe2e1eb8c4baf1576440a52",
+          "reason": "",
+          "tested": "b4600a82a8d30d4f63541d9c322a4ac5eceaee95"
+        }
+      ],
       "lenses": [
         "durability"
+      ],
+      "messages": [
+        {
+          "announced": {
+            "at": "2026-11-24T08:51:36",
+            "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+            "why": ""
+          },
+          "answered": "b4600a82a8d3",
+          "at": "2026-11-24T08:51:36",
+          "by": "xapiand-lead",
+          "id": "msg-1",
+          "text": "From the lead: faultlab-plain-sync (faultlab:eefba53) added faultfs's own flush_mode enum and a per-platform call table (call_for, persists in faultlab types.h) mirroring PosixIO's. Keep your mode enum and call choice in one obvious place in completion (one function from mode+site to call) and name it in your journal, so faultlab can adopt it in a follow-up instead of keeping a copy."
+        }
       ],
       "milestone": "Phase 7b",
       "needs": [],
@@ -8063,9 +8140,9 @@
       ],
       "repo": "../completion",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "completion: PosixIO takes a required flush mode (plain or full) for every sync it issues",
-      "updated": "2026-11-24T11:40:48",
+      "updated": "2026-11-24T11:41:22",
       "worktree": "../completion-wt/xapiand/completion-flush-mode"
     },
     "completion-task-pin": {
