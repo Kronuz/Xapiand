@@ -162,7 +162,7 @@ private:
 	void break_loop();
 	// Runs the control loop's thread until the tasks of `tasks` (and the registry's detached ones) have ended; the
 	// loop has stopped, so this thread drives it.
-	void drain_control(control::Tasks& tasks, const char* what, std::chrono::steady_clock::time_point limit);
+	void drain_control(control::Tasks& tasks, const char* what, std::chrono::steady_clock::time_point limit, bool report = true);
 	// Runs the stopped control loop on this thread for up to `slice` (zero: what is ready, the timers due
 	// included); the stop drives it this way while the catalog's timers still need it.
 	void run_control(std::chrono::milliseconds slice);

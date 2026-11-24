@@ -971,11 +971,11 @@ static ChildResult run_child(F&& body, std::chrono::seconds limit) {
 	return result;
 }
 
-// How long the stop took: from the child's SHUTDOWN_AT line to its "Exiting" line (the logs' own clock, so the
-// process teardown after it, slow under a sanitizer, is not counted).
-static long long stop_ms(const std::string& log) {
+// How long the stop took: from the child's SHUTDOWN_AT line to its "Exiting" line, or to the line `marker` starts
+// (the logs' own clock, so the process teardown after it, slow under a sanitizer, is not counted).
+static long long stop_ms(const std::string& log, const char* marker = "Exiting with unfinished writes abandoned") {
 	const auto at = log.find("SHUTDOWN_AT ");
-	const auto exiting = log.find("Exiting with unfinished writes abandoned");
+	const auto exiting = log.find(marker);
 	if (at == std::string::npos || exiting == std::string::npos) {
 		return -1;
 	}
@@ -1130,7 +1130,8 @@ static void test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has
 
 // A detached task (a timer's autocommit) that fires while the shutdown drains the control loop runs on that loop,
 // not on the draining thread: there it would wait for the turn or the commit of a task of that loop, which only that
-// thread resumes. The stop ends in its bound, abandoning the index whose checkpoint cannot run, and leaves the
+// thread resumes. The drain before the HTTP stop leaves it its two graces (2 x 250 ms in a 2 s bound), though the
+// autocommit cannot end. The stop ends in its bound, abandoning the index whose checkpoint cannot run, and leaves the
 // autocommit suspended in that checkpoint running: destroying its frame would leave the group a waiter to resume.
 static void test_an_autocommit_during_the_shutdown_drain_runs_on_the_control_loop() {
 	const char* log_path = "node_late_autocommit.log";
@@ -1140,10 +1141,13 @@ static void test_an_autocommit_during_the_shutdown_drain_runs_on_the_control_loo
 	const auto log = read_file(log_path);
 	const bool left = log.find("The control loop's unfinished tasks are left running") != std::string::npos;
 	CHECK(left);
+	const auto http_in = stop_ms(log, "Stop 1: the HTTP service");
+	CHECK_GE(http_in, 0);
+	CHECK_LE(http_in, 2000 - 2 * 250 + 300);   // not at the deadline, with no time left for the requests
 	const auto stopped_in = stop_ms(log);
 	CHECK_GE(stopped_in, 0);
 	CHECK_LT(stopped_in, 2000 + 800);
-	if (result.code != 75 || !left || stopped_in < 0 || stopped_in >= 2000 + 800) {
+	if (result.code != 75 || !left || http_in < 0 || http_in > 2000 - 2 * 250 + 300 || stopped_in < 0 || stopped_in >= 2000 + 800) {
 		std::fprintf(stderr, "%s\n", log.c_str());
 	}
 }

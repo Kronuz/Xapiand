@@ -1011,12 +1011,12 @@ XapiandManager::set_ready_impl()
 
 
 void
-XapiandManager::drain_control(control::Tasks& tasks, const char* what, std::chrono::steady_clock::time_point limit)
+XapiandManager::drain_control(control::Tasks& tasks, const char* what, std::chrono::steady_clock::time_point limit, bool report)
 {
 	while ((database_pool->detached() != 0 || tasks.running() != 0) && std::chrono::steady_clock::now() < limit) {
 		run_control(10ms);
 	}
-	if (database_pool->detached() != 0 || tasks.running() != 0) {
+	if (report && (database_pool->detached() != 0 || tasks.running() != 0)) {
 		L_WARNING("{} {} tasks and {} tasks of the index registry did not end", tasks.running(), what, database_pool->detached());
 	}
 }
@@ -1068,7 +1068,10 @@ XapiandManager::join()
 	// the drains run here: run on this thread instead, one could wait for a turn or a commit that a task of that
 	// loop holds, which only this thread resumes. The control is cleared when its scheduler closes (Stop 2).
 	database_pool->stop_names();
-	drain_control(_rx->tasks, "control", deadline);
+	// This drain leaves the HTTP stop its two graces: a detached task that cannot end (it waits for an index that a
+	// request or a held chore keeps) must not take the requests' time; Stop 2 drains what is left to the deadline.
+	const auto http_stop = http_service ? 2 * http_shutdown_grace(shutdown_write_bound) : std::chrono::milliseconds(0);
+	drain_control(_rx->tasks, "control", deadline - http_stop, false);
 
 	// This method should finish and wait for all objects and threads to finish
 	// their work. Order of waiting for objects here matters!
@@ -1118,6 +1121,7 @@ XapiandManager::join()
 		L(-LOG_NOTICE, NOTICE_COL, "Stop 2: the autocommits");
 		_rx->autocommits->stop();
 		drain_control(_rx->autocommits->tasks(), "autocommit", deadline);
+		drain_control(_rx->tasks, "control", deadline);
 	}
 
 
