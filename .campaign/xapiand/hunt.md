@@ -500,3 +500,9 @@ quest fixes them (2 of 5 on 11-20).
 ## consensus ASan simulation timeout (2026-11-24)
 
 - consensus `consensus_simulation` under linux-asan-ubsan runs 174, 279 and 174 s on main (CI runs 45310416625 and the two before) against its 300 s TIMEOUT; it timed out twice on quest/xapiand/netlab-consensus at 177548c0 (run 45319374410), whose diff adds only bench/netlab and docs. detent:consensus-simulation-asan-timeout owns the fix; netlab-consensus lands on green CI after it.
+
+## strata-journal-pin durability review follow-ups (2026-11-24, CHANGES at strata:1cbb6e30; full text in reviews/strata-journal-pin-durability.md)
+
+- F3: a damaged replica (bounded, then lost on recover) has no path back; needs a journal entry point, since `delete_group` takes only closed groups. Already filed above (strata-journal-pin findings).
+- F4: `lost` still goes to `driver.create` in group.hh; check that is the intended path for a group journal lost before the pin.
+- F5: an index delete must stage its first record above `retired` after the delete; check the index-delete path.
