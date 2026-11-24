@@ -5347,12 +5347,6 @@
           "level": "light",
           "minutes": 45,
           "name": "build-test"
-        },
-        {
-          "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --members --base main include/strata/core",
-          "level": "light",
-          "minutes": 10,
-          "name": "members"
         }
       ],
       "consumes": [],
@@ -5364,6 +5358,40 @@
         "test/catalog_policy_test.cc",
         "CMakeLists.txt",
         "docs/mechanisms/catalog.md"
+      ],
+      "history": [
+        {
+          "at": "2026-11-24T12:43:46",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 45,
+                "name": "build-test"
+              },
+              {
+                "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --members --base main include/strata/core",
+                "level": "light",
+                "minutes": 10,
+                "name": "members"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 45,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "owner 2026-11-24 (D180, D178's rule): members proves step 1's pure move and passed there (261124-120328-f817d0 at strata:bb8f4834); step 2 changes moved bodies by design; step 2 is covered by build-test, TSan, the s3fifo unit cases and mutants, and the correctness review",
+          "voided": [],
+          "weakened": [
+            "gate check members removed"
+          ]
+        }
       ],
       "journal": "../Xapiand-wt/xapiand/catalog-restructure",
       "landed": [],
@@ -5379,7 +5407,7 @@
       "risk": "high",
       "status": "review",
       "title": "strata's catalog: the 2,374-line class body by mechanism (pin protocol, slot transitions, eviction policy)",
-      "updated": "2026-11-24T12:26:32",
+      "updated": "2026-11-24T12:43:46",
       "worktree": "../strata-wt/xapiand/catalog-restructure"
     },
     "catalog-stress-cap": {
