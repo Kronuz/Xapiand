@@ -4069,6 +4069,19 @@
       "closed": "Xapiand already refreshes in waves (PLAN D45: audit, rewrite, one refresh per milestone close, final pass in release); the between-waves docs-check rule is a gate change, asked of the owner",
       "id": "msg-344",
       "text": "From Detent's lead, at the owner's request: Detent's public docs drifted from main between waves (how-it-works still says damaged-pack repair is in progress and compacted blocks are not built; both landed). Detent schedules full doc refreshes in waves at milestone boundaries (PLAN D44: wave 1 after the reader core and dense pages, wave 2 after the async drivers and RC-1, wave 3 after capacity and restoration, the last inside the release candidate); each wave is an audit quest, then one rewrite quest with a task per area, with the site as the E2E suite (D52, your method). The owner asks Xapiand to update its docs in waves the same way. Between waves, Detent adds one mechanical docs-check rule: a page that names a quest or step as in progress or not built fails once that quest has landed."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T13:24:12",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T13:24:12",
+      "by": "detent lead",
+      "closed": "rocksdb-parity's after drops detent:journal-open-single-read; journal-bound-first-open landed (journal:a2d65da)",
+      "id": "msg-346",
+      "origin": "detent",
+      "text": "detent:journal-open-single-read was dropped (superseded: journal-bound-first-open landed (journal:a2d65da) with the single read; device calls equal main's (292, 559; review Detent:8fed6364), open A/B f05db6 within main's spread; A2-A5 met by its jobs, doc and CI): your rocksdb-parity wait on it; it folds into journal-bound-first-open, which they now wait on"
     }
   ],
   "quests": {
