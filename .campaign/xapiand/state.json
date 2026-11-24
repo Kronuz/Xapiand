@@ -15333,18 +15333,66 @@
         "ARCHITECTURE.md",
         "CHANGELOG.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/hunt-soundex-one-definition",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-23T16:55:16",
+          "ci": {
+            "carried": true,
+            "commit": "ba10f53b314e1e3aed7c2f4e49dbf6acc77873de",
+            "runs": [
+              45285681350
+            ]
+          },
+          "commit": "5ed383c0e4331f5096f8fbf8609dc435ee427566",
+          "criteria": {
+            "A1": "261123-133456-ff4d3e (the build-test check), 261123-133456-ff4d3e (passed at 1699e58acb9a; 1 merge from main since, none touching its files; ignores docs-only AGENTS.md, ARCHITECTURE.md, CHANGELOG.md, docs/TABLES.md)",
+            "A2": "261123-133739-8d9dd0 (passed at dd922dc9a5e5; 1 merge from main since, none touching its files; ignores docs-only docs/TABLES.md)",
+            "A3": "`docs/TABLES.md`: \"12,272 B\" (lead, ba10f53: the Measured table, before and after sizes of a TU that only includes the headers)",
+            "A4": "CI green at ba10f53b314e (carried to 5ed383c0e433 across clean merges)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "1699e58acb9a063dc6f76ed16f81302b9c2bdf2a",
+              "docs": [
+                "AGENTS.md",
+                "ARCHITECTURE.md",
+                "CHANGELOG.md",
+                "docs/TABLES.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-133456-ff4d3e",
+              "level": "light",
+              "seconds": 40.2,
+              "state": "done",
+              "what": "hunt-soundex-one-definition check build-test at 1699e58acb9a"
+            },
+            {
+              "check": "ci",
+              "ci": "ci:ci",
+              "commit": "ba10f53b314e1e3aed7c2f4e49dbf6acc77873de",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "451f0c318a765948f10b1dfba7f2a1587856e534",
+          "reason": "",
+          "tested": "5ed383c0e4331f5096f8fbf8609dc435ee427566"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../soundex",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "soundex tables defined once, not per including TU",
-      "updated": "2026-11-23T14:54:10",
-      "worktree": "../soundex-wt/xapiand/hunt-soundex-one-definition"
+      "updated": "2026-11-23T16:55:26",
+      "worktree": ""
     },
     "hunt-tls-expiry": {
       "accepted": {},
