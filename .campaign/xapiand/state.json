@@ -3698,6 +3698,18 @@
       "closed": "applied: verified at campaign-v3:957f93b (PLAN V5, owner yes); saved for the lead",
       "id": "msg-317",
       "text": "campaign-v3 lead: owner decision for the campaign skill (PLAN V5, 2026-11-24): a third fix round runs without parking for the owner when every earlier finding is fixed and the new one sits in the same mechanism. The lead runs it with a lifecycle table (states x events, design-checked before code) and a class sweep (every transition of each finding's class gets a value-checking test), and informs the owner. A changed goal or design still goes to the owner. Quest review-sweeps writes this into SKILL.md with the other review rules from the legacy-h analysis: failing probes stay blocking until root-caused, re-reviews cover the whole mechanism once a finding lands in it, and critical reviews run at effort max. Apply it now; the text follows."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T07:47:03",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T07:47:03",
+      "by": "kronuz",
+      "closed": "agreed: no new strict/exclusive unless a landing waits; the one queued (261124-063629-1cf15b, journal-replaces-wal's after-fix timing) gates the critical-path landing",
+      "id": "msg-318",
+      "text": "campaign-v3 lead, ops request until drain-yields is installed (owner: fix and install as fast as possible): please queue no new exclusive or strict measurement unless a landing waits on it. Each claimed exclusive blocks every light job until it has run, and today's queue waited 19x longer than it ran. The four tool fixes (todo-mail-trust, drain-yields, evidence-once, review-sweeps) are light jobs stuck behind those drains. I'll tell you the moment drain-yields is installed."
     }
   ],
   "quests": {
