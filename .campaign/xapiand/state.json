@@ -14921,7 +14921,8 @@
         "test/**",
         "tests/**",
         "CMakeLists.txt",
-        "docs/**"
+        "docs/**",
+        "ARCHITECTURE.md"
       ],
       "journal": "../Xapiand-wt/xapiand/hunt-htm-constexpr-start",
       "landed": [],
@@ -14933,7 +14934,7 @@
       "risk": "low",
       "status": "active",
       "title": "htm start tables constant-initialized",
-      "updated": "2026-11-23T13:23:15",
+      "updated": "2026-11-23T16:07:01",
       "worktree": "../htm-wt/xapiand/hunt-htm-constexpr-start"
     },
     "hunt-lua-fetch": {
