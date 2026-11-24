@@ -7885,10 +7885,57 @@
         "test/transport/groups_test.cc"
       ],
       "journal": "../Xapiand-wt/xapiand/consensus-join-v2",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-24T06:46:11",
+          "ci": {
+            "carried": true,
+            "commit": "d42a7d19600a32c9a9dcc09268db36ae5fe44db9",
+            "runs": [
+              45403935884
+            ]
+          },
+          "commit": "5e22cf07ac832e35f8d051eeefdc36eae042360f",
+          "criteria": {
+            "A1": "ci:macos-arm64, 261124-054101-25af94 (passed at d42a7d19600a; only 1 merge from main since, none touching its files); fails without: 261124-011858-ff586e",
+            "A2": "ci:macos-arm64; fails without: 261123-132818-a116ef, 261123-132820-5a61c4, 261124-030457-5d2f8a, 261124-030459-14bdc0, 261124-051158-f53ca4, 261124-051201-23da5e, 261124-054048-8c4464, 261124-054050-d859ba",
+            "A3": "261124-054104-95ac9d (passed at d42a7d19600a; only 1 merge from main since, none touching its files); fails without: 261123-150202-29c750, 261123-150206-ee4ab3, 261123-150210-a56a49, 261123-154007-7bb36d, 261123-154010-cd7dc9",
+            "A4": "ci:macos-arm64; fails without: 261123-133811-fee953, 261123-133816-735a28, 261123-133820-3e888d, 261123-150215-ec3793, 261124-030501-62ae26, 261124-030504-1f1548, 261124-030506-148f7c, 261124-030511-7bc06b, 261124-051203-172f68, 261124-051207-1006fb, 261124-051209-61e9e5, 261124-051212-5a2385, 261124-054052-e4ce69, 261124-054054-f191b0, 261124-054056-ff0688, 261124-054057-4a6c59",
+            "A5": "ci:macos-arm64, 261124-052541-de01a8 (passed at d42a7d19600a; only 1 merge from main since, none touching its files), 261124-052545-d8b64d (passed at d42a7d19600a; only 1 merge from main since, none touching its files); fails without: 261123-150157-b0634d, 261124-030514-7f9c4c, 261124-051214-0dc10c, 261124-052543-c2eb2f, 261124-054059-31cb6b",
+            "A6": "261124-054106-8c7b15 (passed at d42a7d19600a; only 1 merge from main since, none touching its files), 261124-054108-0b1879 (passed at d42a7d19600a; only 1 merge from main since, none touching its files), 261124-054110-1c746d (passed at d42a7d19600a; only 1 merge from main since, none touching its files)",
+            "A7": "docs/mechanisms/admission.md, hello.md, host-connection.md at consensus:45f2309",
+            "A8": "261124-052545-d8b64d (passed at d42a7d19600a; only 1 merge from main since, none touching its files)"
+          },
+          "evidence": [
+            {
+              "check": "suite",
+              "ci": "ci:macos-arm64",
+              "commit": "d42a7d19600a32c9a9dcc09268db36ae5fe44db9",
+              "state": "done"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "d42a7d19600a32c9a9dcc09268db36ae5fe44db9",
+              "state": "done"
+            },
+            {
+              "check": "tsan",
+              "ci": "ci:linux-tsan",
+              "commit": "d42a7d19600a32c9a9dcc09268db36ae5fe44db9",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "1127f695fc06a3d01a120305a062cca39851887b",
+          "reason": "",
+          "tested": "5e22cf07ac832e35f8d051eeefdc36eae042360f"
+        }
+      ],
       "lenses": [
         "security"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [
         "node-admission"
@@ -7898,9 +7945,9 @@
       ],
       "repo": "../consensus",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "consensus joins a node by token v2 on the transport port, pins keys, reloads certificates and checks the boot",
-      "updated": "2026-11-24T06:45:53",
+      "updated": "2026-11-24T06:46:14",
       "worktree": "../consensus-wt/xapiand/consensus-join-v2"
     },
     "consensus-request-install": {
