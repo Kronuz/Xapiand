@@ -3532,6 +3532,21 @@
         "todo": "5a29b50b"
       },
       "text": "to do, critical path first:\ntodo: finish index-restructure (nothing moved it for 2 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); new): `campaign status index-restructure`"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T04:49:02",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T04:49:02",
+      "by": "campaign",
+      "closed": "A2 requeued at priority -1 behind the critical path; the other three jobs are pre-merge evidence superseded by it and CI at 1127f69",
+      "id": "msg-306",
+      "settles": {
+        "todo": "f2d2c179"
+      },
+      "text": "to do, critical path first:\ntodo: resume netlab-consensus (its journal waits on jobs 261122-211901-cc23ef, 261122-211904-f193f9, 261122-211907-bb83b9 and 261123-192508-9b2efc, which ended (done, failed) 7 h ago; new): `campaign status netlab-consensus`, read them, or park it with a reason"
     }
   ],
   "quests": {
