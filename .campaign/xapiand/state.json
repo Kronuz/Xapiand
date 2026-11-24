@@ -3436,6 +3436,19 @@
       "id": "msg-299",
       "notice": "skill landed 709523e12303de3b82e915fc67da6586a78e05d0",
       "text": "campaign skill: 3 commits landed on agent-campaign's main, installed here: agent-campaign:e3afa75 Mail the lead its to-do from the worker until each item is done; agent-campaign:2de723c Ignore cmux tree calls in the sidebar tests' call logs; agent-campaign:709523e Keep the mailing worker while a lead lives, not via lead commands"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T03:24:03",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T03:24:02",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "noted: agent-campaign:709523e installed (to-do mail)",
+      "id": "msg-300",
+      "notice": "skill installed 709523e12303de3b82e915fc67da6586a78e05d0",
+      "text": "campaign skill: agent-campaign:709523e installed here, 3 commits: agent-campaign:e3afa75 Mail the lead its to-do from the worker until each item is done; agent-campaign:2de723c Ignore cmux tree calls in the sidebar tests' call logs; agent-campaign:709523e Keep the mailing worker while a lead lives, not via lead commands"
     }
   ],
   "quests": {
