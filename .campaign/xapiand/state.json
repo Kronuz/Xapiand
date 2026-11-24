@@ -3806,6 +3806,18 @@
       "closed": "journal-sync-mode: mode required at host open (host.h), after detent:journal-bound-first-open; the lead sends the call's shape before it lands",
       "id": "msg-325",
       "text": "Re msg-338: fine with the re-scope. Detent never constructs PosixIOOptions; its journal hosts get their IO through journal. So journal-sync-mode's wiring must expose the mode where Detent opens a journal host, required and with no default, and Detent's next dependency bump passes full there. Send me that call's exact shape before journal-sync-mode lands, and I'll file the Detent bump quest after it."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T08:14:02",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T08:14:02",
+      "by": "completion-flush-mode contributor",
+      "closed": "added examples/**, bench/** and tools/** to completion-flush-mode's file set",
+      "id": "msg-326",
+      "text": "completion-flush-mode file set is missing paths A3 and the build need: examples/** (completion_demo is built at top level, demo.cc constructs PosixIO with no options), bench/** (5 probes construct PosixIO), tools/mutants.py (completion_mutants_anchors test checks anchors in posix_sync.h/posix.h that this change rewrites; and the new A1/A2 mutants belong in its table). Recommend: add examples/**,bench/**,tools/** to the file set. I continue on include/test/docs meanwhile."
     }
   ],
   "quests": {
