@@ -526,7 +526,7 @@ quest fixes them (2 of 5 on 11-20).
 - N2 (gap): no mutant for `file_ledger::rename`, and the model test never calls `rename` or `add_unlinked`.
 - N3 (nit): the ledger accepts violated preconditions silently (rename of an untracked name, double post, tracking a posted name); unreachable today, a debug assert each would state them.
 - N4 (nit): `rename` drops a replaced name's bytes instead of counting them unlinked until the sync; unreachable (sync_dir follows).
-- Reviewer's call-site mutant probe 261124-030309-f48c48 (three wrong ledger calls in the index): a SURVIVES line is a test gap row here.
+- Reviewer's call-site mutant probe 261124-030309-f48c48: closed, all three killed by index-level tests (rename-keeps-tmp by reclaim_bg and reclaim_backlog; removed-skipped and synced-skipped by reclaim_bg).
 
 ## journal-replaces-wal library follow-ups (2026-11-24)
 
