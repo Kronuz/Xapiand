@@ -40,10 +40,10 @@ jobs no journal names), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261123-174439-9fb117 (build-test at strata:277e595d) passed |
-| A2 | 261123-174446-9bce6e, `--fails-without --for A2` at mutant strata:7b246c1f (277e595d plus a per-edit `ordinals()` rewrite in `log_deleted::insert`, not on the branch): failed as it must, 10M deleted apply 116.5x and read 148.8x against bounds 2 and 4; clumped 99.0x / 54.3x |
-| A3 | Form chosen: ratio to a same-process calibration (Doing above) |
-| A4 | CI at strata:277e595d: running when written |
+| A1 | 261123-181130-89410d (build-test at strata:e0a1c78fa516); earlier 261123-174439-9fb117 at 277e595d passed |
+| A2 | 261123-181130-89410d (passes at the head), fails without: 261123-174446-9bce6e at mutant strata:7b246c1f (10M deleted apply 116.5x, read 148.8x against bounds 2 and 4) |
+| A3 | `test/manifest_log_test.cc`: "snapshot's own read in the same process: the machine's speed cancels." |
+| A4 | CI at the landing commit |
 
 Probes examined: 261123-172410-fa7b2b (interrupted after 7 s, resubmitted), 261123-173046-c009d9 (healthy ratios, passed).
 
