@@ -12127,6 +12127,8 @@
         "group-heal",
         "placement"
       ],
+      "base": "7214f27d2fe92f2e1b71c406607fc2ecc071e688",
+      "branch": "quest/xapiand/file-set-seal-streaming",
       "checks": [
         {
           "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -12140,6 +12142,7 @@
         "include/strata/group/file_set.hh",
         "test/group/file_set*"
       ],
+      "journal": "../Xapiand-wt/xapiand/file-set-seal-streaming",
       "landed": [],
       "lenses": [
         "correctness"
@@ -12149,9 +12152,10 @@
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "file_set::seal checksums a volume streaming, as verify does",
-      "updated": "2026-11-23T15:33:25"
+      "updated": "2026-11-24T00:37:07",
+      "worktree": "../strata-wt/xapiand/file-set-seal-streaming"
     },
     "first-commit-crash": {
       "accepted": {
