@@ -55,6 +55,7 @@
 #include <variant>
 #include <vector>
 
+#include <execinfo.h>
 #include <signal.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -405,6 +406,18 @@ engine::Document make(const std::string& key) {
 // The port of the test process's node.
 const test_utils::ReservedPort node_port;
 
+// A SIGABRT's sender and the aborting thread's stack, to stderr, then the default action: an abort that printed
+// nothing (a child's log ended right before it) names its frames.
+void abort_stack_handler(int, siginfo_t* info, void*) {
+	char line[96];
+	const int n = std::snprintf(line, sizeof line, "SIGABRT (code %d, from pid %d, this pid %d):\n", info->si_code, static_cast<int>(info->si_pid), static_cast<int>(::getpid()));
+	(void)::write(2, line, static_cast<std::size_t>(n));
+	void* frames[64];
+	backtrace_symbols_fd(frames, backtrace(frames, 64), 2);
+	::signal(SIGABRT, SIG_DFL);
+	::raise(SIGABRT);
+}
+
 // The node of the test process: a manager whose control loop runs on its own thread, serving on a port of its own,
 // in a data directory of its own.
 class RunningNode {
@@ -417,6 +430,9 @@ public:
 		sa.sa_flags = SA_RESTART | SA_SIGINFO;
 		sa.sa_sigaction = traceback::collect_callstack_sig_handler;
 		::sigaction(SIGUSR2, &sa, nullptr);
+		sa.sa_flags = SA_SIGINFO | SA_RESETHAND;
+		sa.sa_sigaction = abort_stack_handler;
+		::sigaction(SIGABRT, &sa, nullptr);
 
 		const auto root = std::filesystem::current_path() / name;
 		if (!keep) {

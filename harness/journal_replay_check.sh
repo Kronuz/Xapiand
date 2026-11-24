@@ -144,7 +144,12 @@ scenario_failure() {
 		pass "failure: the node did not come up on a shard whose recovery could not write"
 		wait "$PID" 2>/dev/null; PID=""
 	fi
-	grep -qiE "file too large|EFBIG" "$RUNDIR/f2.log" && pass "failure: the write error is reported" || fail "failure: no file-size error in the log"
+	if grep -qiE "file too large|EFBIG" "$RUNDIR/f2.log"; then
+		pass "failure: the write error is reported"
+	else
+		fail "failure: no file-size error in the log; its end:"
+		tail -n 40 "$RUNDIR/f2.log" | sed 's/^/    | /'
+	fi
 	start_node f3.log || { fail "healthy restart"; return; }
 	local s want; s="$(state)"; want="$(expect "$NDOCS")"
 	same_state "$s" "$want" && pass "failure: the next healthy start recovers everything ($s)" || fail "failure: got '$s', expected '$want'"
