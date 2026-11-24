@@ -15112,6 +15112,8 @@
     "hunt-manifest-log-wallclock": {
       "accepted": {},
       "after": [],
+      "base": "757c00ab4a0c03044394bd0dda87a138f5a98f9b",
+      "branch": "quest/xapiand/hunt-manifest-log-wallclock",
       "checks": [
         {
           "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build --target manifest_log_test && ctest --test-dir build -R \"^manifest_log\" --output-on-failure",
@@ -15124,6 +15126,7 @@
       "files": [
         "test/manifest_log_test.cc"
       ],
+      "journal": "../Xapiand-wt/xapiand/hunt-manifest-log-wallclock",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -15131,9 +15134,10 @@
       "provides": [],
       "repo": "../strata",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "manifest_log_test's replay bound counts work, not wall-clock time",
-      "updated": "2026-11-23T17:20:52"
+      "updated": "2026-11-23T17:21:53",
+      "worktree": "../strata-wt/xapiand/hunt-manifest-log-wallclock"
     },
     "hunt-radix-router": {
       "accepted": {
