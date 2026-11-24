@@ -5365,9 +5365,9 @@
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "strata's catalog: the 2,374-line class body by mechanism (pin protocol, slot transitions, eviction policy)",
-      "updated": "2026-11-24T12:24:52",
+      "updated": "2026-11-24T12:26:32",
       "worktree": "../strata-wt/xapiand/catalog-restructure"
     },
     "catalog-stress-cap": {
