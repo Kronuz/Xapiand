@@ -1,6 +1,6 @@
 # strata-journal-pin: journal
 
-State: waiting on jobs 261123-194216-e06393 (A1) 261123-194218-5b493a (A2) 261123-194221-21e52b 261123-194337-4c3177 261123-194339-539e7b (A5) 261123-194233-72e14d 261123-194341-31812e (A6)
+State: waiting on jobs 261123-232607-c47395 (A1) 261123-232610-a38bc7 (A2) 261123-232608-a429f8 (A5, F1) 261123-232612-095f67 (A6, F2) and the mutants and probe below
 Quest: .campaign/xapiand/quests/strata-journal-pin.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,9 +9,9 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Branch at strata:22ee0282: main merged (strata:5d30f788, journal pin 9c7e31c = journal main, contains
-journal:131eb2e and journal:a3eecb5), then the two durability fixes the lead ruled (2026-11-24).
-Evidence jobs queued at strata:22ee0282; CI A3 on the push.
+Branch at strata:bb2f8a5a: review CHANGES (strata-journal-pin-durability.md) folded in. F1: a head at the
+bound holds that record's whole batch, so attach_log loses only strictly below the bound (`<`); t5b keeps
+the group at the bound and at bound + 1. F2: lifetime case bounded-witness. Jobs queued at bb2f8a5a.
 
 ## Next
 
@@ -29,16 +29,19 @@ hunt.md as its own follow-up, not this quest.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test (asserts on) 261123-194216-e06393 at strata:22ee0282 (queued) |
-| A2 | 261123-194218-5b493a: group_tests built, `ctest -R ^(group_|simulation_group_)` at strata:22ee0282 (queued) |
+| A1 | build-test (asserts on) 261123-232607-c47395 at strata:bb2f8a5a (queued) |
+| A2 | 261123-232610-a38bc7: group_tests, `ctest -R ^(group_|simulation_group_)` (queued) |
 | A3 | CI at the landed commit |
 | A4 | `docs/mechanisms/replication-group.md`: "opens a bounded group through" (section "A damaged turn log"); Result below |
-| A5 | standalone_turn_log t5 t5b 261123-194221-21e52b; mutants (--fails-without) bounded-as-stored 261123-194337-4c3177, bounded-at-bound 261123-194339-539e7b |
-| A6 | group_lifetime_test bounded 261123-194233-72e14d; mutant bounded-created (--fails-without) 261123-194341-31812e |
+| A5 | standalone_turn_log t5 t5b 261123-232608-a429f8; mutants (--fails-without) bounded-as-stored 261123-232614-1c21f5, bounded-at-bound (now: lose at the bound) 261123-232616-f61ae7 |
+| A6 | group_lifetime_test bounded + bounded-witness 261123-232612-095f67; mutants bounded-created 261123-232618-2ba099, bounded-witness-created 261123-232621-02d526 |
 
-Local runs before the jobs (scratch build, Release -O3): t5b ok; bounded-as-stored and bounded-at-bound
-killed by t5b; lifetime `bounded` ok and bounded-created killed (the open then fails with "the group
-exists, is closed, or is lost" and the host keeps the group bounded).
+Review findings (strata-journal-pin-durability.md):
+- F1 (blocking): fix strata:bb2f8a5a; test job 261123-232608-a429f8 (at-bound and bound + 1 cases kept, below lost);
+  mutant 261123-232616-f61ae7 (`<` to `<=` must fail t5b); the reviewer's probe at_bound.sh run at the
+  pre-fix strata:1cbb6e30, where it patches `<=` to `<` (it cannot patch the fixed commit): 261123-232624-4b30b6.
+- F2: witness route test 261123-232612-095f67 (bounded-witness), mutant 261123-232621-02d526.
+- F3 hunt.md; F4 lost still goes to create (one-word follow-up); F5 index-delete's.
 
 ## Result
 
@@ -47,9 +50,10 @@ A4, journal 9e11713 -> 9c7e31c (pin strata:5d30f788, merge of main over strata:2
    pin carries it, index-delete calls it. Pin: strata:2b530925, strata:5d30f788.
 2. `GroupStatus::bounded`, `Host::bound`/`lose` (lost bound, docs/mechanisms/lost-bound.md): a damaged
    turn log keeps the group with its records after the bound. strata follows it twice:
-   - the index (strata:8f002718): attach_log continues a bounded group only when the head is past the
-     bound, else `lose(g)` and log_lost (the check, `<`, came with turn-log-parity; a head AT the bound
-     now loses too, since it may lack the rest of that record's batch); test t5b, mutants.
+   - the index (strata:8f002718, corrected at strata:bb2f8a5a): attach_log continues a bounded group when
+     the head holds it through the bound, else `lose(g)` and log_lost; a head AT the bound holds that
+     record's whole batch (a commit seals it), so only a head strictly below loses (turn-log-parity's `<`);
+     test t5b (below lost; at the bound and bound + 1 kept), mutants.
    - the replicated group (strata:22ee0282): group and witness open a bounded group through
      `driver.recover`: Journal's Store loses it durably and throws Corruption; `driver.create` threw
      logic_error and left it bounded.
@@ -73,10 +77,10 @@ A4, journal 9e11713 -> 9c7e31c (pin strata:5d30f788, merge of main over strata:2
 
 1. A2: no `simulation_group_*` rows exist at the old pins; the closest are the `group_*` ctest rows, run
    with the simulation_group_ rows when they exist (the job's regex takes both).
-2. t5b damages one block with the head below, at and past the bound: the head past needs no checkpoint
+2. t5b damages one block with the head below, at, and past the bound: a head past needs no checkpoint
    record after the damage (it would make the group whole), so the commit's checkpoint turn is withheld
    by powering the disk off before it. The head at the bound is the write that straddles the damaged
-   block into the next (its block's manifest then names it).
+   block into the next (its block's manifest then names it); bound + 1 is the write after it.
 3. `lost` still goes to `create` in group.hh: it throws as before; only `bounded` moved (the lead's
    scope). A lost group's open is a clearer Corruption through recover too: a one-word follow-up, not
    taken here.
