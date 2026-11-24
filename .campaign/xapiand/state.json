@@ -3101,6 +3101,26 @@
       "id": "msg-276",
       "notice": "skill installed 63249d4b15239ecfc98c213aa9d56e0f4b3b0901",
       "text": "campaign skill: agent-campaign:63249d4 installed here, 5 commits: agent-campaign:4cda35e Keep a live lead's record; deliver every message to the lead; agent-campaign:325c7d0 Take the lead record only from the campaign's home; agent-campaign:5fe91c8 Update source-layout for lead-claim's line counts; agent-campaign:200b5c4 Read the fake cmux's calls as empty when none were made; agent-campaign:63249d4 Make the sidebar test's session the lead"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T16:45:31",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T16:45:31",
+      "by": "campaign detent",
+      "closed": "read its quest: one unused test include in consensus test/driver_install_request_test.cc, no library change; our pins stay, no action",
+      "id": "msg-277",
+      "settles": {
+        "ours": [
+          "cluster",
+          "consensus-join-v2",
+          "group-heal"
+        ],
+        "quest": "detent:consensus-drop-memory-io-include"
+      },
+      "text": "detent:consensus-drop-memory-io-include started and changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:node-admission, which your consensus-join-v2 consumes; changes contract consensus:install-request, which your group-heal consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
     }
   ],
   "quests": {
