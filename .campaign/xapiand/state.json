@@ -32811,7 +32811,10 @@
         "include/strata/group/**",
         "include/strata/core/journal*",
         "test/group/**",
-        "sim/**"
+        "sim/**",
+        "include/strata/core/index.hh",
+        "include/strata/core/turn_seal.hh",
+        "test/standalone_turn_log_test.cc"
       ],
       "history": [
         {
@@ -32839,19 +32842,37 @@
           "weakened": [
             "gate check build-test changed"
           ]
+        },
+        {
+          "at": "2026-11-23T19:26:48",
+          "lenses": [
+            [],
+            [
+              "correctness"
+            ]
+          ],
+          "reason": "",
+          "risk": [
+            "low",
+            "high"
+          ],
+          "voided": [],
+          "weakened": []
         }
       ],
       "journal": "../Xapiand-wt/xapiand/strata-journal-pin",
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../strata",
-      "risk": "low",
+      "risk": "high",
       "status": "active",
       "title": "strata builds against journal main (Host::delete_group)",
-      "updated": "2026-11-23T10:51:46",
+      "updated": "2026-11-23T19:26:48",
       "worktree": "../strata-wt/xapiand/strata-journal-pin"
     },
     "strata-nospace-position": {
