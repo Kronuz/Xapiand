@@ -12508,7 +12508,64 @@
       "worktree": "../faultlab-wt/xapiand/faultlab-netlab"
     },
     "faultlab-plain-sync": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-24T09:18:34",
+          "base": "5d4df9b04d7064fc978c84d29e7db8e6789bb10c",
+          "blobs": {
+            "CHANGELOG.md": "100644:3292fb779d5aece79669fdb8c5f4f42abae4508a",
+            "README.md": "100644:4c8a066a09ecf701e010dd4878b9ce0542b68615",
+            "docs/api.md": "100644:0586bb0b2a202b7c39172cbb21d99f8809c8ae20",
+            "docs/mechanisms/crash-model.md": "100644:8302c3ffad9e72d674ea319569e8c66399cf9409",
+            "docs/source-layout.md": "100644:9c01451d502623a202cdc9cda51432754e84f669",
+            "include/faultlab/faultfs.h": "100644:f8d2bfc8e9a2db2655a00984170347832d347357",
+            "include/faultlab/faultfs/file.h": "100644:2d64881ceabba65a13e18f2b3bd043b4297aa358",
+            "include/faultlab/faultfs/filesystem.h": "100644:cc75dbf1a71322d6fd471fb528efbcdb94478bd1",
+            "include/faultlab/faultfs/io.h": "100644:cd99c54b7092947a4e8ef4a1252eabc941fb3d48",
+            "include/faultlab/faultfs/types.h": "100644:5486eb6b91c4f728dc20a92a0e1743348b23c7d2",
+            "test/model_test.cc": "100644:086962ae97b7dd4489fd88197584d8a79108da7d"
+          },
+          "by": "review",
+          "commit": "83fbde73c008e15e64ea7aa73c4c3b9b94e0599c",
+          "criteria": "a4f0d3a6f7e69ecc",
+          "diffs": {
+            "CHANGELOG.md": "6e8c3827fe9eef8e",
+            "README.md": "0a7d8c6c59631c8d",
+            "docs/api.md": "b5b32229d2dab40f",
+            "docs/mechanisms/crash-model.md": "50469d0de0e6ef98",
+            "docs/source-layout.md": "bc779001e7bb1042",
+            "include/faultlab/faultfs.h": "2611e5bc9393809e",
+            "include/faultlab/faultfs/file.h": "41077f3892874908",
+            "include/faultlab/faultfs/filesystem.h": "2571a9fe0bdfea64",
+            "include/faultlab/faultfs/io.h": "509b1162a78abd10",
+            "include/faultlab/faultfs/types.h": "2ddbff6a05592d50",
+            "test/model_test.cc": "671f7e1ff37c11ff"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "/Users/kronuz/code/Kronuz/Xapiand/.scratch/xapiand/review-faultlab-plain-sync-correctness/run.sh",
+                  "commit": "83fbde73c008e15e64ea7aa73c4c3b9b94e0599c",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261124-091414-2d1c19",
+                  "level": "light",
+                  "seconds": 39.9,
+                  "state": "done",
+                  "what": "reviewer R4c probe at the F1 fix"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "41d2235b1822779b7ad91ba2c14ba55bff534440",
+          "reviewed": "eefba5364dcdd24da856a2f51cb2dad28bc3ca40",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "5d4df9b04d7064fc978c84d29e7db8e6789bb10c",
       "branch": "quest/xapiand/faultlab-plain-sync",
@@ -12531,7 +12588,9 @@
       ],
       "journal": "../Xapiand-wt/xapiand/faultlab-plain-sync",
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "Phase 7b",
       "needs": [],
       "provides": [
@@ -12541,7 +12600,7 @@
       "risk": "normal",
       "status": "review",
       "title": "faultlab: faultfs models a plain sync (survives a process crash, not a power cut)",
-      "updated": "2026-11-24T08:51:10",
+      "updated": "2026-11-24T09:18:34",
       "worktree": "../faultlab-wt/xapiand/faultlab-plain-sync"
     },
     "faultlab-seam": {
