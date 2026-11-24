@@ -703,27 +703,31 @@ static void test_a_restore_prepares_and_writes_its_objects_off_its_loop() {
 }
 
 
-// A RESTORE's writes share the log's entries, and the syncs each entry waits for: a shard proposes a command per
-// entry's worth of writes (and the end of its run), not one per write. 400 updates of new ids, prepared on the loop
-// one by one, and 400 plain objects, prepared in chores, each into an index of one shard: one entry per write was
-// 400, each waiting for its own syncs (two full flushes, ~50 ms on macOS).
+// A RESTORE's writes share the log's entries, and the syncs each entry waits for: its prepared objects stay pending
+// across the body's chunks, a shard proposes a command per entry's worth of them, and the id counter rides in the
+// last one. 400 objects of 3 KB each, ~1.2 MB, into an index of one shard: updates of new ids, prepared on the loop
+// one by one; plain objects, prepared in chores; plain objects of numeric ids, which move the id counter. A command
+// per body chunk was 18 entries; one per update 400; the counter's own command one more per slice.
 static void test_a_restores_writes_share_their_log_entries() {
 	constexpr int documents = 400;
-	auto lines = [](int first, int count, bool update) {
+	enum class Kind { update, plain, numeric };
+	auto lines = [](int first, int count, Kind kind) {
 		std::string body;
 		for (int i = first; i < first + count; ++i) {
 			std::string text;
 			for (int w = 0; w < 300; ++w) {
 				text += "word" + std::to_string((i * 131 + w * 7) % 20011) + " ";
 			}
-			body += R"({"_id":"e)" + std::to_string(i) + (update ? R"(","_op_type":"update")" : "\"") + R"(,"n":)" + std::to_string(i) + R"(,"text":")" + text + "\"}\n";
+			const auto id = kind == Kind::numeric ? std::to_string(i) : "\"e" + std::to_string(i) + "\"";
+			body += R"({"_id":)" + id + (kind == Kind::update ? R"(,"_op_type":"update")" : "") + R"(,"n":)" + std::to_string(i) + R"(,"text":")" + text + "\"}\n";
 		}
 		return body;
 	};
-	for (const bool update : {true, false}) {
-		const std::string index = update ? "entries_update" : "entries_plain";
+	std::uint64_t counted[3] = {};
+	for (const auto kind : {Kind::update, Kind::plain, Kind::numeric}) {
+		const std::string index = kind == Kind::update ? "entries_update" : kind == Kind::plain ? "entries_plain" : "entries_numeric";
 		create_index(index, 1);
-		CHECK_EQ(http_call("RESTORE", "/" + index + "/?commit", lines(1, 10, update), "application/x-ndjson") / 100, 2);   // the schema exists after it
+		CHECK_EQ(http_call("RESTORE", "/" + index + "/?commit", lines(1, 10, kind), "application/x-ndjson") / 100, 2);   // the schema exists after it
 		const auto endpoints = engine::sync_wait(XapiandManager::resolve_index_endpoints(Endpoint(index), true));
 		auto pin = engine::sync_wait(XapiandManager::manager()->database_pool->pin(Endpoint(endpoints[0].path), DB_WRITABLE));
 		auto* group = pin.entry().group();
@@ -733,13 +737,16 @@ static void test_a_restores_writes_share_their_log_entries() {
 		}
 		const auto before = group->group.applied();
 		const auto began = std::chrono::steady_clock::now();
-		CHECK_EQ(http_call("RESTORE", "/" + index + "/?commit", lines(11, documents, update), "application/x-ndjson") / 100, 2);
+		CHECK_EQ(http_call("RESTORE", "/" + index + "/?commit", lines(11, documents, kind), "application/x-ndjson") / 100, 2);
 		const auto wall_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - began).count();
 		const auto entries = group->group.applied() - before;
-		std::fprintf(stderr, "  %d %s: %llu log entries in %lld ms\n", documents, update ? "updates on the loop" : "plain objects in chores",
+		counted[static_cast<int>(kind)] = entries;
+		std::fprintf(stderr, "  %d %s: %llu log entries in %lld ms\n", documents,
+			kind == Kind::update ? "updates on the loop" : kind == Kind::plain ? "plain objects in chores" : "plain objects of numeric ids",
 			static_cast<unsigned long long>(entries), static_cast<long long>(wall_ms));
-		CHECK_LE(entries, static_cast<std::uint64_t>(documents / 20));   // 10 measured with the fix; 400 one per update
+		CHECK_LE(entries, static_cast<std::uint64_t>(8));
 	}
+	CHECK_LE(counted[static_cast<int>(Kind::numeric)], counted[static_cast<int>(Kind::plain)]);   // the counter in their entries
 }
 
 
