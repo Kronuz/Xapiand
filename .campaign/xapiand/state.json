@@ -3589,6 +3589,21 @@
       "closed": "rocksdb-parity ordered after detent:journal-turn-sector-checks",
       "id": "msg-309",
       "text": "Heads-up: detent:journal-turn-sector-checks (RFTW0002, per-sector checks in the turn log) changes journal's turn-buffers contract, which your xapiand:rocksdb-parity consumes. It is close to landing (durability review accepted; final build fix at journal:4eb8165 in CI). The turn log format moves RFTW0001 -> RFTW0002 with no reader of the old format (greenfield). Order rocksdb-parity after it if it depends on the on-disk turn log."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T05:57:43",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T05:57:43",
+      "by": "campaign",
+      "closed": "journal-replaces-wal: a contributor is on it (launched 05:44); index-restructure: A3 met, waits on the owner",
+      "id": "msg-310",
+      "settles": {
+        "todo": "fc230931"
+      },
+      "text": "to do, critical path first:\ntodo: resume journal-replaces-wal (its journal waits on jobs 261124-043555-1a9289, 261124-043602-4be160, 261124-034435-22beb7, 261124-034439-e01d6b, 261124-034443-5d5f29, 261124-033419-5c1d14 and 261124-021321-9231e2, which passed 17 min ago; new): `campaign status journal-replaces-wal`, read them, or park it with a reason\ntodo: finish index-restructure (nothing moved it for 79 min: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); listed 16 min): `campaign status index-restructure`"
     }
   ],
   "quests": {
