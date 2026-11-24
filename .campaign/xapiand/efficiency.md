@@ -1182,3 +1182,12 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - index-restructure step 1: members, fnsizes fff00d, selfcontained 58916c (rerun fresh: the slot's build-sc held journal 9e11713, hunt row filed) and CI 45358702484 green at 351eebc5; build-test 30df0e running, then the early landing.
 - journal-replaces-wal (fresh Opus, 259k so far): restored the get/search API pages, bumped strata, found the drain abort (shutdown destroyed the control loop's roots under index work); churns jobs (17 cancelled this hour, several with flags quoted into one word, caught before running).
 - Host: load 43-51; light slots 64%, runnable beside idle 36 min. Quota: weekly 42%, burn 1.43%/h, exhaustion ~40 h.
+
+## 2026-11-24 11h
+
+- No landings. index-restructure: step 2 (file_ledger) built in-quest after both early-landing routes (split as low risk; --upto increment) were denied by the permission system as weakening; correctness review APPROVE at strata:cfa20b41 (Opus, 136k), accepted; landing waits on build-test 57b6da, CI and the owner's yes to drop the step-1-only `members` gate check (103 intended body changes at step 2). Contributor resume: 188k total.
+- journal-replaces-wal (fresh Opus, 259k, finished): CI's 4 docs failures were the branch's (`?commit` beside ack=none answers 400), R2 test 0b04e0 green, shutdown-drain abort fixed by abandoning the stop with a warning (strata group awaiters unsafe to destroy: hunt row). Lead cancelled two stale test_node jobs holding its slot.
+- consensus-join-v2: all three fuzzers green at the merged head 81ada17. Lead error: reran mutants with `rerun --commit HEAD`, which rebuilds unmutated code (7 wasted light jobs, false survivals); rebuilt the mutants on 81ada17 by cherry-pick, 3 of 7 killed so far. Reported to campaign-v3 (msg-66).
+- netlab-consensus: merged consensus main (Detent's ASan speedup, consensus_simulation ~58 s) at consensus:1127f69; A2 rerun queued.
+- Idle-slot fill: three 25-min low-priority fuzz soaks of consensus-join-v2's decoders (no tokens).
+- Host: load 9-14; light slots 59%, runnable beside idle 44 min. Quota: weekly 42%, burn 1.39%/h, exhaustion ~42 h (before the 11-30 reset).
