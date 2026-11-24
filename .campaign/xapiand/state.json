@@ -3301,6 +3301,19 @@
         ]
       },
       "text": "strata-journal-pin landed: unlocks frees include/strata/group/file_set.hh, test/group/file_set* for file-set-seal-streaming; frees test/** for format-freeze"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T01:30:43",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T01:30:42",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "noted: sidebar-lead-only installed (884bc84); the lead stops its hourly stray-pill sweep",
+      "id": "msg-292",
+      "notice": "skill installed 884bc84c4330ea345a0e1ebfcdd2d0e161fbb8d2",
+      "text": "campaign skill: agent-campaign:884bc84 installed here, 6 commits: agent-campaign:0faea9d Test that only the campaign's lead draws its sidebar; agent-campaign:cc588cf Draw a campaign's sidebar only from its recorded lead; agent-campaign:a198886 Merge branch 'main' into quest/campaign-v3/sidebar-lead-only; agent-campaign:3b53580 Merge branch 'main' into quest/campaign-v3/sidebar-lead-only; agent-campaign:15f274d Test that a cleared shared bar is redrawn by its other campaign; agent-campaign:884bc84 Redraw a shared workspace's bar after clearing a stray one"
     }
   ],
   "quests": {
