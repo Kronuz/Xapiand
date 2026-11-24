@@ -5,6 +5,39 @@ Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit 
 
 ## Doing
 
+Session 12 (2026-11-23), task `levels` and R1 on the quest branch (lead's assignment), then the lead's two messages:
+
+1. R1 (Xapiand:c159d38a5): the journal host's PosixIO takes `engine::strata::posix_io_options()`; test_shard_group
+   `test_the_journal_io_takes_the_io_options` (full_flush_ordering both ways, the barrier warning, a group-writable
+   directory the defaults refuse). Mutant: the host built with `PosixIO(directory)`.
+2. Levels (Xapiand:650bb198b, tests Xapiand:ea9598e6d, docs and harness Xapiand:e5d8c3a6d): ack=quorum|none,
+   refresh=false|wait_for|true, read=prefix|linearizable (and ?volatile), ?commit = ack=quorum&refresh=true, 400 on
+   unknown or contradicting levels; RESTORE takes ack. The group's apply marks the engine through
+   `ShardApplication::applied` (on the chore, before the answer, at either level); Core's dirty/pending are atomic and
+   cleared before their work. test_node: `test_ack_quorum_answers_once_applied`,
+   `test_ack_none_answers_at_placement_and_linearizable_reads_wait_for_it`, `test_refresh_levels_and_commit`,
+   `test_a_restore_at_ack_none_reports_no_versions`. Docs: basics.md "Visibility and Durability" with E2E examples
+   per level and a 400; manipulation, architecture, get and search pages, README, options, changelog;
+   journal-durability.md "Levels". harness/power_loss_check.sh (D14 tier, `--later`) replaces wal_recovery_check.sh.
+3. Lead msg (d17a82, the abandon case): reproduced at c4d06c80d by probe 261123-160215-a97282 (2 of the first 10
+   runs, host load ~59). Verdict: a real race in the shutdown, not the bound. join() cleared the registry's control
+   before draining the control loop, so an autocommit timer firing in the drain ran synchronously (run_detached's
+   sync_wait) on the draining thread; an earlier autocommit of the same index, a task of that loop, held the turn
+   or the commit flight and could only resume on that thread. The child's log: "Autocommit of 'acked' failed after
+   30s: The index is busy: its turn did not come in time", then Stop 1 thirty seconds late (the turn deadline); the
+   second failure never reached Stop 1 (the commit flight has no deadline). Fix (Xapiand:6686f9ffc): the control
+   stays set until its scheduler closes (Stop 2); the names' build stops up front (`stop_names`); finish() leaves
+   the control to its owner. Test: `test_an_autocommit_during_the_shutdown_drain_runs_on_the_control_loop` (a held
+   group chore under an autocommit, a second one fired into the drain; the stop must end in its bound). Mutant: join
+   clears the control before the drain again.
+4. Lead msg (576cc8, the wildcard over the cap hung at 91113fb2f): not reproduced (d17a82 passed it); no mechanism
+   found by reading. The watchdog now samples every thread's stack on a hang (Xapiand:03637fc50), so a recurrence
+   names its frames. The 10x test_node job at the head is the check.
+5. Lead msg (test_loop_yield.cc:693 on CI, 3 runs): CI's numbers on this quest are 0.21 and 0.22 (142.7/674.7,
+   109.1/490.5 ms; bound 0.2, master's comment 0.06-0.09). Hypothesis: the denominator shrank, not the numerator
+   grew: through the group every write applies on its group chore, so "prepared and written on the loop" no longer
+   writes on the loop. Probes 261123-161429-7ff092 (merge base) and 261123-161416-5784fc (head) measure both sides.
+
 Session 11 (2026-11-23), the evidence set at the head (lead: nothing else unless a job fails):
 
 1. 261123-142137-528ce7 and 261123-142155-d17a82 had not run (109 jobs queued ahead): no verdict yet on the count
