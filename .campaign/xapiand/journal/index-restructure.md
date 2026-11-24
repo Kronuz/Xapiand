@@ -1,8 +1,8 @@
 # index-restructure: journal
 
-State: blocked on test/reclaim_bg_test.cc (Blocked on 1); waiting on jobs 261124-025155-288e60
-261124-025159-f8ed6f 261124-025203-ff830f 261124-025207-4882f1 261124-025211-9ae8da (ledger test,
-four mutants) at strata:3db2a49e (not pushed: the full build fails until the blocker is ruled)
+State: blocked on test/reclaim_bg_test.cc (Blocked on 1); waiting on jobs 261124-025207-4882f1
+261124-025211-9ae8da (mutants post-keeps-file, unpost-keeps-flight) at strata:3db2a49e (not pushed:
+the full build fails until the blocker is ruled)
 Quest: .campaign/xapiand/quests/index-restructure.md (the lead's; never edit it)
 
 Code: strata worktree /Users/kronuz/code/Kronuz/strata-wt/xapiand/index-restructure, branch
@@ -137,7 +137,7 @@ permit and reclaim-pacing figures, not a file's state. Candidates 2-7 judged aft
 |---|---|
 | A1 | build-test 261124-020132-30df0e and CI 45358702484 at strata:351eebc5 (step 1); step 2's head after Blocked on 1 |
 | A2 | members 261124-020132-e99917, fnsizes 261124-004345-fff00d, selfcontained 261124-015755-58916c, at strata:351eebc5 (step 1's commits, unchanged) |
-| A3 | ledger test 261124-025155-288e60; mutants 261124-025159-f8ed6f (track-adds), 261124-025203-ff830f (forget-drops), 261124-025207-4882f1 (post-keeps-file), 261124-025211-9ae8da (unpost-keeps-flight); all queued |
+| A3 | ledger test 261124-025155-288e60 (passed); mutants killed: 261124-025159-f8ed6f (track-adds: build, then `track` 3 failures), 261124-025203-ff830f (forget-drops); pending: 261124-025207-4882f1 (post-keeps-file), 261124-025211-9ae8da (unpost-keeps-flight) |
 | A4 | strata docs/source-layout.md, docs/mechanisms/index-layout.md (strata:3db2a49e) |
 
 ## Result
