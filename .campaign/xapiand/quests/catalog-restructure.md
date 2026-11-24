@@ -31,7 +31,7 @@ independently, which is the parallel-work gain.
 
 - A1 The suite passes at each step's head: the `build-test` check, and CI on every platform with
   sanitizers ([ci]); TSan on the catalog tests at step 2's head
-- A2 The move changes no code: the `members` check passes, and the journal answers each warning.
+- A2 [decision] The move changes no code: the `members` check passes, and the journal answers each warning.
   A Release `tools/fnsizes.sh` diff of the test binaries, base against head, in one job, shows no
   function whose size changed, or each difference explained in the journal
 - A3 Every new header compiles alone: `tools/selfcontained.sh` over the new headers
