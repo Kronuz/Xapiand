@@ -56,8 +56,8 @@ private:
 	std::size_t bytes_ = 0;   // the open command's writes, encoded
 };
 
-// The results of a command's writes from its accepted verdict: per write, its key and the docid and version
-// strata assigned it.
+// The results of a command's document writes from its accepted verdict: per write, its key and the docid and version
+// strata assigned it. A metadata write (the id counter a slice's last command carries) has none.
 std::vector<engine::WriteResult> restore_results(const Command& command, const ::strata::verdict& verdict);
 
 // SEAM (journal-replaces-wal core step d): ShardEndpoint's propose path. It proposes a command (split_command past

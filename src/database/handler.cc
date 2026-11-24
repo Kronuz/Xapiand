@@ -2759,7 +2759,7 @@ merges_stored(const MsgPack& obj)
 }
 
 
-// The records of the pending updates past which they are written: a few log entries' worth, so the batch commands
+// The data of the pending writes past which they are written: a few log entries' worth, so the batch commands
 // they make are full, and the prepared documents a RESTORE holds stay bounded.
 constexpr std::size_t PENDING_BYTES = 4 * COMMAND_ENTRY_BYTES;
 
@@ -3253,6 +3253,16 @@ DocIndexer::take(std::vector<MsgPack>& batch, bool close)
 		}
 	};
 
+	// A prepared object joins the pending writes; true when they reached their bound.
+	const auto pend = [this](Admitted&& one) {
+		if (const auto& term = std::get<0>(one.prepared); !one.error && !term.empty()) {
+			_pending_bytes += std::get<1>(one.prepared).get_data().size();
+			_pending_terms.insert(term);
+		}
+		_pending.push_back(std::move(one));
+		return _pending_bytes >= PENDING_BYTES;
+	};
+
 	// A round of the run (the design's Rounds): chores pull its objects in input order from `next`, each against a
 	// Schema of its own over `snapshot`, until a slice is spent or an object changes the schema.
 	struct Round {
@@ -3350,11 +3360,16 @@ DocIndexer::take(std::vector<MsgPack>& batch, bool close)
 		co_return stop;
 	};
 
-	// Prepares the run and applies it in input order; each round's chores overlap the apply of the round before.
+	// Prepares the run, in input order, into the pending writes; a round's chores overlap the writes its pending
+	// bound starts. A schema's script reads each object's stored document: those objects are written one by one.
 	const auto apply_run = [&]() -> task::task<void> {
-		if (!run.empty()) {
-			co_await apply_pending();   // the pending writes come before the run's
-		}
+		const auto pend_range = [&](std::size_t from, std::size_t to) {
+			bool full = false;
+			for (auto j = from; j < to; ++j) {
+				full = pend(std::move(run[j])) || full;
+			}
+			return full;
+		};
 		Round round;
 		std::size_t at = 0;
 		std::size_t stop = 0;
@@ -3371,11 +3386,17 @@ DocIndexer::take(std::vector<MsgPack>& batch, bool close)
 			if (!plain) {
 				break;
 			}
-			co_await task::when_all(apply_range(run, at, stop), pull_round(round));
+			if (pend_range(at, stop)) {
+				co_await task::when_all(apply_pending(), pull_round(round));
+			} else {
+				co_await pull_round(round);
+			}
 			at = stop;
 			stop = co_await accept(round);
 		}
-		co_await apply_range(run, at, stop);
+		if (pend_range(at, stop) || stop < run.size()) {
+			co_await apply_pending();
+		}
 		for (at = stop; at < run.size(); ++at) {   // the schema's script reads each object's stored document
 			co_await prepare_inline(run[at]);
 			co_await apply(run[at]);
@@ -3410,25 +3431,23 @@ DocIndexer::take(std::vector<MsgPack>& batch, bool close)
 			}
 			co_return;
 		}
-		co_await apply_run();   // D1: a barrier's read sees every earlier plain object applied
+		co_await apply_run();   // D1: the earlier plain objects are prepared, in input order, before its read
 		auto idx = admit(obj);
 		if (!idx) {
 			co_return;
 		}
 		Admitted one{*idx, std::move(obj), {}, {}, {}};
 		const auto key = co_await merge_key(one.obj);
-		if (key.empty() || _pending_terms.contains(key)) {
-			co_await apply_pending();   // its read sees every earlier write of its id
+		// Its read sees every earlier write of its id: a new id's document (no key yet) could be it too.
+		if (key.empty() || _pending_terms.contains(key) || _pending_terms.contains(std::string(NEW_NUMERIC_KEY))) {
+			co_await apply_pending();
 		}
 		co_await prepare_inline(one);
 		const auto& term = std::get<0>(one.prepared);
 		if (!one.error && !term.empty() && term == key) {
 			// An update joins the pending writes. Its term is the key read before its prepare: a pending write set
 			// the schema's id type, so the two can differ only with nothing pending.
-			_pending_bytes += std::get<1>(one.prepared).get_data().size();
-			_pending_terms.insert(term);
-			_pending.push_back(std::move(one));
-			if (_pending_bytes >= PENDING_BYTES) {
+			if (pend(std::move(one))) {
 				co_await apply_pending();
 			}
 			co_return;
@@ -3454,7 +3473,7 @@ DocIndexer::take(std::vector<MsgPack>& batch, bool close)
 	if (db_handler.budget != nullptr) {
 		db_handler.budget->rearm_light(STREAM_SLICES);   // the takes' slices are not the apply's: it starts light
 	}
-	co_await apply_run();   // the batch's last run applies before the next batch is read
+	co_await apply_run();   // the batch's last run is prepared before the next batch's objects
 	if (close) {
 		co_await apply_pending();
 	}

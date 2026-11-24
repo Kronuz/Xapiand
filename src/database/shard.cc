@@ -1115,6 +1115,16 @@ Shard::restore_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, st
 	bool ended = false;   // a write left the index to be replaced
 	bool done = false;    // the slice's last chore ran
 	std::exception_ptr cut;
+	std::uint64_t carried = 0;   // the id counter the slice's last command carries, durable with its writes
+	const auto close_open = [&] {
+		if (auto closed = batcher.flush()) {
+			if (entry.id_high_ > entry.id_high_logged_) {
+				carried = entry.id_high_;
+				closed->writes.push_back(id_high_write(carried));
+			}
+			close(std::move(*closed));
+		}
+	};
 	const auto prepare = [&] {
 		ShardEndpoint::InlineEngine inline_engine(entry, "a RESTORE's apply slice prepares on a worker in the index's turn");
 		if (DocIndexer::seams.throw_in_slice.exchange(false)) {
@@ -1156,9 +1166,7 @@ Shard::restore_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, st
 		}
 		done = ended || limit != 0 || at >= writes.size() || !batches.empty();
 		if (done) {
-			if (auto closed = batcher.flush()) {
-				close(std::move(*closed));
-			}
+			close_open();
 		}
 	};
 	for (bool first_chore = true; !done; first_chore = false) {
@@ -1169,15 +1177,14 @@ Shard::restore_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, st
 				throw;
 			}
 			cut = std::current_exception();
-			if (auto closed = batcher.flush()) {
-				close(std::move(*closed));
-			}
+			close_open();
 			break;
 		}
 	}
 	auto& eng = entry.engine();
 	const bool at_placement = has_db_ack_none(flags);
 	const auto level = ack_of(at_placement);
+	bool last_failed = false;
 	for (auto& batch : batches) {
 		std::exception_ptr failed;
 		try {
@@ -1199,14 +1206,19 @@ Shard::restore_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, st
 		} catch (...) {
 			failed = std::current_exception();
 		}
+		last_failed = failed != nullptr;
 		if (failed) {
 			for (const auto position : batch.writes) {
 				writes[position].error = failed;
 			}
 		}
 	}
+	if (carried != 0 && !last_failed) {
+		entry.id_high_logged_ = std::max(entry.id_high_logged_, carried);   // the last command carried it
+	}
 	if (entry.id_high_ > entry.id_high_logged_) {
-		// The ids the slice issued or wrote, durable once this lands; a failure leaves it to the next write's command.
+		// The ids the slice issued or wrote that no command carried, durable once this lands; a failure leaves it
+		// to the next write's command.
 		const auto high = entry.id_high_;
 		Command command;
 		command.writes.push_back(id_high_write(high));

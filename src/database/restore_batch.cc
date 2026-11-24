@@ -22,6 +22,7 @@
 
 #include "database/restore_batch.h"
 
+#include <algorithm>               // for std::count_if
 #include <utility>                 // for std::move
 
 #include "engine/error.h"          // for engine::Error, engine::errc
@@ -79,13 +80,19 @@ RestoreBatcher::flush()
 std::vector<engine::WriteResult>
 restore_results(const Command& command, const ::strata::verdict& verdict)
 {
-	if (verdict.result != ::strata::verdict::accepted || verdict.docids.size() != command.writes.size() || verdict.versions.size() != command.writes.size()) {
+	const auto documents = static_cast<std::size_t>(std::count_if(command.writes.begin(), command.writes.end(), [](const CommandWrite& write) {
+		return write.op != CommandOp::set_metadata;
+	}));
+	if (verdict.result != ::strata::verdict::accepted || verdict.docids.size() != documents || verdict.versions.size() != documents) {
 		throw engine::Error(engine::errc::internal, "A RESTORE batch's verdict does not answer its writes");
 	}
 	std::vector<engine::WriteResult> out;
-	out.reserve(command.writes.size());
-	for (std::size_t i = 0; i < command.writes.size(); ++i) {
-		out.push_back({static_cast<engine::docid>(verdict.docids[i]), verdict.versions[i], command.writes[i].key});
+	out.reserve(documents);
+	for (const auto& write : command.writes) {
+		if (write.op != CommandOp::set_metadata) {
+			const auto i = out.size();
+			out.push_back({static_cast<engine::docid>(verdict.docids[i]), verdict.versions[i], write.key});
+		}
 	}
 	return out;
 }

@@ -469,9 +469,10 @@ class DocIndexer {
 	std::string _packed;
 	std::vector<std::pair<size_t, size_t>> _at;
 
-	// The updates prepared on the loop and not yet written, none of the same id: written together, so their batch
-	// commands share the group's syncs, before a later object of the same id is prepared, before a plain run's
-	// writes, at their bound, and at the commit. Kept across batches: a stream's chunks hold a few objects each.
+	// The prepared objects not yet written, in input order: the plain runs and the updates of an id. Written together,
+	// so their batch commands fill log entries and share the group's syncs: before an update of a pending id or any
+	// other stored read is prepared, at their bound, and at the commit. Kept across batches: a body chunk holds a few
+	// objects. `_pending_terms` are their keys, `_pending_bytes` their documents' data.
 	std::vector<Admitted> _pending;
 	std::unordered_set<std::string> _pending_terms;
 	size_t _pending_bytes = 0;
