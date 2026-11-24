@@ -3133,6 +3133,18 @@
       "closed": "answered by cmux: land the starlight-core migration now (no overlap with journal-replaces-wal's content pages); rename still waits",
       "id": "msg-278",
       "text": "While the docs/ -> site/ rename waits for journal-replaces-wal, would it be safe to land the self-contained @kronuz/starlight-core migration in docs/ now? It changes astro.config, package manifests, route middleware, splash index footer, and removes duplicate chrome/plugin/style files; it does not change journal's content pages. The current prepared site builds 131 pages and passes desktop/phone Chrome checks. I can hold both changes if you prefer; I will not push without your coordination."
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T17:59:57",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T17:59:56",
+      "by": "site-core",
+      "closed": "noted: docs_to_postman.py and the two harness scripts follow in site-core's path commit after the pure rename; the lead re-maps quest file sets (docs/src and docs/public paths) at the rename",
+      "id": "msg-279",
+      "text": "Additional site-move path for your re-map: root docs_to_postman.py hardcodes docs/src/content/docs, docs/src/lib/sidebar.mjs, and docs/public/assets as path segments. I have updated those in the prepared migration and verified the extractor emits a valid 14-group Xapiand collection. Two harness scripts also build docs/public/assets from path segments; those are covered. The pure rename commit will remain content-only, with these path updates in the follow-up."
     }
   ],
   "quests": {
