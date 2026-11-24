@@ -1,12 +1,20 @@
 # consensus-join-v2: journal
 
-State: blocked on msg-291 (groups_test.cc grant); waiting on jobs 261124-011858-ff586e 261124-011903-b4f548
+State: waiting on jobs 261124-013122-ade4a2 261124-013129-65e51c 261124-013129-d849ad 261124-013130-531f9c, and CI (suite, asan, tsan) at consensus:f01607b
 Quest: .campaign/xapiand/quests/consensus-join-v2.md (the lead's; never edit it)
 
 Code: consensus worktree `../consensus-wt/xapiand/consensus-join-v2`, branch
 `quest/xapiand/consensus-join-v2`, base consensus:6e1122c.
 
 ## Doing
+
+msg-291 answered: the lead granted test/transport/groups_test.cc. Fix committed and pushed at
+consensus:f01607b (`pin_of` returns `key_pin(leaf.get())`; test-only, no mechanism changes).
+Before: 261124-011858-ff586e at 45bca9f exit 8, every groups case aborts with "node pins: the
+local certificate is not the local node's key". The in-job probe 261124-011903-b4f548 was
+cancelled (superseded). At the fix: groups cases 261124-013122-ade4a2 (A1); `campaign verify
+--for A1` queued suite, asan, tsan (CI at f01607b); A6 fuzzers rerun at f01607b:
+261124-013129-65e51c (token), 261124-013129-d849ad (join), 261124-013130-531f9c (hello).
 
 2026-11-24, CI run 45290843170 at consensus:45bca9f failed on every platform: every
 consensus_transport_groups_* case aborts at NodePins construction ("the local certificate is not
@@ -44,9 +52,7 @@ issue at the fix 261123-154016-cd7eae. S2-S5 are the lead's (not fixed).
 
 ## Blocked on
 
-- msg-291 (lead): add test/transport/groups_test.cc to the file set for the one-line pin_of
-  fix (recommended), or I wait for detent:consensus-fetch-alongside-flake to land. Until then
-  the suite and CI cannot be green.
+- msg-291: resolved (groups_test.cc granted, fixed at consensus:f01607b).
 
 - The lead (msg-270): test/transport/groups_test.cc's pin helper must call `key_pin` (one
   line); it is held by Detent's consensus-fetch-alongside-flake. Until then groups_test compiles
@@ -66,14 +72,14 @@ issue at the fix 261123-154016-cd7eae. S2-S5 are the lead's (not fixed).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | suite (CI at consensus:45f2309); `issue` case; mutants any-token, join-any-cluster, join-unpinned-ca, token-no-version |
+| A1 | suite (CI at consensus:f01607b); groups cases 261124-013122-ade4a2, fails without 261124-011858-ff586e; `issue` case; mutants any-token, join-any-cluster, join-unpinned-ca, token-no-version |
 | A2 | sign-each-time 261123-132820-5a61c4 (fails issue: 3 signatures), save-in-place 261123-132818-a116ef (fails save: the kill-during-save crash test) |
 | A3 | `forged` case (S1) 261123-154016-cd7eae, csr-any-key 261123-154007-7bb36d, issue-verify-first 261123-154010-cd7dc9, probe 261123-154013-225d0b; `flood` case (suite, tsan in CI); join-no-cap 261123-150202-29c750, join-no-slot-deadline 261123-150206-ee4ab3, join-no-rate 261123-150210-a56a49 |
 | A4 | `renew`, `expired`, `reload`, `redial` cases; pin-der 261123-133811-fee953 (done, fails renew), reload-keeps-links 261123-133816-735a28, reload-keeps-trust 261123-133820-3e888d, redial-at-deadline 261123-150215-ec3793 |
 | A5 | `boot` case; skip-boot-check 261123-150157-b0634d |
-| A6 | token 261123-150231-e1409c, join 261123-150234-473c5f, hello 261123-150236-7aa566 (2 workers x 16 min each, ASan+UBSan) |
+| A6 | at consensus:f01607b: token 261124-013129-65e51c, join 261124-013129-d849ad, hello 261124-013130-531f9c (2 workers x 16 min each, ASan+UBSan) |
 | A7 | docs/mechanisms/admission.md, hello.md, host-connection.md at consensus:45f2309 |
-| A8 | CI run 45285292077 at consensus:45f2309 (queued) |
+| A8 | asan, tsan and CI at consensus:f01607b (pending) |
 
 ## Result
 
