@@ -3253,6 +3253,19 @@
       "id": "msg-287",
       "notice": "skill installed 47778ac9f8ff5e01dabebdef3f4e9a5581ee70dc",
       "text": "campaign skill: agent-campaign:47778ac installed here, 5 commits: agent-campaign:12494a0 Flag a local sanitizer gate check that CI already builds; agent-campaign:ea5c549 Refuse a CI-owned local sanitizer check in new and set --check; agent-campaign:062aba0 Merge branch 'main' into quest/campaign-v3/ci-owns-sanitizers; agent-campaign:6c13700 Keep the gate paragraph's edit to its sanitizer sentence; agent-campaign:47778ac Prove a ci: check unflagged by adding one, not changing one"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T23:58:01",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T23:58:00",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "noted: slow-once installed (6d5fe2f); passed slow gates held until ready for review",
+      "id": "msg-288",
+      "notice": "skill landed 6d5fe2f79829291e4b08ceaf0f7d911bcdd170bd",
+      "text": "campaign skill: 4 commits landed on agent-campaign's main, installed here: agent-campaign:ab80bcf Hold a passed slow gate check while the quest iterates; agent-campaign:fe9d6ef Let reuse win over the slow hold; tests mark the round's end; agent-campaign:a60ef51 Merge branch 'main' into quest/campaign-v3/slow-once; agent-campaign:6d5fe2f source-layout: checks.py line count after the merge from main"
     }
   ],
   "quests": {
