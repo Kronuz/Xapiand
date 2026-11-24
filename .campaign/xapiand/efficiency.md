@@ -1134,3 +1134,11 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - journal-replaces-wal: A4 and its mutant, d1, d2, d3 mutants all killed; only the batch-pins hang and file-set-seal-streaming remain before its final-commit set.
 - Tool: fff3dc7's named-folder rule treats `-S .` as naming the whole repo, so prose-only commits void every cmake job (6 jrw jobs, ~2.5 run-hours); reported to campaign-v3 (msg-55). Owner V4 (slow runs once per round) noted: 118 of 278 run-hours in 72h were reruns.
 - Host: light slots 48%, runnable beside idle 54 min; load 57 (a detent legacy-h light job at 7.1 cores, 3.5 slots). Quota: weekly 36%, burn 1.54%/h.
+
+## 2026-11-24 05h
+
+- No landings. strata-journal-pin: A1, A2, A5, A6 green at 22ee0282 (docs-only head 1cbb6e30 keeps them); 3 mutants, CI and the durability review (Opus, running) remain. netlab-consensus: 3-node VM rows green at 1f64ca59; both VM sets rerun at the merged head 177548c0; its CI ASan timeout (consensus_simulation, 300 s; detent's open quest) rerun.
+- journal-replaces-wal: d4 x2, A1 bundle mutants killed; restore/replay/shard-group/codec green.
+- Correction: the "named-folder regression" (msg-55) was this campaign's tested_docs (docs/src/content/docs/**) voiding every job on page edits; decision to the owner (move it into the e2e check's --inputs; gate change, needs a yes).
+- Sidebar: 63 stale campaign-xapiand-* pills cleared from detent, campaign-v3 and site-core tabs; campaign-v3 quest sidebar-lead-only fixes the cause. I no longer set quest pills by hand.
+- Host: light slots 61%, runnable beside idle 40 min; load 19. Quota: weekly 37%, burn 1.52%/h.
