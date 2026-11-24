@@ -13282,7 +13282,10 @@
         "test/field_check_map_test.cc",
         "test/CMakeLists.txt",
         "CMakeLists.txt",
-        "docs/mechanisms/field-check.md"
+        "docs/mechanisms/field-check.md",
+        "include/strata/core/index_open.hh",
+        "bench/eager_open/**",
+        "docs/perf/eager-open.md"
       ],
       "journal": "../Xapiand-wt/xapiand/field-check-at-map",
       "landed": [],
@@ -13296,7 +13299,7 @@
       "risk": "high",
       "status": "active",
       "title": "strata checks a segment's field ids wherever it maps",
-      "updated": "2026-11-24T11:51:31",
+      "updated": "2026-11-24T12:38:17",
       "worktree": "../strata-wt/xapiand/field-check-at-map"
     },
     "field-table": {
@@ -18614,9 +18617,9 @@
       ],
       "repo": "/Users/kronuz/code/Kronuz/journal",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "journal: the caller chooses the sync mode at open (plain fsync or full flush on macOS)",
-      "updated": "2026-11-24T11:43:09",
+      "updated": "2026-11-24T12:39:02",
       "worktree": "../journal-wt/xapiand/journal-sync-mode"
     },
     "journal-turn-buffers": {
