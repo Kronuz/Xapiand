@@ -559,3 +559,8 @@ quest fixes them (2 of 5 on 11-20).
 - catalog_table.hh is a leftover bucket and catalog_observe.hh (117 lines) sits near the ~100-line floor (N2): revisit at the next catalog change; low.
 - catalog_s3fifo.hh comment "links this class alone writes" omits that q_next doubles as the free-list link (N3); docs, low.
 - The ghost-hit counter is now taken after the unlock (N4): stats only; check it is atomic or say why a torn read is fine; low.
+
+## journal-sync-mode durability review notes (2026-11-24, reviews/journal-sync-mode-durability.md)
+
+- journal recovery (D4, owner's call pending): when a segment file vanishes, `missing_between` (turn_log.h:1034-1042) charges missing turns only to gaps it finds, so a group can come back behind its acknowledged records unreported (T9 plain torn point: group 1 keeps 1:1, 6 acked records behind). Reachable in full mode by real damage that loses a segment. Lead's recommendation: treat turns a vanished segment may have held as unknown (every group lost), with the T9 point as a fails-without test. Detent reviews journal recovery.
+- journal T9 plain never checks bounded groups (D1); README implies plain losses are reported, about half are silent (D2); sync-mode.md wording (D3, D5: FreeBSD's AIO barrier is aio_fsync(O_DSYNC)). docs and test, low.
