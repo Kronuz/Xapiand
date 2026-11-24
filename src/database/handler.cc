@@ -2759,8 +2759,8 @@ merges_stored(const MsgPack& obj)
 }
 
 
-// The data of the pending writes past which they are written: a few log entries' worth, so the batch commands
-// they make are full, and the prepared documents a RESTORE holds stay bounded.
+// The data of the pending writes, per child that writes them, past which they are written: a few log entries' worth
+// per shard, so the batch commands they make are full, and the prepared documents a RESTORE holds stay bounded.
 constexpr std::size_t PENDING_BYTES = 4 * COMMAND_ENTRY_BYTES;
 
 
@@ -3254,13 +3254,14 @@ DocIndexer::take(std::vector<MsgPack>& batch, bool close)
 	};
 
 	// A prepared object joins the pending writes; true when they reached their bound.
-	const auto pend = [this](Admitted&& one) {
+	const auto pending_bound = PENDING_BYTES * std::max<std::size_t>(1, children);
+	const auto pend = [this, pending_bound](Admitted&& one) {
 		if (const auto& term = std::get<0>(one.prepared); !one.error && !term.empty()) {
 			_pending_bytes += std::get<1>(one.prepared).get_data().size();
 			_pending_terms.insert(term);
 		}
 		_pending.push_back(std::move(one));
-		return _pending_bytes >= PENDING_BYTES;
+		return _pending_bytes >= pending_bound;
 	};
 
 	// A round of the run (the design's Rounds): chores pull its objects in input order from `next`, each against a

@@ -1106,10 +1106,10 @@ Shard::restore_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, st
 		}
 		batches.push_back(std::move(batch));
 	};
-	// Chores of `slice` each prepare the writes until a command closes (a full entry) or the sub-run ends, so each
-	// proposal, and the group's syncs it waits for, carries an entry's worth of writes. A test's fixed slice is one
-	// chore. The last chore closes the open command, so the loop encodes no entry. A chore that fails after the first
-	// ends the slice with the writes before it, which are proposed.
+	// Chores of `slice` each prepare the writes until the sub-run ends, so each proposal, and the group's syncs it
+	// waits for, carries a full entry's worth of writes but the last. A test's fixed slice is one chore. The last
+	// chore closes the open command, so the loop encodes no entry. A chore that fails after the first ends the slice
+	// with the writes before it, which are proposed.
 	const auto first = at;
 	const auto limit = DocIndexer::seams.writes_per_slice.load(std::memory_order_relaxed);   // a test's fixed slice
 	bool ended = false;   // a write left the index to be replaced
@@ -1164,7 +1164,7 @@ Shard::restore_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, st
 				break;
 			}
 		}
-		done = ended || limit != 0 || at >= writes.size() || !batches.empty();
+		done = ended || limit != 0 || at >= writes.size();
 		if (done) {
 			close_open();
 		}
