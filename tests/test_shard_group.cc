@@ -27,7 +27,10 @@
 
 #include "test_harness.h"
 
+#include <algorithm>
 #include <cstdio>
+#include <memory>
+#include <span>
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -298,6 +301,97 @@ void test_abort_retires_its_upload_volume() {
 	CHECK(r.files->read(volume_name(named), 0, bytes.size()) == bytes);
 }
 
+// The slot's IO as the file set sees it, recording the largest read asked of any of its files.
+class ReadBoundFile final : public kronuz::journal::File {
+public:
+	ReadBoundFile(std::unique_ptr<kronuz::journal::File> f, std::size_t& largest) : f_(std::move(f)), largest_(&largest) {}
+	std::uint64_t size() override { return f_->size(); }
+	std::size_t read_at(std::uint64_t o, std::span<char> b) override {
+		*largest_ = std::max(*largest_, b.size());
+		return f_->read_at(o, b);
+	}
+	std::size_t write_at(std::uint64_t o, std::string_view b) override { return f_->write_at(o, b); }
+	void truncate(std::uint64_t n) override { f_->truncate(n); }
+	void sync() override { f_->sync(); }
+	void sync_data() override { f_->sync_data(); }
+
+private:
+	std::unique_ptr<kronuz::journal::File> f_;
+	std::size_t* largest_;
+};
+
+class ReadBoundIO final : public kronuz::journal::IO {
+public:
+	ReadBoundIO(kronuz::journal::IO& in, std::size_t& largest) : in_(&in), largest_(&largest) {}
+	std::unique_ptr<kronuz::journal::OwnerLock> acquire_owner(bool c) override { return in_->acquire_owner(c); }
+	std::unique_ptr<kronuz::journal::File> open_existing(std::string_view n) override { return wrap(in_->open_existing(n)); }
+	std::unique_ptr<kronuz::journal::File> create_exclusive(std::string_view n) override { return wrap(in_->create_exclusive(n)); }
+	std::unique_ptr<kronuz::journal::File> open_existing_read_only(std::string_view n) override { return wrap(in_->open_existing_read_only(n)); }
+	void open_existing_read_only_into(std::string_view n, kronuz::journal::File& f) override { in_->open_existing_read_only_into(n, f); }
+	std::unique_ptr<kronuz::journal::File> open_reclaim_candidate_read_only(std::string_view n) override { return in_->open_reclaim_candidate_read_only(n); }
+	bool open_reclaim_candidate_read_only_into(std::string_view n, kronuz::journal::File& f) override { return in_->open_reclaim_candidate_read_only_into(n, f); }
+	void replace(std::string_view a, std::string_view b) override { in_->replace(a, b); }
+	void remove(std::string_view n) override { in_->remove(n); }
+	std::unique_ptr<kronuz::journal::DirectoryCursor> scan_directory() override { return in_->scan_directory(); }
+	void sync_directory() override { in_->sync_directory(); }
+
+private:
+	std::unique_ptr<kronuz::journal::File> wrap(std::unique_ptr<kronuz::journal::File> f) { return std::make_unique<ReadBoundFile>(std::move(f), *largest_); }
+	kronuz::journal::IO* in_;
+	std::size_t* largest_;
+};
+
+// A completed upload's seal reads its volume in bounded pieces (review R2): an upload sixteen times strata's 64 KiB
+// read, applied as chunks and a final, seals to its whole bytes' CRC32C with no read past the bound, so a
+// volume of any size (a 32 GiB rotation, a multi-GiB upload) seals without holding it in memory.
+void test_a_seal_reads_its_volume_in_bounded_pieces() {
+	constexpr std::size_t bound = 64 * 1024;
+	const auto dir = std::filesystem::current_path() / "shard_group_bounded_seal";
+	std::filesystem::remove_all(dir);
+	std::filesystem::create_directories(dir);
+	std::size_t largest = 0;
+	{
+		kronuz::journal::PosixIO io(dir);
+		auto index = prospect::index::create(io, engine::strata::index_options({}), engine::strata::new_uuid());
+		ReadBoundIO bounded(io, largest);
+		strata::group::file_set files(bounded);
+		ShardApplication app(index);
+		ShardGroupState state;
+		std::uint64_t at = 0;
+		const auto apply = [&](std::string_view bytes) {
+			const strata::group::entry e{++at, 1, cs::EntryKind::Command, bytes};
+			app.effects(state, e, files);
+			auto t = app.transaction(state, e);
+			if (t) {
+				CHECK(index.apply(*t, {}).result == ::strata::verdict::accepted);
+			}
+			app.advance(state, e);
+			return t.has_value();
+		};
+		const std::uint64_t id = (1ull << 32) | 21;
+		const auto bytes = pattern(16 * bound + 7, 's');
+		for (std::size_t off = 0; off < bytes.size(); off += 3 * bound) {
+			apply(encode_entry(CommandChunk{id, CommandStream::upload, off, std::string_view(bytes).substr(off, 3 * bound)}));
+		}
+		const auto volume = state.open.at(id).upload;
+		auto w = put("Kbig", "video/mp4", std::string());
+		w.document.bytes = document("Kbig", "video/mp4", bytes.size());
+		w.blobs[0].record = CommandBytes{{}, true, CommandStream::upload, 0, bytes.size()};
+		Command final;
+		final.writes.push_back(std::move(w));
+		largest = 0;
+		REQUIRE(apply(encode_entry(CommandFinal{id, final})));
+		const auto named = files.capture();
+		REQUIRE_EQ(named.count(volume_name(volume)), 1u);
+		CHECK(named.at(volume_name(volume)).crc == kronuz::crc32c::crc32c(bytes));
+		CHECK_LE(largest, bound);
+		if (largest > bound) {
+			std::fprintf(stderr, "  the seal read %zu bytes at once (bound %zu)\n", largest, bound);
+		}
+	}
+	std::filesystem::remove_all(dir);
+}
+
 // Whether every locator of `data` views the data's own bytes.
 bool views_its_bytes(const Data& data) {
 	const auto& bytes = data.serialize();
@@ -421,5 +515,5 @@ void test_the_journal_io_takes_the_io_options() {
 
 TEST_MAIN(test_blobs_at_the_offsets_the_state_names, test_rotation_in_log_order, test_chunked_command_applies_at_its_final_entry,
 	test_upload_into_its_own_volume, test_higher_term_retires_open_commands, test_entries_outside_their_term_apply_nothing,
-	test_abort_retires_its_upload_volume, test_a_flush_leaves_its_locators_on_its_bytes, test_place_stored_keeps_the_other_locators,
+	test_abort_retires_its_upload_volume, test_a_seal_reads_its_volume_in_bounded_pieces, test_a_flush_leaves_its_locators_on_its_bytes, test_place_stored_keeps_the_other_locators,
 	test_state_bytes, test_the_journal_io_takes_the_io_options)
