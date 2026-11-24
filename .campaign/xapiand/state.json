@@ -7659,10 +7659,28 @@
         "CHANGELOG.md",
         "docs/**"
       ],
+      "history": [
+        {
+          "at": "2026-11-24T08:09:20",
+          "lenses": [
+            [
+              "correctness"
+            ],
+            [
+              "durability"
+            ]
+          ],
+          "reason": "high risk is durability: dominant-risk lens is durability, not correctness; Detent asked for one durability review at max (msg-323); no review exists",
+          "voided": [],
+          "weakened": [
+            "lens correctness removed"
+          ]
+        }
+      ],
       "journal": "../Xapiand-wt/xapiand/completion-flush-mode",
       "landed": [],
       "lenses": [
-        "correctness"
+        "durability"
       ],
       "milestone": "Phase 7b",
       "needs": [],
@@ -7673,7 +7691,7 @@
       "risk": "high",
       "status": "active",
       "title": "completion: PosixIO takes a required flush mode (plain or full) for every sync it issues",
-      "updated": "2026-11-24T08:08:54",
+      "updated": "2026-11-24T08:09:20",
       "worktree": "../completion-wt/xapiand/completion-flush-mode"
     },
     "completion-task-pin": {
