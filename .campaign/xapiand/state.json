@@ -15981,7 +15981,8 @@
       "accepted": {},
       "after": [
         "turn-log-parity",
-        "split-check-members"
+        "split-check-members",
+        "strata-journal-pin"
       ],
       "base": "cc30217fc2fe2c231487c564318a520aa1bff640",
       "branch": "quest/xapiand/index-restructure",
@@ -16047,12 +16048,11 @@
       "milestone": "",
       "needs": [],
       "provides": [],
-      "reason": "started by force: turn-log-parity, the only open branch editing index.hh, lands first unchanged; this quest then merges main and re-applies its edits (quest file, Decisions)",
       "repo": "../strata",
       "risk": "high",
       "status": "active",
       "title": "strata's index.hh: basic_index's 5,309-line class body split by mechanism",
-      "updated": "2026-11-21T22:06:43",
+      "updated": "2026-11-23T19:27:20",
       "worktree": "../strata-wt/xapiand/index-restructure"
     },
     "install-own-files": {
