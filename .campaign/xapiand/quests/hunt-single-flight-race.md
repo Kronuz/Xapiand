@@ -1,36 +1,24 @@
 # hunt-single-flight-race: test_single_flight waits for the leaving joiner's task, not a snapshot
 
-Risk: low. The lead writes this quest; contributors read it and never edit it. Its machine state
-(status, branch, checks, reviews) is in `state.json`: `campaign status hunt-single-flight-race`.
+Risk: low (a test). The lead writes this quest; contributors read it and never edit it.
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+`test_a_joiner_whose_token_fires_leaves_while_the_load_goes_on` checks `tasks.running() == 2` right
+after B's `cancelled` count rises, but B's coroutine raises the count before it returns, so the task
+count can still be 3 for a moment. It failed master's CI (run 45242486008) and journal-replaces-wal's
+(45289446018). The check waits for the count with `eventually`, which still fails if B never leaves.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
-
-## Contracts
-
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+- A1 The test passes 300 runs in a row under a light hold at the fix (a job)
+- A2 [ci] CI is green on every platform
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 2026-11-24: a test race, not a SingleFlight bug: the count is updated inside B's task before the
+  task completes.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
-
-## Tasks
-
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+Nothing: one line.
