@@ -40,6 +40,7 @@
 #include <regex>                                 // for std::regex
 #include <signal.h>                              // for SIGTERM, SIGINT
 #include <string>                                // for std::string, std::to_string
+#include <sys/resource.h>                        // for getrlimit, RLIMIT_FSIZE
 #include <sys/socket.h>                          // for AF_INET, sockaddr
 #include <sysexits.h>                            // for EX_IOERR, EX_NOINPUT, EX_SOFTWARE
 #include <unistd.h>                              // for ssize_t
@@ -295,7 +296,16 @@ XapiandManager::XapiandManager(std::chrono::steady_clock::time_point process_sta
 {
 	database_pool->set_control(&_rx->host);
 	// The journal of every index's group (cluster-release D2), in the data directory (the working one, setup()'s).
-	database_pool->set_journal(JOURNAL_DIRECTORY);
+	// Its recovery writes (a turn log's segments), so one that fails ends the start before anything is served.
+	try {
+		database_pool->set_journal(JOURNAL_DIRECTORY);
+	} catch (const std::exception& exc) {
+		struct rlimit fsize {};
+		const bool limited = ::getrlimit(RLIMIT_FSIZE, &fsize) == 0 && fsize.rlim_cur != RLIM_INFINITY;
+		L_CRIT("The journal in {} cannot be recovered: {}{}", JOURNAL_DIRECTORY, *exc.what() ? exc.what() : "unknown error",
+			limited ? strings::format(" (the process's file-size limit is {} bytes)", static_cast<unsigned long long>(fsize.rlim_cur)) : std::string());
+		throw SystemExit(EX_IOERR);
+	}
 	_rx->autocommits = std::make_unique<control::Debounce<Endpoint>>(_rx->host,
 		control::Debounce<Endpoint>::Timing{
 			std::chrono::milliseconds(opts.committer_debounce_timeout),

@@ -144,10 +144,11 @@ scenario_failure() {
 		pass "failure: the node did not come up on a shard whose recovery could not write"
 		wait "$PID" 2>/dev/null; PID=""
 	fi
-	if grep -qiE "file too large|EFBIG" "$RUNDIR/f2.log"; then
-		pass "failure: the write error is reported"
+	# The start reports the recovery's failure and the limit it ran into, never an uncaught exception.
+	if grep -q "cannot be recovered" "$RUNDIR/f2.log" && grep -qiE "file-size limit|file too large|EFBIG" "$RUNDIR/f2.log" && ! grep -q "Uncaught exception" "$RUNDIR/f2.log"; then
+		pass "failure: the recovery's write error is reported"
 	else
-		fail "failure: no file-size error in the log; its end:"
+		fail "failure: no recovery error naming the file-size limit in the log; its end:"
 		tail -n 40 "$RUNDIR/f2.log" | sed 's/^/    | /'
 	fi
 	start_node f3.log || { fail "healthy restart"; return; }
