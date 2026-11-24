@@ -1198,3 +1198,10 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - consensus-join-v2: all 7 mutants killed on the merged head; CI's linux GCC jobs hit an internal compiler error in admission_nodes_test's impostor coroutine (pre-existing since 45bca9f). First lead workaround (no structured binding, b92b6c8) did not help; second (name the braced join-offer temporary, 7e12650) in CI. macOS fetch failure is Detent's loop-stall flake.
 - index-restructure: build-test at cfa20b41 green; reviewer's call-site probe killed all 3 mutants (no test gap). Waits on CI and the owner's yes on the members check.
 - Host: load 13-15; light slots 52% used, queued jobs wait on quest slots. Quota: weekly 44%, burn 1.40%/h, exhaustion ~40 h (before the 11-30 reset).
+
+## 2026-11-24 13h
+
+- No landings. consensus-join-v2: lead's second GCC workaround (name the braced join-offer temporary held across a co_await, consensus:7e12650) cleared the internal compiler error; every platform green there except linux-asan-ubsan, where the boot case's relink check fails fast (1.68 s); all 7 mutants (cherry-picked onto 7e12650), groups cases, S1 and the 3 fuzzers green at that head. Fresh Opus contributor launched on the relink race.
+- journal-replaces-wal (Opus resume, 222k): drain fix proven (30/30, both mutants killed), recovery report mutant killed. Crash gate fails on a 2,000-update RESTORE on the loop: likely one durable full flush per serial update (~25 ms on macOS, ~50 s for the request) against master's one sync per RESTORE; probes at the head and at master queued. Lead cancelled netlab's exclusive VM job that stalled the critical path; requeued at priority -1.
+- index-restructure: CI, build-test, A3 and the review green at cfa20b41; only the step-1 `members` check blocks (owner's decision). Parking it on the owner released its file set, so it stays in review (reported to campaign-v3, msg-71).
+- Host: load 6-13; light slots 48% used. Quota: weekly 45%, burn 1.39%/h, exhaustion ~39 h (before the 11-30 reset).
