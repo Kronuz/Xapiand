@@ -27,10 +27,12 @@ call `ok`) must fail. Jobs: 261124-052541-de01a8 (boot x10, Debug), 261124-05254
 
 What it touches, for the security reviewer's call: test/transport/admission_nodes_test.cc
 (boot_case only) and docs/mechanisms/hello.md (one paragraph, one test line). No header, no
-product code, no wire change. Evidence to rerun at the new head: CI (all platforms); the A5
-mutant skip-boot-check (cherry-pick; it still fails `boot` in phase 1); the other six mutants
-touch other cases and need only the rebuild. Groups (A1), forged/issue (S1) and the fuzzers
-(A6) cover files this commit did not change.
+product code, no wire change. Evidence to rerun at d42a7d1 (`campaign status` counts every
+job at 7e12650 as other code): the seven mutants (cherry-pick; skip-boot-check still fails
+`boot` in its first phase), groups cases 261124-051226-db7f2b (A1), forged/issue
+261124-051228-b40f49 (S1), fuzzers 261124-042003-521e3c, 261124-042007-d989ce,
+261124-042011-c8c685 (A6). None of their files changed; I did not rerun them (lead's call).
+Pushed d42a7d1; `campaign verify consensus-join-v2` queued CI.
 
 msg-291 answered: the lead granted test/transport/groups_test.cc. Fix committed and pushed at
 consensus:f01607b (`pin_of` returns `key_pin(leaf.get())`; test-only, no mechanism changes).
