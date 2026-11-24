@@ -12511,9 +12511,9 @@
       ],
       "repo": "../faultlab",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "faultlab: faultfs models a plain sync (survives a process crash, not a power cut)",
-      "updated": "2026-11-24T08:09:11",
+      "updated": "2026-11-24T08:51:10",
       "worktree": "../faultlab-wt/xapiand/faultlab-plain-sync"
     },
     "faultlab-seam": {
