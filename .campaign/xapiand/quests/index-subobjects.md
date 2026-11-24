@@ -5,32 +5,39 @@ Risk: high. The lead writes this quest; contributors read it and never edit it. 
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+After index-restructure moved basic_index's member functions out of its class body into one header per
+mechanism, the class still holds every mechanism's state as its own data members. Where a mechanism's
+state and invariants stand apart, they become a member class basic_index owns, with its own unit
+tests: the first candidate, from index-restructure's journal, is a `file_ledger` that takes `files_`,
+`on_disk_`, `posted_`, `inflight_` and `unlinked_`; then the turn log's cohort state, the checkpoint
+window and replay, each only where it wins. Each extraction is judged on maintenance: fewer members a
+reader must hold in mind, and an invariant stated in one place. No size targets, and no behavior
+changes.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 The suite passes: the `build-test` check, plus CI on every platform with sanitizers
+- A2 Each extracted subobject has unit tests of its own invariant under `test/index/`, plus a mutant per
+  invariant that a named test kills (`--fails-without`; the log shows a complete build, then the named
+  test failing)
+- A3 No behavior changes: the turn-log, group and simulation suites pass unchanged (`ctest -R
+  '^(standalone_turn_log|group_|simulation_)'`), and the journal names, per extraction, which
+  invariant moved and where it is now stated
+- A4 [artifact] `docs/mechanisms/index-layout.md` says which mechanism lives in which member class and
+  why each one stays inside basic_index or leaves it; `docs/source-layout.md` lists any new header
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+`strata:index`'s public API stays the same. Callers include `strata/core/index.hh` and see the same
+names.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 2026-11-24: split from index-restructure, whose step 1 (out-of-class definitions, proved by the
+  `members` check and an fnsizes diff) lands alone as that quest; this quest is its step 2 and carries
+  the review (correctness) that index-restructure's decisions planned to cover both steps. Starts from
+  the main step 1 lands on.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
-
-## Tasks
-
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+Each extraction, on its own proof (A1, A2, A3 for it), with the review at the last one.
