@@ -3423,6 +3423,19 @@
       "closed": "answered: fixture fixed at consensus:4f9f47 (pin_of returns key_pin), journal records it; groups cases green at 81ada17",
       "id": "msg-291",
       "text": "consensus-join-v2 CI failure: cause is test/transport/groups_test.cc:90, pin_of returns certificate_fingerprint (DER) while NodePins now takes key pins (consensus:a921f4e); NodePins' own-key check (node_pins.h:187) throws. Local jobs passed because groups_test was never in them (the previous contributor flagged it, msg-270). Fix is one line in the fixture, pin_of -> key_pin(leaf.get()); no code change, pin check untouched. groups_test.cc is outside my file set and held by detent:consensus-fetch-alongside-flake (in review); its hunks do not touch line 90, so the line merges cleanly. Ask: add test/transport/groups_test.cc to consensus-join-v2's files (or tell me to wait). Jobs: fails-without at 45bca9f 261124-011858-ff586e; probe with the line patched in-job at the merge 963fd9a 261124-011903-b4f548. On the grant I commit, rerun as evidence, push."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T03:23:58",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T03:23:58",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "noted: agent-campaign:709523e installed (to-do mail)",
+      "id": "msg-299",
+      "notice": "skill landed 709523e12303de3b82e915fc67da6586a78e05d0",
+      "text": "campaign skill: 3 commits landed on agent-campaign's main, installed here: agent-campaign:e3afa75 Mail the lead its to-do from the worker until each item is done; agent-campaign:2de723c Ignore cmux tree calls in the sidebar tests' call logs; agent-campaign:709523e Keep the mailing worker while a lead lives, not via lead commands"
     }
   ],
   "quests": {
