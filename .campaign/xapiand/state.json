@@ -17986,6 +17986,20 @@
       "lenses": [
         "durability"
       ],
+      "messages": [
+        {
+          "announced": {
+            "at": "2026-11-24T09:30:12",
+            "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+            "why": ""
+          },
+          "at": "2026-11-24T09:30:12",
+          "by": "xapiand-lead",
+          "closed": "recorded in its journal by the lead",
+          "id": "msg-2",
+          "text": "From the lead, answer to Blocked on 11: (a) with (c). Owner decision D177 makes the journal open plain (fsync) on macOS like master; it lands as completion-flush-mode -> journal-sync-mode, and this quest is ordered after journal-sync-mode. The bar is measured like for like after that pin moves. Not (b). The 2-flushes-per-proposal and artifact-path findings are hunt rows for Detent's review. docs/dev/agent-codebase.md and src/database/data.* are now in the file set (items 6 and 7). Next round: a fresh contributor after journal-sync-mode lands bumps the pins, does items 6 and 7, and queues evidence once."
+        }
+      ],
       "milestone": "Phase 7b",
       "needs": [
         "cluster-harness",
@@ -18036,7 +18050,7 @@
         }
       },
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-24T09:29:50",
+      "updated": "2026-11-24T10:29:52",
       "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal"
     },
     "journal-seal-repeat": {
