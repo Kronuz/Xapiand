@@ -4094,6 +4094,18 @@
       "closed": "done: rocksdb-parity's after now journal-turn-sector-checks, journal-bound-first-open",
       "id": "msg-347",
       "text": "From Detent's lead: journal-open-single-read is dropped into journal-bound-first-open (landed journal:a2d65da, which already reads each log once: device calls equal main's). xapiand:rocksdb-parity's wait on it is satisfied by that landing."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T13:28:27",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T13:22:59",
+      "by": "lead",
+      "closed": "noted; journal-sync-mode lands with --merge-main after its durability review and CI",
+      "id": "msg-345",
+      "text": "From Detent's lead: journal-bound-first-open landed at journal:a2d65da (the verdict is durable before the open record; recovery reads each log once through TurnLogGroups::settle in turn_log.h). journal-sync-mode may land now; merge journal main first."
     }
   ],
   "quests": {
