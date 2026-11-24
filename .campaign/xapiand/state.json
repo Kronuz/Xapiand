@@ -3861,6 +3861,21 @@
       "id": "msg-329",
       "notice": "skill landed deeff8120ca3568c73345eac19a704101c91d772",
       "text": "campaign skill: 3 commits landed on agent-campaign's main, not installed here yet: agent-campaign:be73b75 review-sweeps: fix rounds sweep the class; failing probes stay blocking; agent-campaign:3222ea0 review-sweeps: a third fix round in the same mechanism runs; agent-campaign:deeff81 Prompts: fix rounds sweep a finding's class; lifecycle fixes get whole re-reviews"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T09:30:16",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T09:30:16",
+      "by": "campaign",
+      "closed": "answered journal-replaces-wal as msg-2 (option a with c; waits on journal-sync-mode); index-restructure waits on the owner",
+      "id": "msg-332",
+      "settles": {
+        "todo": "150e166b"
+      },
+      "text": "to do, critical path first:\ntodo: answer journal-replaces-wal (its journal waits on the lead: blocked on the lead: plain RESTORE in chores 66.5 s -> ~3-4 s (master ~1.3-2.3 s); the rest is the journal's full flushes per entry. Code at Xapiand:89a406c7f, no evidence jobs queued (round not ready by the lead's bar). See Blocked on.; it asks: 11. (2026-11-24, session 17) The plain RESTORE in chores is ~3-4 s at Xapiand:89a406c7f against master's ~1.3-2.3 s (A/B same hold; master's strict median 2.26 s), so the round misses the lead's bar on that row; the update row passes (3.7-7.0 s vs master 4.8-8.2 s, strict median 36.4 s). Of the fix\u2026; new): `campaign status journal-replaces-wal`, answer it (`campaign message journal-replaces-wal TEXT`), or park it with a reason\ntodo: finish index-restructure (nothing moved it for 5 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); listed 4 h): `campaign status index-restructure`"
     }
   ],
   "quests": {
