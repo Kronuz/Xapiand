@@ -1,7 +1,8 @@
 # index-restructure: journal
 
-State: ready for review at strata:cfa20b41 (pushed); build-test reruns at this head (held by verify
-until this state), members 261124-025756-a4f2ac at the head is expected red (step 2 changes code)
+State: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;
+members 261124-025756-a4f2ac and 261124-025827-8a1219 at the head are expected red (step 2 changes
+code; step 1's members proof is e99917 at 351eebc5)
 Quest: .campaign/xapiand/quests/index-restructure.md (the lead's; never edit it)
 
 Code: strata worktree /Users/kronuz/code/Kronuz/strata-wt/xapiand/index-restructure, branch
@@ -125,7 +126,7 @@ permit and reclaim-pacing figures, not a file's state. Candidates 2-7 judged aft
 
 | Criterion | Evidence |
 |---|---|
-| A1 | step 1 at strata:351eebc5: build-test 261124-020132-30df0e, CI 45358702484; step 2 at strata:cfa20b41: build-test reruns at this head (verify holds it until ready for review), CI on the push of cfa20b41 |
+| A1 | step 1 at strata:351eebc5: build-test 261124-020132-30df0e, CI 45358702484; step 2 at strata:cfa20b41: build-test 261124-025827-57b6da (queued), CI on the push of cfa20b41 |
 | A2 | step 1's proof, at strata:351eebc5 (step 1's commits, unchanged on the branch): members 261124-020132-e99917 (202 definitions moved, 0 warnings), fnsizes 261124-004345-fff00d, selfcontained 261124-015755-58916c. These stay at 351eebc5: members and fnsizes compare against main and step 2 changes code by design, so at the head members fails (261124-025756-a4f2ac; local run: 103 errors, all in the ledger's edits: index_ledger.hh's new lines and the 20 changed members) and fnsizes would differ |
 | A3 | ledger test 261124-025155-288e60 (passed, every case and the model at 1.2M steps); mutants killed, each by a full build then its named case failing: 261124-025159-f8ed6f (track-adds, `track`), 261124-025203-ff830f (forget-drops, `forget`), 261124-025207-4882f1 (post-keeps-file, `post`), 261124-025211-9ae8da (unpost-keeps-flight, `unpost`) |
 | A4 | strata docs/source-layout.md, docs/mechanisms/index-layout.md (strata:3db2a49e) |
