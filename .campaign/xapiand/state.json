@@ -3491,6 +3491,32 @@
         "quest": "detent:consensus-seeds-rate-flake"
       },
       "text": "detent:consensus-seeds-rate-flake started and changes contract consensus:node-admission, which your consensus-join-v2 consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T04:34:44",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T04:34:44",
+      "by": "campaign",
+      "closed": "transient: index-restructure restored to review at once; nothing started on the freed files",
+      "id": "msg-304",
+      "items": {
+        "catalog-restructure": "frees docs/source-layout.md, CMakeLists.txt for catalog-restructure",
+        "field-check-at-map": "frees include/strata/core/index.hh, CMakeLists.txt for field-check-at-map",
+        "format-freeze": "frees test/** for format-freeze",
+        "rocksdb-parity": "frees include/strata/core/**, test/**, docs/mechanisms/**, CMakeLists.txt for rocksdb-parity"
+      },
+      "settles": {
+        "start": [
+          "catalog-restructure",
+          "field-check-at-map",
+          "format-freeze",
+          "rocksdb-parity"
+        ]
+      },
+      "text": "set index-restructure: unlocks frees docs/source-layout.md, CMakeLists.txt for catalog-restructure; frees include/strata/core/index.hh, CMakeLists.txt for field-check-at-map; frees test/** for format-freeze; frees include/strata/core/**, test/**, docs/mechanisms/**, CMakeLists.txt for rocksdb-parity"
     }
   ],
   "quests": {
