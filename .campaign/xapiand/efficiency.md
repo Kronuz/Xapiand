@@ -1205,3 +1205,10 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - journal-replaces-wal (Opus resume, 222k): drain fix proven (30/30, both mutants killed), recovery report mutant killed. Crash gate fails on a 2,000-update RESTORE on the loop: likely one durable full flush per serial update (~25 ms on macOS, ~50 s for the request) against master's one sync per RESTORE; probes at the head and at master queued. Lead cancelled netlab's exclusive VM job that stalled the critical path; requeued at priority -1.
 - index-restructure: CI, build-test, A3 and the review green at cfa20b41; only the step-1 `members` check blocks (owner's decision). Parking it on the owner released its file set, so it stays in review (reported to campaign-v3, msg-71).
 - Host: load 6-13; light slots 48% used. Quota: weekly 45%, burn 1.39%/h, exhaustion ~39 h (before the 11-30 reset).
+
+## 2026-11-24 14h
+
+- No landings. consensus-join-v2: fresh Opus contributor (150k) ruled the ASan boot failure a test race (a call bound to a link the peer refuses ends fast; never resent), test now forces the interleaving (consensus:d42a7d1, test and docs only); 10x and 30x ASan green, the old claim's probe fails as predicted, all 7 mutants (cherry-picked on d42a7d1) killed, CI green. Groups, S1 and fuzzers queued.
+- journal-replaces-wal: master probe 23.1 s for the whole RESTORE case vs 95-108 s per on-loop RESTORE at the head; fresh Opus contributor (304k) confirmed 4,006 turn-log full flushes (2 per update, ~26 ms) = 104 s of 112 s; group-commit fix at Xapiand:c2766c5bf (pending same-id-free updates go out as batch commands, slices fill an entry; ack after commit unchanged), not yet built; tests, 3 mutants, strict before/after vs master queued. Hunt rows: 2 flushes per lone-voter proposal (library), ack=none same-id update read (pre-existing).
+- netlab-consensus's priority -1 exclusive VM job drained the host ~20 min ahead of critical-path work (reported, msg to campaign-v3); light slots 31% used.
+- Quota: weekly 47%, burn 1.41%/h, exhaustion ~38 h (before the 11-30 reset). Load 4-6; disk 273 GiB free.
