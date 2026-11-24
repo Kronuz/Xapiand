@@ -1,6 +1,6 @@
 # file-set-seal-streaming: journal
 
-State: waiting on jobs 261124-004325-148d8f 261124-004328-8df38e
+State: ready for review: correctness APPROVE at strata:7a4284c4 (no blockers); A1-A3 green; A4 CI running (lead, 2026-11-24)
 Quest: .campaign/xapiand/quests/file-set-seal-streaming.md (the lead's; never edit it)
 
 ## Doing
@@ -39,10 +39,10 @@ reader callers use for bytes, not checksums.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending 261124-004328-8df38e |
-| A2 | 261124-004323-a98c76 passed; fails-without 261124-004325-148d8f pending |
-| A3 | git grep above |
-| A4 | pending CI at 7a4284c4 |
+| A1 | 261124-004328-8df38e (the build-test check) |
+| A2 | 261124-004323-a98c76; fails without: 261124-004325-148d8f ("a seal reads at most 65536 bytes at a time, read 1048583") |
+| A3 | 261124-013327-a9d310 (seal and verify both call crc32c_of; no whole-string crc32c( in file_set.hh) |
+| A4 | CI at 7a4284c4 |
 
 ## Result
 
