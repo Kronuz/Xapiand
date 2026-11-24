@@ -6285,7 +6285,7 @@
         "docs/status/closing-bench*.md",
         "docs/mechanisms/closing-harness.md",
         "docs/dev/testing.md",
-        "docs/src/content/docs/benchmarks.md",
+        "site/src/content/docs/benchmarks.md",
         "docs/perf/**",
         "CMakeLists.txt"
       ],
@@ -6304,7 +6304,7 @@
       "until": [
         "owner"
       ],
-      "updated": "2026-11-20T05:28:23"
+      "updated": "2026-11-24T12:41:18"
     },
     "cluster": {
       "accepted": {},
