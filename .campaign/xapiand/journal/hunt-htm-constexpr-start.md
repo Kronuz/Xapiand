@@ -1,6 +1,6 @@
 # hunt-htm-constexpr-start: journal
 
-State: waiting on jobs 261123-135636-c6b4ab 261123-135639-512858 261123-135642-9c642a 261123-135645-812a48 261123-135647-01d709
+State: ready for review
 Quest: .campaign/xapiand/quests/hunt-htm-constexpr-start.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -18,15 +18,11 @@ Superseded jobs: 261123-133529-8903d0 (build-test at dcc43b8).
 
 ## Next
 
-1. Read the three probe3 logs (~/.scratch/campaign/jobs/<id>/a1/log); put before/inline/extern in Result with commits.
-   Expect: htm.h-only TU no __StaticInit/__mod_init_func; htm.o one initializer.
-2. Paste `campaign brief` Evidence table; State -> ready for review.
-3. Result note: a constexpr Cartesian ctor (cartesian repo) removes the last initializer; lead files the hunt row.
-   Also note: the table is now initialized in htm.cc's TU, so a global constructor in another TU that reads start_vertices has no order guarantee (Xapiand's users are functions, not global initializers).
+1. The lead reads the diff (low risk) and lands on CI green.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
@@ -37,14 +33,33 @@ jobs no journal names), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | 261123-135645-812a48 (the build-test check, passed at e51e63e43d72) |
+| A2 | `docs/start-tables.md`: "576 B, 3 initializers" |
+| A3 | 261123-135647-01d709 (passed at e51e63e43d72) |
+| A4 | CI at the landing commit |
+
+Jobs examined: probes 261123-155842-885328 (htm:c4577b7) and 261123-155846-9f4fa2 (htm:e51e63e) give the A2 numbers;
+261123-135642-9c642a failed only because probe3's grep exits 1 under set -e when the extern header-only object has
+none of the sections (the expected result); probe4 tolerates it. 261123-135636-c6b4ab, 261123-135639-512858 and
+261123-133521-fde1c8 measured the before and the rejected inline-variable try; 261123-133529-8903d0 and
+261123-133531-7b7420 ran at the superseded dcc43b8.
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+`start_vertices` and `start_trixels` are declared `extern` in htm.h and defined once in htm.cc (htm:e51e63e).
+Measured with clang++ -O2 on arm64 macOS (jobs 261123-155842-885328 before, 261123-155846-9f4fa2 after):
+
+| Object | htm:c4577b7 (defined in the header) | htm:e51e63e (extern) |
+|---|---|---|
+| a TU that includes htm.h | 192 B __StaticInit, 1 initializer | none |
+| htm.o | 192 B, 1 initializer | 192 B, 1 initializer |
+| two users + htm.o, linked | 576 B, 3 initializers | 192 B, 1 initializer |
+
+The inline-variable try (htm:dcc43b8) was worse: 277 B of guarded init per TU (261123-133521-fde1c8).
+Open: a constexpr `Cartesian` constructor (cartesian repo) would remove the last initializer; a global constructor in
+another TU reading the tables now has no order guarantee (Xapiand reads them only at query time, polygon.cc:617).
+Written up in htm's docs/start-tables.md; ARCHITECTURE.md names where the tables live.
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+Lead: extern tables over inline variables, on 261123-133521-fde1c8.
