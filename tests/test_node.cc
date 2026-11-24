@@ -131,6 +131,7 @@ public:
 				std::fprintf(stderr, "  FAIL %s: hung (schemas: %llu loads, %llu joined, %llu waiting; settings: %llu loads, %llu joined, %llu waiting)\n", name_,
 					static_cast<unsigned long long>(manager()->schemas->loads()), static_cast<unsigned long long>(manager()->schemas->joined()), static_cast<unsigned long long>(manager()->schemas->waiting()),
 					static_cast<unsigned long long>(manager()->index_settings_resolver->loads()), static_cast<unsigned long long>(manager()->index_settings_resolver->joined()), static_cast<unsigned long long>(manager()->index_settings_resolver->waiting()));
+				dump_stacks();   // where it hangs, for the log
 				std::_Exit(1);
 			}
 		});
@@ -141,6 +142,18 @@ public:
 	}
 
 private:
+	// Every thread's stack, to stderr: sample(1) on macOS, gdb where it is installed.
+	static void dump_stacks() {
+		const auto pid = std::to_string(::getpid());
+#ifdef __APPLE__
+		const auto cmd = "sample " + pid + " 2 -file watchdog_sample.txt >/dev/null 2>&1 && cat watchdog_sample.txt >&2";
+#else
+		const auto cmd = "gdb -p " + pid + " -batch -ex 'thread apply all bt' >&2 2>/dev/null";
+#endif
+		std::fflush(nullptr);
+		[[maybe_unused]] const int status = std::system(cmd.c_str());
+	}
+
 	const char* name_;
 	std::atomic<bool> done_{false};
 	std::thread thread_;
