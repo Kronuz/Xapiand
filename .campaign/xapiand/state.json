@@ -17866,7 +17866,8 @@
     "journal-sync-mode": {
       "accepted": {},
       "after": [
-        "detent:journal-bound-first-open"
+        "completion-flush-mode",
+        "faultlab-plain-sync"
       ],
       "base": "4eb8165a4311a3ffe1307c07dd0df35321d4f91f",
       "branch": "quest/xapiand/journal-sync-mode",
@@ -17888,6 +17889,10 @@
       "files": [
         "include/journal/**",
         "test/**",
+        "bench/**",
+        "examples/**",
+        "fuzz/**",
+        "CMakeLists.txt",
         "README.md",
         "ARCHITECTURE.md",
         "CHANGELOG.md",
@@ -17921,11 +17926,16 @@
       "provides": [
         "journal:sync-mode"
       ],
+      "reason": "re-scoped: completion issues every sync and faultlab models it; this quest wires them after both land",
       "repo": "/Users/kronuz/code/Kronuz/journal",
       "risk": "high",
-      "status": "active",
+      "status": "blocked",
       "title": "journal: the caller chooses the sync mode at open (plain fsync or full flush on macOS)",
-      "updated": "2026-11-24T08:01:05",
+      "until": [
+        "completion-flush-mode",
+        "faultlab-plain-sync"
+      ],
+      "updated": "2026-11-24T08:07:08",
       "worktree": "../journal-wt/xapiand/journal-sync-mode"
     },
     "journal-turn-buffers": {
