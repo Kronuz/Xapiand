@@ -18869,7 +18869,7 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/journal-sync-mode",
+      "journal": "",
       "landed": [
         {
           "at": "2026-11-24T15:43:26",
@@ -18922,8 +18922,8 @@
       "risk": "high",
       "status": "landed",
       "title": "journal: the caller chooses the sync mode at open (plain fsync or full flush on macOS)",
-      "updated": "2026-11-24T15:43:29",
-      "worktree": "../journal-wt/xapiand/journal-sync-mode"
+      "updated": "2026-11-24T15:44:09",
+      "worktree": ""
     },
     "journal-turn-buffers": {
       "accepted": {
