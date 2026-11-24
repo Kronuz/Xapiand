@@ -1,6 +1,6 @@
 # journal-replaces-wal: journal
 
-State: waiting on jobs at Xapiand:113722c02 (pushed; CI runs build-test, e2e, asan, tsan): drain 30x 261124-034435-22beb7, drain mutants 261124-034439-e01d6b and 261124-034443-5d5f29, replay mutant 261124-033419-5c1d14, R2 mutant 261124-021321-9231e2; the evidence rerun at the head: 348401 (A1/A4/A9), 4d9ef7 (A2 blob crash), 6498f3 and e5cec7 (A3), 81cf26 (A4), 791b13, 99308a (A8), 69f858 (A5 levels), a40dc4 (A1 abandon 30x), b4840e (R2), c3d005 (A5 replay check); verify: crash 261124-034557-ef103c, no-wal 261124-034557-ec8be3 (all 261124-0345xx). Next: read them and CI; when Evidence names a passing job per criterion at the head, State "ready for review" (the lead's durability re-accept).
+State: waiting on jobs at Xapiand:b380c36da (light jobs queued behind an exclusive VM job, netlab-consensus f203bc): restore probes 261124-043555-1a9289 (head: status, wall time, syncs) and 261124-043602-4be160 (master, WAL), drain 30x 261124-034435-22beb7, drain mutants 261124-034439-e01d6b and 261124-034443-5d5f29, replay mutant 261124-033419-5c1d14, R2 mutant 261124-021321-9231e2. Evidence rerun at 113722c02: passed 348401, 6498f3, 81cf26, 791b13, 99308a; the rest cancelled (the head moves with the crash fix; rerun with crash and no-wal after it). Next: the restore probes decide the crash failure's cause (item 4 of session 14).
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
@@ -34,6 +34,19 @@ Session 14 (2026-11-24), the drain case's missing warning and the lead's replay-
    report and no "Uncaught exception". Check 7ce077; mutant 5c1d14 (Xapiand:e68110ef7, the report removed) must
    fail the failure case. For the lead (journal library): a short write should continue to the error and name
    the file and errno (EFBIG); a hunt row, not this quest.
+
+4. Lead msg (crash gate ef103c at 113722c02): test_loop_yield.cc:677, the on-loop RESTORE of 2,000 updates at
+   ?commit (the loop-CPU case) answered no 2xx after a 942 s suite run; the next, in-chores RESTORE passed, and so
+   did the earlier ?commit RESTOREs, so a bare ?commit is not refused there (the 400 is only beside ack=none). The
+   test printed no status. Hypothesis: no answer within the test client's 60 s receive timeout (status 0): each
+   on-loop update is prepared after every earlier one applied (D1), so the 2,000 are proposed one by one and each
+   waits for its own durable placement, a full device flush on macOS (~25 ms, 886 took 22 s in probe 23729b),
+   about 50 s alone and more under the gate's load; master's WAL synced once per RESTORE. CI (Linux, cheaper
+   syncs) passes the case. Xapiand:b380c36da makes the case print its status, wall time and answer. Probes 1a9289
+   (head, with the sync counts) and 4be160 (master) measure it. If confirmed, the cause is one durable sync per
+   serial write, a cost of the design (D1 with D17's batching only for plain objects), and its fix (batching a
+   RESTORE's updates into commands, or applying before durability inside one request) changes a contract: it goes
+   to Blocked on with options, not into the test's timeout.
 
 Session 13 (2026-11-24), the lead's relay (~/.scratch/xapiand/lead/jrw-relay.md) and R2:
 
