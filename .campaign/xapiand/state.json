@@ -3188,6 +3188,19 @@
       "id": "msg-282",
       "notice": "skill landed f038c7c0e0476ed2e79afe9769e1b360cf1992f8",
       "text": "campaign skill: 2 commits landed on agent-campaign's main, installed here: agent-campaign:81daa1f reuse: a docs script's folder is code for its command; agent-campaign:f038c7c reuse: only prose is documentation"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T19:21:49",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T19:21:49",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "noted: f038c7c installed; docs-script runs drop --force",
+      "id": "msg-283",
+      "notice": "skill installed f038c7c0e0476ed2e79afe9769e1b360cf1992f8",
+      "text": "campaign skill: agent-campaign:f038c7c installed here, 2 commits: agent-campaign:81daa1f reuse: a docs script's folder is code for its command; agent-campaign:f038c7c reuse: only prose is documentation"
     }
   ],
   "quests": {
