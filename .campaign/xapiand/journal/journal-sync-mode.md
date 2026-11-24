@@ -19,6 +19,8 @@ Jobs at fe050d1 unless noted:
 - 261124-122735-d94c86 A5 strict: bench/flush_mode_ab.sh, main journal:4eb8165 vs full vs plain, 7 rounds
 - `campaign verify journal-sync-mode --for A1` queued (suite + CI)
 
+- (lead, 2026-11-24) Reviewer job 261124-130552-389d38 exited 1 on three lifecycle coverage checks only: its workload never recycled a segment (reviews/journal-sync-mode-durability.md). Round-2 job 261124-142654-0f4410 recycles segments on real files in each mode and passed; no product failure.
+
 ## Next
 
 1. When the jobs finish: Evidence table from `campaign brief`; A5 numbers into
