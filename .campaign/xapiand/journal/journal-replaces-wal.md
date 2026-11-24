@@ -1,9 +1,44 @@
 # journal-replaces-wal: journal
 
-State: waiting on jobs at Xapiand:b380c36da (light jobs queued behind an exclusive VM job, netlab-consensus f203bc): restore probes 261124-043555-1a9289 (head: status, wall time, syncs) and 261124-043602-4be160 (master, WAL), drain 30x 261124-034435-22beb7, drain mutants 261124-034439-e01d6b and 261124-034443-5d5f29, replay mutant 261124-033419-5c1d14, R2 mutant 261124-021321-9231e2. Evidence rerun at 113722c02: passed 348401, 6498f3, 81cf26, 791b13, 99308a; the rest cancelled (the head moves with the crash fix; rerun with crash and no-wal after it). Next: the restore probes decide the crash failure's cause (item 4 of session 14).
+State: session 15, the crash gate's RESTORE fix (group commit) written at Xapiand:9c9189db8; targeted jobs running (see Doing, session 15).
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
+
+Session 15 (2026-11-24), the crash gate's RESTORE (test_loop_yield.cc:677), lead's assignment:
+
+1. Cause confirmed, probe 261124-054543-cc6648 at Xapiand:f845c2966 (syncspy, per-RESTORE windows): the on-loop
+   RESTORE of 2,000 updates took 112.4 s, of which 4,006 turn-log F_FULLFSYNC calls took 104.1 s (2 per update,
+   ~26 ms each, 93%); the in-chores one 57.1 s, 2,497 turn-log full flushes 53.8 s (1.25 per object: a proposal per
+   1 ms prepare slice plus the slice's id counter). Every awaited proposal waits for its own turn's syncs; the
+   serial path had one update in flight, the batched path one small command per chore. Not fsync CPU: the process
+   used 14.0 s and 4.5 s CPU. For the lead (journal/strata): a lone voter's proposal costs two turn-log full
+   flushes, not one.
+2. Fix Xapiand:c2766c5bf (write and fence path, for the durability reviewer):
+   - DocIndexer: an update/merge/patch of an id with no script or schema (`merges_stored`) waits before its read
+     only for the earlier writes of its id (key from `get_prefixed_term_id` before the prepare), not for every
+     earlier write. Its prepared write joins `_pending` (kept across body batches) and is written by
+     `apply_range` (placement, per-shard `restore_slice` batch commands, as a plain run's) before: a later object of
+     the same key, a plain run's writes (`apply_run`), any other stored read (script, schema, no id), 4 MiB of
+     pending records (PENDING_BYTES), and the closing commit (`commit()` writes the pending first). The answer is
+     written after `commit()`, so every acknowledged write is applied (quorum) or placed (ack=none) as before;
+     a crash before the answer loses at most the unacknowledged tail, as before. Nothing is applied before its
+     entry is durable: the batch commands go through the group as every RESTORE batch does.
+   - Shard::restore_slice: chores of 1 ms prepare until a command closes or the shard's run ends (a test's fixed
+     `writes_per_slice` stays one chore), then proposes; a chore failing after the first ends the slice with
+     the writes before it proposed and fails the next write, as a failing slice did. id counter unchanged (its
+     own proposal per slice).
+   Tests (Xapiand:c2766c5bf): `test_a_restores_writes_share_their_log_entries` (400 updates and 400 plain objects
+   into a one-shard index: at most 20 log entries each, by `group.applied()`), and
+   `test_an_update_sees_the_earlier_objects_of_its_stream` gains two pending ids updated twice. Xapiand:6535096f5:
+   test_loop_yield runs one case by name (mutants run only theirs). Docs Xapiand:9c9189db8.
+   Mutants (branches mutant/jrw-*): pending-off 07da015ca (entries case), fill-off e86b9fdcf (entries case),
+   same-id-unchecked 81b0c0cc8 (update case).
+   Jobs: whole test_loop_yield 261124-060107-81fe3f (at c2766c5bf); mutants 261124-060150-afcbaa,
+   261124-060152-be5e43, 261124-060154-1526c7.
+3. Finding for the lead (pre-existing, not changed): at ack=none a RESTORE's update read after a same-id write
+   only placed reads the applied state (`fresh` takes the turn, and so `caught_up`, only when the engine is dirty),
+   so it can miss that write; true of the serial path before this session too.
 
 Session 14 (2026-11-24), the drain case's missing warning and the lead's replay-check message:
 
