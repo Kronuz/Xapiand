@@ -77,9 +77,10 @@ publishes.
 `src/database/shard_group.h`, `ShardGroups` and `ShardGroup`. The process keeps one journal host over
 `.xapiand/journal` in the data directory (Xapiand's own namespace, beside its system indexes) (`DatabasePool::set_journal`, called by the manager), its group loop on a
 thread of its own, and two chore threads the groups apply on. The journal's IO completes inline on the loop's
-thread, and its `PosixIO` takes `engine::strata::posix_io_options()`, as the indexes' do: `--full-flush-ordering`
-turns the turn log's ordering barrier (`TurnLog::reclaim`) into a full flush on macOS, and the per-volume barrier
-warning names the switch (D10). Each index the catalog opens is a lone voter (D2) whose group borrows the slot's
+thread, and its `PosixIO` takes `engine::strata::posix_io_options()`, as the indexes' do: the flush mode is
+completion's `FlushMode::plain` by default and `FlushMode::full` under `--full-flush-ordering` (D177). On macOS plain
+syncs with `fsync` and orders with the barrier, full with `F_FULLFSYNC` at both; the per-volume barrier warning
+names the switch (D10). Each index the catalog opens is a lone voter (D2) whose group borrows the slot's
 directory and index (strata's group-catalog, D169):
 
 1. **Open.** `open_payload` builds the entry, which opens the group last: the group recovers from its last
@@ -119,7 +120,7 @@ directory and index (strata's group-catalog, D169):
    writes as fit one entry; the last chore closes the last command and adds the id counter's write to it, so the
    counter is durable with the writes that moved it. Each command is proposed at `quorum` in input order, and
    `restore_results` reads its document writes' docids and versions from the verdict. Each proposal waits for its
-   entry's syncs (two turn-log full flushes on macOS, ~25 ms each), so a proposal carries an entry's worth of
+   entry's syncs (two turn-log syncs, full flushes of ~25 ms each on macOS in full mode), so a proposal carries an entry's worth of
    writes. A write whose document left its placed shard is missed, as before, and takes the serial path.
 6. **Commit.** A request's commit (`COMMIT`, a RESTORE's closing commit, the autocommit) awaits the group's
    checkpoint (`commit_group`): its bundle covers what the writes before it applied, and the group truncates its
@@ -175,9 +176,9 @@ nothing more of its closing commit, which refreshes.
   is clean after `refresh=true` and `?commit`, `wait_for` at `none` waits for the apply, unknown levels answer
   400), `test_a_restore_at_ack_none_reports_no_versions`. `tests/test_pool.cc`
   (`test_a_lone_voter_reads_its_writes`): a get and a search right after each write see it.
-- `tests/test_shard_group.cc` (`test_the_journal_io_takes_the_io_options`): the host's IO carries
-  `--full-flush-ordering` and the barrier warning, and admits a group-writable directory, which PosixIO's
-  defaults refuse.
+- `tests/test_shard_group.cc` (`test_the_journal_io_takes_the_io_options`): a file the host's IO opens syncs plain
+  by default and full under `--full-flush-ordering`, the options carry the barrier warning, and the IO admits a
+  group-writable directory, which PosixIO's defaults refuse.
 - `tests/test_shard_group.cc`: offsets from the state and idempotent effects, rotation in log order, a chunked
   command applied at its final entry, an upload into its own volume, a higher term retiring open commands,
   entries outside their id's term applying nothing, an abort retiring its upload's volume, the state's bytes, and

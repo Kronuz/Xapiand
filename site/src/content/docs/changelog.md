@@ -14,8 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Docs reading controls:** An Aa button enlarges reading text and opens the reading column; desktop images and diagrams zoom when they fit larger.
 - **`--full-flush-ordering` and the barrier warning (macOS)**: on storage other than an internal Apple SSD the
   ordering barrier is not guaranteed, and the node logs one warning per volume naming the switch; the switch
-  orders commits, the indexes' and the journal's, with a full flush instead. Off by default; Linux and FreeBSD
-  are unchanged.
+  makes every sync of the indexes and the journal a full flush. Off by default (plain: `fsync` and the barrier);
+  Linux and FreeBSD are unchanged.
 - **Write and read levels**: `ack` (`quorum`, the default, answers once the write applied, with its result;
   `none` answers `202` once it is in the journal), `refresh` (`false`, `wait_for`, `true`) and `read` (`prefix`,
   `linearizable`) on writes, `RESTORE` and reads. `?commit` means `ack=quorum&refresh=true` and `?volatile`

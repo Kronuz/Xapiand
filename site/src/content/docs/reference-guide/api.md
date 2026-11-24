@@ -911,8 +911,8 @@ pm.test("Two names, two indexes", function() {
 e2e:end -->
 
 :::hint{.info}
-Single index APIs such as the Document APIs, `INFO`, `COMMIT`, `CHECK`, `DUMP`,
-`RESTORE` and `WAL` do not support multiple indexes.
+Single index APIs such as the Document APIs, `INFO`, `COMMIT`, `CHECK`, `DUMP`
+and `RESTORE` do not support multiple indexes.
 :::
 
 ---
