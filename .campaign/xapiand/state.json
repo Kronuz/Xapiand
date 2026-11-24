@@ -17749,6 +17749,49 @@
       "updated": "2026-11-17T12:09:23",
       "worktree": ""
     },
+    "journal-sync-mode": {
+      "accepted": {},
+      "after": [
+        "detent:journal-bound-first-open"
+      ],
+      "checks": [
+        {
+          "cmd": "ci:macos-arm64",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        },
+        {
+          "cmd": "ci:ci",
+          "level": "light",
+          "minutes": 30,
+          "name": "ci"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/journal/**",
+        "test/**",
+        "README.md",
+        "ARCHITECTURE.md",
+        "CHANGELOG.md",
+        "docs/mechanisms/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [],
+      "provides": [
+        "journal:sync-mode"
+      ],
+      "repo": "/Users/kronuz/code/Kronuz/journal",
+      "risk": "high",
+      "status": "planned",
+      "title": "journal: the caller chooses the sync mode at open (plain fsync or full flush on macOS)",
+      "updated": "2026-11-24T07:58:52"
+    },
     "journal-turn-buffers": {
       "accepted": {
         "durability": {
