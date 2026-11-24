@@ -13260,6 +13260,8 @@
     "field-check-at-map": {
       "accepted": {},
       "after": [],
+      "base": "cfa20b4191cc93ba7287d00e9b574f28ac31765b",
+      "branch": "quest/xapiand/field-check-at-map",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -13277,6 +13279,7 @@
         "CMakeLists.txt",
         "docs/mechanisms/field-check.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/field-check-at-map",
       "landed": [],
       "lenses": [
         "correctness"
@@ -13286,9 +13289,10 @@
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "strata checks a segment's field ids wherever it maps",
-      "updated": "2026-11-21T11:43:36"
+      "updated": "2026-11-24T11:51:31",
+      "worktree": "../strata-wt/xapiand/field-check-at-map"
     },
     "field-table": {
       "accepted": {},
