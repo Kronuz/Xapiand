@@ -1,6 +1,6 @@
 # hunt-manifest-log-wallclock: journal
 
-State: waiting on jobs 261123-172410-fa7b2b (probe: healthy ratios), queued behind the host
+State: waiting on jobs 261123-173046-c009d9 (probe: healthy ratios at strata:761da2c7; the first probe 261123-172410-fa7b2b was interrupted after 7 s)
 Quest: .campaign/xapiand/quests/hunt-manifest-log-wallclock.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -12,7 +12,7 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 Form chosen: ratio to a same-process calibration (A3). In `deletes` (test/manifest_log_test.cc), each
 of the 128-edit apply and the log's open read is the fastest of five runs, divided by the fastest of
 five reads of the same segment's snapshot alone. Commit strata:7748cfa9 has the ratios printed and
-bounds provisional (1e9). Probe job 261123-172410-fa7b2b prints the healthy ratios.
+bounds provisional (1e9). Probe job 261123-173046-c009d9 prints the healthy ratios.
 
 Why not counting work: the library exposes no counter (test-only quest), the harness's operator-new
 byte count is off under TSan and cannot see a walk (clumped / sparse cases allocate nothing), and the
