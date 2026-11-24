@@ -1,28 +1,43 @@
 # journal-sync-mode: journal
 
-State: working
+State: waiting on jobs 261124-122708-2f04ab 261124-122713-058d9e 261124-122716-1b2259 261124-122720-bcba79 261124-122735-d94c86 and CI 45480924916
 Quest: .campaign/xapiand/quests/journal-sync-mode.md (the lead's; never edit it)
 
 ## Doing
 
-Session 2 (after the re-scope). Code and docs committed on journal quest/xapiand/journal-sync-mode:
-journal:7f3e548 (pins completion b4600a8 + faultlab 83fbde7; every PosixIO passes a mode;
-bench/demo take it; test/sync_mode_test.cc; T9 plain sweep), journal:3d7481e (docs). Local runs
-next (host load 78 at 12:02, light queue).
+Ready commit journal:fe050d1 (pushed; CI run 45480924916). Commits: journal:7f3e548 (pins
+completion b4600a8 + faultlab 83fbde7; every PosixIO passes a mode; bench/demo take it;
+test/sync_mode_test.cc; T9 plain), journal:3d7481e (docs), journal:fe050d1 (T9 plain checked by
+prefix; full: a drive flush after every fsync; bench/flush_mode_ab.sh). Local (Debug, macOS):
+the 10 targeted CTest entries pass; T9 plain 39 s, 31,181 checks.
+
+Jobs at fe050d1 unless noted:
+- 261124-122708-2f04ab A1,A3,A6: journal_sync_mode_test (host, refusal, table)
+- 261124-122713-058d9e A2: T9 full and plain
+- 261124-122716-1b2259 A2 --fails-without at mutant journal:d7f0a7d (refs/mutants/journal-sync-mode/full-as-plain-t9): T9 opens full as plain
+- 261124-122720-bcba79 A1 --fails-without at mutant journal:d56e937 (refs/mutants/journal-sync-mode/full-as-plain-host): sync_mode_test host opens full as plain
+- 261124-122735-d94c86 A5 strict: bench/flush_mode_ab.sh, main journal:4eb8165 vs full vs plain, 7 rounds
+- `campaign verify journal-sync-mode --for A1` queued (suite + CI)
 
 ## Next
 
-1. Local: sync_mode_test host/refusal/table (passed once: 12, 4, 40 checks), T9 plain sweep
-   (timing under 600 s), the touched suites.
-2. A5 wiring: a script building main's journal_bench next to the branch's; one strict job.
-3. Mutant commits (A2: full sweep opened plain; A1 seam: full opened plain), then evidence jobs
-   and `campaign verify journal-sync-mode --for A1`.
-4. host.h change only after detent:journal-bound-first-open lands (see Contract for Detent).
+1. When the jobs finish: Evidence table from `campaign brief`; A5 numbers into
+   docs/mechanisms/sync-mode.md ("Cost") and Result; then "ready for review".
+2. Merge journal main once detent:journal-bound-first-open lands (no host.h change, ruling (a)).
+
+## Finding (plain mode, for the durability review)
+
+T9 plain, block 1024, seed 1 cut 76: a power loss restored a recycled segment's name
+(turns-1 reappears: its rename/unlink was only plain-synced) and recovery kept group 1's
+sequence 1 of a turn that wrote 1 and 2, reporting damage. Plain mode can keep part of a turn: a
+shorter prefix of the group's log, never a reorder or an unwritten record. 1 of 5,600 crash
+points; 0 without reported damage. Documented in docs/mechanisms/sync-mode.md.
 
 ## Blocked on
 
-Lead, on the host-open shape (see Contract for Detent): recommendation (a), no host.h change.
-Not blocking the rest.
+Nothing. The lead ruled (a): the mode stays in PosixIOOptions, a Host follows its IO, host.h does
+not change (quest Decisions; Detent has the call shape). Ordering after
+detent:journal-bound-first-open stays: merge journal main once it lands.
 
 ## Contract for Detent
 
@@ -49,7 +64,7 @@ detent:journal-bound-first-open):
   std::invalid_argument unless `io->flush_mode() == mode`; the IO-typed constructor stays for
   faultfs. A second statement of the same choice, checked.
 - (c) `Host(const std::filesystem::path& directory, PosixIOOptions io, Identity, HostOptions = {})`:
-  the host builds its PosixIO; host.h then includes completion/posix.h (POSIX-only today it is not).
+  the host builds its PosixIO; host.h then includes completion/posix.h and becomes POSIX-only.
 
 ## Evidence
 
