@@ -3517,6 +3517,21 @@
         ]
       },
       "text": "set index-restructure: unlocks frees docs/source-layout.md, CMakeLists.txt for catalog-restructure; frees include/strata/core/index.hh, CMakeLists.txt for field-check-at-map; frees test/** for format-freeze; frees include/strata/core/**, test/**, docs/mechanisms/**, CMakeLists.txt for rocksdb-parity"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T04:38:30",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T04:38:30",
+      "by": "campaign",
+      "closed": "A3 now cites 48d9cb at cfa20b41; the remaining gap is the owner's members decision and CI",
+      "id": "msg-305",
+      "settles": {
+        "todo": "5a29b50b"
+      },
+      "text": "to do, critical path first:\ntodo: finish index-restructure (nothing moved it for 2 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); new): `campaign status index-restructure`"
     }
   ],
   "quests": {
