@@ -78,8 +78,37 @@ State and invariants that stand apart, each judged on maintenance when step 2 ru
 
 ## Blocked on
 
-Nothing. A2's `members` half waits on quest split-check-members (not landed); its job
-261121-221904-5a5074 fails until then (split_check has no --members): expected, not evidence.
+1. Step 2's tests are outside the file set. A3 needs each subobject's own unit tests, and a test
+   binary needs a test file and a CMakeLists.txt entry; the file set holds only index.hh,
+   index_*.hh, index/** and the two docs. Options: (a) add `test/index_ledger_test.cc` and
+   `CMakeLists.txt` (CMakeLists already has two writers, cluster and journal-replaces-wal);
+   (b) add `test/index/**` plus a one-line CMakeLists hook that includes `test/index/*.cmake`,
+   as test/placement does, so later subobjects need no CMakeLists edit (recommended);
+   (c) add the cases to `test/index_test.cc` (an existing 1-binary home, no CMake edit).
+2. Landing order. Recommended: land step 1 alone now (the quest's "May land early"), once its
+   jobs and the review pass, and start step 2 from the new main, so the review of step 1 stays a
+   pure move and step 2's diff is small. Step 2's code is not on the branch for that reason.
+
+## Step 2 design (ready to build once 1 is ruled)
+
+First subobject: the file ledger, candidate 1's core. State: files_, on_disk_, posted_,
+inflight_, unlinked_ (5 members, arithmetic in 11 places across storage, commit, merge, open).
+One member class `file_ledger` in `index_ledger.hh` with named transitions:
+track(name, size) (on disk at size), rename(from, to) (commit's tmp -> manifest, bytes stay
+counted), forget(name) (removed: on disk -> unlinked), post(name) -> size (on disk -> in flight),
+removed(name) (in flight -> unlinked), unpost(name) -> size? (requeue: leaves in flight),
+add_unlinked(n) (a failed merge's untracked removed bytes), synced() (unlinked freed); reads
+files(), on_disk(), inflight(), unlinked(), posted_count(). Invariant, stated once: on_disk ==
+sum of files' sizes, inflight == sum of posted sizes, no name both on disk and posted, so each
+file's bytes count once. Tests drive each transition and check the invariant; mutants: track
+adds size instead of the delta, forget drops the bytes instead of moving them to unlinked, post
+keeps the name on disk, unpost keeps the bytes in flight, each killed by a named case. Two
+behavior notes for review: open's `files_[manifest]` (operator[] inserts) becomes a lookup that
+does not insert (the scan tracked every manifest, so the entry always exists); commit's rename
+was `erase(tmp); files_[name] = size`, the same bytes (write_unsynced tracked tmp at that size,
+and the new generation's name is above every name on disk, D3). The rest of candidate 1
+(reserved_, held_, allowance_, debt_, truncated_, obsoleted_, the reclaim queue) stays: they are
+permit and reclaim-pacing figures, not a file's state. Candidates 2-7 judged after this one.
 
 ## Evidence
 
