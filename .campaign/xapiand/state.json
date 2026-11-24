@@ -36549,18 +36549,64 @@
         "ARCHITECTURE.md",
         "tools/**"
       ],
-      "journal": "../Xapiand-wt/xapiand/uinteger-radix-family",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-23T16:53:53",
+          "ci": {
+            "commit": "88e41ade79af6fecd7c0b53c5dc20d771a79bbe1",
+            "runs": [
+              45237859160
+            ]
+          },
+          "commit": "88e41ade79af6fecd7c0b53c5dc20d771a79bbe1",
+          "criteria": {
+            "A1": "261123-102259-f52610 (the build-test check), 261123-102259-f52610, 261123-102259-7b84f2",
+            "A2": "261123-102259-7b84f2 (the members check), 261123-102259-f52610, 261123-102259-7b84f2",
+            "A3": "`docs/source-layout.md` (its radix_encode.hh row names _digits_radix and _digits_append; the digits.hh row names _store_be and _store_bytes; the radix_decode.hh row is parsing only)",
+            "A4": "[manual] the lead (2026-11-23) read uinteger_t:88e41ad: radix_decode.hh holds only input (byte loads, Horner decoder); _digits_append and _digits_radix sit with the encoder they call; _store_be and _store_bytes sit with their one caller, the raw-bytes form in digits.hh. Each header is one family; agreed."
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "88e41ade79af6fecd7c0b53c5dc20d771a79bbe1",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-102259-f52610",
+              "level": "light",
+              "seconds": 883.7,
+              "state": "done",
+              "what": "uinteger-radix-family check build-test at 88e41ade79af"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base master uinteger_t.hh uinteger_t",
+              "commit": "88e41ade79af6fecd7c0b53c5dc20d771a79bbe1",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-102259-7b84f2",
+              "level": "light",
+              "seconds": 1.6,
+              "state": "done",
+              "what": "uinteger-radix-family check members at 88e41ade79af"
+            }
+          ],
+          "final": true,
+          "from": "a1798226a2724ba4df781a3a11365ac29501de63",
+          "reason": "",
+          "tested": "88e41ade79af6fecd7c0b53c5dc20d771a79bbe1"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../uinteger_t",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "uinteger_t's output helpers leave radix_decode.hh",
-      "updated": "2026-11-23T10:21:30",
-      "worktree": "../uinteger_t-wt/xapiand/uinteger-radix-family"
+      "updated": "2026-11-23T16:54:02",
+      "worktree": ""
     },
     "uinteger-restructure": {
       "accepted": {
