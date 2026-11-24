@@ -1,7 +1,7 @@
 # index-restructure: journal
 
-State: step 1 merged with main at strata:351eebc5 (pushed); jobs 261124-004344-c5b586 (members),
-261124-004345-fff00d (fnsizes), 261124-004354-380c9b (selfcontained) queued; step 2 starting
+State: waiting on jobs 261124-004345-fff00d (fnsizes), 261124-004354-380c9b (selfcontained);
+step 1 merged with main at strata:351eebc5 (pushed), members green; step 2 blocked (see Blocked on)
 Quest: .campaign/xapiand/quests/index-restructure.md (the lead's; never edit it)
 
 Code: strata worktree /Users/kronuz/code/Kronuz/strata-wt/xapiand/index-restructure, branch
@@ -114,16 +114,15 @@ permit and reclaim-pacing figures, not a file's state. Candidates 2-7 judged aft
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261121-221903-f4df46 at strata:a7448b3f (queued); CI after push |
-| A2 | members: pending split-check-members (261121-221904-5a5074 fails until it lands). fnsizes: 261121-221906-8a1ce9 (Release+LTO test binaries, main cc30217f against head, fails on any size change; queued). Mover self-check: all 196 moved bodies, re-indented one tab, are byte substrings of main's index.hh; every line added to index.hh is a declaration ending in `;`, an include or its comment |
-| A3 | step 2, not started |
-| A4 | strata docs/source-layout.md, docs/mechanisms/index-layout.md (strata:a4a82ce6) |
-
-Also: selfcontained.sh over index.hh and index_*.hh: 261121-221904-8d6ee6 (queued).
+| A1 | build-test 261121-221903-f4df46 at strata:a7448b3f; reruns at the round's end (verify holds it); CI on the push of 351eebc5 |
+| A2 | members 261124-004344-c5b586 at strata:351eebc5: passed, 202 definitions moved, 0 warnings (nothing to answer). fnsizes 261124-004345-fff00d (main 7214f27d vs 351eebc5, running); at step 1's first head 261121-221906-8a1ce9 passed. selfcontained 261124-004354-380c9b (queued) |
+| A3 | blocked: step 2's test files are outside the file set (Blocked on 1) |
+| A4 | strata docs/source-layout.md, docs/mechanisms/index-layout.md (strata:351eebc5, updated for main's new members) |
 
 ## Result
 
-<Step 1 pending its jobs.>
+Step 1 rerun over main 7214f27d with cpp-libraries' outline.py: basic_index's body 5,413 -> 2,100
+lines, index.hh 6,267 -> 2,967, 202 definitions in 11 mechanism headers; docs above.
 
 ## Rulings I made
 
