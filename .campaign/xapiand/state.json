@@ -4159,6 +4159,36 @@
         "todo": "029fc13c"
       },
       "text": "to do, critical path first:\ntodo: resume field-check-at-map (its journal waits on jobs 261124-122655-73d9cf, 261124-122659-a4de45, 261124-122702-df0b09, 261124-122705-fcbe11 and 261124-122723-cb483e, which ended (done, failed) 1 min ago; new): `campaign status field-check-at-map`, read them, or park it with a reason"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T11:50:31",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T11:50:31",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-343",
+      "items": {
+        "catalog-restructure": "frees docs/source-layout.md, CMakeLists.txt for catalog-restructure",
+        "field-check-at-map": "frees include/strata/core/index.hh, CMakeLists.txt for field-check-at-map",
+        "format-freeze": "frees test/** for format-freeze",
+        "index-delete": "frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete",
+        "more-like-this": "frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this",
+        "rocksdb-parity": "frees include/strata/core/**, test/**, docs/mechanisms/**, CMakeLists.txt for rocksdb-parity"
+      },
+      "settles": {
+        "start": [
+          "catalog-restructure",
+          "field-check-at-map",
+          "format-freeze",
+          "index-delete",
+          "more-like-this",
+          "rocksdb-parity"
+        ]
+      },
+      "text": "index-restructure landed: unlocks frees docs/source-layout.md, CMakeLists.txt for catalog-restructure; frees include/strata/core/index.hh, CMakeLists.txt for field-check-at-map; frees test/** for format-freeze; frees include/strata/core/**, test/**, docs/mechanisms/**, CMakeLists.txt for rocksdb-parity; frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete; frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this"
     }
   ],
   "quests": {
@@ -18840,10 +18870,49 @@
         }
       ],
       "journal": "../Xapiand-wt/xapiand/journal-sync-mode",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-24T15:43:26",
+          "ci": {
+            "carried": true,
+            "commit": "fe050d1fdfa59512a3455eb1e1c51e4808da6167",
+            "runs": [
+              45480924916
+            ]
+          },
+          "commit": "fc5c59b492ff8275ab8be4aa9599c6ca2ae97859",
+          "criteria": {
+            "A1": "261124-153310-8264e0; fails without: 261124-122720-bcba79",
+            "A2": "261124-153311-ff7f0e; fails without: 261124-122716-1b2259",
+            "A3": "261124-153310-8264e0",
+            "A4": "[artifact] journal:3d7481e README.md (Highlights, \"Flush modes\"), ARCHITECTURE.md (\"POSIX backend and the durability model\"), CHANGELOG.md 2026-11-24, docs/mechanisms/sync-mode.md",
+            "A5": "261124-153311-6472f1",
+            "A6": "261124-153310-8264e0"
+          },
+          "evidence": [
+            {
+              "check": "suite",
+              "ci": "ci:macos-arm64",
+              "commit": "fe050d1fdfa59512a3455eb1e1c51e4808da6167",
+              "state": "done"
+            },
+            {
+              "check": "ci",
+              "ci": "ci:ci",
+              "commit": "fe050d1fdfa59512a3455eb1e1c51e4808da6167",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "a2d65da45e72f142695934bd605910e60fd1d3cd",
+          "reason": "",
+          "tested": "fc5c59b492ff8275ab8be4aa9599c6ca2ae97859"
+        }
+      ],
       "lenses": [
         "durability"
       ],
+      "messages": [],
       "milestone": "Phase 7b",
       "needs": [],
       "provides": [
@@ -18851,9 +18920,9 @@
       ],
       "repo": "/Users/kronuz/code/Kronuz/journal",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "journal: the caller chooses the sync mode at open (plain fsync or full flush on macOS)",
-      "updated": "2026-11-24T14:31:39",
+      "updated": "2026-11-24T15:43:29",
       "worktree": "../journal-wt/xapiand/journal-sync-mode"
     },
     "journal-turn-buffers": {
