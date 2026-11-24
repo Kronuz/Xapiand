@@ -22,13 +22,8 @@ Evidence jobs queued at strata:22ee0282; CI A3 on the push.
 
 ## Blocked on
 
-1. A4 cites a committed strata file: none in the file set fits. The journal's changes belong in
-   docs/mechanisms/replication-group.md or docs/design/standalone-turn-log.md (outside the set); the
-   Result below is the record. Lead: name the file, or accept the journal's Result for A4.
-2. Not a block, for the lead: a lost group (and now a bounded one after `lose`) cannot be opened again:
-   Host::create_group refuses any status but none, and Store::recover throws Corruption. Only
-   Host::delete_group (closed groups) starts the id empty, so a replica with a damaged log has no
-   path back to the group yet; group-heal's repair is for the file set, not the log.
+Nothing. A damaged replica's path back (a lost or bounded group cannot be opened again) is filed in
+hunt.md as its own follow-up, not this quest.
 
 ## Evidence
 
@@ -37,7 +32,7 @@ Evidence jobs queued at strata:22ee0282; CI A3 on the push.
 | A1 | build-test (asserts on) 261123-194216-e06393 at strata:22ee0282 (queued) |
 | A2 | 261123-194218-5b493a: group_tests built, `ctest -R ^(group_|simulation_group_)` at strata:22ee0282 (queued) |
 | A3 | CI at the landed commit |
-| A4 | Result below (no strata file, Blocked on 1) |
+| A4 | `docs/mechanisms/replication-group.md`: "opens a bounded group through" (section "A damaged turn log"); Result below |
 | A5 | standalone_turn_log t5 t5b 261123-194221-21e52b; mutants (--fails-without) bounded-as-stored 261123-194337-4c3177, bounded-at-bound 261123-194339-539e7b |
 | A6 | group_lifetime_test bounded 261123-194233-72e14d; mutant bounded-created (--fails-without) 261123-194341-31812e |
 
