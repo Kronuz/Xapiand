@@ -1099,14 +1099,27 @@ static void test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has
 	const auto endpoint = endpoints_of("late")[0];
 	std::unique_ptr<SchedulerHold> chore;
 	{
+		// The first write's autocommit ends before the chore is held: the held chore then has none of its work.
 		auto pin = pin_index(*manager()->database_pool, endpoint.path, WRITE);
 		if (pin.entry().group() == nullptr) {
 			std::_Exit(3);
 		}
+		if (!eventually([&] { return !pin->is_modified() && manager()->database_pool->detached() == 0; }, 10s)) {
+			std::_Exit(7);
+		}
 		chore = std::make_unique<SchedulerHold>(manager()->database_pool->groups()->chore(pin.entry().group()->group.id()));
+		if (!eventually([&] { return chore->entered(); })) {
+			std::_Exit(8);
+		}
 	}
-	std::this_thread::sleep_for(800ms);   // the write's autocommit (200 ms) took the turn and waits for the chore
-	L(-LOG_NOTICE, NOTICE_COL, "DETACHED_AT_SHUTDOWN {}", manager()->database_pool->detached());
+	// Placed while its apply is held, so the index is modified and the write's autocommit (200 ms) takes the turn and
+	// waits in the checkpoint for the held chore: it is still detached when the shutdown starts.
+	if (http_call(abandon_port.port(), "PUT", "/late/2?ack=none", R"({"n":2})").rfind("HTTP/1.1 202", 0) != 0) {
+		std::_Exit(9);
+	}
+	if (!eventually([] { return manager()->database_pool->detached() != 0; }, 10s)) {
+		std::_Exit(10);
+	}
 	XapiandManager::schedule_autocommit(endpoint);   // the next one fires 200 ms into the shutdown's drain
 	const auto now = static_cast<long long>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
 	L(-LOG_NOTICE, NOTICE_COL, "SHUTDOWN_AT {}", now);
