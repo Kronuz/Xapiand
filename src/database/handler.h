@@ -36,6 +36,7 @@
 #include <string>                            // for std::string
 #include <string_view>                       // for std::string_view
 #include <unordered_map>                     // for std::unordered_map
+#include <unordered_set>                     // for std::unordered_set
 #include <utility>                           // for std::pair
 #include <vector>                            // for std::vector
 
@@ -445,6 +446,8 @@ struct DocIndexerSeams {
 // each to its shard, in order, on the reactor that serves the request (docs/design/phase7c.md D12). It owns no
 // thread and waits for none: it yields when its slice is spent, and the parse of the next batch runs beside it.
 class DocIndexer {
+	struct Admitted;   // an admitted object of the stream and its prepare (handler.cc)
+
 	Endpoints endpoints;
 	int flags;
 	engine::Chores& chores;
@@ -466,6 +469,16 @@ class DocIndexer {
 	std::string _packed;
 	std::vector<std::pair<size_t, size_t>> _at;
 
+	// The updates prepared on the loop and not yet written, none of the same id: written together, so their batch
+	// commands share the group's syncs, before a later object of the same id is prepared, before a plain run's
+	// writes, at their bound, and at the commit. Kept across batches: a stream's chunks hold a few objects each.
+	std::vector<Admitted> _pending;
+	std::unordered_set<std::string> _pending_terms;
+	size_t _pending_bytes = 0;
+
+	// index(), and with `close` the writes still pending.
+	task::task<void> take(std::vector<MsgPack>& batch, bool close);
+
 public:
 	// The light slices a body chunk gets for its apply, after its objects are taken (D82).
 	static constexpr unsigned STREAM_SLICES = 4;
@@ -475,6 +488,8 @@ public:
 	// without yielding).
 	DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool comments, const query_field_t& query_field, engine::Chores& chores, task::budget* budget = nullptr);
 
+	~DocIndexer();
+
 	DocIndexer(const DocIndexer&) = delete;
 	DocIndexer& operator=(const DocIndexer&) = delete;
 
@@ -482,7 +497,7 @@ public:
 	// of the stream, stops after `limit`, prepares and applies the rest, and records a result for each.
 	task::task<void> index(std::vector<MsgPack>& batch);
 
-	// Commits what was indexed (the closing commit of a restore).
+	// Writes what is pending and commits what was indexed (the closing commit of a restore).
 	task::task<void> commit();
 
 	size_t prepared() const noexcept {

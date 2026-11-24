@@ -2690,20 +2690,10 @@ pack_str(StringPacker& pk, std::string_view str)
 constexpr auto PREPARE_SLICE = std::chrono::milliseconds(1);
 
 
-// One admitted object of a RESTORE stream and what its prepare left.
-struct Admitted {
-	std::size_t idx;
-	MsgPack obj;
-	std::tuple<std::string, engine::Document, MsgPack> prepared;
-	std::exception_ptr error;                      // the prepare's failure: the object's result
-	std::shared_ptr<const MsgPack> changed;        // the schema its prepare left, when it changed the schema
-	int offers = 0;                                // its schema changes refused so far
-};
-
-
 // Whether an object's prepare reads the stored document or updates the schema as it fetches it (the design's D1):
-// it is prepared on the loop, after every earlier object of its stream has applied. It reads the map's raw pairs,
-// as `find` would (a repeated key's last value wins), so the loop builds no MsgPack tree of the object.
+// it is prepared on the loop, after every earlier object of its stream has applied, or for an update of an id
+// (merges_stored) every earlier write of that id. It reads the map's raw pairs, as `find` would (a repeated key's
+// last value wins), so the loop builds no MsgPack tree of the object.
 bool
 reads_stored(const MsgPack& obj)
 {
@@ -2731,6 +2721,37 @@ reads_stored(const MsgPack& obj)
 }
 
 
+// Whether an object reads its own id's stored document and nothing else: an `update`, `merge` or `patch` with no
+// script or schema. Its prepare waits only for the earlier writes of its id.
+bool
+merges_stored(const MsgPack& obj)
+{
+	if (!obj.is_map()) {
+		return false;
+	}
+	const msgpack::object raw(obj);
+	bool merges = false;
+	for (const auto& kv : std::span(raw.via.map.ptr, raw.via.map.size)) {
+		if (kv.key.type != msgpack::type::STR) {
+			return false;
+		}
+		const std::string_view key(kv.key.via.str.ptr, kv.key.via.str.size);
+		if (key == RESERVED_OP_TYPE) {
+			const std::string_view op = kv.val.type == msgpack::type::STR ? std::string_view(kv.val.via.str.ptr, kv.val.via.str.size) : std::string_view();
+			merges = op == "update" || op == "merge" || op == "patch";
+		} else if (key == RESERVED_SCRIPT || key == RESERVED_SCHEMA) {
+			return false;
+		}
+	}
+	return merges;
+}
+
+
+// The records of the pending updates past which they are written: a few log entries' worth, so the batch commands
+// they make are full, and the prepared documents a RESTORE holds stay bounded.
+constexpr std::size_t PENDING_BYTES = 4 * COMMAND_ENTRY_BYTES;
+
+
 // The prepare of a plain `index` object against `schema`, in a chore: DatabaseHandler::prepare once its schema is
 // fetched. `Schema::index` is CPU only here: no script (no call_script), and `seq` is never 0 (no lock_shard).
 std::tuple<std::string, engine::Document, MsgPack>
@@ -2748,10 +2769,31 @@ prepare_plain(Schema& schema, DatabaseHandler& placement, MsgPack& body, std::si
 }  // namespace
 
 
+// One admitted object of a RESTORE stream and what its prepare left.
+struct DocIndexer::Admitted {
+	std::size_t idx;
+	MsgPack obj;
+	std::tuple<std::string, engine::Document, MsgPack> prepared;
+	std::exception_ptr error;                      // the prepare's failure: the object's result
+	std::shared_ptr<const MsgPack> changed;        // the schema its prepare left, when it changed the schema
+	int offers = 0;                                // its schema changes refused so far
+};
+
+
+DocIndexer::~DocIndexer() = default;
+
+
 task::task<void>
 DocIndexer::index(std::vector<MsgPack>& batch)
 {
-	L_CALL("DocIndexer::index(<{} objects>)", batch.size());
+	co_await take(batch, false);
+}
+
+
+task::task<void>
+DocIndexer::take(std::vector<MsgPack>& batch, bool close)
+{
+	L_CALL("DocIndexer::take(<{} objects>, {})", batch.size(), close);
 
 	// The handler the prepare chores place new ids with (read only while they run). On a reactor the writes run in
 	// chores, one child per shard and at most `children` at once; the prepares take the pool's other workers but its
@@ -2912,9 +2954,9 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 		}
 	};
 
-	const auto apply_serial = [&](std::size_t from, std::size_t to) -> task::task<void> {
+	const auto apply_serial = [&](std::vector<Admitted>& objs, std::size_t from, std::size_t to) -> task::task<void> {
 		for (auto i = from; i < to; ++i) {
-			co_await apply(run[i]);
+			co_await apply(objs[i]);
 			co_await checkpoint();
 		}
 	};
@@ -2922,7 +2964,7 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 	// The writes of [from, to), none a new numeric id of a sharded index, in their shards' turns (fix (c),
 	// docs/perf/x7-loop-stalls.md): placed first, then one sub-run per shard in input order, written in chores by
 	// at most `children` child tasks, each holding one turn at a time.
-	const auto apply_shards = [&](std::size_t from, std::size_t to) -> task::task<void> {
+	const auto apply_shards = [&](std::vector<Admitted>& objs, std::size_t from, std::size_t to) -> task::task<void> {
 		// Placement, by find_docid_term's rules: each term is read in the shard its id routes to, then in the others
 		// while not found; a shard's read retries and reopens, and a shard that is not available fails only the terms
 		// no other shard holds. A term whose pin or read failed otherwise (busy, corrupt) takes the serial path after
@@ -2930,7 +2972,7 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 		std::vector<std::string> terms;
 		std::unordered_map<std::string, std::size_t> term_at;
 		for (auto j = from; j < to; ++j) {
-			auto& one = run[j];
+			auto& one = objs[j];
 			if (!one.error && !std::get<0>(one.prepared).empty()) {
 				const auto& term = std::get<0>(one.prepared);
 				if (term_at.emplace(term, terms.size()).second) {
@@ -3022,7 +3064,7 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 		std::vector<bool> placement_serial(to - from, false);
 		std::vector<std::unordered_set<std::string>> seen(n_shards);
 		for (auto j = from; j < to; ++j) {
-			auto& one = run[j];
+			auto& one = objs[j];
 			if (one.error || std::get<0>(one.prepared).empty()) {
 				continue;
 			}
@@ -3124,7 +3166,7 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 		// review's B1), and every write of a term whose placement failed, take the serial path after them, in input order.
 		std::vector<std::size_t> deferred;
 		for (auto j = from; j < to; ++j) {
-			auto& one = run[j];
+			auto& one = objs[j];
 			const auto [w_shard, w_pos] = slot[j - from];
 			if (placement_error[j - from]) {
 				++_processed;
@@ -3152,16 +3194,16 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 		}
 		for (auto j : deferred) {
 			stats.deferred.fetch_add(1, std::memory_order_relaxed);
-			co_await apply(run[j]);
+			co_await apply(objs[j]);
 			co_await checkpoint();
 		}
 	};
 
 	// The writes of [from, to): in parallel by shard on a reactor, split at each new numeric id of a sharded index
 	// (its shard is the least used, which the earlier writes change), which takes the serial path after a join.
-	const auto apply_range = [&](std::size_t from, std::size_t to) -> task::task<void> {
+	const auto apply_range = [&](std::vector<Admitted>& objs, std::size_t from, std::size_t to) -> task::task<void> {
 		if (!parallel) {
-			co_await apply_serial(from, to);
+			co_await apply_serial(objs, from, to);
 			co_return;
 		}
 		stats.children.store(children, std::memory_order_relaxed);
@@ -3169,7 +3211,7 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 			stats.largest_range.store(to - from, std::memory_order_relaxed);
 		}
 		const auto new_numeric = [&](std::size_t j) {
-			return n_shards > 1 && !run[j].error && std::get<0>(run[j].prepared) == NEW_NUMERIC_KEY;
+			return n_shards > 1 && !objs[j].error && std::get<0>(objs[j].prepared) == NEW_NUMERIC_KEY;
 		};
 		auto i = from;
 		while (i < to) {
@@ -3178,14 +3220,35 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 				++end;
 			}
 			if (end > i) {
-				co_await apply_shards(i, end);
+				co_await apply_shards(objs, i, end);
 			}
 			if (end < to) {
 				stats.serial_after_join.fetch_add(1, std::memory_order_relaxed);
-				co_await apply_serial(end, end + 1);
+				co_await apply_serial(objs, end, end + 1);
 				++end;
 			}
 			i = end;
+		}
+	};
+
+	// Writes the pending updates, in input order, as the run's writes are: batch commands by shard. Their objects are
+	// freed in a chore, as the run's are.
+	const auto apply_pending = [&]() -> task::task<void> {
+		if (_pending.empty()) {
+			co_return;
+		}
+		auto objs = std::exchange(_pending, {});
+		_pending_terms.clear();
+		_pending_bytes = 0;
+		std::exception_ptr failed;
+		try {
+			co_await apply_range(objs, 0, objs.size());
+		} catch (...) {
+			failed = std::current_exception();
+		}
+		co_await chores.run(engine::ChoreClass::flush, [&objs] { objs.clear(); });
+		if (failed) {
+			std::rethrow_exception(failed);
 		}
 	};
 
@@ -3288,6 +3351,9 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 
 	// Prepares the run and applies it in input order; each round's chores overlap the apply of the round before.
 	const auto apply_run = [&]() -> task::task<void> {
+		if (!run.empty()) {
+			co_await apply_pending();   // the pending writes come before the run's
+		}
 		Round round;
 		std::size_t at = 0;
 		std::size_t stop = 0;
@@ -3304,11 +3370,11 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 			if (!plain) {
 				break;
 			}
-			co_await task::when_all(apply_range(at, stop), pull_round(round));
+			co_await task::when_all(apply_range(run, at, stop), pull_round(round));
 			at = stop;
 			stop = co_await accept(round);
 		}
-		co_await apply_range(at, stop);
+		co_await apply_range(run, at, stop);
 		for (at = stop; at < run.size(); ++at) {   // the schema's script reads each object's stored document
 			co_await prepare_inline(run[at]);
 			co_await apply(run[at]);
@@ -3320,30 +3386,67 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 		}
 	};
 
-	const auto take = [&](MsgPack&& obj) -> task::task<void> {
+	// The key an update of an id writes, read before its prepare: none for any other object that reads the stored
+	// document, which waits for every earlier write.
+	const auto merge_key = [this](const MsgPack& obj) -> task::task<std::string> {
+		std::string key;
+		if (merges_stored(obj)) {
+			if (const auto document_id = document_id_of(obj); has_document_id(document_id)) {
+				try {
+					key = co_await db_handler.get_prefixed_term_id(document_id);
+				} catch (...) {
+					key.clear();   // an id the schema cannot read: its prepare fails it
+				}
+			}
+		}
+		co_return key;
+	};
+
+	const auto take_one = [&](MsgPack&& obj) -> task::task<void> {
 		if (!reads_stored(obj)) {
 			if (auto idx = admit(obj)) {
 				run.push_back(Admitted{*idx, std::move(obj), {}, {}, {}});
 			}
 			co_return;
 		}
-		co_await apply_run();   // D1: a barrier's read sees every earlier object applied
-		if (auto idx = admit(obj)) {
-			Admitted one{*idx, std::move(obj), {}, {}, {}};
-			co_await prepare_inline(one);
-			co_await apply(one);
-			co_await checkpoint();
+		co_await apply_run();   // D1: a barrier's read sees every earlier plain object applied
+		auto idx = admit(obj);
+		if (!idx) {
+			co_return;
 		}
+		Admitted one{*idx, std::move(obj), {}, {}, {}};
+		const auto key = co_await merge_key(one.obj);
+		if (key.empty() || _pending_terms.contains(key)) {
+			co_await apply_pending();   // its read sees every earlier write of its id
+		}
+		co_await prepare_inline(one);
+		const auto& term = std::get<0>(one.prepared);
+		if (!one.error && !term.empty() && term == key) {
+			// An update joins the pending writes. Its term is the key read before its prepare: a pending write set
+			// the schema's id type, so the two can differ only with nothing pending.
+			_pending_bytes += std::get<1>(one.prepared).get_data().size();
+			_pending_terms.insert(term);
+			_pending.push_back(std::move(one));
+			if (_pending_bytes >= PENDING_BYTES) {
+				co_await apply_pending();
+			}
+			co_return;
+		}
+		if (!one.error && !term.empty()) {
+			co_await apply_pending();
+		}
+		co_await apply(one);
+		co_await checkpoint();
 	};
 
 	for (auto& obj : batch) {
 		if (obj.is_array()) {
 			for (auto& o : obj) {
-				co_await take(std::move(o));
+				co_await take_one(std::move(o));
 				co_await checkpoint();
 			}
 		} else {
-			co_await take(std::move(obj));
+			co_await take_one(std::move(obj));
 			co_await checkpoint();
 		}
 	}
@@ -3351,6 +3454,9 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 		db_handler.budget->rearm_light(STREAM_SLICES);   // the takes' slices are not the apply's: it starts light
 	}
 	co_await apply_run();   // the batch's last run applies before the next batch is read
+	if (close) {
+		co_await apply_pending();
+	}
 }
 
 
@@ -3378,6 +3484,10 @@ DocIndexer::commit()
 {
 	L_CALL("DocIndexer::commit()");
 
+	if (!_pending.empty()) {
+		std::vector<MsgPack> none;
+		co_await take(none, true);
+	}
 	if (_indexed != 0) {
 		DatabaseHandler committer(endpoints, flags);
 		co_await committer.commit();

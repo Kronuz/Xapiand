@@ -1106,15 +1106,20 @@ Shard::restore_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, st
 		}
 		batches.push_back(std::move(batch));
 	};
-	co_await chores.run(engine::ChoreClass::flush, [&] {
+	// Chores of `slice` each prepare the writes until a command closes (a full entry) or the sub-run ends, so each
+	// proposal, and the group's syncs it waits for, carries an entry's worth of writes. A test's fixed slice is one
+	// chore. A chore that fails after the first ends the slice with the writes before it, which are proposed.
+	const auto first = at;
+	const auto limit = DocIndexer::seams.writes_per_slice.load(std::memory_order_relaxed);   // a test's fixed slice
+	bool ended = false;   // a write left the index to be replaced
+	std::exception_ptr cut;
+	const auto prepare = [&] {
 		ShardEndpoint::InlineEngine inline_engine(entry, "a RESTORE's apply slice prepares on a worker in the index's turn");
 		if (DocIndexer::seams.throw_in_slice.exchange(false)) {
 			throw engine::Error(engine::errc::internal, "Test seam: the apply slice throws");
 		}
 		auto& eng = entry.engine();
 		const auto until = std::chrono::steady_clock::now() + slice;
-		const auto first = at;
-		const auto limit = DocIndexer::seams.writes_per_slice.load(std::memory_order_relaxed);   // a test's fixed slice
 		while (at < writes.size()) {
 			const auto position = at++;
 			auto& write = writes[position];
@@ -1140,16 +1145,31 @@ Shard::restore_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, st
 				}
 			}
 			if (write.error && entry.stale_.load(std::memory_order_acquire)) {
-				break;   // the index must be replaced: the later writes reopen it, as one request each would
+				ended = true;   // the index must be replaced: the later writes reopen it, as one request each would
+				break;
 			}
 			if (limit != 0 ? at - first >= limit : std::chrono::steady_clock::now() >= until) {
 				break;
 			}
 		}
-		if (auto closed = batcher.flush()) {
-			close(std::move(*closed));
+	};
+	for (bool first_chore = true;; first_chore = false) {
+		try {
+			co_await chores.run(engine::ChoreClass::flush, prepare);
+		} catch (...) {
+			if (first_chore) {
+				throw;
+			}
+			cut = std::current_exception();
+			break;
 		}
-	});
+		if (ended || limit != 0 || at >= writes.size() || !batches.empty()) {
+			break;
+		}
+	}
+	if (auto closed = batcher.flush()) {
+		close(std::move(*closed));
+	}
 	auto& eng = entry.engine();
 	const bool at_placement = has_db_ack_none(flags);
 	const auto level = ack_of(at_placement);
@@ -1196,6 +1216,9 @@ Shard::restore_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, st
 		} catch (...) {
 			L_EXC("The id counter of a RESTORE's slice was not logged");
 		}
+	}
+	if (cut) {
+		std::rethrow_exception(cut);   // the next write fails, as a slice failing before it would fail it
 	}
 }
 

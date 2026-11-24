@@ -52,6 +52,7 @@
 #include "database/data.h"
 #include "database/handler.h"
 #include "database/pool.h"
+#include "database/shard_group.h"
 #include "database/utils.h"
 #include "endpoint.h"
 #include "engine/chores.h"
@@ -701,6 +702,46 @@ static void test_a_restore_prepares_and_writes_its_objects_off_its_loop() {
 }
 
 
+// A RESTORE's writes share the log's entries, and the syncs each entry waits for: a shard proposes a command per
+// entry's worth of writes (and the end of its run), not one per write. 400 updates of new ids, prepared on the loop
+// one by one, and 400 plain objects, prepared in chores, each into an index of one shard: one entry per write was
+// 400, each waiting for its own syncs (two full flushes, ~50 ms on macOS).
+static void test_a_restores_writes_share_their_log_entries() {
+	constexpr int documents = 400;
+	auto lines = [](int first, int count, bool update) {
+		std::string body;
+		for (int i = first; i < first + count; ++i) {
+			std::string text;
+			for (int w = 0; w < 300; ++w) {
+				text += "word" + std::to_string((i * 131 + w * 7) % 20011) + " ";
+			}
+			body += R"({"_id":"e)" + std::to_string(i) + (update ? R"(","_op_type":"update")" : "\"") + R"(,"n":)" + std::to_string(i) + R"(,"text":")" + text + "\"}\n";
+		}
+		return body;
+	};
+	for (const bool update : {true, false}) {
+		const std::string index = update ? "entries_update" : "entries_plain";
+		create_index(index, 1);
+		CHECK_EQ(http_call("RESTORE", "/" + index + "/?commit", lines(1, 10, update), "application/x-ndjson") / 100, 2);   // the schema exists after it
+		const auto endpoints = engine::sync_wait(XapiandManager::resolve_index_endpoints(Endpoint(index), true));
+		auto pin = engine::sync_wait(XapiandManager::manager()->database_pool->pin(Endpoint(endpoints[0].path), DB_WRITABLE));
+		auto* group = pin.entry().group();
+		CHECK(group != nullptr);
+		if (group == nullptr) {
+			continue;
+		}
+		const auto before = group->group.applied();
+		const auto began = std::chrono::steady_clock::now();
+		CHECK_EQ(http_call("RESTORE", "/" + index + "/?commit", lines(11, documents, update), "application/x-ndjson") / 100, 2);
+		const auto wall_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - began).count();
+		const auto entries = group->group.applied() - before;
+		std::fprintf(stderr, "  %d %s: %llu log entries in %lld ms\n", documents, update ? "updates on the loop" : "plain objects in chores",
+			static_cast<unsigned long long>(entries), static_cast<long long>(wall_ms));
+		CHECK_LE(entries, static_cast<std::uint64_t>(documents / 20));   // 10 measured with the fix; 400 one per update
+	}
+}
+
+
 // One RESTORE of a stream into 5 shards ends as the stream restored one object per request: ids repeated across it
 // (a later object replacing an earlier one, within one shard's sub-run too), on every shard, and already there.
 static void test_a_sharded_restore_matches_its_serial_model() {
@@ -1007,6 +1048,12 @@ static void test_an_update_sees_the_earlier_objects_of_its_stream() {
 	body += R"({"_id":"a","first":1},{"_id":"a","_op_type":"update","second":2}])";
 	CHECK_EQ(http_call("RESTORE", "/barrier/?commit", body) / 100, 2);
 
+	// Updates whose writes are pending (after a plain object, so the schema reads their ids): the second of an id
+	// waits for the first's, which another id's does not.
+	const std::string updates = R"([{"_id":"s","n":0},{"_id":"u","_op_type":"update","first":1},{"_id":"v","_op_type":"update","first":1},)"
+		R"({"_id":"u","_op_type":"update","second":2},{"_id":"v","_op_type":"update","second":2}])";
+	CHECK_EQ(http_call("RESTORE", "/pending/?commit", updates) / 100, 2);
+
 	// Two pieces with a pause: the update is the first object of the second batch.
 	std::string first_piece;
 	for (int i = 1; i <= 40; ++i) {
@@ -1019,7 +1066,7 @@ static void test_an_update_sees_the_earlier_objects_of_its_stream() {
 	}
 	CHECK_EQ(http_call_pieces("RESTORE", "/boundary/?commit", {first_piece, second_piece}, "application/x-ndjson", 500ms) / 100, 2);
 
-	for (const auto* path : {"/barrier/a", "/boundary/c"}) {
+	for (const auto* path : {"/barrier/a", "/boundary/c", "/pending/u", "/pending/v"}) {
 		std::string reply;
 		CHECK_EQ(http_call("GET", path, "", "application/json", &reply), 200);
 		const auto obj = json_of(reply);
@@ -1257,6 +1304,7 @@ int main() {
 	test_a_search_of_many_hits_yields_its_loop_between_hits();
 	test_a_restored_record_is_compressed_once_and_reads_back();
 	test_a_restore_prepares_and_writes_its_objects_off_its_loop();
+	test_a_restores_writes_share_their_log_entries();
 	test_a_sharded_restore_matches_its_serial_model();
 	test_new_numeric_ids_match_their_serial_model();
 	test_a_write_missed_since_placement_is_placed_afresh();
