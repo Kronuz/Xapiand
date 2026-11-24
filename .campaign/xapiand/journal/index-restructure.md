@@ -127,7 +127,7 @@ permit and reclaim-pacing figures, not a file's state. Candidates 2-7 judged aft
 | Criterion | Evidence |
 |---|---|
 | A1 | step 1 at strata:351eebc5: build-test 261124-020132-30df0e, CI 45358702484; step 2 at strata:cfa20b41: build-test 261124-025827-57b6da (queued), CI on the push of cfa20b41 |
-| A2 | D178. step 1's proof, at strata:351eebc5 (step 1's commits, unchanged on the branch): members 261124-020132-e99917 (202 definitions moved, 0 warnings), fnsizes 261124-004345-fff00d, selfcontained 261124-015755-58916c. These stay at 351eebc5: members and fnsizes compare against main and step 2 changes code by design, so at the head members fails by design (the check was dropped by the owner, 2026-11-24; local run: 103 errors, all in the ledger's edits: index_ledger.hh's new lines and the 20 changed members) and fnsizes would differ |
+| A2 | D178 (step 1's members, fnsizes and selfcontained proofs at strata:351eebc5 are listed there) |
 | A3 | ledger test 261124-034954-48d9cb (passed, every case and the model at 1.2M steps); mutants killed, each by a full build then its named case failing: 261124-025159-f8ed6f (track-adds, `track`), 261124-025203-ff830f (forget-drops, `forget`), 261124-025207-4882f1 (post-keeps-file, `post`), 261124-025211-9ae8da (unpost-keeps-flight, `unpost`) |
 | A4 | strata docs/source-layout.md, docs/mechanisms/index-layout.md (strata:3db2a49e) |
 
