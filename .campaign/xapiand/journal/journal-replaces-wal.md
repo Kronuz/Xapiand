@@ -1,6 +1,6 @@
 # journal-replaces-wal: journal
 
-State: session 15, the crash gate's RESTORE fix (group commit) written at Xapiand:9c9189db8; targeted jobs running (see Doing, session 15).
+State: waiting on jobs 261124-060107-81fe3f (whole test_loop_yield at the fix), mutants 261124-060150-afcbaa, 261124-060152-be5e43, 261124-060154-1526c7, strict measures 261124-060344-860acb (master), 261124-060345-65ddaf (before, Xapiand:f845c2966), 261124-060347-350381 (after, Xapiand:fe66e9a12); all queued, none built yet. Branch pushed at the merge of origin/master (campaign files only). Next: read them; if green, `campaign job rerun` the stale evidence and `campaign verify journal-replaces-wal` (crash included).
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
