@@ -1,6 +1,6 @@
 # field-check-at-map: journal
 
-State: waiting on jobs 261124-122655-73d9cf 261124-122659-a4de45 261124-122702-df0b09 261124-122705-fcbe11 261124-122723-cb483e
+State: waiting on jobs 261124-145133-73466a 261124-145136-a057fa 261124-145139-a2c903
 Quest: .campaign/xapiand/quests/field-check-at-map.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,25 +9,27 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Round 1 is code-complete at strata:55a5ea73 (pushed). Evidence queued once at that commit:
+Fix round 1 (A3 memory, the lead's assignment): both A3 rows at strata:55a5ea73 failed on memory
+(df0b09 resident, fcbe11 dirty and resident). Cause, measured with the counting build
+(`eager_open_count`, 200 clones, `~/.scratch/xapiand/field-check-at-map`): the same allocations
+as main, 16 more bytes per segment on every arm, lazy included. `vouch` grew 16 -> 32 B (table
+size, optional key), so `open_segment` 200 -> 216 B (malloc 208 -> 224). Not per field, not the
+check: per segment, the record.
 
-- A1 head: 261124-122655-73d9cf; A1 mutant (strata:da075624, `mutant/field-check-at-map/skip-check`,
-  `vouch::check` skips `check_fields`), `--fails-without`: 261124-120815-138f97. A local run of the
-  mutant failed the merge case's checks; the head passed.
-- A2 identity (both sides over prospect:4430396, base strata:cfa20b41): 261124-122659-a4de45.
-- A3 strict rows after A2, `summary.py --within today:eager`: d1000s4 261124-122702-df0b09,
-  d1000s10 261124-122705-fcbe11.
-- `campaign verify` build-test (A4): 261124-122723-cb483e. CI runs on the push (A6).
+Fix at strata:239d51e4: `open_segment`'s `version` and three flags share one word (they padded
+three), so the record is 200 B again with the full claim. Heap per index, main `today` / 55a5ea73
+`eager` / fixed `eager`: d1000s4 28,489 / 28,553 / 28,489; d1000s10 56,497 / 56,657 / 56,497;
+lazy likewise +64/+160 -> 0. Equal byte for byte, after open and after the first query. Rows in
+`docs/perf/eager-open.md` "The record's size"; `docs/mechanisms/field-check.md` says it.
 
-Local smoke (10 indexes, one binary on every side): identity ok; d1000s4c refused at open on
-eager arms, at the first read on lazy, with corrupt_segment. The lazy message is wrapped twice
-("strata: corrupt segment: strata: corrupt segment: ..."), as on main for any first-map refusal.
+Queued once at strata:239d51e4 (pushed): A1 head 261124-145133-73466a; A3 strict rows d1000s4
+261124-145136-a057fa, d1000s10 261124-145139-a2c903. Not rerun: A2 identity (no read path
+changed: a member order), the A1 mutant (vouch::check unchanged). `campaign verify --for A1,A4`
+defers build-test to the round's end (State ready for review).
 
 ## Next
 
-1. Read the jobs; fill Evidence and Result; add the A3 rows to `docs/perf/eager-open.md`'s last
-   section (strata) and commit.
-2. Then ready for review.
+1. Read the A3 rows; fill Evidence; set ready for review (build-test then reruns).
 
 ## Blocked on
 
@@ -37,9 +39,9 @@ Nothing. File set note for the lead under "Rulings I made" (1).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261124-122655-73d9cf (head), 261124-120815-138f97 (mutant, --fails-without: passed, the test exits 1 at the mutant) |
+| A1 | 261124-145133-73466a (head, 239d51e4); 261124-120815-138f97 (mutant, --fails-without: passed) |
 | A2 | 261124-122659-a4de45 |
-| A3 | 261124-122702-df0b09 (d1000s4), 261124-122705-fcbe11 (d1000s10) |
+| A3 | 261124-145136-a057fa (d1000s4), 261124-145139-a2c903 (d1000s10), at 239d51e4; failed at 55a5ea73: df0b09, fcbe11 |
 | A4 | 261124-122723-cb483e (build-test) and CI |
 | A5 | `docs/mechanisms/field-check.md` (strata) |
 | A6 | <pending CI> |
@@ -64,6 +66,20 @@ Nothing. File set note for the lead under "Rulings I made" (1).
    p50, open CPU, dirty and resident at most the top of the A/A band (base and aa runs of `today`).
    proto `today` (both checks, until drop-open-verify lands) and base `eager` (no check at all) are
    reported beside it, not judged.
+
+4. A3 fix: repack the record, not shrink the vouch. A 24 B vouch (u32 table size, u32 key with a
+   sentinel) would take the record to 192 B, but a "no bound" sentinel either needs a flag or
+   skips the check for a 2^32-1-field manifest; the repack keeps the explicit types at main's size.
+
+## For the lead (not this quest's)
+
+- prospect: `fielddict::reader::check_fields` scans the pool through `pool()`, which caches it in
+  the reader (map node + `termdict::reader`): 400 B in 2 allocations per segment, kept while the
+  index is open, on main too (Xapiand's `verify_fields` path). Scanning through a reader of its
+  own (a `transient` helper beside `dictionary()`) measured: `eager` and `today` heap per index
+  -1,600 B (d1000s4) and -4,000 B (d1000s10), 7% of a hot index; same identity hash, same
+  `d1000s4c` refusals. Patch at `~/.scratch/xapiand/field-check-at-map/src/prospect-fix`
+  (fielddict.hh); a prospect quest (prospect-check-fields or its own).
 
 ## Messages
 
