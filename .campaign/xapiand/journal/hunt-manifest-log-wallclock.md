@@ -1,6 +1,6 @@
 # hunt-manifest-log-wallclock: journal
 
-State: working
+State: waiting on jobs 261123-172410-fa7b2b (probe: healthy ratios), queued behind the host
 Quest: .campaign/xapiand/quests/hunt-manifest-log-wallclock.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,11 +9,21 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Form chosen: ratio to a same-process calibration (A3). In `deletes` (test/manifest_log_test.cc), each
+of the 128-edit apply and the log's open read is the fastest of five runs, divided by the fastest of
+five reads of the same segment's snapshot alone. Commit strata:7748cfa9 has the ratios printed and
+bounds provisional (1e9). Probe job 261123-172410-fa7b2b prints the healthy ratios.
+
+Why not counting work: the library exposes no counter (test-only quest), the harness's operator-new
+byte count is off under TSan and cannot see a walk (clumped / sparse cases allocate nothing), and the
+at_bound check beside it already uses this ratio form.
 
 ## Next
 
-1. <step>
+1. Read the probe's ratios; set bounds ~10x over healthy and far under the mutant.
+2. Mutant (A2): a scratch commit making log_deleted::insert rewrite ordinals per edit (restore the
+   8.9 s cost); job `--fails-without --for A2` on the test.
+3. build-test `--for A1`; push; drop time_scale if unused.
 
 ## Blocked on
 
