@@ -7555,7 +7555,8 @@
         "test/transport/seeds_test.cc",
         "test/transport/rpc_hosts.h",
         "bench/transport_idle.cc",
-        "bench/flow_bench.cc"
+        "bench/flow_bench.cc",
+        "test/transport/groups_test.cc"
       ],
       "journal": "../Xapiand-wt/xapiand/consensus-join-v2",
       "landed": [],
@@ -7573,7 +7574,7 @@
       "risk": "high",
       "status": "review",
       "title": "consensus joins a node by token v2 on the transport port, pins keys, reloads certificates and checks the boot",
-      "updated": "2026-11-23T17:24:20",
+      "updated": "2026-11-24T01:30:18",
       "worktree": "../consensus-wt/xapiand/consensus-join-v2"
     },
     "consensus-request-install": {
