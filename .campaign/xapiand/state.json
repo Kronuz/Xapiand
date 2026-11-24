@@ -27447,6 +27447,8 @@
     "prospect-pool-reader-transient": {
       "accepted": {},
       "after": [],
+      "base": "44303965ec66e29a1674447990cbbedc0deb3b9a",
+      "branch": "quest/xapiand/prospect-pool-reader-transient",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -27477,6 +27479,7 @@
           "weakened": []
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/prospect-pool-reader-transient",
       "landed": [],
       "lenses": [
         "correctness"
@@ -27484,11 +27487,13 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "started by force: phase4-gate is blocked with no contributor and claims all of prospect; this quest touches one function of fielddict.hh and its test",
       "repo": "/Users/kronuz/code/Kronuz/prospect",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "prospect: the field check reads the pool through a reader it drops, so an opened index keeps no pool reader",
-      "updated": "2026-11-24T15:58:03"
+      "updated": "2026-11-24T15:58:33",
+      "worktree": "../prospect-wt/xapiand/prospect-pool-reader-transient"
     },
     "prospect-pruning-floors": {
       "accepted": {},
