@@ -1,6 +1,6 @@
 # journal-replaces-wal: journal
 
-State: waiting on jobs at Xapiand:015dd1385 (pushed; CI runs build-test, e2e, asan, tsan) on slot xapiand-journal-replaces-wal-b (slot a is busy with the lead's a8e7ab then c5379e): R2 4b0f48, R2 mutant f28acb, drain 30x 2a3ef4, drain mutant 5d7aa1, replay check d250e2, sync-count probe 9e4f83. Next: read them; the batch-pins verdict from 9e4f83; then the full evidence set once (State "ready for review").
+State: waiting on jobs at Xapiand:015dd1385 (pushed; CI runs build-test, e2e, asan, tsan) on slot xapiand-journal-replaces-wal-b (slot a is busy with the lead's a8e7ab then c5379e): R2 261124-021302-0b04e0, R2 mutant 261124-021321-9231e2, drain 30x 261124-021306-742fba, drain mutant 261124-021314-11605e, replay check 261124-021317-01a519, sync-count probe 261124-021310-23729b (the first six, at 0207xx, were cancelled unrun: zsh passed `--slot NAME` as one word). Next: read them; the batch-pins verdict from 9e4f83; then the full evidence set once (State "ready for review").
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
@@ -37,6 +37,13 @@ Session 13 (2026-11-24), the lead's relay (~/.scratch/xapiand/lead/jrw-relay.md)
    log end on that miss (Xapiand:bedf01221); d250e2 shows what the node logs under `ulimit -f`.
 6. R1: the mutant is 261123-232529-f93da2 (killed, exit 1), not 4ee4de (127, never ran).
 7. Merged origin/master (Xapiand:a740b6751, clean: the docs site engine, pages.yml; master's site files taken).
+8. Session 12 item 5's verdict (loop-yield probes, 3 runs each): both sides moved. Merge base 7ff092: in chores
+   168.9-174.5 ms, on the loop 2,752-3,076 ms (0.057-0.062). Head 4fae12: in chores 227.2-273.2 ms, on the loop
+   1,546-2,005 ms (0.135-0.147). The denominator shrank 1.5-1.8x (the group applies every write on its chore, so
+   "on the loop" no longer applies there) and the numerator grew 1.3-1.6x (+55-100 ms per 2,000 documents, the loop
+   proposing each command, ~30-50 us a document). CI's 0.21-0.22 is the same shift on slower runners; the bound
+   was not changed. For the lead: the ratio's denominator no longer measures what it did; an absolute loop budget
+   per document would state the claim.
 
 Session 12 (2026-11-23), task `levels` and R1 on the quest branch (lead's assignment), then the lead's two messages:
 
