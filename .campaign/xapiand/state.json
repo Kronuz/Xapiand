@@ -16106,11 +16106,8 @@
       ],
       "consumes": [],
       "files": [
-        "include/strata/core/index.hh",
-        "include/strata/core/index_*.hh",
-        "include/strata/core/index/**",
-        "docs/source-layout.md",
-        "docs/mechanisms/index-layout.md"
+        "test/index/**",
+        "CMakeLists.txt"
       ],
       "history": [
         {
@@ -16156,7 +16153,7 @@
       "risk": "high",
       "status": "active",
       "title": "strata's index.hh: basic_index's 5,309-line class body split by mechanism",
-      "updated": "2026-11-23T19:27:20",
+      "updated": "2026-11-24T00:54:04",
       "worktree": "../strata-wt/xapiand/index-restructure"
     },
     "install-own-files": {
