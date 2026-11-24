@@ -16284,7 +16284,8 @@
         "docs/source-layout.md",
         "docs/mechanisms/index-layout.md",
         "test/index/**",
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "test/reclaim_bg_test.cc"
       ],
       "history": [
         {
@@ -16330,7 +16331,7 @@
       "risk": "high",
       "status": "active",
       "title": "strata's index.hh: basic_index's 5,309-line class body split by mechanism",
-      "updated": "2026-11-24T00:54:30",
+      "updated": "2026-11-24T02:57:03",
       "worktree": "../strata-wt/xapiand/index-restructure"
     },
     "index-subobjects": {
