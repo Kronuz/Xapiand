@@ -1,6 +1,6 @@
 # journal-replaces-wal: journal
 
-State: waiting on jobs 261124-063522-3016ad (targeted test_loop_yield cases at Xapiand:ff969606f), mutants 261124-063552-ee5bf1 (pending-off), 261124-063553-3e8972 (fill-off), 261124-063555-832e66 (same-id-unchecked), strict e2e timings 261124-063626-58ffbf (master), 261124-063628-1d2c27 (before, Xapiand:f845c2966), 261124-063629-1cf15b (after, Xapiand:ff969606f). Next: read them; push; rerun stale evidence; `campaign verify journal-replaces-wal`.
+State: waiting on jobs 261124-063522-3016ad (targeted test_loop_yield cases at Xapiand:ff969606f; still queued after 10 min behind a strict hold), mutants 261124-063552-ee5bf1 (pending-off), 261124-063553-3e8972 (fill-off), 261124-063555-832e66 (same-id-unchecked), all after 3016ad; strict e2e timings 261124-063626-58ffbf (master afc0de180), 261124-063628-1d2c27 (before, Xapiand:f845c2966, 2 rounds), 261124-063629-1cf15b (after, Xapiand:ff969606f, after 3016ad). Branch pushed at Xapiand:0b56d765f (origin/master merged, campaign files only). Next: read them; if 3016ad passes, check its log-entry counts against the test bound (the "10 measured" comment was never measured), `campaign job rerun` the stale evidence, `campaign verify journal-replaces-wal`.
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
