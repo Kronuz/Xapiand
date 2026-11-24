@@ -7631,6 +7631,47 @@
       "title": "One owner-lock API (CL-2)",
       "updated": "2026-11-08T15:41:22"
     },
+    "completion-flush-mode": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "none",
+          "minutes": 1,
+          "name": "asan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/completion/**",
+        "test/**",
+        "README.md",
+        "ARCHITECTURE.md",
+        "CHANGELOG.md",
+        "docs/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [],
+      "provides": [
+        "completion:flush-mode"
+      ],
+      "repo": "../completion",
+      "risk": "high",
+      "status": "planned",
+      "title": "completion: PosixIO takes a required flush mode (plain or full) for every sync it issues",
+      "updated": "2026-11-24T08:05:50"
+    },
     "completion-task-pin": {
       "accepted": {},
       "after": [],
