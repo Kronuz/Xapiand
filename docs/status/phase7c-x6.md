@@ -7,7 +7,7 @@ the carried conditions: strata `docs/status/road-to-release.md`. How it works: `
 
 ## State
 
-All six criteria are built and proved. Nothing is blocked. Overlap with X4 (`phase7c/x4-lua`): none in `src/lua/`; the branches will conflict textually in `docs/src/content/docs/changelog.md` and possibly `harness/async_allowlist.tsv`.
+All six criteria are built and proved. Nothing is blocked. Overlap with X4 (`phase7c/x4-lua`): none in `src/lua/`; the branches will conflict textually in `site/src/content/docs/changelog.md` and possibly `harness/async_allowlist.tsv`.
 Two things for the lead (below, "Findings"): `--strict --owed` cannot be the gate until X1 and X4 land, and D16's order differs from the code's in one step.
 
 ## Done criteria
@@ -38,7 +38,7 @@ Two things for the lead (below, "Findings"): `--strict --owed` cannot be the gat
   - The plant (run locally, the CI command, since the job cannot run without a push): `engine::sync_wait(task::task<void>{});` inserted at the top of `metrics_view` in `src/server/search_views.cc` gives `search_views.cc:768: [sync_wait] unclassified` and **exit 1**; removed, exit 0. (A `std::fflush` in `at_end.h` was the first real catch: `Xapiand:640a6bf84`.)
   - The gate tools' own tests: `python3 -I harness/test_gate_tools.py` 14 of 14.
 - [x] **K5. Docs.** `Xapiand:fe13fc906`. `ARCHITECTURE.md`: the `DatabaseCleanup` box and its edge are out of the D2 source and `assets/runtime.svg` is re-rendered with the source's own command (`d2 --theme 0 --pad 20`), the committer debouncer is gone from the box, and the networking section no longer has an offload `thread_pool`;
-  `docs/src/content/docs/architecture/internals.md` replaces the Worker-tree paragraph with the never-block rule and its CI check; `docs/mechanisms/control-plane.md` no longer narrates replaced threads. Grep for `committer|cleanup thread|DatabaseCleanup|thread_pool|offload|bulk preparer|http server` over the docs, `man`, `README` and `AGENTS`: only the changelog and `docs/dev/side-findings.md` (history) remain.
+  `site/src/content/docs/architecture/internals.md` replaces the Worker-tree paragraph with the never-block rule and its CI check; `docs/mechanisms/control-plane.md` no longer narrates replaced threads. Grep for `committer|cleanup thread|DatabaseCleanup|thread_pool|offload|bulk preparer|http server` over the docs, `man`, `README` and `AGENTS`: only the changelog and `docs/dev/side-findings.md` (history) remain.
   The SVG was checked with `rsvg-convert` (its fonts clip two container titles; the committed original does the same).
 - [x] **K6. Proof.** At `Xapiand:fe13fc906` plus the test commit `Xapiand:3dd4dd5f1` (the later commit only drops a `fflush` from the debug abort path, rebuilt; Debug ctest at the head, `Xapiand:640a6bf84`, is 29 of 29 and the death tests pass). Separate builds: Release; Debug; ASan+UBSan (`RelWithDebInfo`, `detect_leaks=0`); TSan.
 

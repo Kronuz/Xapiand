@@ -1,49 +1,30 @@
-# Xapiand docs on Astro + Starlight (migration prototype)
+# Xapiand documentation site
 
-A prototype migration of the Jekyll `../docs/` site to **Astro + Starlight**, reusing
-the Kronuz theme from `KronuzBlog/Kronuz.github.io`. It is parallel to and independent
-of the existing Jekyll site (nothing in `../docs/` is touched), so it is fully
-reversible.
+This directory builds the [Xapiand documentation](https://kronuz.github.io/Xapiand/)
+with Astro and Starlight. The shared reading controls, Markdown renderers, themes,
+and footer come from the pinned [`@kronuz/starlight-core`](https://github.com/Kronuz/starlight-core)
+package. Design notes and campaign records live in [`../docs/`](../docs/).
 
-## Why
+## Run locally
 
-- **Search is broken** in the Jekyll site: Algolia DocSearch pointed at the dead
-  `kronuz.io` domain, and the account is no longer reachable. Starlight ships
-  **Pagefind** (local, static, build-time search, no API key, no external service),
-  which replaces it for free.
-- Match the Starlight look/feel of the blog, keep all content, keep the full curated
-  sidebar, and keep the embedded E2E tests.
-
-## What's proven here
-
-- **Builds:** `npm run build` → 196 pages, and a **Pagefind index** under `dist/pagefind/`.
-- **Full sidebar**, transformed 1:1 from `../docs/_data/docs.yaml` by
-  `scripts/gen-sidebar.mjs` (the four groups Getting Started / Reference Guide / Set up
-  / Miscellaneous, deep nesting, top groups expanded).
-- **Content:** `scripts/convert-docs.mjs` converts `../docs/_docs` + `../docs/_tutorials`
-  (108 pages), plus a splash home (`src/content/docs/index.mdx`).
-- **Embedded E2E tests survive:** a request's ` ```rest ` block renders (Expressive Code);
-  the `pm.test` / `status:` / `params:` payload is wrapped in an `<!-- e2e:begin … e2e:end -->`
-  HTML comment (hidden from render, preserved in source). `docs_to_postman.py` still
-  extracts requests + assertions from the migrated `.md` unchanged.
-
-## Commands
+Install Node.js 22.12 or newer and the [D2 CLI](https://d2lang.com/) for diagrams.
+From this directory:
 
 ```sh
-npm install
-npm run sidebar   # regenerate src/sidebar.mjs from ../docs/_data/docs.yaml
-npm run convert   # regenerate src/content/docs from ../docs/_docs (+ tutorials)
-npm run dev       # preview at http://localhost:4321/Xapiand
-npm run build     # build to dist/ (also builds the Pagefind index)
+npm ci
+npm run dev
+npm run build
 ```
 
-## Known prototype gaps (not blockers)
+The build writes static pages and a Pagefind search index to `dist/`. The site
+uses the `/Xapiand/` base path in development and on GitHub Pages.
 
-- The converters are best-effort: a few Jekyll-isms (some `{: .note }` asides, edge
-  Liquid) may need cleanup; `../docs/tests/` (test-only docs) is not migrated yet.
-- The request example renders as a plain ` ```rest ` block; the real migration should add
-  a small remark plugin to render it as the curl card (copy-as-curl button), replacing
-  `_includes/curl.html`.
-- Two sidebar slugs (`reference-guide` overview, `tutorials/home`) are stubs.
-- Single-version for now; multi-version (v0.4.0 / v1.0.0) is a later phase
-  (`starlight-versions` plugin or per-version dirs).
+## Source
+
+- Pages and request examples live in `src/content/docs/`.
+- `src/lib/sidebar.mjs` defines navigation and the docs E2E page order.
+- `src/starlightRouteData.ts` supplies the reader preferences and site footer data.
+- `public/assets/` contains examples used by both the site and test harness.
+
+Pushing `site/` changes to `master` runs `.github/workflows/pages.yml`. The
+workflow builds and deploys the static site to GitHub Pages.

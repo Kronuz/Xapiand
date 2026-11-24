@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)
 
-<p align="center"><img src="docs/public/img/logo-2x.png" alt="Xapiand" width="320"></p>
+<p align="center"><img src="site/public/img/logo-2x.png" alt="Xapiand" width="320"></p>
 
 **A RESTful search and storage engine in one binary.** Send it JSON or MessagePack
 documents over HTTP, then search them with full text, geospatial, and range queries.

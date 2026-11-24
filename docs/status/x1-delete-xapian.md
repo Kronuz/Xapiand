@@ -47,7 +47,7 @@ The Xapian engine and the cluster layer are deleted; Release and Debug build, th
 
 ## Left alone (history, not described as current)
 
-`docs/design`, `docs/reviews`, `docs/status` (other ledgers), `docs/perf`, `docs/gates`, `docs/mechanisms` and the rest of `docs/dev` describe Xapian and the cluster as they were; they need a labelling pass by the lead. `harness/profile_bulk.sh` still has a regex group for Xapian frames. `docs/src/content/docs/copyright.md` keeps its Xapian licensing text.
+`docs/design`, `docs/reviews`, `docs/status` (other ledgers), `docs/perf`, `docs/gates`, `docs/mechanisms` and the rest of `docs/dev` describe Xapian and the cluster as they were; they need a labelling pass by the lead. `harness/profile_bulk.sh` still has a regex group for Xapian frames. `site/src/content/docs/copyright.md` keeps its Xapian licensing text.
 
 ## Next
 

@@ -26,7 +26,7 @@ in `THIRD-PARTY-NOTICES`.
 
 ### Google Maps
 
-`docs/public/assets/el_cerrito.png` is a Google Maps screenshot ("Map data
+`site/public/assets/el_cerrito.png` is a Google Maps screenshot ("Map data
 &copy;2019 Google", under Google's terms) with Xapiand's HTM trixels drawn over
 it. The trixel overlay is Xapiand's; the image as a whole is not MIT.
 

@@ -6,7 +6,7 @@ Xapiand's accuracy terms: def_accuracy_num for numbers, def_accuracy_datetime fo
 
 Usage: python3 -I sizes.py SORTABLE_MODEL ASSETS_DIR FILES_ROOT GIT_ROOT [MAX_FILES]
   SORTABLE_MODEL  path to Kronuz/sortable tools/model.py (the format's reference encoder)
-  ASSETS_DIR      Xapiand docs/public/assets (accounts.ndjson, cities.ndjson)
+  ASSETS_DIR      Xapiand site/public/assets (accounts.ndjson, cities.ndjson)
   FILES_ROOT      a directory tree whose file sizes and modification times are sampled
   GIT_ROOT        a directory whose immediate subdirectories are git repositories (commit times)
 """

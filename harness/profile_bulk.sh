@@ -48,7 +48,7 @@ ap.add_argument('--min-sample-frac', type=float, default=0.25, help='invalid bel
 ap.add_argument('--min-sibling-frac', type=float, default=0.5, help='invalid below this fraction of the median wall samples of the other profiles in OUTDIR')
 a = ap.parse_args(); MIN_FRAC = a.min_sample_frac; MIN_FRAC2 = a.min_sibling_frac; a.bin = os.path.abspath(a.bin); a.out = os.path.abspath(a.out)
 repo = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip()
-ds = a.dataset or os.path.join(repo, 'docs/public/assets/accounts.ndjson')
+ds = a.dataset or os.path.join(repo, 'site/public/assets/accounts.ndjson')
 lines = [l for l in open(ds, 'rb').read().split(b'\n') if l.strip()]
 body = b'\n'.join(lines * a.mult) + b'\n'; ndocs = len(lines) * a.mult
 os.makedirs(a.out, exist_ok=True)

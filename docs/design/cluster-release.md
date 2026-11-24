@@ -589,8 +589,8 @@ Detent's) are written here by the names Detent gives them.
 | 12 | `cluster-membership` | Node identity, `--join`, certificates, keepalives, `/:nodes` | high | Xapiand | `src/cluster/{node,membership}*`, `src/opts.*`, `src/manager.*` | needs 8; after `detent:consensus-transport` and 10 | 900 |
 | 13 | `shard-groups` | Shards across nodes: routing, members, replicas, linearizable reads | critical | Xapiand | `src/index_resolver_lru.*`, `src/database/{pool,shard,handler}.*`, `src/cluster/**` | needs 1, 6, 10, 11, 12 | 1,700 |
 | 14 | `distributed-search` | Fan-out, exact statistics, merged aggregations, patterns from the root | high | Xapiand | `src/engine/{search,strata/search}.*`, `src/database/handler.cc`, `src/server/search_views.cc`, `src/index_pattern.*`, `src/walk_gate.h` | needs 2, 13 | 1,500 |
-| 15 | `cluster-api` | Settings, health, `:info`, docs, changelog | normal | Xapiand | `src/server/search_views.cc`, `src/index_resolver_lru.cc`, `docs/src/content/docs/{options,installation,architecture,faq,changelog}.md`, `docs/src/content/docs/{reference-guide,tutorials}/**` | needs 9, 13; after 14 | 800 |
-| 16 | `cluster-migration` | One node to a cluster and back, without loss | high | Xapiand | `harness/cluster/migration*`, `docs/src/content/docs/upgrade.md` | needs 9, 13 | 500 |
+| 15 | `cluster-api` | Settings, health, `:info`, docs, changelog | normal | Xapiand | `src/server/search_views.cc`, `src/index_resolver_lru.cc`, `site/src/content/docs/{options,installation,architecture,faq,changelog}.md`, `site/src/content/docs/{reference-guide,tutorials}/**` | needs 9, 13; after 14 | 800 |
+| 16 | `cluster-migration` | One node to a cluster and back, without loss | high | Xapiand | `harness/cluster/migration*`, `site/src/content/docs/upgrade.md` | needs 9, 13 | 500 |
 | 17 | `cluster-gate` | The release's cluster gate | critical | Xapiand | `docs/gates/cluster-release.md`, `harness/cluster/gate*` | needs 1, 7, 14, 15, 16 | 400 |
 
 Quest 12 lands after 10 because both edit `src/opts.*` and `src/manager.*` (section 6 weighs the

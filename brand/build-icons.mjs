@@ -20,7 +20,7 @@ const INNER = 5 / 6; // the hexagon is the rim scaled by 5/6 about the center (b
 const GAMMA = { 16: 0.7, 32: 0.7, 48: 0.85 };
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const sharp = createRequire(`${root}docs/package.json`)('sharp'); // the docs site's own dependency
+const sharp = createRequire(`${root}site/package.json`)('sharp'); // the docs site's own dependency
 const master = readFileSync(`${root}brand/logo.svg`, 'utf8');
 const [, viewBox, body] = master.match(/viewBox="([^"]+)"[^>]*>([\s\S]*)<\/svg>/);
 const [x, y, w, h] = viewBox.trim().split(/\s+/).map(Number);

@@ -1,7 +1,7 @@
 # Docs-site audit
 
 > Status: audit of 2026-11-09 (quest `docs-site-audit`, owner ruling D45). Read-only over the site: no page was changed.
-> Audited tree: `docs/src/content/docs/` at `docs-site-audit` branch (`8d3a556f2`, master of 2026-11-09), 128 pages, 17,758 lines.
+> Audited tree: `site/src/content/docs/` at `docs-site-audit` branch (`8d3a556f2`, master of 2026-11-09), 128 pages, 17,758 lines.
 > Source of truth: Xapiand `src/` of that tree, strata (`~/code/Kronuz/strata`), prospect (`~/code/Kronuz/prospect`) and the queryparser library, with their docs.
 > Not read: Xapian, `src/sortable_serialise.{cc,h}`, `contrib/python/xapiand-py/xapiand/utils/sortable.py` (GPL).
 > No node was started and nothing was built: a claim only a running node settles is under "## Unverified" with its probe.
@@ -17,7 +17,7 @@ What the audit found, in order of weight:
 1. No page documents a removed feature as live (no `_elite_set`, `_cjk_words`, `_terms` over text, cluster, `?nearest`, `#xapian_query`, `cluster_name`): the Xapian purge of the site is done except `welcome.md` ("Highly Available Distributed"), `benchmarks.md` (Xapian-era figures) and `architecture/internals.md` (ten file paths that do not exist).
 2. The larger defect is old documentation that was never true of this code: 20 pages are `wrong`, almost all because they were copied from Elasticsearch's docs or written before the code settled (`numeric_detection` default, `geo_point`, `upsert` as a query parameter, version "ignored", fuzzy `_max_expansions` 50, index delete, `DELETE /`, scripts that score queries).
 3. Whole behaviors the code has and no page states: the verbs `COMMIT`, `FLUSH`, `QUIT`, `CHECK`, `UPSERT`, `PATCH`, `WAL`; `--admin-commands`; 29 of the 53 options; the search URL parameters and response shape; the query, aggregation and body limits; the queryparser grammar; the term, path and detection rules of schemas.
-4. Site infrastructure still describes the Jekyll migration: orphan pages, generated-sidebar header with no generator, `editLink` to a directory that does not exist, `docs/README.md`.
+4. Site infrastructure still describes the Jekyll migration: orphan pages, generated-sidebar header with no generator, `editLink` to a directory that does not exist, `site/README.md`.
 
 ## Page table
 
@@ -229,11 +229,11 @@ Format: page, verdict, why; then one line per stale or wrong claim (`L<line>` is
   - L"--tls-key mode 0600; warns within 14 days" -> src/tls.cc:54,73 true
   - on no page: --bind-address, --max-clients, --max-files, --schema-pool-size, --schema-versions-size, --scripts-cache-size, --resolver-cache-size, --uuid, --admin-commands, --log, --uid, --gid, -P/--pidfile, -L/--logfile, --force, --color, --no-color, --no-pretty, --no-echo, --no-human, --no-comments, --iterm2 and the build-conditional --random-errors-{net,io,db} (src/opts.cc:110-272); the Docker entrypoint's XAPIAND_UID, XAPIAND_GID, XAPIAND_NAME, XAPIAND_DATABASE (contrib/docker/xapiand/entrypoint.sh:33-36) and the XAPIAND_DATA_PATH environment variable (src/main.cc:966) are on no page either
   - barrier switch: OWNED barrier-warning A2 (documented with the other options)
-  - not in the sidebar (orphan) (docs/src/lib/sidebar.mjs has no `options`)
+  - not in the sidebar (orphan) (site/src/lib/sidebar.mjs has no `options`)
 - `benchmarks.md` | **stale** | numbers are from the Xapian-era 1.0 alpha against 0.40.0; reproduction commands name wrong paths and a wrong shard default
   - L16-25 table "Xapiand ... ~470 MB, 9.2 MB, ~7,800 docs/s" -> measured before strata (git log: page last edited 5a517b052 only to drop cluster text); no strata run behind them (docs/perf has no matching file: grep "11,500" docs/ finds none)
   - L"pread ... Zstandard-compressed storage" -> describes the Xapian-era storage, not strata files
-  - L93 "docs/assets/accounts.ndjson" -> docs/public/assets/accounts.ndjson (harness/loadtest.py:202)
+  - L93 "docs/assets/accounts.ndjson" -> site/public/assets/accounts.ndjson (harness/loadtest.py:202)
   - L99 "NUM_SHARDS=1 matches Xapiand's default of one shard" -> default is 5 (src/opts.cc:43)
   - OWNED closing-benchmark (its file set lists benchmarks.md)
 
@@ -270,7 +270,7 @@ Format: page, verdict, why; then one line per stale or wrong claim (`L<line>` is
   - L34-44 `"#docid": 1, "#shard": 1` in the default GET body -> only added when request.comments is set (default off; on at verbosity 4+): src/server/search_views.cc:1882-1889, src/opts.cc:252-255 (stale)
   - L57-58 "latest committed document from the primary shard" -> ?volatile opens the index writable so the read sees the writer's newest view; "primary shard" is cluster-era wording: src/server/search_views.cc:2323-2331, 1834-1838 (stale, minor)
 - `reference-guide/documents/index-api.md` | **wrong** | shows an echoed body as the default result, an integer auto id, and an index-templates feature; none match the code
-  - L19-31 "The result of the above index operation is: {...}" -> PUT with an id answers 204 No Content with no body unless ?echo / --echo (echo off by default); a body-less POST answers 201 with Location: src/server/search_views.cc:941-985, src/opts.cc:256-259 (stale; docs/src/content/docs/options.md:15-23 says this, this page never mentions it)
+  - L19-31 "The result of the above index operation is: {...}" -> PUT with an id answers 204 No Content with no body unless ?echo / --echo (echo off by default); a body-less POST answers 201 with Location: src/server/search_views.cc:941-985, src/opts.cc:256-259 (stale; site/src/content/docs/options.md:15-23 says this, this page never mentions it)
   - L28-29 `"#docid": 1, "#shard": 1` -> need ?comments too: src/server/search_views.cc:959-966 (stale)
   - L74 `"_id": 2` for POST without an id -> an id minted by the server is a UUID (v6 codec; v1 with --legacy-ids), not a counter: src/database/schema.cc:2713-2717, 2787, 2804, 2853-2870; src/opts.cc:235 (wrong)
   - L43 "applies any index templates that are configured" -> there is no index-template feature in src/ (the only `template` hits are C++): wrong, Elasticsearch wording (wrong)
@@ -411,7 +411,7 @@ Format: page, verdict, why; then one line per stale or wrong claim (`L<line>` is
 - `reference-guide/schemas/field-types/geospatial-type/htm.md` | **stale** | Level table runs to 30 and the text to 31; the schema accepts levels 0 to 25 only
   - L14-15 "runs out of bits at level 31" and L34 level 30 row -> HTM_MAX_LEVEL is 25 (~0.3 m), an `_accuracy` level above it answers 400: htm repo htm.h:39; src/database/schema.cc:4684-4694 (stale)
   - L17-20 distance formula and L22-34 rows -> arithmetic checks (level 0 = 10,007,557.2 m; level 25 = 0.298 m) (true)
-  - L12 image /Xapiand/assets/htm.png and L37 link /Xapiand/tutorials/spatial-search/#searching -> both exist (docs/public/assets/htm.png; tutorials/spatial-search.md:77) (true)
+  - L12 image /Xapiand/assets/htm.png and L37 link /Xapiand/tutorials/spatial-search/#searching -> both exist (site/public/assets/htm.png; tutorials/spatial-search.md:77) (true)
 - `reference-guide/schemas/field-types/uuid-type.md` | **stale** | Generated ids are UUIDv6 by default; page describes v1-only condensed ids and versions 1/3/4/5
   - L5 "version 1, 3, 4, and 5 UUIDs" -> validity is a format check, not a version check, and the default id codec is v6: src/database/schema.cc:2713-2717, src/serialize.cc:1185, src/opts.cc:236 (stale)
   - L17-21 "a subset of UUID 1 ... condensed" -> v1 condensed `~...` ids still decode; ids the server mints are v6 with an 8-byte compact form unless `--legacy-ids`: docs changelog.md [1.0.0-alpha.5], upgrade.md:44; src/opts.cc:235-238 (stale)
@@ -556,7 +556,7 @@ Format: page, verdict, why; then one line per stale or wrong claim (`L<line>` is
 ### Tests (E2E fixture pages)
 
 - `tests.md` | **missing content** | index lists 15 of 21 fixture pages; carries a stray request that belongs in a tests/schema page
-  - L5-19 list "Check Datatypes ... Objects" -> sidebar (docs/src/lib/sidebar.mjs:533-546) also has Fuzzy, Partial, Wildcard, Restore; tests/schema/stem-language.md and basque-language.md are in neither (stale: list not kept up)
+  - L5-19 list "Check Datatypes ... Objects" -> sidebar (site/src/lib/sidebar.mjs:533-546) also has Fuzzy, Partial, Wildcard, Restore; tests/schema/stem-language.md and basque-language.md are in neither (stale: list not kept up)
   - L21-43 "### Reserved Subfield" with a ```rest PUT /test/reserved_subfield/doc inside the e2e comment -> request is real (runs, expects 400; a `_reserved` key in a field spec throws ClientError "Field ... is not valid", src/database/schema.cc:3040) but sits on the overview page, with an H3 and no body text, so the rendered page shows a bare heading; move it to tests/schema/ (stale shape)
   - L16 "[**_Replace Value by Null_**]" -> the page's own title is "Set Value With Null" (tests/nulltype/replace-null.md:2) (stale, cosmetic)
   - all 15 links hard-code the /Xapiand/ base (astro.config.mjs:49 base '/Xapiand'); fine today, breaks if the base changes -> use relative links (stale-prone)
@@ -588,12 +588,12 @@ Format: page, verdict, why; then one line per stale or wrong claim (`L<line>` is
   - '/' separators are accepted by the fallback date_re in the datetime library (/Users/kronuz/code/Kronuz/datetime/datetime.cc:37, 89); epoch float -> ISO is not checked in the library; see UNVERIFIED
   - L63-95 the second GET request sits INSIDE the e2e comment (rest_inside_comment) so the rendered page shows heading "Get date type format yyyy-mm-dd" with no request (cosmetic; harness still runs it)
 - `tests/namespace/namespace.md` | **stale** | six strict-index examples carry number_of_replicas (no effect on one node, yet required by strict mode); two assertion blocks leak onto the rendered page
-  - L371-376, L479-484, L593-598, L627-632, L746-751, L1184-1189 "number_of_replicas": 1 -> accepted and stored, no effect (the cluster is gone; docs/src/content/docs/reference-guide/indexes/create-api.md:55 says so), but src/index_resolver_lru.cc:~573-585 throws MissingTypeError "Value of 'number_of_replicas' is missing" for a strict new index that omits it, so the examples cannot simply drop it. Decision for the owner: keep the example as is and document the requirement, or stop requiring it in strict mode (code change) (stale)
+  - L371-376, L479-484, L593-598, L627-632, L746-751, L1184-1189 "number_of_replicas": 1 -> accepted and stored, no effect (the cluster is gone; site/src/content/docs/reference-guide/indexes/create-api.md:55 says so), but src/index_resolver_lru.cc:~573-585 throws MissingTypeError "Value of 'number_of_replicas' is missing" for a strict new index that omits it, so the examples cannot simply drop it. Decision for the owner: keep the example as is and document the requirement, or stop requiring it in strict mode (code change) (stale)
   - L371-376 etc. "number_of_shards": 5 -> equals the default (src/opts.cc:43 NUM_SHARDS 5); max 9999 and not changeable after creation: src/index_resolver_lru.cc:~560-575 (true)
   - L399-415 "Get Strict Namespace" and L497-517 "Get Strict Namespace Array": the ```js assertion blocks are outside <!-- e2e --> (js_outside_comment at L403, L409), so the rendered page prints raw pm.test code (cosmetic, harness runs them)
   - L675 heading "Info Strict Namespace Array" is reused for the namespace_text INFO; L982-1003 INFO assertion carries a dead helper `tobytes` (cosmetic)
   - L476 one request ("Index Strict Namespace Array" PUT) has no assertion block (gets the default 2xx)
-  - nested index paths `/test/namespace/...`, `/test/namespace/types/integer/` under existing `test/namespace`: allowed now (src/index_pattern.cc:371ff; docs/src/content/docs/reference-guide/api.md:356). `ade61e145` had renamed such examples; 708b6bfe3 restored them. This page is the live nesting coverage (positive)
+  - nested index paths `/test/namespace/...`, `/test/namespace/types/integer/` under existing `test/namespace`: allowed now (src/index_pattern.cc:371ff; site/src/content/docs/reference-guide/api.md:356). `ade61e145` had renamed such examples; 708b6bfe3 restored them. This page is the live nesting coverage (positive)
   - `_accuracy_prefix` ['<64>.','<3e8>.',...] and geo ['<3>.',...]: prefix format "<hex>." from src/database/utils.cc:112-122 get_prefix(unsigned long long), used by get_acc_prefix schema.cc:1604 (true)
   - L586-612 "Namespace different nested types" expects 400 for mixed keyword/numeric under one `_namespace`: no reason pinned; the 400 would also arise from any other error in the body (weak: assert the message)
 - `tests/datastructures/arrays.md` | **current** | array schema types, INFO value slots and AND searches over arrays of text/arrays/objects hold
@@ -604,7 +604,7 @@ Format: page, verdict, why; then one line per stale or wrong claim (`L<line>` is
   - L716-748 "stop word ... is not indexed": `personality: the` ANDed with `behavior` expects total 0 (the query does not drop stop words when `_language` is set) - see UNVERIFIED
   - no use of `_terms`, `_elite_set`, `?nearest`, `_cjk_words`, INFO term lists
 - `tests/restore/restore.md` | **current** | RESTORE of an ndjson file answers 2xx with unique ids per item
-  - L5-35 body `@fruits.ndjson` (docs/public/assets/fruits.ndjson: 5 lines, no trailing newline; 188 bytes, far under the 16 MiB cap, src/server/search_views.cc:3182) -> items carry `_id`: src/database/handler.cc:2255-2274 (true). Assertion only checks ids are unique, not that items.length == 5 or that `indexed`/`total` are 5 (response fields prepared/processed/indexed/total/items: search_views.cc:1707-1712). A restore that dropped the first line (an open bug recorded in docs/status/numeric-range.md "CR5") would pass. Weak test, see MISSING
+  - L5-35 body `@fruits.ndjson` (site/public/assets/fruits.ndjson: 5 lines, no trailing newline; 188 bytes, far under the 16 MiB cap, src/server/search_views.cc:3182) -> items carry `_id`: src/database/handler.cc:2255-2274 (true). Assertion only checks ids are unique, not that items.length == 5 or that `indexed`/`total` are 5 (response fields prepared/processed/indexed/total/items: search_views.cc:1707-1712). A restore that dropped the first line (an open bug recorded in docs/status/numeric-range.md "CR5") would pass. Weak test, see MISSING
   - L7 `RESTORE /test/restore/` is index `test/restore` under index `test`: allowed (nesting)
 - `tests/schema/stem-language.md` | **current** | Italian elision "all'art" indexes and is found by phrase query
   - orphan: not in sidebar.mjs, not in tests.md; harness runs it (after the ranked pages, `basque-language` before `stem-language`). Add both to the sidebar or fold them into one "Languages" page
@@ -653,7 +653,7 @@ One section per area docs-site-refresh must cover. "Pages" are the existing page
 
 - Pages: `tutorials/home.md` (a stub that says "there aren't many tutorials yet"), `tutorials/spatial-search.md` (current; an orphan: not in the sidebar), `exploration.md`.
 - In code, on no page: there is no tutorial for aggregations beyond one example, for backup and restore, for scripting, for wide search over many indexes, for schemas and strict mode, or for TLS.
-- Write from: the E2E fixtures in `tests/` and `docs/public/assets/{accounts,cities,fruits}.ndjson`; each tutorial request must run in the docs E2E.
+- Write from: the E2E fixtures in `tests/` and `site/public/assets/{accounts,cities,fruits}.ndjson`; each tutorial request must run in the docs E2E.
 
 ### 6. Configuration and options
 
@@ -687,9 +687,9 @@ One section per area docs-site-refresh must cover. "Pages" are the existing page
 
 ### Site infrastructure (not a page)
 
-- `docs/src/lib/sidebar.mjs` says "GENERATED by scripts/gen-sidebar.mjs from ../docs/_data/docs.yaml. Do not edit by hand"; neither exists. It is hand-edited now. Pages in no sidebar: `about.md`, `help.md`, `options.md`, `reference-guide/wal.md`, `reference-guide/schemas/field-types/geospatial-type/htm.md`, `tutorials/spatial-search.md`, `tests/schema/basque-language.md`, `tests/schema/stem-language.md` (`index.mdx` is the splash).
-- `docs/astro.config.mjs` `editLink.baseUrl` ends `/edit/master/docs-astro/`; the directory is `docs/`. Every "Edit this page" link is a 404.
-- `docs/README.md` describes a prototype ("196 pages", "Jekyll", `npm run convert`, `scripts/convert-docs.mjs`); `docs/scripts/` does not exist.
+- `site/src/lib/sidebar.mjs` says "GENERATED by scripts/gen-sidebar.mjs from ../docs/_data/docs.yaml. Do not edit by hand"; neither exists. It is hand-edited now. Pages in no sidebar: `about.md`, `help.md`, `options.md`, `reference-guide/wal.md`, `reference-guide/schemas/field-types/geospatial-type/htm.md`, `tutorials/spatial-search.md`, `tests/schema/basque-language.md`, `tests/schema/stem-language.md` (`index.mdx` is the splash).
+- `site/astro.config.mjs` `editLink.baseUrl` ends `/edit/master/docs-astro/`; the directory is `docs/`. Every "Edit this page" link is a 404.
+- `site/README.md` describes a prototype ("196 pages", "Jekyll", `npm run convert`, `scripts/convert-docs.mjs`); `docs/scripts/` does not exist.
 - Broken internal links: `exploration#sample-dataset` from 16 aggregation pages (the heading is "Loading the Sample Dataset", slug `loading-the-sample-dataset`); `schemas/dynamic-typing.md` `#text-detection`, `#uuid-detection` (no such headings); `schemas.md` links namespaces to `indexing-mode`; `field-types.md` `#time`, `#time-delta`; `stop-words.md` `love-and-hate-modifiers`; `exploration.md` `reference-guide/query-dsl`. Relative links (`delete-api`, `../versioning`, `..#structuring`) depend on the trailing-slash policy and were not resolved; the refresh's link check settles them (docs-site-refresh A4).
 - E2E: `docs_to_postman.py` runs every fence of the whole tree (396 requests; 172 in `tests/`), nothing checks the count, so a broken fence shrinks coverage silently; `harness/e2e_check.sh` is dead (needs a 61 MB baseline that does not exist, describes a Xapian-era run); `docs/dev/testing.md:34,117-124`, `harness/README.md:1-16` and `harness/e2e_assert.py` still cite `docs/_docs`, `docs/tests` and `{% comment %}`. Two orphan fixtures run but cannot be reached. Merge candidates: `tests/schema/{stem,basque}-language.md`; `tests/querydsl/{fuzzy,partial,wildcard}.md`; `reference-guide/schemas/dynamic-field-names.md` into `namespaces.md`.
 - Most examples show echoed bodies, `#docid` and `#shard`: the docs E2E turns `echo` on for every request (`docs_to_postman.py` adds `commit`, `volatile`, `echo`), so the rendered examples differ from a plain request. The refresh should show what a reader's request returns, or say that the examples are echoed.
@@ -744,14 +744,14 @@ Pages an open quest changes. The refresh does not edit these paragraphs until th
 
 | Quest | State | Pages and what it changes | Race to avoid |
 |---|---|---|---|
-| `docs-upgrade-page` | active | new `upgrading.md` (file set `docs/src/content/docs/upgrading.md`, `docs/src/content/docs/**`, `docs/public/assets/**`); `reference-guide/indexes/backups.md` (restore procedure, links to it) | `upgrade.md` already holds the 0.40.0 and alpha.9 story and is the page `src/xapian_data_guard.h:104` links, anchor `#upgrading-from-100-alpha9`. Two upgrade pages is the risk: decide `upgrade.md` is replaced or redirected, and keep the anchor or change the constant |
+| `docs-upgrade-page` | active | new `upgrading.md` (file set `site/src/content/docs/upgrading.md`, `site/src/content/docs/**`, `site/public/assets/**`); `reference-guide/indexes/backups.md` (restore procedure, links to it) | `upgrade.md` already holds the 0.40.0 and alpha.9 story and is the page `src/xapian_data_guard.h:104` links, anchor `#upgrading-from-100-alpha9`. Two upgrade pages is the risk: decide `upgrade.md` is replaced or redirected, and keep the anchor or change the constant |
 | `sortable-encoding` | planned, critical | `changelog.md` (A11); text on how numbers and dates are stored: `reference-guide/schemas/field-types/{numeric,date,geospatial}-type.md`, `architecture/internals.md` ("Value encoding" row and the monotonic-encoding paragraph), `copyright.md` (the GPL note), `about.md` (the MIT claim), `tests/schema/range-search.md` and `tests/datastructures/arrays.md` (pinned value-slot bytes; xxh32 slot numbers do not change) | the refresh is after it by D45; until then leave the encoding paragraphs |
 | `more-like-this` | planned, high | `changelog.md` (A8); `reference-guide/documents/info-api.md` (INFO terms return, A2); `reference-guide/search/search-api.md` (`?nearest`, `?fuzzy`, A4); `reference-guide/search/query-dsl.md` (`more_like_this`, A3); E2E examples | do not document these as absent or present; the audit found no page that says either |
 | `barrier-warning` | planned, high | `changelog.md` (A4); `options.md` (A2: the switch, documented with the other options) | the refresh rewrites `options.md`: add the switch row last, or leave the file to the quest |
 | `release` | planned, critical | the name everywhere: `index.mdx`, `about.md`, `welcome.md`, `help.md`, `installation.md`, `quickstart.md`, `building.md`, `copyright.md`, `architecture.md`, every `/Xapiand/` internal link (the base path is `astro.config.mjs:49`), the Homebrew formula and image name, `changelog.md` (A5: cut `[Unreleased]`) | write the refreshed pages with the name and the base path as one substitution |
 | `closing-benchmark` | blocked | `benchmarks.md` (file set lists it) | the page is Xapian-era; the refresh must not rewrite it with other figures |
 | `cjk-words` | blocked (after the release) | `reference-guide/schemas/field-types/text-type.md`, the CJK note; `tests/schema/define-prefix.md` | `_cjk_words` stays undocumented until it returns |
-| `license-closure` | planned | `reference-guide/documents/store-api.md` (A1: the Lenna images become a generated sample, `docs/public/assets/Lenna.*` removed), `tutorials/spatial-search.md` (A5: the map screenshot `el_cerrito.png`), `copyright.md` | the store-api examples change with it; the E2E examples that use Lenna move |
+| `license-closure` | planned | `reference-guide/documents/store-api.md` (A1: the Lenna images become a generated sample, `site/public/assets/Lenna.*` removed), `tutorials/spatial-search.md` (A5: the map screenshot `el_cerrito.png`), `copyright.md` | the store-api examples change with it; the E2E examples that use Lenna move |
 | `gate-prep-followups` | planned | `reference-guide/api.md` (A1: `HEAD /:stats`, `/:schema`, unknown commands at the root; adds a docs E2E example), `reference-guide/wal.md` (A5: `:wal` streams, answers a shard path) | the root-command paragraph of `api.md` |
 | `phrase-expansion` (and the Xapiand quest it opens) | planned | `query-dsl/leaf-queries/text-queries/{phrase,near}.md` (wildcards, fuzzy and partial words inside phrases) | write them as "words only" now and leave the extension to that quest |
 | `xapiand-final-release`, `phase7b` | planned, blocked | file set `docs/**`; no page text; 7b brings the cluster back, which the "single node" sentences (`basics.md`, `upgrade.md`, `contributing.md`) anticipate | none for the refresh |

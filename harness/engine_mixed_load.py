@@ -58,7 +58,7 @@ data = os.path.join(a.out, 'data')
 subprocess.run(['rm', '-rf', data]); os.makedirs(data)
 for f in os.listdir(a.out):
     if f.startswith('san.'): os.unlink(os.path.join(a.out, f))
-rows = [json.loads(l) for l in open(os.path.join(HERE, '..', 'docs/public/assets/accounts.ndjson')) if l.strip()]
+rows = [json.loads(l) for l in open(os.path.join(HERE, '..', 'site/public/assets/accounts.ndjson')) if l.strip()]
 
 env = dict(os.environ)
 san = os.path.join(a.out, 'san')

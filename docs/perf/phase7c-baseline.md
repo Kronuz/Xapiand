@@ -13,7 +13,7 @@ The numbers are what the commit below did on this host; they are not a timing cl
 - Host: Intel Core i9-9980HK (8 cores, 16 threads), 32 GiB, macOS 15.8.1 x86_64, kqueue. Taken under `QUIET_PAUSE=1 quiet strict`, which on a
   Mac holds the host and pauses the other agents' light holds; Detent's VMs were not stopped. The harness preflight is the dry run in the ledger.
 - Builds: `RelWithDebInfo` with `-fno-omit-frame-pointer` (`-O2 -g`). Binary A is the plain build; binary B adds `-DHTTP_TRACE_HOP`.
-- Load, as the design fixes it: `accounts` = 1,000,000 documents (the 1,000 accounts of `docs/public/assets/accounts.ndjson` with explicit
+- Load, as the design fixes it: `accounts` = 1,000,000 documents (the 1,000 accounts of `site/public/assets/accounts.ndjson` with explicit
   `_id`s), 10 reactors (the default on this host), heavy = 4 x reactors = 40 closed-loop clients (39 searches and aggregations, 1 RESTORE
   stream of 20,000-document requests), light = open loop at a fixed rate, 10% write-then-GET pairs, 45% GET by id, 45% single-term
   searches (`contact.state`, `_limit` 10). Phases are 30 s. Latency runs from each request's scheduled send time.

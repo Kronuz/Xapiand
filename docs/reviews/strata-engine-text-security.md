@@ -530,7 +530,7 @@ fan-out multiplies.
 
 ### Other items
 
-- Changelog (`docs/src/content/docs/changelog.md:14-16,24-27`) states YAML bodies are limited to 200
+- Changelog (`site/src/content/docs/changelog.md:14-16,24-27`) states YAML bodies are limited to 200
   levels and that a "YAML flow sequence 1,000 levels deep" answers 400. True for flow nesting, false for
   aliases (SR3b, SR3c). Narrow it or fix the aliases before landing.
 - The 2.3x chain-cap margin is measured under ASan -O1 only; release has more stack, so its margin is larger but unmeasured.

@@ -167,7 +167,7 @@ from `reactor::tls::server_context`, and the global `tls_context` goes; the desc
 before `demote`. `http_shutdown_grace(left)` and its reserve go (`manager.cc:145-168,1078-1079`):
 the grace is `Limits`' fixed 5 s (D77). Files: `src/opts.*`, `src/tls.*`, core files,
 `CMakeLists.txt`, `tests/test_node.cc`, `harness/{tls,limits}_check.sh`,
-`harness/coverage_e2e_main*`, `tests/test_coverage_main*`, `docs/src/content/docs/options.md`,
+`harness/coverage_e2e_main*`, `tests/test_coverage_main*`, `site/src/content/docs/options.md`,
 changelog, `docs/mechanisms/server-limits.md`. Needs 2, 3, 7.
 
 User-visible: `--max-clients` bounds plain and TLS connections, idle ones counted, default 1024
@@ -195,7 +195,7 @@ and restore run the Registry under `lifecycle`, the tool's end their stop source
 `src/database/pool.*`, `tests/test_{node,loop_yield,control_plane,blocking_guard}.cc`,
 `tests/test_lifecycle*`, `harness/{graceful_shutdown,signal}_check.sh`,
 `harness/coverage_e2e_main*`, `docs/mechanisms/control-plane.md`,
-`docs/src/content/docs/reference-guide/api.md`, changelog. Needs 8 and 1; after light-share and
+`site/src/content/docs/reference-guide/api.md`, changelog. Needs 8 and 1; after light-share and
 restore-exit-status.
 
 User-visible: the first signal closes the listeners and refuses new keep-alive requests while
@@ -236,7 +236,7 @@ on the data directory (tools per Q5); node identity (`manager.cc:337-456,762-824
 counters; `manager.*` go. Files: core files, `src/node_identity.*`, `src/server/server_metrics.*`,
 `src/server/{components.h,search_views.cc}`, `harness/{daemon_check.sh,coverage_e2e_main*}`,
 `tests/test_{coverage_main*,node.cc}`, `docs/mechanisms/process-step.md`,
-`docs/src/content/docs/options.md`, changelog. Needs 10 and 4.
+`site/src/content/docs/options.md`, changelog. Needs 10 and 4.
 
 User-visible (C7): `--detach` returns once the node is ready, or with its startup error and status;
 a second instance exits per Q4; tools on a live node's directory act per Q5.

@@ -7,7 +7,7 @@ Question: where does the time of a 20,000-document bank RESTORE go, by layer, an
 ## Method
 
 - Binary: `RelWithDebInfo -O2 -g`, `-fno-omit-frame-pointer`, LTO off (so layers stay visible). x86_64 macOS (i9-9980HK, 8 physical cores), single `--solo` node.
-- Load: `docs/public/assets/accounts.ndjson` x 20 = 20,000 docs, one `RESTORE /bench/?commit` (the developer's seam-write corpus and client).
+- Load: `site/public/assets/accounts.ndjson` x 20 = 20,000 docs, one `RESTORE /bench/?commit` (the developer's seam-write corpus and client).
 - Harness: `harness/profile_bulk.sh BIN OUTDIR` (build-agnostic, rerunnable): a timed smoke run (docs/s, server user/sys from `wait4`), then a fresh node sampled end to end with `sample(1)`; samples are classified by the deepest frame that matches a layer rule (leaf to root) and by thread group; JSON and markdown are written beside the raw sample. Rules live in `LAYERS` in the script. `--schema JSON` PUTs a schema first, `--reanalyze` redoes the analysis from a kept sample.
 - Held with `quiet strict`. One smoke and one profile per variant (no repeats). Spread of the baseline docs/s over three separate runs: 4,240 / 4,510 (harness) / 4,635 (lead's number), about 5%. Percentages are shares of busy samples, not exact CPU.
 - Raw samples, JSON and logs: `~/code/Kronuz/Xapiand/.scratch/bulk-profile/` (`base.*`, `nodelwal.*`, `noindex.*`; `s1.txt` is an 8 s steady-state sample of a 100k-doc run).

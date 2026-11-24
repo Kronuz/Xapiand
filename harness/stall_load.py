@@ -71,7 +71,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATASET = os.path.join(REPO, "docs", "public", "assets", "accounts.ndjson")
+DATASET = os.path.join(REPO, "site", "public", "assets", "accounts.ndjson")
 CHUNK_DOCS = 20_000
 JSON_CT = "application/json"
 NDJSON_CT = "application/x-ndjson"

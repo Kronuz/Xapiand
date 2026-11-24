@@ -98,7 +98,7 @@ export default defineConfig({
       ],
       // "Edit this page" -> GitHub, like the Jekyll "Improve this page" link.
       editLink: {
-        baseUrl: `${REPO_URL}/edit/master/docs/`,
+        baseUrl: `${REPO_URL}/edit/master/site/`,
       },
       expressiveCode: { themes: [kronuzDark, kronuzLight], shiki: { langs: restLangs }, plugins: [pluginRestCurl()] },
       social: [

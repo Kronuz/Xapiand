@@ -59,7 +59,7 @@ import time
 from typing import Any
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATASET = os.path.join(REPO, "docs", "public", "assets", "accounts.ndjson")
+DATASET = os.path.join(REPO, "site", "public", "assets", "accounts.ndjson")
 GROUPS = ("hop", "scheduler", "engine", "http", "other")
 
 IDLE = re.compile(

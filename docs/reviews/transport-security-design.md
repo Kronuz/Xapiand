@@ -258,7 +258,7 @@ Evidence:
   `<data>/.tls/` and without a token cannot tell "first node" from "new node", so each
   creates its own authority and discovery key.
 - The documented StatefulSet starts three replicas with identical arguments and no token
-  (`docs/src/content/docs/reference-guide/kubernetes.md:52,65-68`); the container
+  (`site/src/content/docs/reference-guide/kubernetes.md:52,65-68`); the container
   entrypoint adds only user, group, name, cluster, and data directory
   (`contrib/docker/xapiand/entrypoint.sh:89-95`).
 - An existing plain cluster upgraded to step 2 has data and no `.tls/` on every node.

@@ -39,9 +39,9 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # The migrated docs site: the Astro content is the source of truth. Its pages carry
 # the E2E requests (```rest / ```http / ```json) and assertions (in <!-- e2e:begin -->
 # comments), and its sidebar encodes the reading order.
-CONTENT_DIR = os.path.join(BASE_DIR, 'docs', 'src', 'content', 'docs')
-SIDEBAR_PATH = os.path.join(BASE_DIR, 'docs', 'src', 'lib', 'sidebar.mjs')
-ASSETS_DIR = os.path.join(BASE_DIR, 'docs', 'public', 'assets')
+CONTENT_DIR = os.path.join(BASE_DIR, 'site', 'src', 'content', 'docs')
+SIDEBAR_PATH = os.path.join(BASE_DIR, 'site', 'src', 'lib', 'sidebar.mjs')
+ASSETS_DIR = os.path.join(BASE_DIR, 'site', 'public', 'assets')
 
 
 def content_order():
