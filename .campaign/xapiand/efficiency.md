@@ -1163,3 +1163,12 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Host: load 12; light slots 54%, runnable beside idle 50 min. Quota: weekly 39%, burn 1.43%/h.
 
 - 01:00 landing: strata-journal-pin at strata:7214f27d (durability accepted with F1=a76b46, F2=e3aa7b; build-test edd28e, CI 45351185385). Total: contributor ~204k, reviewer 160k; one fix round. Started file-set-seal-streaming (Opus, critical path) and resumed index-restructure (fresh Opus, merge main + A3). format-freeze held: it holds strata test/** and reviews the release's formats, so it waits for cluster.
+
+## 2026-11-24 09h
+
+- Landed: strata-journal-pin at strata:7214f27d (00:55).
+- file-set-seal-streaming (Opus contributor, 117k, 17 min): seal streams through crc32c_of (64 KiB reads, was up to 32 GiB); test + fix strata:213561d9/7a4284c4; bounded-read test a98c76 passed; build-test, fails-without and CI running. Correctness reviewer (Opus) launched in parallel with them (critical path).
+- index-restructure (fresh Opus resume, 139k): merged main (index.hh rebuilt with cpp-libraries outline.py, the strict bound kept), members c5b586 green (202 definitions moved, 0 warnings); basic_index 5,413 to 2,100 lines. File set widened with test/index/** and CMakeLists.txt for A3 (lead; one bad `set` overwrote the globs for a commit, restored). Step 1 lands early on A1/A2 per the quest file.
+- consensus-join-v2: CI at 45bca9f5 failed on 8 of 8 platforms (transport-groups fixtures: "local certificate is not the local node's key"); fresh Opus contributor resumed; cause found in test/transport/groups_test.cc:90. cluster parked until journal-replaces-wal and consensus-join-v2 (campaign-v3 flagged it as stalled 52 h).
+- journal-replaces-wal probes: batch-pins passes 3/3 but takes 33-37 s, ~850 full flushes at 35-43 ms each (F_FULLFSYNC median); held for the contributor with the drain abort.
+- Host: load 38-49 (legacy-h fnsizes LTO at 4.6 cores); light slots 70%, runnable beside idle 29 min. Quota: weekly 40%, burn 1.41%/h.
