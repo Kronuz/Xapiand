@@ -1212,3 +1212,11 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - journal-replaces-wal: master probe 23.1 s for the whole RESTORE case vs 95-108 s per on-loop RESTORE at the head; fresh Opus contributor (304k) confirmed 4,006 turn-log full flushes (2 per update, ~26 ms) = 104 s of 112 s; group-commit fix at Xapiand:c2766c5bf (pending same-id-free updates go out as batch commands, slices fill an entry; ack after commit unchanged), not yet built; tests, 3 mutants, strict before/after vs master queued. Hunt rows: 2 flushes per lone-voter proposal (library), ack=none same-id update read (pre-existing).
 - netlab-consensus's priority -1 exclusive VM job drained the host ~20 min ahead of critical-path work (reported, msg to campaign-v3); light slots 31% used.
 - Quota: weekly 47%, burn 1.41%/h, exhaustion ~38 h (before the 11-30 reset). Load 4-6; disk 273 GiB free.
+
+## 2026-11-24 15h
+
+- Landed: netlab-consensus (consensus:1127f69; 5-node VM rows green) and consensus-join-v2 (consensus:5e22cf0; boot race ruled a test race, forced deterministically, 10x and 30x ASan green; security re-accepted test-only with S1 confirmed by 95ac9d).
+- journal-replaces-wal: group-commit fix c2766c5bf did not compile (incomplete DocIndexer::Admitted); 6 jobs cancelled. Fresh Opus contributor (145k) fixed the build (aec45ef9b), moved entry encoding back off the loop; targeted cases, 3 mutants, strict timings queued. Master baseline (58ffbf, beside light holds): updates on the loop median 36.4 s (25.6-63.1), plain 2.3 s; one master round exceeds the test's 60 s.
+- campaign-v3 (msg-314): 72 h, 3,162 jobs, 21% cancelled before start, 19x queue-wait to run time; xapiand's mutant re-proving at each head is part of it. Contributors now iterate under quiet light, queue evidence once per round, never rerun a passed mutant (memory evidence-once).
+- No explorer batch: host load 14-34, 27 jobs queued, quota ahead of the week.
+- Quota: weekly 48%, burn 1.40%/h, exhaustion ~37 h (before the 11-30 reset). Disk 272 GiB free.
