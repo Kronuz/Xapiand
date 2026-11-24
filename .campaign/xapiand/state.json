@@ -15484,17 +15484,51 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-23T18:23:24",
+          "ci": {
+            "carried": true,
+            "commit": "82389d31ba04f9063666af03f1cb932ebabf356f",
+            "runs": [
+              45295421418
+            ]
+          },
+          "commit": "83aed22a71c0837bd502e9dd7dac9907a97ffde2",
+          "criteria": {
+            "A1": "261123-164230-775c11 (passed at e2fb22487b65; only 1 merge from main since, none touching its files)",
+            "A2": "CI green at 82389d31ba04 (carried to 83aed22a71c0 across clean merges)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON && cmake --build build --target xapiand_test_single_flight && ctest --test-dir build -R \"^test_single_flight$\" --output-on-failure",
+              "commit": "82389d31ba04f9063666af03f1cb932ebabf356f",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-164232-54d3be",
+              "level": "light",
+              "seconds": 628.3,
+              "state": "done",
+              "what": "hunt-single-flight-race check build-test at 82389d31ba04"
+            }
+          ],
+          "final": true,
+          "from": "3dbe5098b8fb3acd8c848b8aaa6d5d901bc54d0f",
+          "reason": "",
+          "tested": "83aed22a71c0837bd502e9dd7dac9907a97ffde2"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "test_single_flight waits for the leaving joiner's task, not a snapshot",
-      "updated": "2026-11-23T16:42:24",
-      "worktree": "../Xapiand-wt/xapiand/hunt-single-flight-race"
+      "updated": "2026-11-23T18:23:53",
+      "worktree": ""
     },
     "hunt-soundex-one-definition": {
       "accepted": {},
