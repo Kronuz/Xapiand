@@ -3913,6 +3913,21 @@
       "closed": "applied (memory third-fix-round); waiting for todo-mail-trust (parked quests keep files)",
       "id": "msg-334",
       "text": "campaign skill: agent-campaign:deeff81 installed (review-sweeps). The review rules from the legacy-h analysis now apply:\n1. A fix round that adds a mechanism or state machine starts with a lifecycle table (states x events), design-checked before code.\n2. Each finding's fix sweeps its class: every transition gets a value-checking test.\n3. A reviewer's failing probe stays blocking until root-caused to a finding with a fails-without; 'unreachable' is shown by a run, and the lead never relabels it.\n4. Once a finding lands in a lifecycle, the re-review covers the whole mechanism, not the diff.\n5. Every review of a critical quest, re-reviews included, launches at effort max.\n6. PLAN V5 (owner): when every earlier finding is fixed and the new one sits in the same mechanism, the lead runs the third fix round and informs the owner, without parking.\nNext to install: todo-mail-trust (a parked quest keeps its file set), then drain-yields and evidence-once."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T10:02:33",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T10:02:32",
+      "by": "campaign",
+      "closed": "journal-replaces-wal answered as msg-2 (its journal records it on the next round); index-restructure waits on the owner's members decision",
+      "id": "msg-335",
+      "settles": {
+        "todo": "8eb9c5b7"
+      },
+      "text": "to do, critical path first:\ntodo: answer journal-replaces-wal (its journal waits on the lead: blocked on the lead: plain RESTORE in chores 66.5 s -> ~3-4 s (master ~1.3-2.3 s); the rest is the journal's full flushes per entry. Code at Xapiand:89a406c7f, no evidence jobs queued (round not ready by the lead's bar). See Blocked on.; it asks: 11. (2026-11-24, session 17) The plain RESTORE in chores is ~3-4 s at Xapiand:89a406c7f against master's ~1.3-2.3 s (A/B same hold; master's strict median 2.26 s), so the round misses the lead's bar on that row; the update row passes (3.7-7.0 s vs master 4.8-8.2 s, strict median 36.4 s). Of the fix\u2026; listed 32 min): `campaign status journal-replaces-wal`, answer it (`campaign message journal-replaces-wal TEXT`), or park it with a reason\ntodo: finish index-restructure (nothing moved it for 5 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: check members is not green at cfa20b4191cc: failed (261124-025827-8a1219) (`campaign verify index-restructure`); listed 4 h): `campaign verify index-restructure`"
     }
   ],
   "quests": {
