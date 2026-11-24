@@ -136,6 +136,7 @@ static const ct_type_t& get_acceptable_type(Request& request, const T& ct);
 // definitions (e.g. prepare(), write_http_response).
 static void url_resolve(Request& request);
 static query_field_t query_field_maker(Request& request, int flags);
+static int write_levels(Request& request, const query_field_t& query_field);
 
 // The DB-bound prep helpers lifted off HttpClient `this` (Leg 2 stage 3a). They
 // touch only their `request` argument plus the manager/DB singletons -- never any
