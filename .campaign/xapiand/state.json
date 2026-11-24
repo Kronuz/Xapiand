@@ -32814,7 +32814,8 @@
         "sim/**",
         "include/strata/core/index.hh",
         "include/strata/core/turn_seal.hh",
-        "test/standalone_turn_log_test.cc"
+        "test/standalone_turn_log_test.cc",
+        "docs/mechanisms/replication-group.md"
       ],
       "history": [
         {
@@ -32888,7 +32889,7 @@
       "risk": "high",
       "status": "active",
       "title": "strata builds against journal main (Host::delete_group)",
-      "updated": "2026-11-23T19:27:39",
+      "updated": "2026-11-23T19:44:47",
       "worktree": "../strata-wt/xapiand/strata-journal-pin"
     },
     "strata-nospace-position": {
