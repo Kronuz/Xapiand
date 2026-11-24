@@ -16464,11 +16464,15 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "landing needs the owner's yes to remove the step-1-only `members` gate check (--weaken): it proves step 1 changed no code (cited at strata:351eebc5) and cannot pass at step 2's head (103 intended body changes); review APPROVE accepted, build-test and A3 green at cfa20b41, CI pending",
       "repo": "../strata",
       "risk": "high",
-      "status": "review",
+      "status": "blocked",
       "title": "strata's index.hh: basic_index's 5,309-line class body split by mechanism",
-      "updated": "2026-11-24T03:14:20",
+      "until": [
+        "owner"
+      ],
+      "updated": "2026-11-24T04:34:44",
       "worktree": "../strata-wt/xapiand/index-restructure"
     },
     "index-subobjects": {
