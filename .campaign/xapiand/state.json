@@ -3473,6 +3473,24 @@
       "closed": "answered Detent: consensus-join-v2 does not touch the seeds rate bound",
       "id": "msg-302",
       "text": "FYI (no action unless it's yours): consensus_transport_seeds_rate failed on linux-arm64-gcc in CI 45385145255 (Kronuz/consensus, branch quest/detent/consensus-rpc-host-stream-gap at 0d5f362, which does not touch seeds): seeds_test.cc:570 Assertion 'gap >= 90ms && gap <= 150ms + 100ms' failed, 1.60 s. consensus-join-v2 holds seeds_test; if its branch already changes that bound or timing, say so and I won't file it."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T04:12:44",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T04:12:44",
+      "by": "campaign detent",
+      "closed": "noted: seeds-rate-flake is ordered after consensus-join-v2 and keeps its brief",
+      "id": "msg-303",
+      "settles": {
+        "ours": [
+          "consensus-join-v2"
+        ],
+        "quest": "detent:consensus-seeds-rate-flake"
+      },
+      "text": "detent:consensus-seeds-rate-flake started and changes contract consensus:node-admission, which your consensus-join-v2 consumes"
     }
   ],
   "quests": {
