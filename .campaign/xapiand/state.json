@@ -24006,9 +24006,66 @@
         }
       ],
       "journal": "../Xapiand-wt/xapiand/placement",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-23T19:23:24",
+          "ci": {
+            "carried": true,
+            "commit": "da1ee3fbaeaab0fe87155c40ff1841e81c2a17de",
+            "runs": [
+              45308203069
+            ]
+          },
+          "commit": "e9f0fafde62ec06b329b8aa288ae91e2385f5407",
+          "criteria": {
+            "A1": "261123-175306-b9f9c4 (passed at da1ee3fbaeaa; only 1 merge from main since, none touching its files), 261123-175405-6faf38 (passed at da1ee3fbaeaa; only 1 merge from main since, none touching its files), 261123-175400-861795 (passed at da1ee3fbaeaa; only 1 merge from main since, none touching its files); fails without: 261120-184058-c79fd0, 261120-184101-2554bf, 261120-184104-36c5cc, 261120-184107-7f41e3, 261120-184109-320ce4, 261120-184112-afa37c, 261120-184114-509256, 261120-184116-a5361a, 261120-184118-da971a, 261120-184120-7d2405, 261120-184122-b8c951, 261120-184124-095ee8, 261120-184126-fc384b, 261120-184129-3f2ea7, 261120-184131-30aa04, 261120-184133-49d82e, 261120-184136-567e2b, 261120-184139-ba294f, 261120-184141-bfeec2, 261120-184144-06d7d2",
+            "A2": "261123-175353-732ea1 (passed at da1ee3fbaeaa; only 1 merge from main since, none touching its files), 261123-175409-9300d4; fails without: 261120-181211-11c0e5",
+            "A3": "261123-175414-9d2b85 (passed at da1ee3fbaeaa; only 1 merge from main since, none touching its files), 261123-175419-1fa92d (passed at da1ee3fbaeaa; only 1 merge from main since, none touching its files), 261123-175423-639a0e (passed at da1ee3fbaeaa; only 1 merge from main since, none touching its files), 261123-175428-ab5481 (passed at da1ee3fbaeaa; only 1 merge from main since, none touching its files), 261123-175432-c4625a (passed at da1ee3fbaeaa; only 1 merge from main since, none touching its files), 261123-175438-56e7b0 (passed at da1ee3fbaeaa; only 1 merge from main since, none touching its files); fails without: 261121-002719-b7c57d, 261121-002720-cd7f2d, 261121-002723-86ef33, 261121-002724-b25808, 261121-002725-07f209, 261121-002726-d6fee4, 261121-002727-19a20a, 261121-002752-d9cb1d, 261121-054427-5c7193, 261123-052125-a1c9ef, 261123-052128-9e5bf9, 261123-052130-052739, 261123-052133-e49432, 261123-052135-697a79",
+            "A4": "261123-175435-d52ff5 (passed at da1ee3fbaeaa; only 1 merge from main since, none touching its files); fails without: 261121-002729-8d49af, 261121-004909-30fad7",
+            "A5": "`docs/mechanisms/placement-root.md`, `docs/mechanisms/placement-repair.md` (on the quest branch at ae70ff95); `docs/mechanisms/placement-repair.md` (repair's half)"
+          },
+          "evidence": [
+            {
+              "check": "build-test",
+              "ci": "ci:macos-arm64",
+              "commit": "da1ee3fbaeaab0fe87155c40ff1841e81c2a17de",
+              "state": "done"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "da1ee3fbaeaab0fe87155c40ff1841e81c2a17de",
+              "state": "done"
+            },
+            {
+              "check": "tsan",
+              "ci": "ci:linux-tsan",
+              "commit": "da1ee3fbaeaab0fe87155c40ff1841e81c2a17de",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "e0a1c78fa516784be669a17e0829eecb154fba24",
+          "reason": "",
+          "tested": "e9f0fafde62ec06b329b8aa288ae91e2385f5407"
+        }
+      ],
       "lenses": [
         "correctness"
+      ],
+      "messages": [
+        {
+          "announced": {
+            "at": "2026-11-20T17:47:40",
+            "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+            "why": ""
+          },
+          "answered": "e9f0fafde62e",
+          "at": "2026-11-20T17:47:40",
+          "by": "scan",
+          "id": "msg-1",
+          "text": "scan -> root: the scan (include/strata/placement/scan.hh) assumes namespace records iterate in PATH ORDER: segment by segment, a path before its descendants and its descendants before its next sibling (twitter < twitter/user < twitter-a). In bytes: encode each '/' of the path as 0x00 (names never hold bytes < 0x20), behind whatever record-kind prefix you use. The scan reaches records only through a Source adapter: seek(path) = first record >= path, skip(path) = first record past path's whole subtree (with 0x00 separators: seek to enc(path)+0x01), next(); each returns the record's path with '/' separators. If you pick raw '/' bytes instead, subtrees interleave with siblings (twitter, twitter-a, twitter/user) and the seek-past bound breaks: please tell me before you commit to it. Also: CMakeLists.txt is outside both our file sets; I add one 3-line test block for placement_scan_test and record it as a ruling."
+        }
       ],
       "milestone": "Phase 7b",
       "needs": [
@@ -24020,7 +24077,7 @@
       ],
       "repo": "../strata",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "tasks": {
         "repair": {
           "base": "debadea4dcd9f9cef03c8463a52d79b78126ec5f",
@@ -24035,10 +24092,10 @@
             "test/placement/root_fuzz*",
             "test/placement/root_corpus/**"
           ],
-          "journal": "../Xapiand-wt/xapiand/placement--repair",
+          "journal": "",
           "reason": "its head d30901a is already merged into quest/xapiand/placement by git; its cases run in the quest's evidence at strata:63472c6 (placement_repair_group via ctest, job 261121-213355-f37e3f); its own jobs ran at the pre-group-heal pin, without -G Ninja",
           "status": "dropped",
-          "worktree": "../strata-wt/xapiand/placement--repair"
+          "worktree": ""
         },
         "root": {
           "base": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
@@ -24072,7 +24129,7 @@
         }
       },
       "title": "The root authority places and repairs groups",
-      "updated": "2026-11-23T19:22:21",
+      "updated": "2026-11-23T19:23:31",
       "worktree": "../strata-wt/xapiand/placement"
     },
     "placement-locality-sim": {
