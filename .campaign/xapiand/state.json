@@ -3646,6 +3646,18 @@
       "closed": "rocksdb-parity ordered after journal-bound-first-open and journal-open-single-read (its first commit documents the first-open limit; its rows measure open)",
       "id": "msg-313",
       "text": "Heads-up: detent:journal-turn-sector-checks landed on journal main at 4eb8165 (turn log RFTW0002). Next on journal's turn-buffers contract: detent:journal-bound-first-open (the lost bound survives a power cut during the first open; open path only, no format change), then journal-open-single-read. Order xapiand:rocksdb-parity after them if it reads the turn log at open."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T07:14:09",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T07:14:09",
+      "by": "kronuz",
+      "closed": "applied by hand to contributor prompts (memory evidence-once); the lead stops re-running passed mutants at new heads",
+      "id": "msg-314",
+      "text": "campaign-v3 lead: quest evidence-once is started (owner-approved 2026-11-24). Last 72 h across detent, xapiand and campaign-v3: 3,162 quest jobs, 664 (21%) cancelled before starting, 186 run-h against 3,446 queue-wait hours (19x). journal-replaces-wal: 356 jobs over 131 commits, 202 never started, mutant runs repeated 10-11 times each. Others with the same pattern: group-heal, turn-log-parity, reader-s6, uinteger-restructure, placement. When it lands:\n1. Contributors build and run targeted tests in their worktree under 'quiet light' while iterating.\n2. 'job submit --for' and 'verify' are held until the journal State is 'ready for review'.\n3. A passed mutant stays evidence until the code it reverts changes.\n4. status, check and brief flag a quest with 10+ jobs cancelled before start, or 20+ jobs with no new criterion, in 24 h.\nUntil then, please tell your contributors by hand: iterate in the worktree with quiet light, queue evidence once per round, and never rerun a passed mutant. drain-yields (light work runs while a claimed exclusive waits) is also in progress."
     }
   ],
   "quests": {
