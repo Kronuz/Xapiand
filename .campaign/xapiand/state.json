@@ -32867,7 +32867,77 @@
       "updated": "2026-11-08T13:25:27"
     },
     "strata-journal-pin": {
-      "accepted": {},
+      "accepted": {
+        "durability": {
+          "at": "2026-11-24T00:32:19",
+          "base": "e9f0fafde62ec06b329b8aa288ae91e2385f5407",
+          "blobs": {
+            "CMakeLists.txt": "100644:0f19b5017773bf396ab80a77528f55266b324632",
+            "docs/mechanisms/replication-group.md": "100644:dc9e7af6f3d777bf30e85e7b5f623f372b5417ea",
+            "include/strata/core/index.hh": "100644:728fc28259ec154e4ab4943e91a63e5ae85c5219",
+            "include/strata/core/turn_seal.hh": "100644:a199797e79956805b8923ae096395fd87c1b1a0b",
+            "include/strata/group/group.hh": "100644:eb4a6a5fc461811f39e37749fe58e8bdf3cfa7c8",
+            "include/strata/group/witness.hh": "100644:f646bdf086a4f15f34424ef1ac7723aee7c13e4d",
+            "test/group/lifetime_test.cc": "100644:842227cf527d8bace320059a7d835c28f8673a2e",
+            "test/group/mutants.py": "100644:a0812973728cca14a515db7385a155df9a594df4",
+            "test/standalone_turn_log_test.cc": "100644:f98e2d77a51ae4d970364ed3331eeada85891c8d"
+          },
+          "by": "review",
+          "commit": "7214f27d2fe92f2e1b71c406607fc2ecc071e688",
+          "criteria": "5e4358edd4633900",
+          "diffs": {
+            "CMakeLists.txt": "21055389ce0b1ea9",
+            "docs/mechanisms/replication-group.md": "822caa832e26f378",
+            "include/strata/core/index.hh": "21c8fe1c6e512d73",
+            "include/strata/core/turn_seal.hh": "1d97326fb71907e8",
+            "include/strata/group/group.hh": "c0ccb0de09f06bd3",
+            "include/strata/group/witness.hh": "c6b2965b4814e14d",
+            "test/group/lifetime_test.cc": "c33b64a1597c476b",
+            "test/group/mutants.py": "d6beb0fb41a08d1c",
+            "test/standalone_turn_log_test.cc": "231095106ba2d9d8"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "sh -c 'cmake -G Ninja -S . -B build-a5 -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE=-O3 >/dev/null && cmake --build build-a5 -j4 --target standalone_turn_log_test && build-a5/standalone_turn_log_test t5 t5b'",
+                  "commit": "7214f27d2fe92f2e1b71c406607fc2ecc071e688",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261123-235930-a76b46",
+                  "level": "light",
+                  "seconds": 23.8,
+                  "state": "done",
+                  "what": "sh -c 'cmake -G Ninja -S . -B build-a5 -DCMAKE_BUILD_TYPE=Re at 7214f27d2fe9"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "F2": {
+              "jobs": [
+                {
+                  "cmd": "sh -c 'cmake -G Ninja -S . -B build-a6 -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE=-O3 >/dev/null && cmake --build build-a6 -j4 --target group_lifetime_test && build-a6/group_lifetime_test bounded && build-a6/group_lifetime_test bounded-witness'",
+                  "commit": "7214f27d2fe92f2e1b71c406607fc2ecc071e688",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261123-235934-e3aa7b",
+                  "level": "light",
+                  "seconds": 21.8,
+                  "state": "done",
+                  "what": "sh -c 'cmake -G Ninja -S . -B build-a6 -DCMAKE_BUILD_TYPE=Re at 7214f27d2fe9"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "99f7ee6e0baad1bdbf0bf313dcb4faa65513ebc0",
+          "reviewed": "1cbb6e309217952db5acfaf4e58aaf6e5fb09e35",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [
         "turn-log-parity"
       ],
@@ -32967,7 +33037,7 @@
       "risk": "high",
       "status": "review",
       "title": "strata builds against journal main (Host::delete_group)",
-      "updated": "2026-11-24T00:25:35",
+      "updated": "2026-11-24T00:32:19",
       "worktree": "../strata-wt/xapiand/strata-journal-pin"
     },
     "strata-nospace-position": {
