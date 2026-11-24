@@ -98,7 +98,7 @@ docs/mechanisms/group-install.md (Repair).
 
 | Criterion | Evidence |
 |---|---|
-| A3 | pending: 261123-063129-a135ff, 261123-063139-f5dbcc (at d457da76; fa0f89 failed at c7f776ac, 053709 at 1d2c820f); fails without: 17 mutants 261123-063143-84cfc5 .. 261123-063248-279216 |
+| A3 | pending: 261123-063129-a135ff, 261123-083549-978002 (at d457da76; fa0f89 failed at c7f776ac, 053709 at 1d2c820f); fails without: 17 mutants 261123-063143-84cfc5 .. 261123-063248-279216 |
 
 ## Result
 
