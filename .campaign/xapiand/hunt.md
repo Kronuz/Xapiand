@@ -527,3 +527,9 @@ quest fixes them (2 of 5 on 11-20).
 - N3 (nit): the ledger accepts violated preconditions silently (rename of an untracked name, double post, tracking a posted name); unreachable today, a debug assert each would state them.
 - N4 (nit): `rename` drops a replaced name's bytes instead of counting them unlinked until the sync; unreachable (sync_dir follows).
 - Reviewer's call-site mutant probe 261124-030309-f48c48 (three wrong ledger calls in the index): a SURVIVES line is a test gap row here.
+
+## journal-replaces-wal library follow-ups (2026-11-24)
+
+- Journal library: a short write (preallocation under a file-size limit) throws "short turn log preallocation" without the file or errno; Xapiand now reports it as a recovery error naming the limit (Xapiand:a7b187c56), but the library's error should name the file and errno itself. Start in strata's turn-log preallocation; normal.
+- Journal library: test_node's batch-pins case does 886 full flushes (F_FULLFSYNC, ~25 ms each) for 22.2 s of a 21.4 s case (probe 261124-021310-23729b); the test's watchdog was raised to 120 s (Xapiand:bb8036409). Cutting the flushes per batch is the library's work: measure flushes per committed batch on main first; performance, normal.
+- Master's stop order (also fixed on journal-replaces-wal by Xapiand:2305b1335): a control task that cannot end used the HTTP stop's whole budget and skipped the control-loop check. Lands with journal-replaces-wal; no separate fix unless that quest stalls.
