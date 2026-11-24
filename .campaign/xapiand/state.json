@@ -3833,6 +3833,21 @@
         "todo": "81fc9f67"
       },
       "text": "to do, critical path first:\ntodo: resume journal-replaces-wal (its journal waits on jobs 261124-063522-3016ad, 261124-063552-ee5bf1, 261124-063553-3e8972, 261124-063555-832e66, 261124-063626-58ffbf, 261124-063628-1d2c27 and 261124-063629-1cf15b, which ended (done, failed, skipped) 45 min ago; listed 43 min): `campaign status journal-replaces-wal`, read them, or park it with a reason\ntodo: finish index-restructure (nothing moved it for 4 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); listed 3 h): `campaign status index-restructure`"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T09:09:00",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T09:09:00",
+      "by": "campaign",
+      "closed": "journal-replaces-wal: contributor still working (its journal lists the old jobs until it reports); index-restructure waits on the owner",
+      "id": "msg-328",
+      "settles": {
+        "todo": "679b691a"
+      },
+      "text": "to do, critical path first:\ntodo: resume journal-replaces-wal (its journal waits on jobs 261124-063522-3016ad, 261124-063552-ee5bf1, 261124-063553-3e8972, 261124-063555-832e66, 261124-063626-58ffbf, 261124-063628-1d2c27 and 261124-063629-1cf15b, which ended (done, failed, skipped) 77 min ago; listed 74 min): `campaign status journal-replaces-wal`, read them, or park it with a reason\ntodo: finish index-restructure (nothing moved it for 5 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); listed 3 h): `campaign status index-restructure`"
     }
   ],
   "quests": {
