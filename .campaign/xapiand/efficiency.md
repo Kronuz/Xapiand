@@ -1148,3 +1148,9 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - No landings. netlab-consensus: both VM sets green at the merged head 177548c0; ready except CI, whose linux-asan consensus_simulation timed out twice (main runs 174-279 s vs 300 s; detent:consensus-simulation-asan-timeout owns it); third rerun in progress, hunt row filed. strata-journal-pin: A5 + 2 mutants, A6 green; A6 mutant, CI (rerun after a cancel; docs-only head has no CI run) and the durability review (still running) remain.
 - journal-replaces-wal: A9 mutants (term, abort seal, ready point) killed; A5's journal_replay_check failed one assertion (no file-size error line in the log; behavior correct). Held for the contributor with the batch-pins probe.
 - Host: load 188 at 22:20 from detent's legacy-h light jobs (test_reader_switch 559% CPU, a 16-thread test; rust integration 285%); detent cancelled the stale one and gives those tests ctest PROCESSORS next round. Light slots 68%, runnable beside idle 34 min. Quota: weekly 37%, burn 1.46%/h.
+
+## 2026-11-24 07h
+
+- No landings. strata-journal-pin: every criterion but the review proven (A1, A2, A5, A6 + 3 mutants killed; CI 45321560305 green at 22ee0282); the durability reviewer (Opus, ~154k) stalled with nothing running, nudged to write the review. netlab-consensus: CI's linux-asan consensus_simulation timed out a third time (300.1 s); it waits for detent:consensus-simulation-asan-timeout.
+- journal-replaces-wal: A5 level tests + R1 green; A9 and A6-pin mutants killed.
+- Host: load 7; light slots 61%, runnable beside idle 50 min (the queue is mostly jrw on one slot). Quota: weekly 38%, burn 1.44%/h.
