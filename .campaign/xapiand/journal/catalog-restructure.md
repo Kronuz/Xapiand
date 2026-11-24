@@ -1,6 +1,10 @@
 # catalog-restructure: journal
 
-State: working
+State: waiting on jobs 261124-120331-87d38d 261124-121317-b85f6c 261124-121319-6bfb2b 261124-121322-2dae3d
+261124-121324-7a97a8 261124-121326-09df74 261124-121329-8d8400 261124-121332-b58fd5 261124-121334-c69f52
+261124-121336-5fe8af 261124-121344-f10263 261124-121346-26182f 261124-121400-0da3d7 (pushed at strata:a4223957;
+members 261124-121400-74b161 at the head is expected red: step 2 changes code; step 1's proof is
+261124-120328-f817d0 at strata:bb8f4834)
 Quest: .campaign/xapiand/quests/catalog-restructure.md (the lead's; never edit it)
 
 Code: strata worktree /Users/kronuz/code/Kronuz/strata-wt/xapiand/catalog-restructure, branch
@@ -9,14 +13,11 @@ map, build logs).
 
 ## Doing
 
-Step 2 built locally (Debug, the 12 catalog targets); its local test run is in a light hold.
-Then commit step 2, make the mutant commits (~/.scratch/xapiand/catalog-restructure/mutants.py)
-and queue the evidence at the ready head.
+Nothing: evidence queued at strata:a4223957; then a correctness review.
 
 ## Next
 
-1. Commit step 2; mutants (9, one per policy invariant), build-test (`campaign verify`), TSan on the
-   catalog tests, selfcontained at the head; push.
+1. Read the jobs; answer any fnsizes difference; the lead rules on the nested types (below).
 
 ## Blocked on
 
@@ -54,17 +55,31 @@ The map is ~/.scratch/xapiand/catalog-restructure/catalog.map, and is quoted in 
 
 | Criterion | Evidence |
 |---|---|
-| A1 | |
-| A2 | step 1 at strata:bb8f4834 (code = the move commit 94f6fb5d): members 261124-120328-f817d0 (passed: 115 definitions moved, 0 errors, 0 warnings); fnsizes 261124-120331-87d38d (queued) |
-| A3 | step 1: selfcontained 261124-120349-3bdf6e (queued; 261124-120334-519a1c was a malformed command, cancelled) |
-| A4 | |
-| A5 | strata docs/mechanisms/catalog-layout.md, docs/source-layout.md (strata:bb8f4834, step 2 section after) |
+| A1 | step 2 at strata:a4223957: build-test 261124-121400-0da3d7, TSan on the catalog tests (12 targets, ctest -R catalog) 261124-121344-f10263, CI on the push of a4223957; local Debug run of every catalog test passed at step 2 before the commit |
+| A2 | step 1 at strata:bb8f4834 (code = the move commit 94f6fb5d): members 261124-120328-f817d0 (passed: 115 definitions moved, 0 errors, 0 warnings); fnsizes of the 12 catalog test binaries, Release+LTO, main vs bb8f4834: 261124-120331-87d38d |
+| A3 | selfcontained over every catalog_*.hh at strata:a4223957: 261124-121346-26182f (it superseded step 1's 261124-120349-3bdf6e; 261124-120334-519a1c was a malformed command, cancelled) |
+| A4 | catalog_policy_test's named cases at a4223957 (in build-test, registered as catalog_policy_<case>); mutants of catalog_s3fifo.hh, each a commit on mutant/catalog-restructure/<name>, each job a full build of catalog_policy_test then the named case failing (--fails-without): push-at-head (fifo_order) 261124-121317-b85f6c, ghost-ignored (ghost_to_main) 261124-121319-6bfb2b, small-first (pick_queue) 261124-121322-2dae3d, used-stays (evict_order) 261124-121324-7a97a8, no-round-bound (kept_round) 261124-121326-09df74, transitions-ignored (limits) 261124-121329-8d8400, visits-ignored (limits) 261124-121332-b58fd5, requeue-unchecked (requeue_refused) 261124-121334-c69f52, unlink-keeps-tail (unlink_any) 261124-121336-5fe8af. The catalog's behavior cases are unchanged (lock-step, the D6 scenes) |
+| A5 | strata docs/mechanisms/catalog-layout.md, docs/source-layout.md (strata:bb8f4834, a4223957) |
 
-Step 1 commits: strata:94f6fb5d (the move), strata:bb8f4834 (docs).
+Commits: strata:94f6fb5d (step 1, the move), bb8f4834 (its docs), 702fb47a (step 2), a4223957 (its docs).
 
 ## Result
 
-<When ready for review.>
+Step 1 (strata:94f6fb5d): catalog's 115 multi-line member definitions moved out of the class body
+into five headers with outline.py: catalog_table, catalog_pin, catalog_transitions (the state
+machine, whole), catalog_policy, catalog_observe. Class body 2,403 -> 734 lines; catalog.hh 2,663
+-> 1,002. Proof: members 261124-120328-f817d0; fnsizes pending.
+
+Step 2 (strata:702fb47a): `catalog_detail::s3fifo` (catalog_s3fifo.hh, 162 lines) owns S3-FIFO's
+queues, ghost, cap and mutex and decides order, ghost-to-main, the requeue's refusal and a pass's
+walk under the limits; the catalog keeps each candidate's fate. Eight named unit cases over a
+fake link table; nine mutants. Body 727 lines.
+
+For the reviewer (the quest's questions): the policy's view of slot state is `policy_slots`
+(catalog.hh): gen and queueable read the word under the policy's mutex exactly as
+policy_requeue and pick did; `evict`'s order of decide, requeue and the round check is the old
+loop's (catalog_policy.hh, catalog_s3fifo.hh). Pin lifetimes and the transitions' orderings are
+untouched by step 2, and moved verbatim by step 1.
 
 ## Rulings I made
 
