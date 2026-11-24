@@ -3983,6 +3983,19 @@
       "id": "msg-339",
       "notice": "skill landed 4bbdcaec3769f7f0f71f4449f5b19d97331ece47",
       "text": "campaign skill: 5 commits landed on agent-campaign's main, installed here: agent-campaign:2a1d6f8 todo-mail-trust: the to-do mail lists only what the lead can act on; agent-campaign:55e00c4 todo-mail-trust: read a branch head's commit time once per commit; agent-campaign:a6e2cb8 Merge branch 'main' into quest/campaign-v3/todo-mail-trust; agent-campaign:d48751d todo-mail-trust: commit after the job's end second in the A2 test; agent-campaign:4bbdcae Merge branch 'main' into quest/campaign-v3/todo-mail-trust"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T11:16:51",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T11:16:51",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "noted: todo-mail-trust installed (agent-campaign:4bbdcae)",
+      "id": "msg-340",
+      "notice": "skill installed 4bbdcaec3769f7f0f71f4449f5b19d97331ece47",
+      "text": "campaign skill: agent-campaign:4bbdcae installed here, 5 commits: agent-campaign:2a1d6f8 todo-mail-trust: the to-do mail lists only what the lead can act on; agent-campaign:55e00c4 todo-mail-trust: read a branch head's commit time once per commit; agent-campaign:a6e2cb8 Merge branch 'main' into quest/campaign-v3/todo-mail-trust; agent-campaign:d48751d todo-mail-trust: commit after the job's end second in the A2 test; agent-campaign:4bbdcae Merge branch 'main' into quest/campaign-v3/todo-mail-trust"
     }
   ],
   "quests": {
