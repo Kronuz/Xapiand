@@ -1,6 +1,6 @@
 # journal-replaces-wal: journal
 
-State: waiting on jobs at Xapiand:6d6921068 (pushed). Nothing compiled locally: compile check 261123-165051-0b0570 (every target, -k 0, then the new tests) gates the rest, which run --after it; Xapiand:0e256600e fixed the one compile error a probe build showed (write_levels used above its definition). Gate: crash 261123-165252-fef4e8, no-wal 261123-165252-228c39; CI at the pushed head gives build-test, e2e, asan, tsan. Criteria: see Evidence. Lead's checks: test_node 10x 261123-165247-a8e7ab (--long, no criterion), the abandon case 30x 261123-165235-1c28ca, loop-yield probes 261123-161429-7ff092 (merge base) and 261123-165249-4fae12 (head). Next: if 0b0570 fails, fix and resubmit the set (~/.scratch/xapiand/jrw-levels/resubmit.py AFTER_ID); read the loop-yield pair for item 5's verdict.
+State: waiting on jobs at Xapiand:6d6921068 (pushed). Nothing compiled locally: compile check 261123-165051-0b0570 (every target, -k 0, then the new tests) gates the rest, which run --after it; Xapiand:0e256600e fixed the one compile error a probe build showed (write_levels used above its definition). Gate: crash 261123-165252-fef4e8, no-wal 261123-165252-228c39; CI at the pushed head gives build-test, e2e, asan, tsan. Criteria: see Evidence. Lead's checks: batch-pins sync probe 261123-174805-f1b77c, test_node 30x 261123-174823-c5379e, test_node 10x 261123-165247-a8e7ab (--long, no criterion), the abandon case 30x 261123-165235-1c28ca, loop-yield probes 261123-161429-7ff092 (merge base: on the loop ~2,950 ms, in chores ~172 ms, 0.057) and 261123-165249-4fae12 (head). Next: if 0b0570 fails, fix and resubmit the set (~/.scratch/xapiand/jrw-levels/resubmit.py AFTER_ID); read the loop-yield pair for item 5's verdict.
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
@@ -40,6 +40,19 @@ Session 12 (2026-11-23), task `levels` and R1 on the quest branch (lead's assign
    writes on the loop. Probes 261123-161429-7ff092 (merge base) and 261123-165249-4fae12 (head; 5784fc failed to
    compile, the write_levels declaration) measure both sides. No verdict until they land.
 6. Out of set: the get and search API pages (`volatile`) were edited and reverted (Blocked on 10).
+7. Lead msg (crash gate 261123-165000-bd1f5e at 0e256600e: "a search batch pins its indexes together: hung"). The
+   watchdog's sample (its log, line 69395 on) shows no deadlock and no pin wait: the 16 pool workers are parked,
+   the test thread waits in sync_wait at test_node.cc:1584 (the 24-index setup's `shard.commit()`, not the batch
+   search), the control and HTTP loops idle in kevent, and the journal host's loop thread (ShardGroups::Driven,
+   InlineCompletion) is in PosixIO::sync_files for all 41 samples: 27 in fsync, 14 in fcntl at posix.h:244, the
+   durable mode's F_FULLFSYNC per device. Verdict so far: not a pin order or a pin held across a turn; every
+   group's IO completes inline on that one thread, so the setup's 24 creates, writes and checkpoints serialize
+   their durable syncs, each a full device flush on macOS, and under the host's disk load (other jobs' builds and
+   syncs) they took past the 40 s watchdog. The wildcard case (30 creates, each ?commit a checkpoint at 91113fb2f,
+   120 s watchdog) is the same shape. Probe 261123-174805-f1b77c times the case against the volume's
+   fsync+F_FULLFSYNC latency in the same job, so the ratio counts the full flushes it pays; that decides between
+   fewer syncs per create/write/checkpoint (the journal host's batching, strata's side: a finding for the lead) and
+   the watchdog's bound. test_node 30x at the head: 261123-174823-c5379e (--long, stops at the first failure).
 
 Session 11 (2026-11-23), the evidence set at the head (lead: nothing else unless a job fails):
 
