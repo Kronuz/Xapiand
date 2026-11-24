@@ -1299,8 +1299,10 @@ static void test_a_restores_objects_are_freed_off_its_loop() {
 // Runs every case, or the one its argument names.
 int main(int argc, char** argv) {
 	const std::string_view only = argc > 1 ? argv[1] : "";
+	int ran = 0;
 	const auto run = [&](std::string_view name, void (*test)()) {
 		if (only.empty() || only == name) {
+			++ran;
 			test();
 		}
 	};
@@ -1328,6 +1330,10 @@ int main(int argc, char** argv) {
 	RUN(test_each_chunk_of_a_streamed_restore_starts_light);
 	RUN(test_a_restores_results_are_freed_as_one_buffer);
 	RUN(test_a_restores_objects_are_freed_off_its_loop);
+	if (ran == 0) {
+		std::fprintf(stderr, "FAIL: no case is named %.*s\n", static_cast<int>(only.size()), only.data());
+		return 1;
+	}
 	if (testh::failures != 0) {
 		std::fprintf(stderr, "%d of %d checks FAILED\n", testh::failures, testh::checks);
 		return 1;
