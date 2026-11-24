@@ -674,13 +674,20 @@ static void test_a_restore_prepares_and_writes_its_objects_off_its_loop() {
 		DocIndexer::stats.reset();
 		const auto loop_before = loop_cpu_ms();
 		const auto process_before = process_cpu_ms();
-		CHECK_EQ(http_call("RESTORE", "/" + index + "/?commit", body, "application/x-ndjson") / 100, 2);
+		const auto began = std::chrono::steady_clock::now();
+		std::string reply;
+		const auto status = http_call("RESTORE", "/" + index + "/?commit", body, "application/x-ndjson", &reply);
+		const auto wall_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - began).count();
+		CHECK_EQ(status / 100, 2);
 		const auto loop_ms = loop_cpu_ms() - loop_before;
 		const auto process_ms = process_cpu_ms() - process_before;
 		const auto children = DocIndexer::stats.children.load();
 		const auto peak = DocIndexer::stats.peak_children.load();
-		std::fprintf(stderr, "  restore of %d documents %s: loop %.1f ms of the process's %.1f ms CPU; %zu children at most, %zu at once\n", documents,
-			on_loop ? "on the loop" : "in chores", loop_ms, process_ms, children, peak);
+		std::fprintf(stderr, "  restore of %d documents %s: %d in %lld ms; loop %.1f ms of the process's %.1f ms CPU; %zu children at most, %zu at once\n", documents,
+			on_loop ? "on the loop" : "in chores", status, static_cast<long long>(wall_ms), loop_ms, process_ms, children, peak);
+		if (status / 100 != 2) {
+			std::fprintf(stderr, "  its answer (0: none within the client's 60 s): %.300s\n", reply.c_str());
+		}
 		CHECK_GT(process_ms, 200.0);   // long enough to tell
 		if (!on_loop && children > 1) {   // a pool of 5 threads or more
 			CHECK_GT(peak, std::size_t{1});
