@@ -1087,3 +1087,35 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - htm explorer: extern table in htm.cc (htm:e51e63e), CI green; probes queued. soundex: A3 sizes in docs/TABLES.md (soundex:ba10f53). stox-no-libc: lead's header comment (strict-stox:aebfcd9). Both wait on macOS arm64 CI (runner shortage; uinteger_t's attempt 7).
 - Tool bug to campaign-v3 (msg-47): artifact rows with backticks or two files stay pending silently (~6 edits, ~40k lead tokens).
 - Quota: weekly 29% (1.58%/h; exhaustion in about 45 h at this burn, reset 2026-11-30). Host: load 42 (52 over 5 min) on 16 CPUs, 113 jobs queued, 284 GiB free.
+
+## 2026-11-24 00h30
+
+- Landed: none. Close: hunt-htm-constexpr-start (all evidence, CI at htm:6fff441), group-heal (reruns at the merged head strata:04e523125802 and CI), stox-no-libc and soundex (macos-arm64 runner).
+- test_node (owner asked): fails only on journal-replaces-wal, three different cases since 11:33 (576cc8 hang, d17a82 shutdown-abandon :992-:1003, CI 45220356167 flush/revision); 11 of 11 local runs on other quests and every master CI passed it. Lead had called the hang load: wrong. Contributor told to find one cause first, 10x proof. test_loop_yield.cc:693 failed CI 3x, also only on this quest.
+- hunt-single-flight-race: master's flake (CI 45242486008) is a test race, B counts its cancellation inside its task; lead fix Xapiand:82389d31b, 300-run job queued.
+- group-heal: 14 of 14 A3 mutants killed; lead merged strata main (41 files), fixed A6's row and 16 task citations; durability re-check (Sonnet, 67k, 41 s) APPROVE at 04e523125802 (consensus 59ae07f..6e1122c changes no include/ or src/).
+- consensus-join-v2: S1 probe at the fix, forged RSA-16384 and DSA requests refused at 0.032 ms against 0.126 ms for a real P-256 one (was 10.1 ms); join-no-cap, join-no-rate, skip-boot-check, redial-at-deadline mutants killed; token fuzz 2x16 min clean.
+- htm: per-TU initializers removed: two users + htm.o go from 3 initializers (576 B) to 1 (192 B) (jobs 885328, 9f4fa2); written up in htm docs/start-tables.md.
+- No explorer batch: seven quests wait on the lead to land and 66 jobs are queued; review and landing are the limit, not ideas.
+- Quota: weekly 31% (1.60%/h; exhaustion in about 43 h at this burn, reset 2026-11-30). Host: load 9 (17 over 5 min), light slots 67% used last hour, 280 GiB free.
+
+## 2026-11-24 01h
+
+- Landed: hunt-htm-constexpr-start (htm:6fff441), stox-no-libc (strict-stox:aebfcd9), hunt-soundex-one-definition (soundex:5ed383c, after merging soundex main's ci.yml commit), uinteger-radix-family (uinteger_t:88e41ad; macos-arm64 finally acquired).
+- journal-replaces-wal: contributor (Opus, 329k, 1h19m) found test_node's cause: join() cleared the control loop before draining it, so an autocommit ran in place and deadlocked on a turn held by a task of that loop (hung 6 of 30 at c4d06c80d); fix Xapiand:6686f9ffc with test and mutant; 30x and 10x reruns queued. loop_yield baseline on master: chores 169-175 ms against 2,752-3,076 ms on the loop (about 6%, bound 20%); head probe pending.
+- group-heal: 24 mutants killed in all (A1 skip-file-set; A3 22 of 22); simulator rows pass at the merged head; suite rerun and CI pending.
+- netlab-consensus (no contributor): lead merged consensus main (rpc_host_fetch flake fix), requeued VM rows (the 5-node failure was the VM's GitHub fetch), swapped 5 stale citations.
+- consensus-join-v2: fuzz token, join and hello all clean (ASan+UBSan, 2x16 min each).
+- Reuse audit (campaign-v3's docs-script bug): 180 reused rows, 18 with non-prose docs changes, 1 real (restore-free-off-loop e2e read a regenerated accounts.ndjson); master CI 57f736336 passed it, no claim changes.
+- Lead slips: the single-flight check named a nonexistent target and lacked -DBUILD_TESTS=ON (2 failed jobs, 2 weakening records).
+- Explorer launched (Sonnet medium): hunt-manifest-log-wallclock (strata test bound by wall-clock).
+- Quota: weekly 33% (1.62%/h; exhaustion in about 41 h at this burn, reset 2026-11-30). Host: load 22 (14 over 5 min), light slots 46% used last hour with 46 min of runnable work beside idle slots, 110 jobs queued, 279 GiB free.
+
+## 2026-11-24 02h
+
+- Landed: group-heal at strata:04e52312 (24 mutants killed; durability re-check APPROVE at that commit; 15 queued mutant reruns cancelled as surplus).
+- Agent runs: journal-replaces-wal contributor (360k, batch-pins hang read as serialized F_FULLFSYNC on the journal host's one loop thread, not a deadlock; probe queued); hunt-manifest-log-wallclock explorer (109k, ratio bounds; mutant 116.5x/148.8x vs bounds 2/4; A1-A3 proven, CI pending).
+- Lead: placement merged main (strata:da1ee3fb), 24 evidence reruns queued, 7 green so far; its ASan CI failure is manifest_log's wall-clock bound, not placement.
+- Site: site-core landed the shared Starlight engine (Xapiand:8676f5105); main checkout still dirty with its old draft, blocking Xapiand landings.
+- Host: runnable work beside idle light slots 46, 53, 55 min in three hours; cause per-quest build-slot serialization (42 of 109 queued jobs on journal-replaces-wal's one slot). Reported to campaign-v3 (msg-51).
+- Quota: weekly 34%, burn 1.59%/h, exhaustion ~41h before the 11-30 reset.
