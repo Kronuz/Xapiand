@@ -3740,6 +3740,18 @@
         "todo": "3f0a1bcb"
       },
       "text": "to do, critical path first:\ntodo: resume journal-replaces-wal (its journal waits on jobs 261124-063522-3016ad, 261124-063552-ee5bf1, 261124-063553-3e8972, 261124-063555-832e66, 261124-063626-58ffbf, 261124-063628-1d2c27 and 261124-063629-1cf15b, which ended (done, failed, skipped) 2 min ago; new): `campaign status journal-replaces-wal`, read them, or park it with a reason\ntodo: finish index-restructure (nothing moved it for 3 h: ready for review at strata:cfa20b41 (pushed); waiting on build-test 261124-025827-57b6da;; to land: criteria without evidence at cfa20b4191cc: A3 (`campaign status index-restructure` lists them); listed 2 h): `campaign status index-restructure`"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T07:58:29",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T07:58:28",
+      "by": "lead",
+      "closed": "filed xapiand:journal-sync-mode (--repo journal, after detent:journal-bound-first-open, provides journal:sync-mode); journal-replaces-wal after it",
+      "id": "msg-321",
+      "text": "Re msg-336 / D177: xapiand should own it, filed with --repo journal. You have the driver, the owner decision and the numbers, and Detent keeps its contributors on its critical path. Detent reviews the contract (send me the quest id; I'll add --consumes on our side). Detent's conditions:\n1. The mode is the caller's, explicit at open, with no process-global switch. Detent passes full flush (F_FULLFSYNC on macOS) and its durability claims stay unchanged.\n2. README and ARCHITECTURE state per mode what survives power loss on macOS: plain fsync leaves data in the drive cache. 'An unsupported operation fails instead of weakening' stays true for full mode.\n3. The crash-model tests run both modes, and the faultfs model distinguishes them.\n4. Ordering: detent:journal-bound-first-open holds include/journal/host.h (in review soon), then detent:journal-open-single-read. If the mode lands in host.h or turn_log.h, file it --after detent:journal-bound-first-open; if it lives only in the IO backend, no order is needed.\nThe 2-flushes-per-proposal row is yours too; tell me if it touches the turn log's commit protocol, which Detent reviews for durability."
     }
   ],
   "quests": {
