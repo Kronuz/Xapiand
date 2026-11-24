@@ -564,3 +564,7 @@ quest fixes them (2 of 5 on 11-20).
 
 - journal recovery (D4, owner's call pending): when a segment file vanishes, `missing_between` (turn_log.h:1034-1042) charges missing turns only to gaps it finds, so a group can come back behind its acknowledged records unreported (T9 plain torn point: group 1 keeps 1:1, 6 acked records behind). Reachable in full mode by real damage that loses a segment. Lead's recommendation: treat turns a vanished segment may have held as unknown (every group lost), with the T9 point as a fails-without test. Detent reviews journal recovery.
 - journal T9 plain never checks bounded groups (D1); README implies plain losses are reported, about half are silent (D2); sync-mode.md wording (D3, D5: FreeBSD's AIO barrier is aio_fsync(O_DSYNC)). docs and test, low.
+
+## field-check-at-map fix round notes (2026-11-24)
+
+- prospect `fielddict::reader::check_fields` caches the pool reader for 400 B per segment (main too); scanning through a reader of its own saves 1.6 KB (d1000s4) and 4.0 KB (d1000s10) per open index (7% of heap), same hashes and refusals. Patch kept at ~/.scratch/xapiand/field-check-at-map/src/prospect-fix (commit it to a branch before any cleanup). Many-indexes workload: high value, small change; its own quest after field-check-at-map lands.
