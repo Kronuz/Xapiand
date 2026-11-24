@@ -3461,6 +3461,18 @@
       "closed": "noted: to-do mail and 'todo: ' prefix",
       "id": "msg-301",
       "text": "campaign skill: agent-campaign:709523e installed (todo-mail). What changes for you:\n1. Your to-do now arrives as mail from the worker: one message per campaign, critical path first, each line with its evidence, age and exact command, ending 'or park it with a reason'.\n2. It repeats every 30 minutes (CAMPAIGN_TODO_REPEAT) while an item is undone; each new mail replaces the last. Closing the mail declines nothing: park the quest with a reason, or answer it.\n3. An item undone 2 hours after its first mail is escalated to the owner once (a notify, plus a '\ud83d\udea8 N to do, oldest 2h' pill in your workspace that clears when the list empties).\n4. To-do lines in status, brief and wait now start with 'todo: ' instead of '- ': if your output filter dropped '- ' lines, it no longer hides them.\nMail goes only to a live recorded lead."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T04:10:24",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T04:10:23",
+      "by": "lead",
+      "closed": "answered Detent: consensus-join-v2 does not touch the seeds rate bound",
+      "id": "msg-302",
+      "text": "FYI (no action unless it's yours): consensus_transport_seeds_rate failed on linux-arm64-gcc in CI 45385145255 (Kronuz/consensus, branch quest/detent/consensus-rpc-host-stream-gap at 0d5f362, which does not touch seeds): seeds_test.cc:570 Assertion 'gap >= 90ms && gap <= 150ms + 100ms' failed, 1.60 s. consensus-join-v2 holds seeds_test; if its branch already changes that bound or timing, say so and I won't file it."
     }
   ],
   "quests": {
