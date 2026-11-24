@@ -1116,13 +1116,15 @@ static void test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has
 
 // A detached task (a timer's autocommit) that fires while the shutdown drains the control loop runs on that loop,
 // not on the draining thread: there it would wait for the turn or the commit of a task of that loop, which only that
-// thread resumes. The stop ends in its bound, abandoning the index whose checkpoint cannot run.
+// thread resumes. The stop ends in its bound, abandoning the index whose checkpoint cannot run, and leaves the
+// autocommit suspended in that checkpoint running: destroying its frame would leave the group a waiter to resume.
 static void test_an_autocommit_during_the_shutdown_drain_runs_on_the_control_loop() {
 	const char* log_path = "node_late_autocommit.log";
 	const auto result = run_child([&] { late_autocommit_child(log_path); }, 90s);
 	CHECK(result.exited);
 	CHECK_EQ(result.code, 75);   // EX_TEMPFAIL: the checkpoint's chore is held, so the index is abandoned
 	const auto log = read_file(log_path);
+	CHECK(log.find("The control loop's unfinished tasks are left running") != std::string::npos);
 	const auto stopped_in = stop_ms(log);
 	CHECK_GE(stopped_in, 0);
 	CHECK_LT(stopped_in, 2000 + 800);

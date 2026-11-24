@@ -1111,9 +1111,17 @@ XapiandManager::join()
 	}
 
 
-	// The control loop's tasks still suspended (an autocommit that did not run, a wait the drains gave up on) go
-	// the same way, with the loop stopped: its scheduler closes and destroys them. Every root that may hold a pin
-	// is gone before the catalog's shutdown is awaited, which waits for every pin (x-pool C24).
+	// A task of the control loop the drains left at the deadline is inside index work (a turn, a commit, a group's
+	// checkpoint) whose awaiters its frame may not outlive: destroying it would leave the group a waiter to resume.
+	// The loop is left running instead, as after an abandoned HTTP stop, and the process exits abandoning it.
+	if (!abandoned_ && (database_pool->detached() != 0 || _rx->tasks.running() != 0 || _rx->autocommits->tasks().running() != 0)) {
+		L_WARNING("The control loop's unfinished tasks are left running");
+		abandoned_ = true;
+	}
+
+	// The control loop's tasks still suspended (an autocommit that did not run) go the same way, with the loop
+	// stopped: its scheduler closes and destroys them. Every root that may hold a pin is gone before the catalog's
+	// shutdown is awaited, which waits for every pin (x-pool C24).
 	if (!abandoned_) {
 		database_pool->set_control(nullptr);   // from here a detached task runs on the thread that starts it
 		_rx->reactor.io().stop();
