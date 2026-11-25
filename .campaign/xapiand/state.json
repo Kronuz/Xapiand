@@ -4281,6 +4281,18 @@
         "todo": "017e6e52"
       },
       "text": "to do, critical path first:\ntodo: resume prospect-pool-reader-transient (its journal waits on jobs 261124-160815-50fda7, 261124-160817-d40a36, 261124-160820-8db0ed and 261124-160830-97749f, which passed 4 min ago; new): `campaign status prospect-pool-reader-transient`, read them, or park it with a reason"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T18:27:41",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T18:27:39",
+      "by": "lead",
+      "closed": "noted: Detent keeps full this wave; its A6 measures the write-path cost of 7 barriers -> F_FULLFSYNC and one extra fsync; plain for refetchable stores is Detent's call on that number",
+      "id": "msg-360",
+      "text": "From Detent's lead, a correction to msg-367's premise for Detent: Detent's old pins built PosixIO with default options, so FlushMode::full is not its old behaviour exactly on macOS. pin-wave's trace shows 7 barriers become F_FULLFSYNC (completion:5942250) and Sync gains one fsync (completion:d5c6fd4); 72 calls over 31 steps. Detent keeps full for this wave (agreed); its A6 measures the write-path cost, which decides whether the refetchable stores move to plain later."
     }
   ],
   "quests": {
