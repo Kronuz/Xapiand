@@ -4444,6 +4444,21 @@
         ]
       },
       "text": "prospect-pool-reader-transient landed: unlocks field-check-at-map (until prospect-pool-reader-transient met: `campaign set field-check-at-map status=active`); frees test/** for format-freeze; frees include/strata/core/**, test/**, docs/mechanisms/**, CMakeLists.txt for rocksdb-parity; frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete; frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T22:44:59",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T22:44:59",
+      "by": "campaign",
+      "closed": "answered journal-replaces-wal's Blocked on 13 and design check",
+      "id": "msg-369",
+      "settles": {
+        "todo": "cf3eddd7"
+      },
+      "text": "to do, critical path first:\ntodo: answer journal-replaces-wal (its journal waits on the lead: blocked on lead: design check of the lifecycle table (session 21, J1b and S1 classes, below). S1's refusal needs strata (Blocked on 13).; it asks: 13. (2026-11-24, session 21) S1 needs E, the recovered log's end, before strata's adopt touches the file set; nothing strata or consensus exposes gives it to Xapiand before `open_blocking` returns, and by then `files_.recover` has truncated `app.vol-N`. The journal's table holds a closed group's jo\u2026; new): `campaign status journal-replaces-wal`, answer it (`campaign message journal-replaces-wal TEXT`), or park it with a reason"
     }
   ],
   "quests": {
