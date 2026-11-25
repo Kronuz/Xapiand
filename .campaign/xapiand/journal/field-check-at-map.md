@@ -1,6 +1,6 @@
 # field-check-at-map: journal
 
-State: waiting on jobs 261124-185647-29ad76 261124-185649-bbc152 (A3 rows at prospect:c99e6be)
+State: waiting on jobs 261124-190110-6a800d 261124-190112-00d680 (A3 rows at prospect:c99e6be)
 Quest: .campaign/xapiand/quests/field-check-at-map.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -51,7 +51,7 @@ Nothing queued: the fix is outside the file set.
 
 ## Resume (prospect-pool-reader-transient landed at prospect:c99e6be)
 
-Queued strict A3 rows at strata:6dc38c77 (docs-only over 239d51e4), BASE strata:cfa20b4 as before, PROSPECT prospect:c99e6be, same commands as a057fa/a2c903: d1000s4 261124-185647-29ad76, d1000s10 261124-185649-bbc152. No code change, so A1 (73466a) stands and the A1 mutant is not rerun. Then: write the rows into docs/perf/eager-open.md, `campaign verify field-check-at-map`, ready for review. Note: `campaign brief` says main changed 12 files since the branch point; the lead merges main (or tells me to).
+Queued strict A3 rows at strata:6dc38c77 (docs-only over 239d51e4), BASE strata:cfa20b4 as before, PROSPECT prospect:c99e6be, same commands as a057fa/a2c903: d1000s4 261124-190110-6a800d, d1000s10 261124-190112-00d680. No code change, so A1 (73466a) stands and the A1 mutant is not rerun. Then: write the rows into docs/perf/eager-open.md, `campaign verify field-check-at-map`, ready for review. Note: `campaign brief` says main changed 12 files since the branch point; the lead merges main (or tells me to).
 
 ## Next
 
@@ -124,3 +124,5 @@ File set note for the lead under "Rulings I made" (1).
   opened mid-load (fragmentation, vmmap); fix is prospect's; blocked on the lead's choice.
 - Lead (no id): A1 head job 261124-120813-03d164 was cancelled by me; noted, evidence is now
   queued once at the ready commit and not cancelled.
+
+- (lead, 2026-11-24) Merged strata main (catalog-restructure) into the branch: strata:aaf38cd2. A3 rows resubmitted there with BASE at strata main 49fca948 (like for like) and PROSPECT c99e6be: d1000s4 261124-190110-6a800d, d1000s10 261124-190112-00d680; A1 rerun at aaf38cd2; build-test at the round's end.
