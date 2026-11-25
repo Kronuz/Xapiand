@@ -186,9 +186,11 @@ An index refuses to open, with one error line naming its cause and the same text
 Only the journal the index last stopped with may be put back with it. A journal older than the index (an earlier
 copy, or a copy of a running data root that took the journal before the indexes) still holds the group, so the
 first check passes, and recovery cuts the index's blob volumes to the older bundle's lengths: acknowledged writes
-are lost and blobs read other bytes. strata's open fences only the opposite case, an index older than its
-journal's bundle; refusing this one needs the recovered log's end before the file set's recovery, which strata's
-open does not expose.
+are lost and blobs read other bytes. A power cut in plain flush mode on macOS can leave the same pair: the drive
+keeps strata's last commit and drops the journal's last turns. This is a known hazard until strata's journal
+binding lands (strata docs/design/journal-binding.md): the index records the (position, term) of the entry it
+applied last, and the open refuses, before consensus starts, a log that does not hold it. The first release
+waits for it (PLAN D182).
 
 The journal's directory holds the journal's files only. The pool refuses an index path at or inside it
 (`errc::invalid`, a 400) before anything is created, with or without a create: first by name, then, on a path
