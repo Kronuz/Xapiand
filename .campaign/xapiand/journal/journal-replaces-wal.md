@@ -1,6 +1,6 @@
 # journal-replaces-wal: journal
 
-State: ready for review (round 3 at Xapiand:bf7668b4a, pushed); jobs queued (session 21 table). S1 waits on strata-journal-behind (Next 0). Next: the lead reads the jobs; `campaign accept ... durability --confirm` is the lead's.
+State: ready for review; waiting on jobs 261124-231558-1b3106, -231602-a9e71c, -231605-ebe75b, -231610-09be1d, -231614-0d6d34, -231619-cab4ba, the eight reruns, crash 231707-777023, no-wal 231707-095b53 and CI at 3d5ce3627 (code at Xapiand:bf7668b4a, pushed). S1 waits on strata-journal-behind (Next 0). `campaign accept ... durability --confirm` is the lead's.
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
