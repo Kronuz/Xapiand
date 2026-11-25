@@ -30041,13 +30041,15 @@
       "files": [
         "include/strata/core/**",
         "bench/kv/**",
-        "test/**",
+        "test/background_merge_test.cc",
+        "test/merge_policy_test.cc",
+        "test/kv*",
+        "test/index_*",
         "fuzz/**",
         "docs/design/rocksdb-parity.md",
         "docs/design/standalone-turn-log.md",
-        "docs/mechanisms/**",
-        "docs/perf/**",
-        "CMakeLists.txt"
+        "docs/mechanisms/sorted-runs.md",
+        "docs/perf/**"
       ],
       "journal": "../Xapiand-wt/xapiand/rocksdb-parity",
       "landed": [],
@@ -30063,7 +30065,7 @@
       "risk": "high",
       "status": "active",
       "title": "strata matches or beats RocksDB on every gate row",
-      "updated": "2026-11-24T22:49:31",
+      "updated": "2026-11-25T00:24:27",
       "worktree": "../strata-wt/xapiand/rocksdb-parity"
     },
     "rocksdb-spec": {
