@@ -4530,6 +4530,21 @@
         "quest": "detent:consensus-inline-sync-loop"
       },
       "text": "detent:consensus-inline-sync-loop started and changes contract consensus:group-last, which your strata-journal-behind consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-25T01:54:55",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-25T01:54:54",
+      "by": "campaign",
+      "closed": "answered on the quest (msg to strata-journal-behind); design review running",
+      "id": "msg-375",
+      "settles": {
+        "todo": "18b8e631"
+      },
+      "text": "to do, critical path first:\ntodo: answer strata-journal-behind (its journal waits on the lead: blocked on lead: consensus:recover-gate (Blocked on 2), strata:applied-term outside the file set (3), D5's change to strata:group-install (4); design at strata:786f7102 ready for a design review; it asks: 1. (lead, not blocking this quest) Consensus 6d710cb's own pins (task 477a7d3, completion 3061516, journal f66c16e, faultlab 1ac0b17, crc32c 52889db) fail strata's build: completion's PosixIO now takes a required FlushMode (`PosixIO(dir, PosixIOOptions{FlushMode, ...}, mode)`), and 15 files constru\u2026; new): `campaign status strata-journal-behind`, answer it (`campaign message strata-journal-behind TEXT`), or park it with a reason"
     }
   ],
   "quests": {
