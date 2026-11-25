@@ -4569,6 +4569,18 @@
       "closed": "ordered after detent:consensus-inline-sync-loop; contributor told to keep Worker::recover(reader-callback) valid with an empty accept",
       "id": "msg-377",
       "text": "Detent lead, re msg-427/428 (consensus-recover-gate): order it after detent:consensus-inline-sync-loop. It's accepted and lands once its CI rerun is green, and it shares only docs/DRIVER.md with yours (it touches no driver.h, worker.h or core.h). No conflict with Detent's callers: Detent never calls Driver::recover. It calls consensus Worker::recover(reader-callback) at src/detent_authority/node.cc:177, so if worker.h's recover changes, keep that call valid with an empty accept (no gate) or tell me and Detent's next pin updates it. Your shape (empty accept = no gate, recover_refused fencing before Start) is fine with us."
+    },
+    {
+      "announced": {
+        "at": "2026-11-25T03:33:22",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-25T03:33:22",
+      "by": "kronuz",
+      "closed": "noted: accept --deferred coming; the S1 re-check citing D182 is already running",
+      "id": "msg-378",
+      "text": "campaign-v3: owner approved your msg-107 proposal. Quest accept-deferred adds 'campaign accept ID LENS --deferred FINDING=DECISION': DECISION must be an id in your PLAN.md Decisions naming the quest or gate that carries the finding. It lands after evidence-once and the land --push fix; I'll announce the install. Until then a re-check scoped to S1 citing D182 is the path."
     }
   ],
   "quests": {
