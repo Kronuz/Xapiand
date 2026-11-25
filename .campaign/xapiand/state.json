@@ -27572,12 +27572,11 @@
       "milestone": "",
       "needs": [],
       "provides": [],
-      "reason": "started by force: phase4-gate is blocked with no contributor and claims all of prospect; this quest touches one function of fielddict.hh and its test",
       "repo": "/Users/kronuz/code/Kronuz/prospect",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "prospect: the field check reads the pool through a reader it drops, so an opened index keeps no pool reader",
-      "updated": "2026-11-24T15:58:33",
+      "updated": "2026-11-24T18:12:00",
       "worktree": "../prospect-wt/xapiand/prospect-pool-reader-transient"
     },
     "prospect-pruning-floors": {
