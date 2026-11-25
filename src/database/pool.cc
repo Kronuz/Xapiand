@@ -546,6 +546,29 @@ create_index_directory(const std::string& dir, const std::string& path)
 	}
 }
 
+// The path lexically normal, absolute when `like` is, without a trailing separator.
+std::filesystem::path
+comparable_path(const std::string& path, bool absolute)
+{
+	namespace fs = std::filesystem;
+	auto out = (absolute ? fs::absolute(path) : fs::path(path)).lexically_normal();
+	if (out.has_parent_path() && out.filename().empty()) {
+		out = out.parent_path();
+	}
+	return out;
+}
+
+// Whether `path` is `directory` or inside it, by their names.
+bool
+inside(const std::string& path, const std::string& directory)
+{
+	namespace fs = std::filesystem;
+	const bool absolute = fs::path(path).is_absolute() || fs::path(directory).is_absolute();
+	const auto p = comparable_path(path, absolute);
+	const auto d = comparable_path(directory, absolute);
+	return std::mismatch(d.begin(), d.end(), p.begin(), p.end()).first == d.end();
+}
+
 // A pin's failure as the engine's error: an absent index is not_found, a closed catalog not_available, and
 // strata's own failures are translated; anything else (the group's recovery) leaves as it is.
 [[noreturn]] void
@@ -590,6 +613,10 @@ DatabasePool::make_host(std::size_t soft_open, const IndexSweep& sweep)
 	h.resolve = [this](const IndexCatalog::opening& op) -> std::unique_ptr<kronuz::journal::IO> {
 		namespace fs = std::filesystem;
 		const std::string path(op.key);
+		// The journal's directory holds the journal's files only: an index there would break its next scan.
+		if (!journal_.empty() && inside(path, journal_)) {
+			throw engine::Error(engine::errc::invalid, "Index path " + repr(path) + " is inside the journal's directory " + repr(journal_) + ", a reserved name");
+		}
 		if (index_io_) {
 			return strata::counted_io::make(op.counts, [&] { return index_io_(path); });
 		}
@@ -691,6 +718,7 @@ void
 DatabasePool::set_journal(const std::string& directory)
 {
 	groups_ = std::make_unique<ShardGroups>(directory);
+	journal_ = comparable_path(directory, false).string();
 }
 
 

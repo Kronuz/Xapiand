@@ -2845,7 +2845,10 @@ DocIndexer::take(std::vector<MsgPack>& batch, bool close)
 	};
 
 	// Records an object's failure: its status, its status's name and the error.
-	const auto put_error = [&put](std::size_t idx, const http_errors_t& errors) {
+	const auto put_error = [this, &put](std::size_t idx, const http_errors_t& errors) {
+		if (errors.error_code >= 500) {
+			_unwritten_status = std::max(_unwritten_status, static_cast<unsigned>(errors.error_code));
+		}
 		put(idx, [&](StringPacker& pk) {
 			pk.pack_map(3);
 			pack_str(pk, RESPONSE_STATUS);

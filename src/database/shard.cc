@@ -255,29 +255,95 @@ ShardEndpoint::open_blocking(kronuz::journal::IO& directory, prospect::index& in
 
 	// The group last: it recovers on the index as the open left it (D169), and its failed open fails this one.
 	if (auto* groups = database_pool.groups()) {
+		refuse_without_journal(*groups, directory, index);
 		group_ = std::make_unique<ShardGroup>(*groups, directory, index);
-		group_->app.applied = [eng = &dynamic_cast<engine::strata::Shard&>(*engine_)] { eng->applied_by_group(); };
+		auto* eng = &dynamic_cast<engine::strata::Shard&>(*engine_);
+		group_->app.applied = [eng] { eng->applied_by_group(); };
+		group_->on_checkpoint = [eng] { eng->checkpointed(); };
 		group_->group.open_blocking();
-		// What the log committed before the open is applied before anything is served, and reads see it; the id
-		// counter is the log's.
-		std::vector<std::uint64_t> left_open;
-		std::string high;
-		group_->catch_up([&](const ShardGroupState& state, prospect::index& applied) {
-			for (const auto& chunked : state.open) {
-				left_open.push_back(chunked.first);
+		try {
+			if (group_->group.damaged()) {
+				throw engine::Error(engine::errc::corrupt, group_->group.damage_reason());
 			}
-			if (const auto it = applied.metadata().find(std::string(ID_HIGH_METADATA)); it != applied.metadata().end()) {
-				high = it->second;
+			// What the log committed before the open is applied before anything is served, and reads see it; the id
+			// counter is the log's.
+			std::vector<std::uint64_t> left_open;
+			std::string high;
+			group_->catch_up([&](const ShardGroupState& state, prospect::index& applied) {
+				for (const auto& chunked : state.open) {
+					left_open.push_back(chunked.first);
+				}
+				if (const auto it = applied.metadata().find(std::string(ID_HIGH_METADATA)); it != applied.metadata().end()) {
+					high = it->second;
+				}
+			});
+			// The ready point (A9): the chunked commands this term's earlier proposers left open are aborted.
+			group_->abort_open(left_open);
+			if (!high.empty()) {
+				id_high_ = std::max(id_high_, MsgPack::unserialize(high).u64());
 			}
-		});
-		// The ready point (A9): the chunked commands this term's earlier proposers left open are aborted.
-		group_->abort_open(left_open);
-		if (!high.empty()) {
-			id_high_ = std::max(id_high_, MsgPack::unserialize(high).u64());
+			id_high_logged_ = id_high_;
+			id_high_moved_ = false;
+		} catch (...) {
+			refuse_opened_group(std::current_exception());
 		}
-		id_high_logged_ = id_high_;
-		id_high_moved_ = false;
 	}
+}
+
+
+// An index that holds state (strata applied a log position, or the file set has files) whose group the journal does
+// not hold: its journal was lost or moved. A new group would restart the log and the file set over that state
+// (deleting its blob volumes, writing new records where old locators point), so the open refuses and touches nothing.
+void
+ShardEndpoint::refuse_without_journal(ShardGroups& groups, kronuz::journal::IO& directory, prospect::index& index)
+{
+	const auto id = ShardGroups::group_id(index.manifest().uuid);
+	if (groups.holds(id)) {
+		return;
+	}
+	bool files = false;
+	for (auto cursor = directory.scan_directory(); auto name = cursor->next();) {
+		if (name->starts_with(strata::group::bundle_detail::prefix)) {
+			files = true;
+			break;
+		}
+	}
+	const auto applied = index.applied().index;
+	if (applied == 0 && !files) {
+		return;   // a new index: its group is created
+	}
+	const auto reason = strings::format("The journal in {} holds no group {:016x} for index {}, which holds state (applied through {}{}): restore the journal, or restore the index from a dump", repr(groups.directory()), id, repr(to_string()), applied, files ? ", blob volumes" : "");
+	L_ERR("{}", reason);
+	throw engine::Error(engine::errc::corrupt, reason);
+}
+
+
+// After the group's open, a failure (a damaged replica, a catch-up that throws) closes the group on its loop before
+// the open fails: the catalog then destroys a group no longer attached. A damaged group's close skips its
+// checkpoints; its own error is the damage again, so the refusal names the first cause.
+[[noreturn]] void
+ShardEndpoint::refuse_opened_group(std::exception_ptr failed)
+{
+	std::string reason;
+	try {
+		std::rethrow_exception(failed);
+	} catch (const std::exception& exc) {
+		reason = exc.what();
+	} catch (...) {
+		reason = "unknown error";
+	}
+	if (group_->group.damaged()) {
+		reason = group_->group.damage_reason();
+	}
+	L_ERR("The index {} refuses to open: {}", repr(to_string()), reason);
+	group_->quiesce();
+	try {
+		group_->group.close_blocking();
+	} catch (...) {
+		// The damage, or a failed checkpoint: the refusal below is the open's answer.
+	}
+	group_.reset();
+	throw engine::Error(engine::errc::corrupt, "The index " + to_string() + " refuses to open: " + reason);
 }
 
 
@@ -290,6 +356,7 @@ ShardEndpoint::close_group()
 		return;
 	}
 	auto& group = group_->group;
+	group_->quiesce();
 	group.close_blocking();
 	database_pool.groups()->closed(group.id(), group.closed_record());
 }
@@ -426,7 +493,7 @@ ShardEndpoint::commit_group()
 	}
 	auto& eng = dynamic_cast<engine::strata::Shard&>(*engine_);
 	try {
-		co_await checkpoint(*group_, [&eng](prospect::index&) { eng.checkpointed(); });
+		co_await checkpoint(*group_);
 	} catch (...) {
 		eng.rethrow_failure();   // a fenced index is the catalog's to replace (x-pool D2)
 	}

@@ -957,7 +957,7 @@ static void test_a_throwing_apply_slice_fails_one_write_and_restores_the_engines
 // A write that fails and marks the index stale ends its slice, so the later writes of the shard run after the index is
 // replaced, in a slice of their own, as one request each would: with the failing write, the run has one more slice
 // than the same run with no failure (a slice takes a shard's whole sub-run unless it ends), the failing write alone
-// fails, and every other object is stored.
+// fails, and every other object is stored. The RESTORE then answers the failure's 503, not 200.
 static void test_a_stale_marking_failure_ends_its_slice() {
 	create_index("stale_a", 5);
 	create_index("stale_b", 5);
@@ -968,7 +968,7 @@ static void test_a_stale_marking_failure_ends_its_slice() {
 	for (int k = 1; k <= 60; ++k) {
 		body += R"({"_id":"k)" + std::to_string(k) + R"(","v":1})" "\n";
 	}
-	auto run = [&](const std::string& index, const std::string& failing, std::size_t& slices, std::size_t& failed, std::string& total) {
+	auto run = [&](const std::string& index, const std::string& failing, std::size_t& slices, std::size_t& failed, std::string& total, int& status) {
 		std::atomic<std::size_t> counted{0};
 		std::string reply;
 		{
@@ -979,7 +979,7 @@ static void test_a_stale_marking_failure_ends_its_slice() {
 				counted.fetch_add(1);
 				co_return;
 			};
-			CHECK_EQ(http_call("RESTORE", "/" + index + "/?commit", body, "application/x-ndjson", &reply) / 100, 2);
+			status = http_call("RESTORE", "/" + index + "/?commit", body, "application/x-ndjson", &reply);
 		}
 		slices = counted.load();
 		failed = 0;
@@ -992,8 +992,11 @@ static void test_a_stale_marking_failure_ends_its_slice() {
 	};
 	std::size_t without_slices = 0, without_failed = 0, with_slices = 0, with_failed = 0;
 	std::string without_total, with_total;
-	run("stale_a", "", without_slices, without_failed, without_total);
-	run("stale_b", "k1", with_slices, with_failed, with_total);
+	int without_status = 0, with_status = 0;
+	run("stale_a", "", without_slices, without_failed, without_total, without_status);
+	run("stale_b", "k1", with_slices, with_failed, with_total, with_status);
+	CHECK_EQ(without_status, 200);
+	CHECK_EQ(with_status, 503);   // an object the server left unwritten: the RESTORE answers its status, never 200
 	std::fprintf(stderr, "  slices %zu without a failure, %zu with one; failed %zu; stored %s\n", without_slices, with_slices, with_failed, with_total.c_str());
 	CHECK_EQ(without_failed, std::size_t{0});
 	CHECK_EQ(with_failed, std::size_t{1});

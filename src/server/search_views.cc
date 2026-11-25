@@ -1784,7 +1784,10 @@ restore_database_view(Request& request)
 				response_obj[RESPONSE_TOOK] = took / 1e9;
 			}
 
-			write_http_response(request, has_db_ack_none(levels) ? HTTP_STATUS_ACCEPTED : HTTP_STATUS_OK, response_obj);
+			// An object the server left unwritten makes the whole answer its error; the items say which.
+			const auto unwritten = indexer ? indexer->unwritten_status() : 0;
+			const auto status = unwritten != 0 ? static_cast<enum http_status>(unwritten) : has_db_ack_none(levels) ? HTTP_STATUS_ACCEPTED : HTTP_STATUS_OK;
+			write_http_response(request, status, response_obj);
 
 			L_TIME("Restore took {}", strings::from_delta(took));
 

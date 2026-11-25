@@ -466,6 +466,7 @@ class DocIndexer {
 	size_t _indexed = 0;
 	size_t _total = 0;
 	size_t _idx = 0;
+	unsigned _unwritten_status = 0;   // the highest 5xx an object's result carries: the server left it unwritten
 	// The objects' results, MessagePack-packed into one buffer: `_at[idx]` is object idx's (offset, size) there,
 	// size 0 until it is recorded. A MsgPack per object would hold a zone of its own (8 KB), all freed in one turn.
 	std::string _packed;
@@ -517,6 +518,12 @@ public:
 
 	size_t total() const noexcept {
 		return _total;
+	}
+
+	// The highest server error (5xx) among the objects' results, 0 if none: an object the server failed to write
+	// makes the RESTORE's own answer that status, never a 200.
+	unsigned unwritten_status() const noexcept {
+		return _unwritten_status;
 	}
 
 	// The results, one per object in input order, as one array: an object not yet recorded is an empty map.

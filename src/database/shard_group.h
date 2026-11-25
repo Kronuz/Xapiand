@@ -24,6 +24,8 @@
 
 #include <array>                   // for std::array
 #include <atomic>                  // for std::atomic
+#include <condition_variable>      // for std::condition_variable
+#include <cstddef>                 // for std::size_t
 #include <functional>              // for std::function
 #include <cstdint>                 // for std::uint64_t
 #include <map>                     // for std::map
@@ -147,6 +149,12 @@ private:
 };
 
 
+// A shard's retained log between checkpoints (consensus's `log_bytes` and `log_entries`): what replay re-applies
+// after a crash and what the group holds in memory. A placement past half of either schedules a checkpoint, which
+// cuts the log, so no write meets the bound (docs/mechanisms/journal-durability.md, "The log's bound").
+inline constexpr std::size_t LOG_BYTES = 16 * COMMAND_ENTRY_BYTES;
+inline constexpr std::size_t LOG_ENTRIES = 65536;
+
 // Where the process's journal lives, relative to the data directory: inside `.xapiand`, the namespace Xapiand
 // owns, so it takes no name a user index can have.
 inline constexpr const char* JOURNAL_DIRECTORY = ".xapiand/journal";
@@ -160,6 +168,8 @@ public:
 	using group_type = strata::group::group<ShardApplication>;
 
 	// The journal host over `directory`, made when missing; `chores` threads apply the groups' entries.
+	// A directory inside `directory` is not the journal's (its files are plain): one left by an earlier build, which let
+	// an index be made there, is moved to `directory + ".strays"`, so the host's scan never takes it for its own.
 	explicit ShardGroups(const std::string& directory, std::size_t chores = 2);
 	~ShardGroups();
 
@@ -175,6 +185,13 @@ public:
 	void closed(kronuz::consensus::GroupId id, std::optional<std::string> record);
 
 	static kronuz::consensus::GroupId group_id(const std::array<char, 16>& uuid) noexcept;
+
+	// Whether the journal holds group `id`, read on the loop: stored, closed or bounded (recovered by its open). None
+	// or lost, the open would create the group afresh.
+	bool holds(kronuz::consensus::GroupId id);
+
+	// The journal's directory, as constructed: the pool refuses an index path inside it.
+	const std::string& directory() const noexcept { return directory_; }
 
 	// The options the journal's IO was built with (engine::strata::posix_io_options()): `--full-flush-ordering`
 	// reaches the turn log's ordering barrier, and its per-volume warning names the switch (D10).
@@ -194,6 +211,7 @@ private:
 		task::scheduler_ref ref() { return task::scheduler_ref::of(scheduler); }
 	};
 
+	std::string directory_;
 	kronuz::journal::PosixIOOptions io_options_;
 	kronuz::journal::InlineCompletion io_;
 	std::unique_ptr<kronuz::journal::Host> host_;
@@ -215,8 +233,25 @@ struct ShardGroup {
 	kronuz::journal::IO* directory;   // the slot's, where the file set lives; blobs are read through it
 	std::optional<ChunkedIds> ids;   // this leader's chunked-command ids, on the loop
 	std::atomic<std::uint64_t> checkpointed{0};   // the log index the last checkpoint() published through
+	// Run on the chore after every checkpoint() publishes, with the index as it committed it: the engine's view
+	// follows the commit (engine::strata::Shard::checkpointed).
+	std::function<void()> on_checkpoint;
+
+	// The log placed since the last checkpoint's start, counted at each placement on the loop: the pressure
+	// trigger's measure (L1). An estimate: entries placed during a checkpoint are kept.
+	std::atomic<std::size_t> log_bytes{0};
+	std::atomic<std::size_t> log_entries{0};
 
 	ShardGroup(ShardGroups& groups, kronuz::journal::IO& directory, prospect::index& index);
+	~ShardGroup();
+
+	// Starts the pressure checkpoint on the loop unless one runs or the group is quiesced: a placement left the log
+	// past half its bound. It runs with no pin; quiesce() waits for it.
+	void pressure();
+
+	// Blocks the calling thread (never the loop) until no pressure checkpoint runs, and starts none after: before
+	// the group's close.
+	void quiesce();
 
 	// Blocks the calling thread (never the loop or the chore) until the group applied everything committed when
 	// it was called: a linearizable read's barrier (D4). `at`, if any, then reads the state and the index on the chore.
@@ -225,10 +260,17 @@ struct ShardGroup {
 	// Blocks the calling thread until the abort of each chunked command `ids` names is placed (D12, A9): the leader's
 	// ready point ends what its term's earlier proposers left open, so their files are freed.
 	void abort_open(const std::vector<std::uint64_t>& ids);
+
+private:
+	std::mutex pressure_mtx_;
+	std::condition_variable pressure_cv_;
+	bool pressure_running_ = false;   // under pressure_mtx_
+	bool quiesced_ = false;           // under pressure_mtx_
 };
 
 // Proposes `entry` on the group's loop from any scheduler and answers on the caller's: handler.h's ProposeEntry. A
-// closing group raises errc::not_available.
+// closing group raises errc::not_available. A full log (LogFull) waits for a checkpoint and proposes again; a log
+// still full, or any other refusal, raises errc::busy naming consensus's reason (a 503).
 task::task<strata::group::answer> propose_entry(ShardGroup& shard_group, std::string entry, strata::group::ack level);
 
 // Awaits, from any scheduler and on the caller's, until the group applied everything committed when it was called: a
@@ -239,6 +281,6 @@ task::task<void> caught_up(ShardGroup& shard_group);
 task::task<std::uint64_t> next_chunked_id(ShardGroup& shard_group);
 
 // A checkpoint of the group (D16), started on its loop from any scheduler and answered on the caller's: the shard's
-// commit. Never from a commit hook (D169): the checkpoint's chore takes the index's write lease. `at`, if any, then
-// runs on the chore with the index as the checkpoint committed it.
-task::task<void> checkpoint(ShardGroup& shard_group, std::function<void(prospect::index&)> at = {});
+// commit, and the pressure trigger's. Never from a commit hook (D169): the checkpoint's chore takes the index's
+// write lease. The group's `on_checkpoint`, if any, then runs on the chore.
+task::task<void> checkpoint(ShardGroup& shard_group);

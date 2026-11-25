@@ -42,6 +42,8 @@
 #include <memory>
 #include <optional>
 #include <mutex>
+#include <fstream>
+#include <iterator>
 #include <set>
 #include <string>
 #include <thread>
@@ -2774,6 +2776,209 @@ void test_a_reopen_aborts_an_upload_left_open() {
 	std::filesystem::remove_all(path);
 }
 
+// Bytes zstd does not shrink, `n` of them from `seed`.
+std::string noise(std::size_t n, std::uint32_t seed) {
+	std::string out(n, '\0');
+	for (auto& c : out) {
+		seed = seed * 1664525u + 1013904223u;
+		c = static_cast<char>(seed >> 24);
+	}
+	return out;
+}
+
+// The engine error a call raises: its kind and description (internal and empty when it raises none).
+template <typename F>
+std::pair<engine::errc, std::string> error_of(F&& f) {
+	try {
+		f();
+	} catch (const engine::Error& error) {
+		return {error.kind, error.description()};
+	}
+	return {engine::errc::internal, ""};
+}
+
+// A shard's log holds LOG_BYTES between checkpoints (L1). With no commit, writes past it at both levels, a RESTORE
+// slice past it and an upload 2.5 times it all succeed: a placement past half the bound checkpoints, and a write that
+// meets the bound waits for a checkpoint. Every write reads back.
+void test_a_log_past_its_bound_checkpoints_instead_of_refusing() {
+	Watchdog watchdog("a log past its bound", 300s);
+	const auto journal = fresh("journal_full");
+	const auto path = fresh("group_full");
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		auto entry = pin(pool, path);
+		Shard quorum = use(entry, WRITE);
+		Shard none = use(entry, WRITE | DB_ACK_NONE);
+		auto* group = quorum.group();
+		REQUIRE(group != nullptr);
+		constexpr std::size_t DOC = 128 * 1024;
+		constexpr std::size_t N = 3 * LOG_BYTES / 2 / DOC;   // 1.5 times the bound at each level
+		std::vector<engine::docid> dids;
+		for (std::size_t i = 0; i < N; ++i) {
+			dids.push_back(engine::sync_wait(quorum.add_document(make("Kq" + std::to_string(i), noise(DOC, static_cast<std::uint32_t>(i))))).did);
+		}
+		for (std::size_t i = 0; i < N; ++i) {
+			engine::sync_wait(none.add_document(make("Kn" + std::to_string(i), noise(DOC, static_cast<std::uint32_t>(N + i)))));
+		}
+		std::vector<SliceWrite> writes(N);
+		for (std::size_t i = 0; i < N; ++i) {
+			writes[i].idx = i;
+			writes[i].term = "Kr" + std::to_string(i);
+			writes[i].doc = make(writes[i].term, noise(DOC, static_cast<std::uint32_t>(2 * N + i)));
+		}
+		std::size_t at = 0;
+		std::unordered_set<std::string> missed;
+		while (at < writes.size()) {
+			engine::sync_wait(quorum.apply_slice(engine::inline_chores(), writes, at, std::chrono::seconds(60), missed));
+		}
+		for (const auto& write : writes) {
+			CHECK_FALSE(write.error);
+		}
+		const auto uploaded = noise(5 * LOG_BYTES / 2, 7);
+		ChunkedUpload upload(engine::sync_wait(next_chunked_id(*group)), uploaded.size());
+		Pieces body(uploaded, 256 * 1024);
+		engine::sync_wait(propose_upload(group_proposer(*group), upload, body));
+		Data placeholder;
+		placeholder.update(ct_type_t("video/mp4"), 0, 0, uploaded.size());
+		placeholder.flush();
+		auto up = make("Kup", "");
+		up.set_data(placeholder.serialize());
+		const auto up_did = engine::sync_wait(quorum.replace_document_term("Kup", std::move(up), false, true, &upload)).did;
+		CHECK_GT(group->checkpointed.load(), 0u);   // the pressure checkpointed with no commit
+		CHECK_LT(group->log_bytes.load(), LOG_BYTES);
+		for (std::size_t i = 0; i < N; i += N / 8) {
+			auto view = engine::sync_wait(quorum.get_view(dids[i]));
+			CHECK(view->data() == noise(DOC, static_cast<std::uint32_t>(i)));
+		}
+		auto view = engine::sync_wait(quorum.get_view(writes[N - 1].info.did));
+		CHECK(view->data() == noise(DOC, static_cast<std::uint32_t>(3 * N - 1)));
+		const auto [up_type, up_read] = stored_blob(quorum, up_did, "video/mp4");
+		CHECK(up_read == uploaded);
+	}
+	std::filesystem::remove_all(journal);
+	std::filesystem::remove_all(path);
+}
+
+// The journal's directory holds its own files only (J1): an index path at or inside it is refused before anything
+// is created, and a directory an earlier build let an index make there is moved aside, so the journal opens.
+void test_an_index_inside_the_journal_is_refused() {
+	namespace fs = std::filesystem;
+	const auto journal = fresh("journal_inside");
+	fs::remove_all(journal + ".strays");
+	const auto listing = [&] {
+		std::set<std::string> names;
+		for (const auto& entry : fs::directory_iterator(journal)) {
+			names.insert(entry.path().filename().string());
+		}
+		return names;
+	};
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		const auto before = listing();
+		for (const auto& inside : {journal, journal + "/groups-abc-000000001/x", journal + "/layout/x", journal + "/x/../y"}) {
+			CHECK(error_kind([&] { pin(pool, inside); }) == engine::errc::invalid);
+		}
+		CHECK(listing() == before);
+		const auto sibling = fresh("journal_insidex");   // a name that starts like the journal's is an index
+		CHECK_TRUE(static_cast<bool>(pin(pool, sibling)));
+		fs::remove_all(sibling);
+	}
+	fs::create_directories(journal + "/groups-abc-000000001/x/strata");
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		CHECK_TRUE(fs::is_directory(journal + ".strays/groups-abc-000000001/x/strata"));
+		CHECK_FALSE(fs::exists(journal + "/groups-abc-000000001"));
+		const auto path = fresh("group_inside");
+		Shard shard(pin(pool, path), WRITE);
+		engine::sync_wait(shard.add_document(make("Ka", "a")));
+		fs::remove_all(path);
+	}
+	fs::remove_all(journal);
+	fs::remove_all(journal + ".strays");
+}
+
+// An index with a stored blob, committed and closed: the path of its blob volume and the blob.
+std::pair<std::string, std::string> blob_index(const std::string& journal, const std::string& path) {
+	const auto blob = noise(300 * 1024, 4);
+	DatabasePool pool(control_loop(), 8);
+	pool.set_journal(journal);
+	Shard shard(pin(pool, path), WRITE);
+	Data data;
+	data.update(ct_type_t("application/octet-stream"), -1, 0, 0, blob);
+	data.flush();
+	auto doc = make("Kb", "");
+	doc.set_data(data.serialize());
+	engine::sync_wait(shard.replace_document_term("Kb", std::move(doc)));
+	engine::sync_wait(shard.add_document(make("Kj", "j")));
+	CHECK_TRUE(engine::sync_wait(shard.commit()));
+	return {path + "/strata/app.vol-1", blob};
+}
+
+std::string file_bytes(const std::string& name) {
+	std::ifstream in(name, std::ios::binary);
+	return std::string(std::istreambuf_iterator<char>(in), {});
+}
+
+// An index whose group the journal lost (J2): its open refuses, naming the missing journal group, and deletes and
+// writes nothing; with the journal back, the index opens and its blob reads back.
+void test_an_index_without_its_journal_refuses_and_keeps_its_volumes() {
+	Watchdog watchdog("an index without its journal", 120s);
+	namespace fs = std::filesystem;
+	const auto journal = fresh("journal_lost");
+	const auto path = fresh("group_lost");
+	fs::remove_all(journal + ".aside");
+	const auto [volume, blob] = blob_index(journal, path);
+	const auto bytes = file_bytes(volume);
+	CHECK_GT(bytes.size(), 0u);
+	fs::rename(journal, journal + ".aside");
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		for (int attempt = 0; attempt < 2; ++attempt) {
+			const auto [kind, why] = error_of([&] { pin(pool, path); });
+			CHECK(kind == engine::errc::corrupt);
+			CHECK_NE(why.find("holds no group"), std::string::npos);
+		}
+		CHECK(file_bytes(volume) == bytes);
+	}
+	fs::remove_all(journal);
+	fs::rename(journal + ".aside", journal);
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		Shard shard(pin(pool, path), WRITE);
+		const auto [type, read] = stored_blob(shard, 1, "application/octet-stream");
+		CHECK(read == blob);
+	}
+	fs::remove_all(journal);
+	fs::remove_all(path);
+}
+
+// A blob volume shorter than its bundle names (D1): the open closes the damaged group on its loop and refuses, each
+// time, naming the damage; nothing aborts, and the pool ends.
+void test_a_damaged_volume_refuses_its_index() {
+	Watchdog watchdog("a damaged volume", 120s);
+	namespace fs = std::filesystem;
+	const auto journal = fresh("journal_damaged");
+	const auto path = fresh("group_damaged");
+	const auto [volume, blob] = blob_index(journal, path);
+	fs::resize_file(volume, fs::file_size(volume) / 2);
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		for (int attempt = 0; attempt < 2; ++attempt) {
+			const auto [kind, why] = error_of([&] { pin(pool, path); });
+			CHECK(kind == engine::errc::corrupt);
+			CHECK_NE(why.find("a file shorter than the bundle names: vol-1"), std::string::npos);
+		}
+	}
+	fs::remove_all(journal);
+	fs::remove_all(path);
+}
+
 int main(int argc, char** argv) {
 	struct Case { const char* name; void (*fn)(); };
 	const Case cases[] = {
@@ -2842,6 +3047,10 @@ int main(int argc, char** argv) {
 		{"test_a_commit_is_the_groups_checkpoint", test_a_commit_is_the_groups_checkpoint},
 		{"test_the_id_counter_is_in_the_log", test_the_id_counter_is_in_the_log},
 		{"test_a_reopen_aborts_an_upload_left_open", test_a_reopen_aborts_an_upload_left_open},
+		{"test_a_log_past_its_bound_checkpoints_instead_of_refusing", test_a_log_past_its_bound_checkpoints_instead_of_refusing},
+		{"test_an_index_inside_the_journal_is_refused", test_an_index_inside_the_journal_is_refused},
+		{"test_an_index_without_its_journal_refuses_and_keeps_its_volumes", test_an_index_without_its_journal_refuses_and_keeps_its_volumes},
+		{"test_a_damaged_volume_refuses_its_index", test_a_damaged_volume_refuses_its_index},
 	};
 	for (const auto& c : cases) {
 		if (argc > 1 && std::string(c.name).find(argv[1]) == std::string::npos) {

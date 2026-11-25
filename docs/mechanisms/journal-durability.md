@@ -128,7 +128,53 @@ directory and index (strata's group-catalog, D169):
    commit hook stays a plain strata commit (D169: its chore holds the index's lease, which the checkpoint takes).
 7. **Close.** Every catalog close runs `close_payload` before the index's close: the group checkpoints until
    its bundle covers what it committed, and the process keeps its closed record, so a reopen resumes its term
-   with no election. The catalog's commit hook and a request's commit stay plain strata commits.
+   with no election. The catalog's commit hook stays a plain strata commit.
+
+## The log's bound
+
+A shard's retained log holds at most `LOG_BYTES` (16 MiB) and `LOG_ENTRIES` (65,536) between checkpoints
+(`src/database/shard_group.h`, consensus's `log_bytes` and `log_entries`). The bound is what replay re-applies
+after a crash and what the group keeps in memory per open index; with millions of indexes per host, it is the
+per-index cost, so it is not raised to fit a write. It bounds no single write: an entry is at most 1 MiB and a
+larger command is chunked (D12); an upload streams through as many checkpoints as it needs (up to its 4 GiB
+limit); a buffered body is at most 16 MiB, as before. 16 MiB is Lucene's default in-memory buffer
+(`IndexWriterConfig.DEFAULT_RAM_BUFFER_SIZE_MB`), past which it flushes a segment instead of refusing a write;
+Tantivy's per-thread budget is at least 15 MB and flushes the same way; Xapian flushes every 10,000 documents.
+None refuses a write at its buffer, and neither does the group:
+
+1. **Pressure.** Each placement counts its bytes and entries on the loop (`ShardGroup::log_bytes`,
+   `log_entries`). Past half of either bound, `ShardGroup::pressure` starts one checkpoint on the group's loop
+   (never from a commit hook), holding no pin; the group's close waits for it (`quiesce`). Every checkpoint
+   subtracts what was placed before its capture.
+2. **A full log.** A proposal that consensus still refuses as `LogFull` (applies behind, or a burst faster than a
+   checkpoint) runs a checkpoint itself and proposes again; consensus retires the cut log's entries a
+   command's worth per step, so the following attempts drain it. A log still full after that, or any other
+   refusal, answers 503 naming consensus's reason, never 500.
+3. **RESTORE.** An object the server left unwritten (any 5xx in its result) makes the RESTORE's own answer that
+   status; its items say which objects. A client's object refused for itself (a 4xx) leaves the answer 200, as
+   before.
+
+## Refusals at open
+
+An index refuses to open, with one error line naming its cause and the same text as the request's answer, when:
+
+1. **Its journal lost its group.** The journal holds no group for the index (moved, deleted, or lost), and the
+   index holds state: strata applied a log position, or the file set has `app.` files. A new group would
+   restart the log and the file set over that state: the file set's recovery deletes the committed blob volumes,
+   and new records land where old locators point. The open checks before the group is built
+   (`refuse_without_journal`) and touches nothing. Recovery: put the journal's directory back, or delete the
+   index and RESTORE it from a dump.
+2. **A volume is damaged.** strata opens the group damaged (a file shorter than its bundle names, a sealed file
+   failing its CRC32C) and arms its repair, which at `rf = 1` has no peer to repair from. The open closes the group
+   on its loop, which skips the checkpoints, and refuses (`refuse_opened_group`), so the whole index refuses at
+   `rf = 1`; master served all but that volume's blobs. Recovery: restore the volume from a copy of the index
+   taken at a clean stop and remove the damage marker (`rd` in the index's `strata` directory), or delete the
+   index and RESTORE it from a dump.
+
+The journal's directory holds the journal's files only. The pool refuses an index path at or inside it
+(`errc::invalid`, a 400) before anything is created, and a directory found there at start (left by a build
+that let an index be made there) is moved to `<journal>.strays` with a warning, so the host's scan never takes
+it for its own.
 
 ## Levels
 
@@ -176,6 +222,13 @@ nothing more of its closing commit, which refreshes.
   is clean after `refresh=true` and `?commit`, `wait_for` at `none` waits for the apply, unknown levels answer
   400), `test_a_restore_at_ack_none_reports_no_versions`. `tests/test_pool.cc`
   (`test_a_lone_voter_reads_its_writes`): a get and a search right after each write see it.
+- `tests/test_pool.cc`: `test_a_log_past_its_bound_checkpoints_instead_of_refusing` (1.5 times the bound at each
+  level, a RESTORE slice and a 2.5-times upload with no commit, all read back),
+  `test_an_index_inside_the_journal_is_refused` (paths inside the journal answer `invalid` and create nothing; a
+  stray directory is moved aside), `test_an_index_without_its_journal_refuses_and_keeps_its_volumes` and
+  `test_a_damaged_volume_refuses_its_index` (both refusals, twice each, naming their cause, the volume's bytes
+  untouched). `tests/test_loop_yield.cc` (`test_a_stale_marking_failure_ends_its_slice`): a RESTORE with one
+  object left unwritten answers 503.
 - `tests/test_shard_group.cc` (`test_the_journal_io_takes_the_io_options`): a file the host's IO opens syncs plain
   by default and full under `--full-flush-ordering`, the options carry the barrier warning, and the IO admits a
   group-writable directory, which PosixIO's defaults refuse.

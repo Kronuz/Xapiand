@@ -41,6 +41,8 @@
 #include "engine/strata/document.h"  // for engine::strata::StrataDocument
 #include "engine/strata/io_options.h"  // for engine::strata::posix_io_options
 #include "engine/strata/shard.h"   // for engine::strata::append_write
+#include "log.h"                    // for L_WARNING, L_DEBUG
+#include "repr.hh"                 // for repr
 #include "reserved/fields.h"       // for VERSION_FIELD_NAME
 #include "serialize.h"             // for Serialize::version
 #include "varint.hh"               // for varint::leb128
@@ -521,7 +523,8 @@ lone_voter_options()
 	o.admission = jn::AdmissionLimits{{1ull << 30, 1u << 20}, {1u << 20, 16}, {96ull << 20, 64}, 64, 3};
 	o.limits.command_bytes = COMMAND_ENTRY_BYTES;
 	o.limits.rpc_bytes = 2 * COMMAND_ENTRY_BYTES;
-	o.limits.log_bytes = 16 * COMMAND_ENTRY_BYTES;
+	o.limits.log_bytes = LOG_BYTES;
+	o.limits.log_entries = LOG_ENTRIES;
 	o.timing = kronuz::consensus::Timing{20, 40, 100, 200, 60000};
 	return o;
 }
@@ -555,9 +558,24 @@ ShardGroups::Driven::end()
 
 
 ShardGroups::ShardGroups(const std::string& directory, std::size_t chores) :
+	directory_(directory),
 	io_options_(engine::strata::posix_io_options())
 {
-	std::filesystem::create_directories(directory);
+	namespace fs = std::filesystem;
+	fs::create_directories(directory);
+	for (const auto& entry : fs::directory_iterator(directory)) {
+		if (!entry.is_directory()) {
+			continue;
+		}
+		const fs::path strays(directory + ".strays");
+		fs::create_directories(strays);
+		auto to = strays / entry.path().filename();
+		for (int n = 1; fs::exists(to); ++n) {
+			to = strays / (entry.path().filename().string() + "." + std::to_string(n));
+		}
+		fs::rename(entry.path(), to);
+		L_WARNING("The journal's directory held {}, which is not the journal's: moved to {}", repr(entry.path().string()), repr(to.string()));
+	}
 	host_ = std::make_unique<jn::Host>(std::make_shared<jn::PosixIO>(directory, io_options_), jn::Identity{'X', 'H'}, jn::HostOptions{1, jn::TurnLogOptions{}});
 	loop_ = std::make_unique<strata::group::loop>(loop_thread_.ref(), jn::completion_ref::of(io_), *host_, 0, std::random_device{}());
 	task::spawn(loop_thread_.ref(), host_->driver(0).run(jn::completion_ref::of(io_), stop_.token()), [this](std::exception_ptr) { turns_done_.store(true); });
@@ -601,6 +619,27 @@ ShardGroups::group_id(const std::array<char, 16>& uuid) noexcept
 	std::uint64_t id = 0;
 	std::memcpy(&id, uuid.data(), sizeof(id));
 	return id != 0 ? id : 1;
+}
+
+
+bool
+ShardGroups::holds(kronuz::consensus::GroupId id)
+{
+	std::mutex mtx;
+	std::condition_variable cv;
+	std::optional<kronuz::journal::GroupStatus> status;
+	auto read = [&]() -> task::task<void> {
+		const auto found = host_->status(id);
+		std::lock_guard<std::mutex> lk(mtx);
+		status = found;
+		cv.notify_one();   // under the lock: the waiter's frame outlives it
+		co_return;
+	};
+	task::spawn(loop_thread_.ref(), read());
+	std::unique_lock<std::mutex> lk(mtx);
+	cv.wait(lk, [&] { return status.has_value(); });
+	using kronuz::journal::GroupStatus;
+	return *status == GroupStatus::stored || *status == GroupStatus::closed || *status == GroupStatus::bounded;
 }
 
 
@@ -699,16 +738,21 @@ ShardGroup::abort_open(const std::vector<std::uint64_t>& ids)
 
 
 task::task<void>
-checkpoint(ShardGroup& shard_group, std::function<void(prospect::index&)> at)
+checkpoint(ShardGroup& shard_group)
 {
 	const auto home = task::current();
 	co_await task::schedule_on{shard_group.group.owner().scheduler()};
 	std::exception_ptr error;
 	try {
+		// What was placed before the capture is behind the bundle once it publishes.
+		const auto bytes = shard_group.log_bytes.load();
+		const auto entries = shard_group.log_entries.load();
 		const auto published = co_await shard_group.group.checkpoint();
 		shard_group.checkpointed.store(published.through, std::memory_order_release);
-		if (at) {
-			co_await shard_group.group.read_applied([&](prospect::index& index) { at(index); });
+		shard_group.log_bytes.fetch_sub(bytes);
+		shard_group.log_entries.fetch_sub(entries);
+		if (shard_group.on_checkpoint) {
+			co_await shard_group.group.read_applied([&](prospect::index&) { shard_group.on_checkpoint(); });
 		}
 	} catch (const kronuz::consensus::closed&) {
 		error = std::make_exception_ptr(engine::Error(engine::errc::not_available, "The shard's group is closing"));
@@ -730,19 +774,115 @@ ShardGroup::ShardGroup(ShardGroups& groups, kronuz::journal::IO& directory_, pro
 }
 
 
+ShardGroup::~ShardGroup()
+{
+	quiesce();
+}
+
+
+void
+ShardGroup::pressure()
+{
+	{
+		std::lock_guard<std::mutex> lk(pressure_mtx_);
+		if (pressure_running_ || quiesced_) {
+			return;
+		}
+		pressure_running_ = true;
+	}
+	auto run = [](ShardGroup& shard_group) -> task::task<void> {
+		try {
+			co_await checkpoint(shard_group);
+		} catch (const std::exception& exc) {
+			// A writer that meets the full log runs its own checkpoint and answers its error.
+			L_DEBUG("The pressure checkpoint of group {} failed: {}", shard_group.group.id(), exc.what());
+		}
+	};
+	task::spawn(group.owner().scheduler(), run(*this), [this](std::exception_ptr) {
+		std::lock_guard<std::mutex> lk(pressure_mtx_);
+		pressure_running_ = false;
+		pressure_cv_.notify_all();   // under the lock: quiesce() may destroy the group once it sees false
+	});
+}
+
+
+void
+ShardGroup::quiesce()
+{
+	std::unique_lock<std::mutex> lk(pressure_mtx_);
+	quiesced_ = true;
+	pressure_cv_.wait(lk, [this] { return !pressure_running_; });
+}
+
+
+namespace {
+
+const char*
+reject_reason(kronuz::consensus::RejectReason reason) noexcept
+{
+	using R = kronuz::consensus::RejectReason;
+	switch (reason) {
+		case R::Busy: return "busy";
+		case R::NotLeader: return "not the leader";
+		case R::NotReady: return "not ready";
+		case R::LogFull: return "the log is full";
+		case R::TooLarge: return "the entry is too large";
+		default: return "refused";
+	}
+}
+
+// Attempts at one entry while its proposal meets a full log: the first after a checkpoint, the rest each retire
+// a command's worth of the cut log (consensus retires 1 MiB per step), so the bound's entries all drain.
+constexpr std::size_t LOG_FULL_ATTEMPTS = 2 + LOG_BYTES / COMMAND_ENTRY_BYTES;
+
+}  // namespace
+
+
 task::task<strata::group::answer>
 propose_entry(ShardGroup& shard_group, std::string entry, strata::group::ack level)
 {
+	namespace cs = kronuz::consensus;
 	const auto home = task::current();
 	co_await task::schedule_on{shard_group.group.owner().scheduler()};
 	std::exception_ptr error;
 	std::optional<strata::group::answer> out;
-	try {
-		out.emplace(co_await shard_group.group.propose(std::move(entry), level));
-	} catch (const kronuz::consensus::closed&) {
-		error = std::make_exception_ptr(engine::Error(engine::errc::not_available, "The shard's group is closing"));
-	} catch (...) {
-		error = std::current_exception();
+	const auto bytes = entry.size();
+	// On the loop, at the placement: counts the entry, and past half the log's bound starts a checkpoint (L1).
+	auto placed = [&shard_group, bytes](cs::Placement) {
+		const auto log_bytes = shard_group.log_bytes.fetch_add(bytes) + bytes;
+		const auto log_entries = shard_group.log_entries.fetch_add(1) + 1;
+		if (log_bytes >= LOG_BYTES / 2 || log_entries >= LOG_ENTRIES / 2) {
+			shard_group.pressure();
+		}
+	};
+	for (std::size_t attempt = 0;; ++attempt) {
+		bool full = false;
+		try {
+			out.emplace(co_await shard_group.group.propose(attempt + 1 < LOG_FULL_ATTEMPTS ? entry : std::move(entry), level, {}, placed));
+		} catch (const cs::closed&) {
+			error = std::make_exception_ptr(engine::Error(engine::errc::not_available, "The shard's group is closing"));
+		} catch (const cs::rejected& rejected) {
+			if (rejected.reason == cs::RejectReason::LogFull && attempt + 1 < LOG_FULL_ATTEMPTS) {
+				full = true;
+			} else {
+				error = std::make_exception_ptr(engine::Error(engine::errc::busy, std::string("The shard's group refused the write: ") + reject_reason(rejected.reason)));
+			}
+		} catch (...) {
+			error = std::current_exception();
+		}
+		if (!full) {
+			break;
+		}
+		if (attempt == 0) {
+			// The writer waits for the checkpoint the trigger missed, or a second one, and proposes again.
+			try {
+				co_await checkpoint(shard_group);
+			} catch (...) {
+				error = std::current_exception();
+				break;
+			}
+			co_await task::schedule_on{shard_group.group.owner().scheduler()};
+		}
 	}
 	co_await task::schedule_on{home};
 	if (error) {

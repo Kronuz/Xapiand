@@ -300,6 +300,10 @@ private:
 	// storage with chores inline, then the group over `directory` and the index, recovered from its journal. The slot is
 	// `opening`, so no pin sees any of it first.
 	void open_blocking(kronuz::journal::IO& directory, prospect::index& index);
+	// The open's refusals, each logged once with its cause: an index that holds state whose group the journal lacks
+	// (nothing touched), and a failure after the group opened (the group closed first, on its loop).
+	void refuse_without_journal(ShardGroups& groups, kronuz::journal::IO& directory, prospect::index& index);
+	[[noreturn]] void refuse_opened_group(std::exception_ptr failed);
 
 	// The catalog's commit chore (x-pool D7, C24): runs with no pin held, under the chore's lease, at the bound
 	// close, at shutdown, in a replace close and in a demotion that only syncs a merge's output. With nothing
@@ -431,6 +435,7 @@ class DatabasePool {
 	std::function<std::unique_ptr<kronuz::journal::IO>(const std::string& path)> index_io_;
 	// The journal the indexes' groups log in (cluster-release D2), once set; it outlives the catalogs.
 	std::unique_ptr<ShardGroups> groups_;
+	std::string journal_;   // its directory, lexically normal, without a trailing separator
 
 	// The catalogs' timer (on the control loop), their budget, their shutdown, and the catalogs, in the order they
 	// are made: the catalogs go first, once the timer has run what is still armed (their destructors wait for them).
@@ -525,7 +530,7 @@ public:
 	}
 
 	// The journal over `directory`: every index opened from here on is a lone-voter group logged there. Set before
-	// the first pin.
+	// the first pin. An index path at or inside `directory` is refused (errc::invalid) before anything is created.
 	void set_journal(const std::string& directory);
 
 	ShardGroups* groups() const noexcept {
