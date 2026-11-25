@@ -329,3 +329,83 @@ Code at bf7668b4a against strata 7a4284c4 (the pin) and journal's `Host::status`
 - S1, by the owner's ruling.
 - I am a subagent of the lead's session, not a session of my own, so no `xapiand · reviewer journal-replaces-wal
   durability` title applies.
+
+## Re-check (round 5, T1)
+
+Commit: Xapiand:66bcd87eb (fix; code identical at ca2a27058 where the jobs ran; branch head Xapiand:cb0a09b78 adds only the journal)
+Verdict: APPROVE
+Date: 2026-11-25
+
+Scope: `git diff 1933c78f9 cb0a09b78 -- src tests docs harness` (Proposer {in_turn, pinned} through group_proposer
+and propose_entry, the inline pressure checkpoint, ShardEndpoint::checkpoint_in_turn, the pressure task, quiesce and
+their two allowlist rows removed, journal-durability.md "Who writes the index", test_a_checkpoint_holds_the_turn) and
+the journal's session-22 thread table. No probe was needed: the job records and the code settle every question.
+
+### Evidence I relied on
+
+- 261125-043517-a4b25b (ASSERTS, ca2a27058): test_a_checkpoint_holds_the_turn 20 of 20, the L1 test 5 of 5.
+- 261125-043520-724b20 (mutant 89d85b591, pressure checkpoint spawned off the turn): fails at test_pool.cc:2964-2965
+  (the pressure phase) and :2980.
+- 261125-043523-718f1e (mutant cf9e7a2c9, a pinned proposer's full-log checkpoint off the turn): fails at
+  test_pool.cc:2980 only, the upload phase, as named.
+- CI run 45615287943 at ca2a27058: "Unit tests under TSan" (the job that caught T1 at 1933c78f9, run 45605598968)
+  and "ThreadSanitizer" are green; build, ASan+UBSan and E2E green; "Unit tests under ASan + UBSan" still running
+  when I wrote this.
+- 261125-043544-9e00b8 (no-wal): passed.
+
+### What I checked myself
+
+1. **The thread rule (Q1).** Every path that touches `core.index` outside a published view is in the turn, or on the
+   chore while a turn holder awaits it. Checkpoints have four callers, and each holds a turn or comes before or after
+   every pin: commit_group (shard.cc:495-505, in the turn); propose_entry's pressure trigger, in_turn only
+   (shard_group.cc:882-892); the full-log retry, which takes the turn for a pinned proposer (shard_group.cc:870,
+   shard.cc:514-518); and strata's close checkpoint (no pins). Every in_turn site holds a turn: propose(), used by
+   do_write (shard.cc:720), do_set_metadata (:906) and restore_slice (:1273, :1308, after take_turn at :1170);
+   propose_upload_command's final entry (:720); restore_slice's propose_entry (:1274). Pinned sites hold no turn:
+   upload_stored (handler.cc:640-652, pin only) and index_uploaded's abort (handler.cc:675-680, its turn ended with
+   index_uploaded_through_group). written_key, written_keys and written_count take the turn (shard.cc:1062-1089), and
+   RESTORE's written_key at :1226 runs inside its slice's turn. applied_by_group touches only atomics
+   (engine/strata/shard.cc:1081). A pinned proposer's entries never write the index: a chunk or an abort (an empty
+   Command) makes no transaction (shard_group.cc:258-262, :405-410; strata group.hh:887 applies only a returned
+   transaction). Searches and get_view read published views. group_ changes only at open and close
+   (shard.cc:259, :269, :353), so checkpoint_in_turn's `*group_` is the proposer's group while it is pinned.
+2. **L1 (Q2).** An in-turn placement that leaves the log pressed checkpoints before it answers, and on_checkpoint
+   runs Shard::checkpointed's refresh (engine/strata/shard.cc:1090), so what was applied is visible after it. A pinned
+   upload fills the log to LogFull, then takes the turn, checkpoints with the same refresh and proposes again.
+   ack=none writes stay covered: the checkpoint's capture comes after their apply, and the next holder's take_turn
+   runs caught_up (pool.cc:363-366). The L1 test passes 5 of 5 (a4b25b), and its upload phase acknowledges 2.5 times
+   the bound. A failed pressure checkpoint is logged and the write still stands. The next in-turn write sees
+   `pressed()` again, so no wake is lost: the trigger is a predicate checked at every in-turn proposal, not an edge.
+3. **Blocking, lost wakes, lifetime (Q3, lead's (a) and (b)).** The fix adds no blocking call: take_turn and
+   checkpoint are coroutines, and the fsync runs on the group's chore. Removing quiesce removes the only
+   condition-variable wait this mechanism had. Deadlock (a): no turn holder waits for a pin to drop. Reopen re-pins
+   outside the turn (handler.cc:1967, shard.cc:1623, :1648, :1674). A turn holder never waits on an upload: an
+   upload's final entry follows its own chunks, which are already placed. The new edge (pin, then wait for the turn)
+   is bounded under a Host by turn_timeout (DB_TIMEOUT 30 s, pool.cc:344), which answers 503, never a hang. Lifetime:
+   checkpoint_in_turn captures the endpoint, which owns group_. It is called only by a proposer holding the pin, and
+   close runs only after the last pin, so the hook cannot outlive the shard, and no background task is left to
+   outlive it.
+4. **The test and mutants (Q4).** The value test asks a written read while the checkpoint's hook sleeps and passes
+   only if the read returns after the hook ends. Both mutants (the old background task's shape, and a pinned
+   checkpoint off the turn) fail where named. The pressure mutant matches the code at 1933c78f9 closely enough: a
+   checkpoint spawned on the loop with no turn. TSan on its own did not catch the race reliably (3d5ce3627 passed CI
+   TSan), so the value test, not TSan, is the proof; CI TSan at the fix is the clean run.
+
+### Findings
+
+| ID | Blocking | Kind | Finding | Evidence | Fix |
+|---|---|---|---|---|---|
+| T1 | no | defect | Closed. Every checkpoint runs in the shard's turn; the pressure task and quiesce are gone; the value test kills both mutants; CI TSan is green at the fix. | shard_group.cc:866-892; shard.cc:514-518; test_pool.cc:2916-2985; jobs a4b25b, 724b20, 718f1e; CI 45615287943 | none |
+| L1-T | no | gap | Round 4's optional trigger-only mutant now exists: 724b20 fails the pressure phase (test_pool.cc:2964-2965). | job 724b20 | none |
+| N15 | no | note | The write whose placement presses the log pays one checkpoint (capture, commit, fsync, refresh) before it answers, about once per 8 MiB or 32,768 entries, and the shard's next writers queue on the turn meanwhile (bounded by the 30 s turn timeout). Before this, the checkpoint ran beside the writes. No loop thread blocks; only the latency moves. Not measured. | shard_group.cc:882-892 | owner's call: keep it (a correct turn rule), or measure p99 and revisit |
+| N16 | no | note | At rf > 1 a follower's apply holds no local turn (release_superseded, the applies a follower makes); the journal hands that to the cluster quest. Unreachable at rf = 1 today. | journal session 22 class sweep | cluster quest |
+
+### Not run
+
+- The lead's strict write-p99 smoke (base 1933c78f9 against the fix). It needs two builds and a load driver, which
+  is not cheap; N15 names the cost from the code instead.
+- My own wait on TSan jobs 261125-043535-432e87 and 261125-043538-76be33: they were still queued. CI's TSan jobs at
+  the same code are green, so I relied on those.
+- CI's "Unit tests under ASan + UBSan" at ca2a27058 was still running.
+- No probe scripts were written this round.
+- I am a subagent of the lead's session, so the session title rule does not apply.
