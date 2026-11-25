@@ -1,6 +1,6 @@
 # rocksdb-parity: journal
 
-State: working
+State: waiting on jobs 261124-231350-d66cf1 261124-231353-1ad1c6
 Quest: .campaign/xapiand/quests/rocksdb-parity.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -30,12 +30,28 @@ Launch 1 (2026-11-24): first commit, gap table, one strata-only task.
 
 ## Next
 
-1. Read jobs 261124-231305-3c9f9c (tests at fix), 261124-231315-48aa2b (mutant must show the
-   sorted_runs CHECK), 261124-231329-08a553 (strict smoke), 261124-231350-d66cf1 (exclusive A/A,
-   A/B x3, identity), 261124-231353-1ad1c6 (exclusive tenx1 and twox1 vs RocksDB). Fill the numbers
-   in `sorted-runs.md` and Result. If B loses on any row past the A/A band, revert and record.
-2. Task 7 step 2: the runs' range index for gets and the run-count cap (N13); then settle flushes
-   under `run_bytes` too (wamp 1.2 -> ~0.6 needs it).
+1. Read 261124-231350-d66cf1 (exclusive: A/A, A=strata:7823c51a B=strata:19ddcbd0 on ab.py's
+   `runs` set x3, readall identity) and 261124-231353-1ad1c6 (exclusive: tenx1 and twox1 at
+   strata:19ddcbd0 against RocksDB 11.11 pinned). Out dirs: ~/.scratch/rocksdb-parity/.
+   Decide: land step 1 if tenx1 fillseq moves past the A/A band and no row loses past it; twox1
+   fillseq's write amp is the row to watch (smoke 1.04 -> 1.63, light probes 1.04 both, twice). If
+   it loses, revert strata:19ddcbd0 and record it here and in `sorted-runs.md`.
+2. Fill the numbers in `docs/mechanisms/sorted-runs.md` and Result; then a `campaign verify`
+   round (build-test) at the head.
+3. Task 7 step 2: the runs' range index for gets and the run-count cap (N13); then settle flushes
+   under `run_bytes` (wamp ~1.2 -> ~0.6 needs it).
+
+## Jobs read (launch 1)
+
+- 261124-231305-3c9f9c, tests at strata:19ddcbd0: merge_policy and background_merge pass (exit 0).
+- 261124-231315-48aa2b, mutant `mutant/rocksdb-parity/no-ranges`: background_merge fails at
+  sorted_runs' `segments().size() == 6` (lines 244 and 251), as required (exit 0 of the inverted
+  check). A plain `--fails-without` needs `--for`, and no criterion fits a merge-policy test (A2 is
+  log formats), so the job greps for the failing CHECK instead.
+- 261124-231329-08a553, strict smoke beside 7 light holds, 1 trial, B/A: tenx1 fillseq 1.16x
+  faster, CPU 5.78 -> 4.63 us/op, write amp 1.78 -> 1.32, peak RSS 160 -> 103 MiB; tenx1 fillrandom
+  1.02x (tie); twox1 fillseq 0.94x, write amp 1.04 -> 1.63; twox1 fillrandom 1.04x; tenx1
+  readrandom 0.95x. Noise band unknown until the exclusive A/A.
 
 ## Gap table (launch 1)
 
