@@ -1,6 +1,6 @@
 # rocksdb-parity: journal
 
-State: waiting on jobs 261125-020618-9f6c9c 261125-020620-96fc88 261125-020622-cd1920 261125-020625-245609 261125-020725-4543a9 261125-020727-610311 261125-020751-9cf6ff 261125-013258-77d915 261124-231353-1ad1c6
+State: waiting on jobs 261125-035316-b8b4f2 261125-020727-610311
 Quest: .campaign/xapiand/quests/rocksdb-parity.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -50,9 +50,37 @@ Launch 1 (2026-11-24): first commit, gap table, one strata-only task.
    - Mutant branches (each one change on strata:34791d51): `mutant/rocksdb-parity/size-gate`
      (runs need 4 MiB, baeda3b4), `no-cap` (97d5d86b), `no-key-ranges` (find probes all, 6aaa31e3).
 
+5. Suite fix round (lead: full suite 261125-020751-9cf6ff failed 13 of 139 at strata:54b4c043):
+   - Real regression, apply_atomic (commit alloc N=120-122: retry broke the docid invariant):
+     `index_ranges()` ran after the `segs_` change and its `bad_alloc` escaped, leaving a flush
+     half done and the commit unfenced. Fix strata:8888ecf2: `index_ranges()` is
+     noexcept; a failed allocation leaves the ranges unfinished (lookups probe all). Class: every
+     `index_ranges()` call site follows a `segs_` change (flush x2, merge publish, checkpoint,
+     open, close, destroy, warm, heal, run_merges); noexcept covers all. Test that fails without:
+     apply_atomic (failed in 261125-020751-9cf6ff, passes locally after).
+   - Old merge shape (tests that force tier merges with segments_per_tier 2 / floor 1 over
+     ordered keys, now runs): write_buffer, reclaim_backlog(+_mapped), defer_io(+_mapped),
+     shared_read(+_mapped), catalog_host, warm and index_prereq (cold_hooks fixture). New
+     behavior is right (disjoint segments are runs); `max_runs = 0` now means no runs, the tiers
+     alone (strata:d80addd0), and those tests set it, so they count the merges they did. A first
+     try with max_runs 0 as "cap 0" kept merging outputs into the next run (warm demote,
+     close_ready, reclaim counts failed): rejected.
+   - index(+_mapped): the commit-driven index keeps 40 one-key runs under cap 64 (checked ==
+     40) and stays under 20 at cap 8 (strata:d80addd0).
+   - Local (quiet light): all 16 affected ctest entries pass with the edits.
+
 ## Next
 
-0. Read jobs: tests 261125-020618-9f6c9c (e2c18e42); mutants 261125-020620-96fc88 (size-gate,
+0. msg-1 (lead, measure a search row at 64 runs before landing): answered here: not done yet;
+   it is the next step after the suite is green: an exclusive term/phrase p50/p99 row on a text
+   index keyed in order, 64 runs against `max_runs = 0` (tiers), then the cap's mechanism named
+   in sorted-runs.md and per-layout caps if search loses.
+0a. Full suite 261125-035316-b8b4f2 at pending/rocksdb-parity/tier-tests (strata:ff7b4d97 =
+   d80addd0 + the out-of-set test edits); green -> lead widens the file set, quest branch
+   fast-forwards to it. Mutants/tests/smoke read: size-gate failed only at 387, no-cap only at
+   345 416, no-key-ranges only at 437-441, tests 9f6c9c pass; smoke 4543a9: tenx1 fillseq
+   1.33x, wamp 1.25 -> 0.57; twox1 fillseq wamp 1.63 -> 0.58; readrandom 0.88 (1 trial).
+0b. Read jobs: tests 261125-020618-9f6c9c (e2c18e42); mutants 261125-020620-96fc88 (size-gate,
    must fail only at merge_policy_test:387), 261125-020622-cd1920 (no-cap, only 345 and 416),
    261125-020625-245609 (no-key-ranges, only 437-441); strict smoke 261125-020725-4543a9; exclusive
    A/B with A/A 261125-020727-610311 (A = strata:31fcb7b3, B = 54b4c043; runs set 3 trials plus
@@ -142,7 +170,13 @@ journal test, before it lands):
 
 ## Blocked on
 
-Nothing blocks step 2. One question for the lead, default taken (64): the run cap trades search
+File set: six test paths outside it carry `max_runs = 0` (commit strata:ff7b4d97 on
+`pending/rocksdb-parity/tier-tests`, patch also at ~/.scratch/rocksdb-parity/step2/outside-file-set.patch):
+test/catalog_host_test.cc, test/cold_hooks.hh, test/defer_io_test.cc, test/reclaim_backlog_test.cc,
+test/shared_read_test.cc, test/write_buffer_test.cc. Widen to them, then the quest branch
+fast-forwards to ff7b4d97.
+
+Nothing else blocks step 2. One question for the lead, default taken (64): the run cap trades search
 cost for bytes written. An index of text documents keyed in order (auto-increment ids) now holds
 up to 64 segments where the tiers held about 16, and each segment costs a query its setup
 (query-gap H20: 16 segments cost 1.03-1.58x before P6). Options: (a) keep 64 (KV parity: tenx1
