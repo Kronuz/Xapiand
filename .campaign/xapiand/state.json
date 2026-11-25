@@ -4512,6 +4512,24 @@
         ]
       },
       "text": "field-check-at-map landed: unlocks frees test/** for format-freeze; frees include/strata/core/**, test/**, docs/mechanisms/**, docs/perf/**, CMakeLists.txt for rocksdb-parity; frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete; frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this"
+    },
+    {
+      "announced": {
+        "at": "2026-11-25T01:27:32",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-25T01:27:32",
+      "by": "campaign detent",
+      "closed": "told Detent's lead what strata-journal-behind relies on in GroupState::last",
+      "id": "msg-374",
+      "settles": {
+        "ours": [
+          "strata-journal-behind"
+        ],
+        "quest": "detent:consensus-inline-sync-loop"
+      },
+      "text": "detent:consensus-inline-sync-loop started and changes contract consensus:group-last, which your strata-journal-behind consumes"
     }
   ],
   "quests": {
