@@ -1,6 +1,6 @@
 # field-check-at-map: journal
 
-State: ready for review (jobs running: A3 aab22b a00a3e, A2 d9a59d, mutant 7f00f1, build-test)
+State: ready for review
 Quest: .campaign/xapiand/quests/field-check-at-map.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
