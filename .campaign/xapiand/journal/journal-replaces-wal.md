@@ -1,9 +1,34 @@
 # journal-replaces-wal: journal
 
-State: waiting on jobs 261124-160741-26cfd4 261124-160741-838232 261124-160758-b7c564 261124-160758-92f823 261124-160758-2e2d34 261124-160759-3536d4 261124-160759-56ed44 261124-160759-d57f08 261124-160800-7adbab 261124-160800-54a48e 261124-160800-a73a91 261124-160801-9c2628 261124-160801-40491e 261124-160801-82cbcd 261124-160810-feba37 261124-155600-dc1640 261124-160825-6198e5 261124-160827-b2b5ef and CI at Xapiand:0ea6bd04a (ready commit; code at Xapiand:66a63182d). Next: Evidence table from `campaign brief`; the A/B numbers into Result; then ready for review.
+State: implementing the durability review's round-2 fixes (L1, J1, J2, D1; N2, N5) at Xapiand:33c922879. Next: code, then targeted tests, then evidence once.
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
+
+Session 19 (2026-11-24), durability review round 2 (CHANGES at Xapiand:0ea6bd04a): L1, J1, J2, D1 blocking; N2, N5 nits.
+
+Lifecycle of a shard's group (the lead's design check is this table, per the assignment; each fixed cell names its
+fix and the class test). Classes: L1 = a proposal meets the retained-log cap; J = a client path or a stray entry
+inside the journal's directory; J2 = a group created over an index that holds state; D1 = anything thrown after
+the group opened.
+
+| State | write | checkpoint trigger | crash | journal missing | volume damaged | close | DELETE |
+|---|---|---|---|---|---|---|---|
+| opening | held by the catalog until the open returns | none | next open replays from the last bundle | **J2**: refused before the group is built, errc::corrupt naming the missing journal group; nothing created or deleted | **D1**: strata opens it damaged; open closes the group on the loop and refuses naming the damage, one log line | not reachable (the open owns the slot) | 501 (index-delete quest) |
+| catching up | held | none | replay | checked before (J2) | **D1**: catch-up throws; the same close and refusal | not reachable | 501 |
+| open | placed at its level; each placement counts toward the pressure trigger | **L1**: a placement past half the log's bytes or entries schedules one checkpoint on the loop; COMMIT and autocommit checkpoint as before | replay; every answered write is in the log | not reachable (the host holds the group) | an apply that meets damage marks it damaged | to closing | 501 |
+| checkpointing | placed meanwhile; entries past the capture stay in the log | joins: the group serializes checkpoints | replay from the previous bundle | not reachable | the checkpoint fails; the group is damaged or fenced | waits for the in-flight checkpoint; **L1**: and for the pressure task | 501 |
+| log full | **L1**: LogFull waits for a checkpoint and retries; with no progress, 503 naming the full log, never 500 | runs, cuts the log | replay (the reviewer's d069b2) | not reachable | as open | checkpoints until covered | 501 |
+| damaged | refused, replica_damaged naming the reason | refused | the next open finds it damaged again: D1 | not reachable | (already) | **D1**: close skips checkpoints, tears down on the loop | 501 |
+| closing | refused (closed: 503) | **L1**: the pressure task is not started; one in flight ends before the close | replay from the last bundle | not reachable | the close throws damaged, swallowed by the open's failure path | (already) | 501 |
+| closed | the next pin opens it | none | not running | next open: J2 | next open: D1 | none | 501 |
+
+Paths into the journal's directory (J class): a client path naming it or inside it is refused by the pool before
+resolve creates anything (J1, N6); a directory left there by an earlier build is moved aside before the host scans.
+
+Plan: (1) D1 and J2 in ShardEndpoint::open_blocking; (2) J1 in the pool's resolve and ShardGroups' constructor;
+(3) L1 in propose_entry (pressure trigger, LogFull wait, 503) and the RESTORE's status; (4) N2, N5; tests in
+test_pool.cc and test_shard_group.cc, one per class transition; mutants per fix; the reviewer's probes rerun.
 
 Session 18 (2026-11-24), after journal-sync-mode landed (lead's resume):
 
