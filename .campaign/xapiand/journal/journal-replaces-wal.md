@@ -1,9 +1,30 @@
 # journal-replaces-wal: journal
 
-State: waiting on jobs (round 2 at Xapiand:98ea84a70, pushed; listed under Session 19 below) and CI. Next: read them; the crash check reruns at the round's end (State ready for review); then `campaign accept ... durability --confirm` is the lead's.
+State: ready for review (L1 test fix at Xapiand:0fffbb26a, pushed); jobs 261124-222236-8c886d (test) and 261124-222240-69101c (mutant L1 rerun) queued. Next: the lead reads them; `campaign accept ... durability --confirm` is the lead's.
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
+
+Session 20 (2026-11-24), L1's unit test (lead's step): mutant 261124-201402-16805d left the log-bound test passing.
+
+Cause: the mutant's diff (Xapiand:7e88de1e3) removes only the LogFull wait (`LOG_FULL_ATTEMPTS = 1`), not the
+pressure trigger its message names; the test's serial writes never outran the pressure checkpoint, so it exercised
+the trigger alone. With both removed, the old test already failed (local: "the log is full").
+
+Fix (Xapiand:0fffbb26a, test only): the upload (2.5 times LOG_BYTES) runs while the group's `on_checkpoint` hook (the
+production hook, wrapped by the test; no new seam) holds the next checkpoint for 1 s, so placements fill the log to
+its bound and a writer must wait for a checkpoint. Values asserted per phase: refused writes 0, a checkpoint
+published (`checkpointed` rose), every document (keys of 288 writes + 192 restore slice) and the 40 MiB upload read
+back byte-equal, the slow checkpoint ran during the upload. Local (quiet light, -G Ninja -j4, build/): head 13 of 13
+runs pass, 2.2 s each; wait-only mutant 11 of 11 fail (upload refused 503); both removed 3 of 3 fail (every phase).
+Also D181 (msg from the lead): journal-durability.md, "Refusals at open" item 1, states how an index moves between
+nodes (replication or DUMP/RESTORE) and that a copied directory is refused.
+
+| Finding | Test job | Mutant (must fail) |
+|---|---|---|
+| L1 (test missed the LogFull wait) | 261124-222236-8c886d at 0fffbb26a | 261124-222240-69101c: rerun of 16805d at 7c3728033 (branch mutant/jrw-r2-l1-r3, same diff on 0fffbb26a) |
+
+No other mutant or probe reruns (test-only change); round-2 jobs stand.
 
 Session 19 (2026-11-24), durability review round 2 (CHANGES at Xapiand:0ea6bd04a): L1, J1, J2, D1 blocking; N2, N5 nits.
 
@@ -796,3 +817,6 @@ Drafts, applied when the code lands; each names the contract it shapes (format-f
 54. N2 left for the lead: an upload's final whose volume length differs from its blob's size can only come from a
     proposer bug (ChunkedUpload::end checks the size); the apply-side reaction is a policy (fence the index for good
     vs. retire the volume and fail the write), not a few lines.
+55. L1's test slows a checkpoint by wrapping the group's own `on_checkpoint` hook (sleep 1 s once), not by a new
+    seam in the write path: it is the only deterministic way to make placements outrun the pressure checkpoint
+    (serial writes left the wait-only mutant passing; the upload alone killed it in about 2 runs of 5).
