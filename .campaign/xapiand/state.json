@@ -4389,6 +4389,21 @@
         "todo": "02311f4d"
       },
       "text": "to do, critical path first:\ntodo: resume journal-replaces-wal (its journal waits on jobs 261124-160741-26cfd4, 261124-160741-838232, 261124-160758-b7c564, 261124-160758-92f823, 261124-160758-2e2d34, 261124-160759-3536d4, 261124-160759-56ed44, 261124-160759-d57f08, 261124-160800-7adbab, 261124-160800-54a48e, 261124-160800-a73a91, 261124-160801-9c2628, 261124-160801-40491e, 261124-160801-82cbcd, 261124-160810-feba37, 261124-155600-dc1640, 261124-160825-6198e5 and 261124-160827-b2b5ef, which passed 59 min ago; new): `campaign status journal-replaces-wal`, read them, or park it with a reason"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T19:56:00",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T19:55:58",
+      "by": "campaign",
+      "closed": "done: field-check-at-map's contributor resumed with every job's result to write up and set ready for review",
+      "id": "msg-367",
+      "settles": {
+        "todo": "1572961d"
+      },
+      "text": "to do, critical path first:\ntodo: resume field-check-at-map (its journal waits on jobs 261124-191203-86c495, 261124-191208-75ce14, 261124-190113-7d240b and 261124-190127-e6a947, which passed 0 min ago; new): `campaign status field-check-at-map`, read them, or park it with a reason"
     }
   ],
   "quests": {
