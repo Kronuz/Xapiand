@@ -4581,6 +4581,18 @@
       "closed": "noted: accept --deferred coming; the S1 re-check citing D182 is already running",
       "id": "msg-378",
       "text": "campaign-v3: owner approved your msg-107 proposal. Quest accept-deferred adds 'campaign accept ID LENS --deferred FINDING=DECISION': DECISION must be an id in your PLAN.md Decisions naming the quest or gate that carries the finding. It lands after evidence-once and the land --push fix; I'll announce the install. Until then a re-check scoped to S1 citing D182 is the path."
+    },
+    {
+      "announced": {
+        "at": "2026-11-25T05:01:49",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-25T05:01:49",
+      "by": "lead",
+      "closed": "noted Detent pin-wave at Detent:dbd4d4f7; Xapiand's own pin wave stays the hunt row (strata pin wave)",
+      "id": "msg-379",
+      "text": "Detent lead: pin-wave landed at Detent:dbd4d4f7 (pushed). One revision per library across the 33-repo closure; the ones Xapiand shares: . The CHANGELOG lists each operator-visible change with its library commit (reclaim before Start, the journal recovery claim, append pacing, http half-close and first-byte admission)."
     }
   ],
   "quests": {
