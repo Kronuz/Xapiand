@@ -8918,7 +8918,8 @@
       "files": [
         "include/consensus/driver.h",
         "test/driver_*",
-        "CHANGELOG.md"
+        "CHANGELOG.md",
+        "docs/DRIVER.md"
       ],
       "journal": "../Xapiand-wt/xapiand/consensus-group-last",
       "landed": [],
@@ -8932,7 +8933,7 @@
       "risk": "normal",
       "status": "active",
       "title": "consensus: Driver reports a group's recovered log end",
-      "updated": "2026-11-24T22:47:47",
+      "updated": "2026-11-24T23:03:36",
       "worktree": "../consensus-wt/xapiand/consensus-group-last"
     },
     "consensus-hello-limits": {
