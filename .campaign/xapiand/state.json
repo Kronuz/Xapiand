@@ -4486,6 +4486,32 @@
         "todo": "45689398"
       },
       "text": "to do, critical path first:\ntodo: answer journal-replaces-wal (its journal waits on the lead: blocked on lead: design check of the lifecycle table (session 21, J1b and S1 classes, below). S1's refusal needs strata (Blocked on 13).; it asks: 13 answered (lead, 2026-11-24, msg-3): consensus-group-last then strata-journal-behind; the pin bump and S1's tests are Next 0.; listed 32 min): `campaign status journal-replaces-wal`, answer it (`campaign message journal-replaces-wal TEXT`), or park it with a reason"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T22:46:08",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T22:46:08",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-370",
+      "items": {
+        "format-freeze": "frees test/** for format-freeze",
+        "index-delete": "frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete",
+        "more-like-this": "frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this",
+        "rocksdb-parity": "frees include/strata/core/**, test/**, docs/mechanisms/**, docs/perf/**, CMakeLists.txt for rocksdb-parity"
+      },
+      "settles": {
+        "start": [
+          "format-freeze",
+          "index-delete",
+          "more-like-this",
+          "rocksdb-parity"
+        ]
+      },
+      "text": "field-check-at-map landed: unlocks frees test/** for format-freeze; frees include/strata/core/**, test/**, docs/mechanisms/**, docs/perf/**, CMakeLists.txt for rocksdb-parity; frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete; frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this"
     }
   ],
   "quests": {
@@ -35377,7 +35403,8 @@
       "files": [
         "include/strata/group/group.hh",
         "test/group/**",
-        "docs/mechanisms/**",
+        "docs/mechanisms/group-open.md",
+        "CMakeLists.txt",
         "CHANGELOG.md"
       ],
       "landed": [],
@@ -35395,7 +35422,7 @@
       "risk": "high",
       "status": "planned",
       "title": "strata: a group whose journal is behind its index refuses at open",
-      "updated": "2026-11-24T22:46:51"
+      "updated": "2026-11-25T00:24:29"
     },
     "strata-journal-pin": {
       "accepted": {
