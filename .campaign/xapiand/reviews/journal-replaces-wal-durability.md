@@ -241,3 +241,91 @@ builds xapiand (ASSERTS on) and runs one, and its header has the submit line.
   folding that applies).
 - I am a subagent of the lead's session, not a session of my own, so no `xapiand · reviewer journal-replaces-wal
   durability` title applies.
+
+## Re-check (round 4)
+
+Commit: Xapiand:8754e27f8 (code at Xapiand:bf7668b4a; the branch head Xapiand:54c556df2 adds only the journal)
+Verdict: APPROVE
+Date: 2026-11-25
+
+Scope: `git diff 98ea84a70 8754e27f8 -- src tests harness docs` (pool.cc's identity walk, shard.cc's group_fenced
+refusal, the monotonic pressure counters, refusal_kind, the EXDEV text, quiesce's check_may_block, the allow rows,
+journal-durability.md's refusals and hazard) and the journal's session-21 lifecycle tables. J1b, A1 and L1-T are
+closed. S1 is deferred by the owner (PLAN D182): strata-journal-behind fixes it (strata docs/design/journal-binding.md
+on that quest's branch; design review reviews/strata-journal-behind-design.md), it blocks the first release
+(cluster-gate A13), and journal-durability.md states it as a known hazard. I did not re-verify S1. No round-4 change
+adds a durability or loop-blocking defect. No probe was needed; every question was settled by a job record or the code.
+
+### Evidence I relied on
+
+- 261124-231558-1b3106 (ASSERTS on, bf7668b4a): test_pool (J1b, the older index, N9, N11, held at start, the log
+  bound), test_shard_group, test_loop_yield, test_node all pass. With ASSERTS on, quiesce()'s new check_may_block ran
+  on every close, D1 refusal and fenced-open path these suites take, and it did not abort.
+- Mutants, each failing on its named test: a9e71c (j1b, `test_another_spelling`), ebe75b (older), 09be1d (n9),
+  0d6d34 (n11).
+- 261124-231619-cab4ba: my journalcase probe (e2b871's script, r3/) passes at the fix.
+- L1-T: 261124-222240-69101c runs commit Xapiand:7c3728033, whose one-line diff is `LOG_FULL_ATTEMPTS = 1` (round 3's
+  16805d mutation: the retry dropped, the trigger kept). The slow-checkpoint test fails on it (test_pool.cc:2885, :2888,
+  :2902), so the retry is now tested. The job's title says "no pressure trigger", but the commit drops only the retry.
+  261124-222236-8c886d passes on the test, and so does 1b3106 at bf7668b4a.
+- CI run 45566919032 at Xapiand:3d5ce3627 (same src, tests and harness as bf7668b4a) is green on every job.
+  `async_check --strict` reports 284 hits, 0 unclassified and 0 owed.
+- Crash check 261124-231707-777023 and no-wal check 095b53 at 3d5ce3627.
+
+### What I checked myself
+
+Code at bf7668b4a against strata 7a4284c4 (the pin) and journal's `Host::status`.
+
+1. **J1b.** `reaches` (pool.cc:577-598) runs on resolve's miss branch (pool.cc:666), before `index_not_created` and
+   `create_index_directory`, so a create and a plain open both refuse. It walks up to the deepest existing ancestor,
+   makes it physical with `canonical`, and compares that directory and each parent with the journal's (device, inode).
+   set_journal reads that identity after ShardGroups made the directory (pool.cc:752-758). A symlink, a bind mount or a
+   case-folded spelling all reach the journal's inode. ENOTDIR through a journal file (`J/layout/x`) starts the walk at
+   its parent. The journal's directory always exists, so any path through it has an existing ancestor at or under it.
+   No spelling misses the walk. A hit, meaning `<path>/strata` opens, cannot be under the journal: creation there is
+   refused, and the start moves strays. The test covers the alias on every platform and four case spellings on APFS,
+   with and without a create, and checks that the journal's tree does not change (test_pool.cc:3100).
+2. **The older index.** shard.cc:263-271 catches strata's `group_fenced`. strata's own open has already fenced and
+   closed the driver row (group.hh:266-290 at the pin). The fence sits at group.hh:1181, before `files_.recover`
+   (:1183). The test (test_pool.cc:3143) refuses twice and leaves the index's tree byte-equal.
+3. **The counters.** `cut_*` only ever takes an earlier load of `placed_*`. `log_bytes()` loads `cut` before
+   `placed`, both seq_cst, so the value cannot wrap. `raise` (shard_group.cc:752-757, :774-775) makes overlapping
+   checkpoints idempotent, which N9 asked for. N10 (the counters start at 0 at each open) is unchanged and still a nit.
+4. **refusal_kind** (shard_group.cc:867-872) answers 503 for LogFull, Busy, NotLeader and NotReady and 500 for
+   everything else. The L1 test's LogFull retries still answer 200.
+5. **EXDEV** (shard_group.cc:578-586) compares the filesystem error with `errc::cross_device_link`, which is
+   equivalent to EXDEV, and ends the start naming the directory and the remedy (N12). Not run.
+6. **A1.** The new rows match their sites. The `fs|is_directory` count is 7 (shard_group.cc:567-580, ShardGroups'
+   constructor on the main thread). The `pressure_mtx_` count is 3: pressure(), the completion, and quiesce(). `holds()`
+   joins the `lk(mtx)` and `cv.wait` rows; it is called from the open chore. Payloads are destroyed in the catalog's
+   `retire`, which is posted to the executor (strata catalog_transitions.hh:700-705), or on the open chore's failure
+   (:175), or at shutdown. None of those runs on a reactor, which agrees with the ASSERTS suites.
+7. **Hazard text** (journal-durability.md:180-194). It is accurate. The S1 effects it lists (volumes cut to the older
+   bundle's lengths, acknowledged writes lost, blobs reading other bytes) are fb40f3's. The plain-mode macOS power cut
+   matches round 3. The fix it describes ((P_H, T_H) recorded, refused before consensus starts) is journal-binding.md
+   D1-D2, and "the first release waits" is D182. Two phrases overstate; see N13.
+
+### Findings
+
+| ID | Blocking | Kind | Finding | Evidence | Fix |
+|---|---|---|---|---|---|
+| J1b | no | defect | Closed. The miss branch's identity walk refuses every spelling of the journal's directory, with and without a create, before anything is made. | pool.cc:577-598, :666-668, :752-758; test_pool.cc:3100; jobs 1b3106, a9e71c (killed), cab4ba | none |
+| S1 | no | defect | Deferred by the owner (PLAN D182) to strata-journal-behind (strata docs/design/journal-binding.md); it blocks the first release (cluster-gate A13) and is documented as a known hazard. Not re-verified here. | journal-durability.md:187-194; reviews/strata-journal-behind-design.md | strata-journal-behind, then the pin bump and S1's two value tests (journal Next) |
+| A1 | no | gap | Closed. CI's async_check is green with 0 unclassified. quiesce() is checked (shard_group.cc:835), and the ASSERTS suites pass with the check in place. | CI run 45566919032; harness/async_allowlist.tsv rows 14-16, 67-72; job 1b3106 | none |
+| L1-T | no | gap | Closed. The slow-checkpoint test meets LogFull and kills the retry-only mutant (`LOG_FULL_ATTEMPTS = 1`). Round 3 also asked for a trigger-only mutant; it was not run, so the trigger is still covered only by liveness. | test_pool.cc:2809-2912; Xapiand:7c3728033; jobs 69101c (killed), 8c886d, 1b3106 | optional: a mutant without `pressure()` in `placed`, checked against the test's `checkpointed()` after phase 1 |
+| N13 | no | nit | Two phrases in the doc overstate. "The open refuses naming both positions" and the journal's table ("naming P_b and P_H"): the refusal carries strata's text "(P_b > P_H)", not the two values. "Nothing is written": the index's files are untouched (the test), but strata fences in `recover`, after `driver.recover`. A lone voter starting in a fresh process persists a term, then a NoOp (journal-binding.md F1), so each refused open may add a term and a NoOp to the journal. That is harmless for the stated recovery: the right index replays them. | journal-durability.md:182-183; shard.cc:265-271; strata 7a4284c4 group.hh:255-270, :1181 | "the index's files are untouched"; name the values, or say "naming the cause" |
+| N14 | no | nit | From round 2, not this round. `ShardGroups::holds` spawns `host_->status(id)` with no completion handler. `status` can read a closed group's shard file (`stored()`), and if it throws, `status` is never set, so the open chore waits forever (or the process terminates). This needs a damaged journal shard file. Not run. | shard_group.cc:635-651; journal host.h `status` | Run it through `run_blocking`, which rethrows. |
+| N10 | no | nit | Unchanged from round 3: the counters start at 0 at every open. | shard_group.h `placed_bytes{0}` | as round 3 |
+
+### Not run
+
+- No probe jobs. The suite, mutants, CI and my r3 journalcase probe at the fix covered every question, so the scripts
+  in r3/ stand as they are.
+- EXDEV (N12) on a real second volume; N14's throwing `status`; a trigger-only L1 mutant.
+- Linux and FreeBSD locally. CI ran the suites on Linux, and the symlink alias there exercises the identity walk
+  without case folding.
+- Two index names that fold to one directory on APFS (`/foo`, `/FOO`). That is not this round's change: strata's
+  directory flock (index.hh lock_directory) should refuse the second open as busy, but I did not run it.
+- S1, by the owner's ruling.
+- I am a subagent of the lead's session, not a session of my own, so no `xapiand · reviewer journal-replaces-wal
+  durability` title applies.
