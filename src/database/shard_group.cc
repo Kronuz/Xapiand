@@ -558,7 +558,7 @@ ShardGroups::ShardGroups(const std::string& directory, std::size_t chores) :
 	io_options_(engine::strata::posix_io_options())
 {
 	std::filesystem::create_directories(directory);
-	host_ = std::make_unique<jn::Host>(std::make_shared<jn::PosixIO>(directory, io_options_), jn::Identity{'X', 'H'}, jn::HostOptions{1, jn::TurnLogOptions{}});
+	host_ = std::make_unique<jn::Host>(std::make_shared<jn::PosixIO>(directory, jn::PosixIOOptions{jn::FlushMode::plain, true, true}), jn::Identity{'X', 'H'}, jn::HostOptions{1, jn::TurnLogOptions{}});
 	loop_ = std::make_unique<strata::group::loop>(loop_thread_.ref(), jn::completion_ref::of(io_), *host_, 0, std::random_device{}());
 	task::spawn(loop_thread_.ref(), host_->driver(0).run(jn::completion_ref::of(io_), stop_.token()), [this](std::exception_ptr) { turns_done_.store(true); });
 	task::spawn(loop_thread_.ref(), loop_->run(stop_.token()), [this](std::exception_ptr) { driver_done_.store(true); });
