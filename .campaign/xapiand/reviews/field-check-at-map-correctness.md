@@ -89,3 +89,40 @@ Probe job 261124-203958-0dda88 (light, fresh checkout, ASan+UBSan -O1, macOS x86
 - Xapiand's consumers of the check.
 
 Session: a subagent of the lead's session, not its own titled session.
+
+## Re-check
+
+Commit: strata:539fa10e (code at 0d39c221)
+Verdict: APPROVE
+Date: 2026-11-24
+
+Scope: `git diff 093bb965 539fa10e` and the ruling that install mutant 261124-205559-b94bac is
+equivalent.
+
+- F1 fixed. `guard` (bench/eager_open/ab.sh) runs before `row`, `heap` and `identity`. It prints
+  the sides line (which `identity` now has too) and exits 3 before any run in three cases: proto's
+  strata differs from the tree's HEAD, base or aa's strata differs from `$JOB_REF_BASE`, or a
+  side's prospect differs from `$JOB_REF_PROSPECT`. When that is unset, the sides' prospects must
+  agree with each other. `exit` inside the function ends the script.
+  - Evidence: test_guard.sh covers each refusal on all three commands (passed 2d1c17), and the
+    unguarded script fails it (8c5e65).
+- N1 fixed. `fail(..., false)` is called from inside the `corrupt_segment` handler, where `throw;`
+  rethrows the handled exception; a `corrupt_index` is still rewrapped. The single-prefix CHECK
+  fails without the fix (16b399).
+- N3 fixed: wake, heal and install cases match my P1-P3. The twin and heal mutants are killed
+  (96bca6, 765a8d).
+- N6 doc: fixed.
+- The equivalent-mutant ruling stands. The own copies (index_checkpoint.hh:59, 68) are
+  `write_new` of the bytes `load_files(whole=true)` just checked under the same `vouch_of(theirs)`.
+  A later map of a copy also passes size, footer crc and identity. A different field id there
+  therefore needs section bytes rewritten under intact block and term checksums: a forgery, which
+  the trusted-cluster model excludes. Under honest faults the claim on the copies is
+  unobservable. The copies keep it, and field-check.md now says the test rests on the load-side
+  check.
+- The crash-kill is acceptable. 7f00f1's log shows CHECK failures at field_check_map_test.cc:313
+  and :314 (no refusal; digest, segments and fields changed) before the abort. The abort is the
+  unguarded `ix.digest()` then mapping the damaged copies, and the mutant causes both.
+
+| ID | Blocking | Kind | Finding | Evidence | Fix |
+|---|---|---|---|---|---|
+| R1 | no | nit | With `JOB_REF_BASE` unset, the guard checks base and aa only for prospect agreement, not their strata commit or each other. A row run without `--ref BASE` can still measure a stale base. | bench/eager_open/ab.sh guard (`want_base` empty) | Require `JOB_REF_BASE` for `row`/`heap`, or check that base and aa have equal stamps. |

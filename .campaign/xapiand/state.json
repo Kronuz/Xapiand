@@ -13725,7 +13725,48 @@
       "worktree": "../faultlab-wt/xapiand/faultlab-strata-gaps"
     },
     "field-check-at-map": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-24T22:45:29",
+          "base": "49fca9483b145448e247cdc073581bd748bfd19b",
+          "blobs": {
+            "CMakeLists.txt": "100644:948ee0485c674b3d4082d7bd64d63b2c5cc73ef2",
+            "bench/eager_open/CMakeLists.txt": "100644:13dacfb73ed77842569c254fcc4ab44a012ce4e4",
+            "bench/eager_open/ab.sh": "100755:35786fe0943e1397b16ba6d4d6dd6fa3a4a20200",
+            "bench/eager_open/eager_open.cc": "100644:eae743de3a61effba8b9c319be4f654a8fd171de",
+            "bench/eager_open/summary.py": "100755:0d04f5a9f1b683ff59861ba6495531c52a75575c",
+            "bench/eager_open/test_guard.sh": "100755:6ae971aa2a6b6073a6ad622ff602da66901980d2",
+            "docs/mechanisms/field-check.md": "100644:a9a8e2cb72210b5bbc89997f493c447f995ea69b",
+            "docs/perf/eager-open.md": "100644:5297cc3b6c7d7df583363fa8c12ad4a5dababb58",
+            "include/strata/core/index.hh": "100644:c7cb2c951d4ae6043ed3444fe5ea915bdcf4afc9",
+            "include/strata/core/index_open.hh": "100644:57ee0a28f4d5f2eb9b58ba99bb573dfe1d487a69",
+            "include/strata/core/reader.hh": "100644:bc0eca41b88f7b1a93aa8dc555580a3289b942a4",
+            "test/field_check_map_test.cc": "100644:4b8a22f107cce3e6626f9e87c2a80534b437ba4e"
+          },
+          "by": "review",
+          "commit": "539fa10e52848dfd0b37278150af26c9a8b8524e",
+          "criteria": "2b744710147bc3ea",
+          "diffs": {
+            "CMakeLists.txt": "2e0c58b1b6885bc0",
+            "bench/eager_open/CMakeLists.txt": "bd969bf77e1d546f",
+            "bench/eager_open/ab.sh": "a53c58c2fac55f35",
+            "bench/eager_open/eager_open.cc": "8fbe1ef6e72d546e",
+            "bench/eager_open/summary.py": "dd8592a042c8c7fc",
+            "bench/eager_open/test_guard.sh": "ad729651df461d2e",
+            "docs/mechanisms/field-check.md": "984a6d9a640850f4",
+            "docs/perf/eager-open.md": "1da85a332b8f9dca",
+            "include/strata/core/index.hh": "bb400a6c768d6676",
+            "include/strata/core/index_open.hh": "1de87aaa06b98de2",
+            "include/strata/core/reader.hh": "f20bab7841aa026c",
+            "test/field_check_map_test.cc": "f63d54d350d0c373"
+          },
+          "findings": {},
+          "note": "",
+          "review": "fd840705a122fc2d168f4c6e2b4ec64e43644172",
+          "reviewed": "539fa10e52848dfd0b37278150af26c9a8b8524e",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "prospect-pool-reader-transient"
       ],
@@ -13763,7 +13804,7 @@
       "risk": "high",
       "status": "review",
       "title": "strata checks a segment's field ids wherever it maps",
-      "updated": "2026-11-24T19:57:30",
+      "updated": "2026-11-24T22:45:29",
       "worktree": "../strata-wt/xapiand/field-check-at-map"
     },
     "field-table": {
