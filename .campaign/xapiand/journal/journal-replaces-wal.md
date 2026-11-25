@@ -1,6 +1,6 @@
 # journal-replaces-wal: journal
 
-State: session 18 (2026-11-24): merged master (site/ rename), pins bumped (journal fc5c59b, completion b4600a8, faultlab 83fbde7), the mode passed at every PosixIO; next: whole test_loop_yield, the like-for-like A/B, evidence once.
+State: waiting on jobs 261124-160741-26cfd4 261124-160741-838232 261124-160758-b7c564 261124-160758-92f823 261124-160758-2e2d34 261124-160759-3536d4 261124-160759-56ed44 261124-160759-d57f08 261124-160800-7adbab 261124-160800-54a48e 261124-160800-a73a91 261124-160801-9c2628 261124-160801-40491e 261124-160801-82cbcd 261124-160810-feba37 261124-155600-dc1640 261124-160825-6198e5 261124-160827-b2b5ef and CI at Xapiand:0ea6bd04a (ready commit; code at Xapiand:66a63182d). Next: Evidence table from `campaign brief`; the A/B numbers into Result; then ready for review.
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
@@ -28,6 +28,16 @@ Session 18 (2026-11-24), after journal-sync-mode landed (lead's resume):
    The RESTORE case: in chores 1,714 ms (session 17 under full flushes: 3.25-3.5 s), on the loop 2,654 ms; loop CPU
    155.0 ms in chores against 1,007.1 ms on the loop (0.15, bound 0.2). Entries case: 2 log entries per 400 objects
    of each kind.
+6. Evidence once at Xapiand:0ea6bd04a (pushed; CI on the push): `campaign verify` crash 261124-160741-26cfd4, no-wal
+   261124-160741-838232; reruns at head: drain 30x 160758-b7c564, A1/A4/A9 build+tests 160758-92f823, A3 160758-2e2d34
+   and 160800-a73a91, A4 160759-3536d4, restore/replay 160759-56ed44, A8 160759-d57f08, R2 160800-7adbab, A2 blob
+   crash 160800-54a48e, A5 levels and IO options 160801-9c2628, A1 abandon 30x 160801-40491e, A5 replay check
+   160801-82cbcd. New mutant (A5, --fails-without): 261124-160810-feba37 at mutant/jrw-host-mode-plain
+   (Xapiand:36ebf8002, the host's IO opens plain whatever the switch says; the IO options case must fail).
+7. Like for like (lead's ruling on 11, step 5): strict A/B/A, master bf2d2f40a's binary (built by 261124-155600-dc1640,
+   same flags: RelWithDebInfo, LTO off) against the quest's, 5 interleaved pairs each with master run twice (the
+   A/A): plain (both default) 261124-160825-6198e5, full (both `--full-flush-ordering`) 261124-160827-b2b5ef.
+   Scripts: ~/.scratch/xapiand/journal-replaces-wal/ab-modes/ (ab_modes.sh, restore_e2e.py, summary.py).
 
 Session 17 (2026-11-24), the plain RESTORE in chores (lead's message after 3016ad):
 
