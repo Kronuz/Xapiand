@@ -149,7 +149,9 @@ with 5 writes past the bundle is refused "P_H = 12 ... E = 7" by kill, power cut
 past opens); 261125-011919-316e27 (control at the merge base: opens, digests equal);
 261125-011921-926bd8 (F2: P_H = E + 1, the second open serves "ee" for c; P_H = E + 2, refused at E 3
 then E 4, the third open reads past the end of vol-0); 261125-011923-0ee55a (simulation_group_corruption
-segment seed 3: "install activated: bundle 2, strata P_H 3", the restart refused at E 2).
+segment seed 3: "install activated: bundle 2, strata P_H 3", the restart refused at E 2). GitHub CI
+run 45579169240 at strata:31821753: red on freebsd-x86_64 and linux-tsan, simulation_group_corruption
+only (the same F1 refusal, "P_H = 3 ... E = 2"); strata:786f7102 adds docs only.
 
 ## Result
 
