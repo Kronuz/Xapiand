@@ -27542,7 +27542,38 @@
       "updated": "2026-11-08T15:40:36"
     },
     "prospect-pool-reader-transient": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-24T18:38:22",
+          "base": "44303965ec66e29a1674447990cbbedc0deb3b9a",
+          "blobs": {
+            "CHANGELOG.md": "100644:0fe8018eb7c6542636432e5d6bab02c43c00044a",
+            "docs/perf/fielddict-pool-reader.md": "100644:ec621861070deb39ec44f0ab968a5306309b34c5",
+            "include/prospect/fielddict.hh": "100644:52bfab6b2f7940d82b86ea17a01d139a22680e63",
+            "test/fielddict_pool_heap.cc": "100644:a1131c5f7cab2d4e8703c6a7dc279a718795f2a1",
+            "test/fielddict_pool_heap.sh": "100755:cf2cfb4caf9dd6d01494770c0cb8d4b79e3e83eb",
+            "test/fielddict_pool_heap_ab.sh": "100755:3f2373f71067d8916e23c815cf595f9d1f21d4ac",
+            "test/fielddict_test.cc": "100644:8339415539bc5fde83e880e7fd3b051bc8a9dd2e"
+          },
+          "by": "review",
+          "commit": "c99e6bed2854c560be6de5cf09797c4af1bcf34a",
+          "criteria": "e7988a8382b7fa7b",
+          "diffs": {
+            "CHANGELOG.md": "966319e66d2f8023",
+            "docs/perf/fielddict-pool-reader.md": "2454a4a8650cf9cb",
+            "include/prospect/fielddict.hh": "06e9a6542ff482c1",
+            "test/fielddict_pool_heap.cc": "45ddc2bb0218ac29",
+            "test/fielddict_pool_heap.sh": "a4d2b21dd49d1821",
+            "test/fielddict_pool_heap_ab.sh": "d9d82e910e585e70",
+            "test/fielddict_test.cc": "d2f545dc51acdd5b"
+          },
+          "findings": {},
+          "note": "",
+          "review": "eaf4a8e1cb7e90fa9b5320b752ec9977c3c2667e",
+          "reviewed": "c99e6bed2854c560be6de5cf09797c4af1bcf34a",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "44303965ec66e29a1674447990cbbedc0deb3b9a",
       "branch": "quest/xapiand/prospect-pool-reader-transient",
@@ -27588,7 +27619,7 @@
       "risk": "normal",
       "status": "review",
       "title": "prospect: the field check reads the pool through a reader it drops, so an opened index keeps no pool reader",
-      "updated": "2026-11-24T18:12:00",
+      "updated": "2026-11-24T18:38:22",
       "worktree": "../prospect-wt/xapiand/prospect-pool-reader-transient"
     },
     "prospect-pruning-floors": {
