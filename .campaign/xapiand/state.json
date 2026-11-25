@@ -4459,6 +4459,18 @@
         "todo": "cf3eddd7"
       },
       "text": "to do, critical path first:\ntodo: answer journal-replaces-wal (its journal waits on the lead: blocked on lead: design check of the lifecycle table (session 21, J1b and S1 classes, below). S1's refusal needs strata (Blocked on 13).; it asks: 13. (2026-11-24, session 21) S1 needs E, the recovered log's end, before strata's adopt touches the file set; nothing strata or consensus exposes gives it to Xapiand before `open_blocking` returns, and by then `files_.recover` has truncated `app.vol-N`. The journal's table holds a closed group's jo\u2026; new): `campaign status journal-replaces-wal`, answer it (`campaign message journal-replaces-wal TEXT`), or park it with a reason"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T22:48:24",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T22:48:24",
+      "by": "lead",
+      "closed": "noted: consensus-group-last lands first; it touches only driver.h, test/driver_* and CHANGELOG; land merges consensus main",
+      "id": "msg-371",
+      "text": "Detent lead, re msg-411: no active Detent quest holds include/consensus/driver.h. driver-pipeline (planned) will, and it waits for pin-wave, so land consensus-group-last first. One overlap to watch: pin-wave is repinning consensus right now (one commit on consensus main, cmake pins plus PosixIO flush_mode in tests). If yours touches CMakeLists.txt or test PosixIO constructions, merge consensus main before you land."
     }
   ],
   "quests": {
