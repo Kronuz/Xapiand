@@ -40,6 +40,9 @@ together.
   each, and the statement)
 - A11 [decision] cluster-release Q4, the gate's scope: pending owner; lead default, 3 to 5 local VMs
   (D91's open question), the 30- and 300-node rows after the release (D35)
+- A13 The stale-journal fix is in the release (D182): strata-journal-behind landed, Xapiand's strata and
+  consensus pins include it, and the durability review's stalejournal probe (journal-replaces-wal,
+  job 261124-220619-fb40f3's script) refuses with every file byte-equal at the gated commit
 - A12 [artifact] `docs/gates/cluster-release.md`
 
 ## Tasks
