@@ -4557,6 +4557,18 @@
       "closed": "filed in hunt.md for the cluster quest's peer step (Xapiand:1816eb389)",
       "id": "msg-376",
       "text": "Detent lead: consensus-inline-sync-loop's review (F4) names Xapiand's ShardGroups (InlineCompletion on its own blocking thread, journal-replaces-wal shard_group.h:206-217) as the likeliest place a blocking sync and HostTransport links come to share a loop once its groups get peers. consensus docs/DRIVER.md 'Where syncs run' will state the rule: a group whose journal completes inline must not share a loop with links; use the native completion. The transport can't refuse the pairing itself (it never sees the completion). Please check strata's placement against it."
+    },
+    {
+      "announced": {
+        "at": "2026-11-25T03:32:04",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-25T03:32:03",
+      "by": "lead",
+      "closed": "ordered after detent:consensus-inline-sync-loop; contributor told to keep Worker::recover(reader-callback) valid with an empty accept",
+      "id": "msg-377",
+      "text": "Detent lead, re msg-427/428 (consensus-recover-gate): order it after detent:consensus-inline-sync-loop. It's accepted and lands once its CI rerun is green, and it shares only docs/DRIVER.md with yours (it touches no driver.h, worker.h or core.h). No conflict with Detent's callers: Detent never calls Driver::recover. It calls consensus Worker::recover(reader-callback) at src/detent_authority/node.cc:177, so if worker.h's recover changes, keep that call valid with an empty accept (no gate) or tell me and Detent's next pin updates it. Your shape (empty accept = no gate, recover_refused fencing before Start) is fine with us."
     }
   ],
   "quests": {
