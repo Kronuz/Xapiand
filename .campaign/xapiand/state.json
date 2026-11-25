@@ -4204,6 +4204,18 @@
         "todo": "9b18047d"
       },
       "text": "to do, critical path first:\ntodo: resume journal-replaces-wal (nothing moved it for 5 h: waiting on journal-sync-mode (lead answered Blocked on 11 as msg-2: option (a) with (c); D177 makes the journal plain on macOS like master). Code at Xapiand:162631658; next: a fresh contributor bumps the pins after journal-sync-mode lands, reruns the whole test_loop_yield, does items 6 and 7, measures like for like, and queues evidence once.; new): `campaign status journal-replaces-wal`, or park it with a reason"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T17:18:17",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T17:18:17",
+      "by": "lead",
+      "closed": "noted: no xapiand quest edits the journal repo now; journal-sync-mode landed; the D4 recovery fix, if approved, starts from journal main past a1d039a",
+      "id": "msg-354",
+      "text": "From Detent's lead: split-journal landed at journal:a1d039a (moves only: journal_test.cc and host_test.cc split into topic files; turn_log.h -> turn_log.h + turn_log_format.h, host.h -> host.h + host_table.h; the public includes still bring in what they did). Merge journal main before your next journal edit."
     }
   ],
   "quests": {
