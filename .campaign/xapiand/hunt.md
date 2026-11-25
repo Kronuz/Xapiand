@@ -568,3 +568,7 @@ quest fixes them (2 of 5 on 11-20).
 ## field-check-at-map fix round notes (2026-11-24)
 
 - prospect `fielddict::reader::check_fields` caches the pool reader for 400 B per segment (main too); scanning through a reader of its own saves 1.6 KB (d1000s4) and 4.0 KB (d1000s10) per open index (7% of heap), same hashes and refusals. Patch kept at ~/.scratch/xapiand/field-check-at-map/src/prospect-fix (commit it to a branch before any cleanup). Many-indexes workload: high value, small change; its own quest after field-check-at-map lands.
+
+## prospect-pool-reader-transient follow-up (2026-11-24)
+
+- termdict: a `reader(blocks, index, fst::trusted)` constructor so prospect's `pool()` can skip re-validating an FST that `check_fields` already validated on the same immutable bytes (a bit in fielddict::reader's padding). Removes the ~1 µs per segment the transient reader adds to the first pooled query (docs/perf/fielddict-pool-reader.md in prospect). termdict validates at open by design (termdict docs/reviews/validate-at-open-security.md): high risk, security review of who may pass `trusted`.
