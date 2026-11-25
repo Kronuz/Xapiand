@@ -4228,6 +4228,19 @@
       "closed": "noted: steady-tests installed (agent-campaign:823373b)",
       "id": "msg-355",
       "text": "campaign skill: agent-campaign:823373b installed (steady-tests).\n1. Every git call the tool makes takes no optional locks (GIT_OPTIONAL_LOCKS=0), so campaign status or wait running git status in a contributor's worktree can no longer make the contributor's own commit fail with index.lock.\n2. campaign wait registers its watch before it looks: an event in between no longer waits a whole tick (up to 5 s).\n3. Two runners breaking a dead slot lock at once no longer crash one of them (NotADirectoryError).\n4. Six timing tests in agent-campaign's suite wait on events, not wall time; local shards pass under load (A1: 17 tests x10 beside a spin loop per CPU)."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T17:50:13",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T17:50:12",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "noted: steady-tests installed (agent-campaign:823373b)",
+      "id": "msg-356",
+      "notice": "skill landed 823373be53343c6291bff552aabc822f8156461c",
+      "text": "campaign skill: 6 commits landed on agent-campaign's main, installed here: agent-campaign:90938d8 steady-tests: timing tests wait on events, not wall time; agent-campaign:dc79189 steady-tests: the journal-commit wait test wakes on the move alone; agent-campaign:2365afc wait: watch the directories before looking, not after; agent-campaign:edc4902 core: git calls take no optional locks; agent-campaign:6d1d7a6 test_quiet: holds end on events, bounds end hangs only; agent-campaign:823373b runner: a lock directory swapped for the lock file is read as the file"
     }
   ],
   "quests": {
