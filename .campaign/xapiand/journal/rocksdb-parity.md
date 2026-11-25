@@ -15,14 +15,27 @@ Launch 1 (2026-11-24): first commit, gap table, one strata-only task.
    by detent:journal-bound-first-open (journal:870382d, on journal main through journal:fc5c59b);
    strata's journal pin (journal:9c7e31c) predates it.
 2. Done: the gap table below.
-3. Task 7 (D9 sorted runs): prototype in `index_merge.hh` `run_merges` passes each mapped
-   segment's key range to the policy, which already settles disjoint runs (strata:1d50e0ab) but
-   never received a range from the index. Probing base against it on tenx1 rows (light).
+3. Task 7 (D9 sorted runs), step 1 at strata:19ddcbd0 (doc strata:faff0726,
+   `docs/mechanisms/sorted-runs.md`): `run_merges` maps each candidate (a map point, as
+   `schedule()`) and passes its key range to the policy, which already settled disjoint runs
+   (strata:1d50e0ab) but never received a range; merging or damaged segments count as occupied
+   key space (`candidate::overlapped`). Tests: `background_merge` `sorted_runs` (sequential load
+   merges nothing before and after a reopen; a segment across the runs merges them; contents equal
+   a tiered twin's), `merge_policy` overlapped case. Mutant branch
+   `mutant/rocksdb-parity/no-ranges` (strata:19ddcbd0 with base `index_merge.hh`).
+   Light probe (shared host, 1 trial, bodied-only variant): tenx1 fillseq written 210.8 -> 134.2
+   MiB (wamp 1.91 -> 1.21), CPU 4.19 -> 2.73 us/op, 275k -> 362k ops/s; random-key rows unmoved
+   within noise. Identity (light): fillseq --after readall, get digest eb2a3ad93b05aafe, 1,000,000
+   hits on both base and fix.
 
 ## Next
 
-1. Read the light probe; if it wins, test (identity and settled-run behavior), then the strict
-   smoke and one exclusive job for the rows it moves.
+1. Read jobs 261124-231305-3c9f9c (tests at fix), 261124-231315-48aa2b (mutant must show the
+   sorted_runs CHECK), 261124-231329-08a553 (strict smoke), 261124-231350-d66cf1 (exclusive A/A,
+   A/B x3, identity), 261124-231353-1ad1c6 (exclusive tenx1 and twox1 vs RocksDB). Fill the numbers
+   in `sorted-runs.md` and Result. If B loses on any row past the A/A band, revert and record.
+2. Task 7 step 2: the runs' range index for gets and the run-count cap (N13); then settle flushes
+   under `run_bytes` too (wamp 1.2 -> ~0.6 needs it).
 
 ## Gap table (launch 1)
 
