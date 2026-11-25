@@ -180,7 +180,8 @@ An index refuses to open, with one error line naming its cause and the same text
 3. **The index is older than its journal.** The index's directory was put back from an earlier copy while the
    journal kept running: the journal's bundle is past strata's durable head (P_b > P_H), and the log before the
    bundle is cut, so nothing can replay the gap. strata fences its own open before the file set's recovery, and
-   the open refuses naming both positions; nothing is written. Recovery: put back the index as of the journal's
+   the open refuses with strata's reason (`P_b > P_H`); the index's files are untouched, though a lone voter's
+   refused open may add a term and a NoOp to the journal (journal binding's gate removes that). Recovery: put back the index as of the journal's
    last stop, or delete the index and RESTORE it from a dump.
 
 Only the journal the index last stopped with may be put back with it. A journal older than the index (an earlier
