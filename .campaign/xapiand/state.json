@@ -9320,6 +9320,42 @@
       "updated": "2026-11-24T06:46:14",
       "worktree": "../consensus-wt/xapiand/consensus-join-v2"
     },
+    "consensus-recover-gate": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo >/dev/null && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/consensus/driver.h",
+        "include/consensus/worker.h",
+        "include/consensus/core.h",
+        "test/driver_*",
+        "test/worker_*",
+        "docs/DRIVER.md",
+        "CHANGELOG.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "durability"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "consensus:recover-gate"
+      ],
+      "repo": "../consensus",
+      "risk": "high",
+      "status": "planned",
+      "title": "consensus: recover refuses, before Start, a log that retains no accepted boundary",
+      "updated": "2026-11-25T03:31:06"
+    },
     "consensus-request-install": {
       "accepted": {
         "correctness": {
