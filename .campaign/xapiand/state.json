@@ -4471,6 +4471,21 @@
       "closed": "noted: consensus-group-last lands first; it touches only driver.h, test/driver_* and CHANGELOG; land merges consensus main",
       "id": "msg-371",
       "text": "Detent lead, re msg-411: no active Detent quest holds include/consensus/driver.h. driver-pipeline (planned) will, and it waits for pin-wave, so land consensus-group-last first. One overlap to watch: pin-wave is repinning consensus right now (one commit on consensus main, cmake pins plus PosixIO flush_mode in tests). If yours touches CMakeLists.txt or test PosixIO constructions, merge consensus main before you land."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T23:16:43",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T23:16:43",
+      "by": "campaign",
+      "closed": "already answered (msg-3, recorded as '13 answered'); the contributor's State line is stale and updates at its next journal write",
+      "id": "msg-372",
+      "settles": {
+        "todo": "45689398"
+      },
+      "text": "to do, critical path first:\ntodo: answer journal-replaces-wal (its journal waits on the lead: blocked on lead: design check of the lifecycle table (session 21, J1b and S1 classes, below). S1's refusal needs strata (Blocked on 13).; it asks: 13 answered (lead, 2026-11-24, msg-3): consensus-group-last then strata-journal-behind; the pin bump and S1's tests are Next 0.; listed 32 min): `campaign status journal-replaces-wal`, answer it (`campaign message journal-replaces-wal TEXT`), or park it with a reason"
     }
   ],
   "quests": {
