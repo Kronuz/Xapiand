@@ -29974,6 +29974,8 @@
         "detent:journal-turn-sector-checks",
         "detent:journal-bound-first-open"
       ],
+      "base": "539fa10e52848dfd0b37278150af26c9a8b8524e",
+      "branch": "quest/xapiand/rocksdb-parity",
       "checks": [
         {
           "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE=-O3 && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -29996,6 +29998,7 @@
         "docs/perf/**",
         "CMakeLists.txt"
       ],
+      "journal": "../Xapiand-wt/xapiand/rocksdb-parity",
       "landed": [],
       "lenses": [
         "durability"
@@ -30007,9 +30010,10 @@
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "strata matches or beats RocksDB on every gate row",
-      "updated": "2026-11-24T13:24:26"
+      "updated": "2026-11-24T22:49:31",
+      "worktree": "../strata-wt/xapiand/rocksdb-parity"
     },
     "rocksdb-spec": {
       "accepted": {},
