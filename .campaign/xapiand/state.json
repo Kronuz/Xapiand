@@ -18767,9 +18767,7 @@
     },
     "journal-replaces-wal": {
       "accepted": {},
-      "after": [
-        "strata-journal-behind"
-      ],
+      "after": [],
       "base": "ce5e4df02373983150ccacc74c230b0e6d9c6062",
       "branch": "quest/xapiand/journal-replaces-wal",
       "checks": [
@@ -19194,7 +19192,7 @@
         }
       },
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-24T22:47:34",
+      "updated": "2026-11-25T03:26:06",
       "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal"
     },
     "journal-seal-repeat": {
