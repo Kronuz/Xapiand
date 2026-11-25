@@ -22,4 +22,9 @@ for j in 261125-004551-0bc60c 261125-033043-326a1d 261125-033134-b6ba15; do
 	step "sjb-rerun-$j" -- campaign job rerun "$j"
 done
 
+# rocksdb-parity's round: suite, run-cap mutant, search smoke and A/B, step-2 A/B (retried if they fail).
+for j in 261125-044001-59906a 261125-043931-f778e3 261125-041712-dedde3 261125-041728-c7bab8 261125-020727-610311; do
+	step "rp-$j" -- campaign job rerun "$j"
+done
+
 campaign job list --queued 2>/dev/null | head -40 || true
