@@ -29,8 +29,8 @@ jobs no journal names), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | plain: 261124-225614-d4ca21 (`driver_test group_last`: plain log, checkpoint plus tail, held-turn staged entry; `driver_close_test group_last_closed`); mutant `group-last-committed` (reports `committed`): 261124-225605-635aa9 --fails-without |
-| A2 | build-test 261124-225604-857136 |
+| A1 | plain: 261124-235520-47acc3 (`driver_test group_last`: plain log, checkpoint plus tail, held-turn staged entry; `driver_close_test group_last_closed`); mutant `group-last-committed` (reports `committed`): 261124-225605-635aa9 --fails-without |
+| A2 | build-test 261124-235519-6bd5e7 |
 | A3 | `CHANGELOG.md`: "Driver::GroupState::last" |
 
 ## Result
