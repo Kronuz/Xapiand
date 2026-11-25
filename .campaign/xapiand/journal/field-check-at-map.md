@@ -1,6 +1,6 @@
 # field-check-at-map: journal
 
-State: waiting on jobs 261124-191203-86c495 261124-191208-75ce14 (A3 rows, rebuilt), 261124-190113-7d240b (A1), 261124-190127-e6a947 (A2)
+State: ready for review
 Quest: .campaign/xapiand/quests/field-check-at-map.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -78,18 +78,22 @@ File set note for the lead under "Rulings I made" (1).
 
 ## Evidence
 
+Head strata:093bb965 (docs over strata:aaf38cd2, the merge of main). Real builds, BASE strata main 49fca948, PROSPECT prospect:c99e6be.
+
 | Criterion | Evidence |
 |---|---|
-| A1 | 261124-145133-73466a (head, 239d51e4); 261124-120815-138f97 (mutant, --fails-without: passed) |
-| A2 | 261124-122659-a4de45 |
-| A3 | d1000s4 261124-145136-a057fa (passed, 239d51e4); d1000s10 261124-145139-a2c903 failed (see Fix round 2); failed at 55a5ea73: df0b09, fcbe11 |
-| A4 | 261124-122723-cb483e (build-test) and CI |
-| A5 | `docs/mechanisms/field-check.md` (strata) |
+| A1 | 261124-190113-7d240b (head aaf38cd2); mutant 261124-120815-138f97 (--fails-without: passed; vouch::check unchanged since) |
+| A2 | 261124-193029-58f381 (identity, rebuilt at prospect c99e6be) |
+| A3 | d1000s4 261124-191203-86c495, d1000s10 261124-191208-75ce14: all four measures (open p50, open CPU, dirty, resident) of proto eager inside the base/A/A `today` band |
+| A4 | build-test via `campaign verify field-check-at-map` and CI |
+| A5 | `docs/mechanisms/field-check.md`, `docs/perf/eager-open.md` (strata) |
 | A6 | <pending CI> |
+
+Void, not evidence: A3 passes before prospect c99e6be and the rows 261124-190110-6a800d / 190112-00d680 (no build step, stale binaries naming prospect:4430396); A2 261124-190127-e6a947 (no build step); the earlier fails df0b09, fcbe11, a2c903.
 
 ## Result
 
-<pending>
+The map checks a segment's field ids wherever it maps (`vouch` in `index.hh`, called from `open_body_of`). Eager open with the check at the map costs what today's open costs (Xapiand's `verify_fields` loop): d1000s10 dirty 59,867 B against 59,896 B (aa 59,892), resident 224,051 against 224,088; open p50 2,225 us against 2,174 (aa 2,080), CPU 2,248 against 2,184 (aa 2,095), inside the spread; d1000s4 likewise (dirty 30,147 against 30,167). The record stays 200 B (strata:239d51e4); the remaining gap was prospect's cached pool reader (prospect:c99e6be, its own quest), which also takes 4.2 KB per index off `today` at d1000s10. Rows and method: `docs/perf/eager-open.md` "The A3 rows over prospect's transient pool reader"; mechanism: `docs/mechanisms/field-check.md`.
 
 ## Rulings I made
 
