@@ -35409,10 +35409,28 @@
         "CMakeLists.txt",
         "CHANGELOG.md"
       ],
+      "history": [
+        {
+          "at": "2026-11-25T00:56:40",
+          "lenses": [
+            [
+              "correctness"
+            ],
+            [
+              "durability"
+            ]
+          ],
+          "reason": "durability is the dominant risk (quest file, Review); one reviewer carries the correctness questions too",
+          "voided": [],
+          "weakened": [
+            "lens correctness removed"
+          ]
+        }
+      ],
       "journal": "../Xapiand-wt/xapiand/strata-journal-behind",
       "landed": [],
       "lenses": [
-        "correctness"
+        "durability"
       ],
       "milestone": "",
       "needs": [
@@ -35423,9 +35441,9 @@
       ],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "strata: a group whose journal is behind its index refuses at open",
-      "updated": "2026-11-25T00:24:33",
+      "updated": "2026-11-25T00:56:40",
       "worktree": "../strata-wt/xapiand/strata-journal-behind"
     },
     "strata-journal-pin": {
