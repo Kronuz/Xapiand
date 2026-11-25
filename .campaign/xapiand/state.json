@@ -8936,9 +8936,44 @@
         "CHANGELOG.md",
         "docs/DRIVER.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/consensus-group-last",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-25T00:23:34",
+          "ci": {
+            "carried": true,
+            "commit": "dff54e42e8068abf39db8c46a04f9f15a228a230",
+            "runs": [
+              45565208598
+            ]
+          },
+          "commit": "6d710cb70a021dae5d9a4152f7a9f0178d6df433",
+          "criteria": {
+            "A1": "261124-235520-47acc3; fails without: 261124-225605-635aa9",
+            "A2": "261124-235519-6bd5e7 (the build-test check), 261124-235519-6bd5e7",
+            "A3": "`CHANGELOG.md`: \"Driver::GroupState::last\""
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo >/dev/null && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "6d710cb70a021dae5d9a4152f7a9f0178d6df433",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261124-235519-6bd5e7",
+              "level": "light",
+              "seconds": 1513.6,
+              "state": "done",
+              "what": "consensus-group-last check build-test at 6d710cb70a02"
+            }
+          ],
+          "final": true,
+          "from": "72cc58d1acba0965fa3ee51aa83a960cc63b98dc",
+          "reason": "",
+          "tested": "6d710cb70a021dae5d9a4152f7a9f0178d6df433"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [
@@ -8946,10 +8981,10 @@
       ],
       "repo": "../consensus",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "consensus: Driver reports a group's recovered log end",
-      "updated": "2026-11-24T23:49:47",
-      "worktree": "../consensus-wt/xapiand/consensus-group-last"
+      "updated": "2026-11-25T00:23:37",
+      "worktree": ""
     },
     "consensus-hello-limits": {
       "accepted": {},
