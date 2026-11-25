@@ -1,9 +1,33 @@
 # journal-replaces-wal: journal
 
-State: waiting on journal-sync-mode (lead answered Blocked on 11 as msg-2: option (a) with (c); D177 makes the journal plain on macOS like master). Code at Xapiand:162631658; next: a fresh contributor bumps the pins after journal-sync-mode lands, reruns the whole test_loop_yield, does items 6 and 7, measures like for like, and queues evidence once.
+State: session 18 (2026-11-24): merged master (site/ rename), pins bumped (journal fc5c59b, completion b4600a8, faultlab 83fbde7), the mode passed at every PosixIO; next: whole test_loop_yield, the like-for-like A/B, evidence once.
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
+
+Session 18 (2026-11-24), after journal-sync-mode landed (lead's resume):
+
+1. Xapiand:fcbf43fda merges origin/master bf2d2f40a: master's docs/ -> site/ rename carried the branch's docs/src
+   edits by rename detection; one conflict, site/.../reference-guide/wal.md (renamed on master, deleted here): kept
+   deleted. `campaign brief` lists no file outside the set from the merge.
+2. Xapiand:66a63182d pins completion b4600a8 and journal fc5c59b ahead of strata's own pins (declared before
+   prospect/strata, first declaration wins; strata 7a4284c4 builds against both: its include/ builds no PosixIO),
+   and faultlab 83fbde7 (journal's pin) for test_pool. `posix_io_options()` is `FlushMode::full` under
+   `--full-flush-ordering`, else `plain` (D177); the shard acquire, the pool's resolve and the journal host take it;
+   every test's own PosixIO opens plain. `ShardGroups::journal_io()` (the host's IO) lets
+   `test_the_journal_io_takes_the_io_options` check the mode of a file the host's IO opens (PosixFile::flush_mode),
+   not only the options it stored. Targeted (local, quiet light): io_options 3, shard_group 128, group_chunk 94,
+   group_chunk_group 12, journal_replay 92, restore_batch 701, reactor_requests 62 checks, all pass.
+3. Xapiand:5d3e7c14e docs: options.md, changelog and journal-durability.md state the two modes (plain: fsync and the
+   barrier; full: F_FULLFSYNC at both); strata-engine.md and api.md no longer name DatabaseWAL, `:wal` or `WAL`.
+4. Blocked-on items 6 and 7 were already done in session 10 (Xapiand:91113fb2f: agent-codebase.md has no WAL
+   mention, `grep -i wal` empty; Xapiand:09a223a4e: Data::flush builds its bytes apart and parse()s them, test
+   `test_a_flush_leaves_its_locators_on_its_bytes` flushes twice and a third time after a reparse; CI's ASan+UBSan
+   job runs test_shard_group). Nothing new to do there.
+5. Whole test_loop_yield at Xapiand:66a63182d (local, quiet light, plain mode): 879 of 879 checks, 18.1 s wall.
+   The RESTORE case: in chores 1,714 ms (session 17 under full flushes: 3.25-3.5 s), on the loop 2,654 ms; loop CPU
+   155.0 ms in chores against 1,007.1 ms on the loop (0.15, bound 0.2). Entries case: 2 log entries per 400 objects
+   of each kind.
 
 Session 17 (2026-11-24), the plain RESTORE in chores (lead's message after 3016ad):
 
@@ -497,6 +521,11 @@ strata: `group-catalog` (item 4), which `core` step c waits on.
 
 ## Blocked on
 
+12. (2026-11-24, session 18) Outside the file set, changed (required to build at the bumped pins: PosixIOOptions'
+    mode is required and `full_flush_ordering` is gone): src/engine/strata/io_options.h (`posix_io_options()` maps
+    the switch to the mode) and tests/test_io_options.cc (its two checks read `flush_mode`). Recommend: add both to
+    the set (they are the switch's one place, D177); the alternative, leaving them, does not compile.
+
 11 answered (lead, 2026-11-24, msg-2): (a) with (c). The bar is measured after journal-sync-mode lands, with the journal in plain mode; not (b).
 
 11. (2026-11-24, session 17) The plain RESTORE in chores is ~3-4 s at Xapiand:89a406c7f against master's ~1.3-2.3 s
@@ -679,4 +708,11 @@ Drafts, applied when the code lands; each names the contract it shapes (format-f
 43. A RESTORE slice's last command carries the id counter's write; `restore_results` answers its document writes
     only. The counter's own proposal stays as the fallback when that command failed.
 44. A RESTORE slice prepares its whole sub-run (bounded by the pending set), not to its first closed command.
+45. Xapiand pins completion and journal itself, declared ahead of strata's FetchContent (first declaration wins),
+    rather than waiting for a strata commit that pins them: strata's include/ builds no PosixIO, so strata 7a4284c4
+    builds against both unchanged. faultlab follows journal's pin (83fbde7) so one faultfs models the two modes.
+46. Tests that build their own PosixIO open it plain: their claims are not about power loss, and plain is the
+    product default; only test_the_journal_io_takes_the_io_options exercises full.
+47. `ShardGroups::journal_io()` exposes the host's IO so the test checks a file's mode (completion's
+    `detail::PosixFile::flush_mode`), the only observable proof the host's IO took the options.
 
