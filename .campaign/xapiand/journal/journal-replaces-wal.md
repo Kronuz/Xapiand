@@ -83,7 +83,7 @@ N9 mutant failed 3 of 3 local runs, 16 of 25 checks):
 | S1 | after strata-journal-behind (Next 0) | | stalejournal (fb40f3's script) then |
 
 Reruns at bf7668b4a: 231639-140abf, 231640-4f4566, 231640-6dbcfa, 231641-01874e, 231642-7dc2d2, 231642-5ba24a,
-231643-d3a472, 231643-34b7e8 (all 261124-); `campaign verify` below.
+231643-d3a472, 231643-34b7e8 (all 261124-); `campaign verify`: crash 261124-231707-777023, no-wal 261124-231707-095b53; CI at the push (3d5ce3627).
 
 Session 20 (2026-11-24), L1's unit test (lead's step): mutant 261124-201402-16805d left the log-bound test passing.
 
