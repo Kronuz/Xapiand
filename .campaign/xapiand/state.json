@@ -9345,7 +9345,38 @@
       "worktree": "../consensus-wt/xapiand/consensus-join-v2"
     },
     "consensus-recover-gate": {
-      "accepted": {},
+      "accepted": {
+        "durability": {
+          "at": "2026-11-25T04:35:25",
+          "base": "217481b63fbf465d82164ee967664d1d1b3f81e8",
+          "blobs": {
+            "CHANGELOG.md": "100644:bae78812cebd7aa03079ee7d03ecbac3200c25cb",
+            "docs/DRIVER.md": "100644:4503c9588b7c7f3fc680f37415a80e230bc9357c",
+            "include/consensus/core.h": "100644:7cff33c50a960acd00441c4d258a214c4cf1997e",
+            "include/consensus/driver.h": "100644:aaeeae98d38c7c4a03cd679f78c33d563c41dbd1",
+            "include/consensus/worker.h": "100644:1128a3ed9fd39d4e5ff7b21a31c1eaf95eb7379d",
+            "test/driver_mutants.py": "100644:d2a00291a96a55f3a2e48d056c837b5557ab4d3c",
+            "test/driver_test.cc": "100644:93a7490bd52b6dc1aec17dc2ab17534f1e3b711a"
+          },
+          "by": "review",
+          "commit": "b6a604abf39409b8db000e7c77977c529bcc0db5",
+          "criteria": "717ee0e1cfcd88e7",
+          "diffs": {
+            "CHANGELOG.md": "5af54b43095b9067",
+            "docs/DRIVER.md": "bc14b3d4fe6b867c",
+            "include/consensus/core.h": "7be6639338101dd0",
+            "include/consensus/driver.h": "9d130598396702da",
+            "include/consensus/worker.h": "96c3a8ad716f5611",
+            "test/driver_mutants.py": "2d68d4e69ff1be35",
+            "test/driver_test.cc": "ea011fb1829a1bcf"
+          },
+          "findings": {},
+          "note": "",
+          "review": "81ac2d60ddff850d99f94f11266807dddf58dd51",
+          "reviewed": "b6a604abf39409b8db000e7c77977c529bcc0db5",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "detent:consensus-inline-sync-loop"
       ],
@@ -9383,7 +9414,7 @@
       "risk": "high",
       "status": "review",
       "title": "consensus: recover refuses, before Start, a log that retains no accepted boundary",
-      "updated": "2026-11-25T03:57:28",
+      "updated": "2026-11-25T04:35:25",
       "worktree": "../consensus-wt/xapiand/consensus-recover-gate"
     },
     "consensus-request-install": {
