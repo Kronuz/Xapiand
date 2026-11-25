@@ -921,8 +921,9 @@ static void test_a_miss_defers_every_later_write_of_its_id() {
 
 
 // An apply slice that fails before its writes (a pin or a turn that cannot be had, here a thrown slice) fails its
-// shard's next write alone, and the rest retry, each its own result as one request each would have; the engine's chores
-// are restored: no engine runs its chores inline afterwards, and a later RESTORE writes.
+// shard's next write alone, and the rest retry, each its own result as one request each would have, the RESTORE answering
+// the failure's 5xx; the engine's chores are restored: no engine runs its chores inline afterwards, and a later RESTORE
+// writes.
 static void test_a_throwing_apply_slice_fails_one_write_and_restores_the_engines_chores() {
 	create_index("throws", 5);
 	CHECK_EQ(http_call("RESTORE", "/throws/?commit", R"({"_id":"seed","v":1})" "\n", "application/x-ndjson") / 100, 2);   // the schema exists: no range of one
@@ -934,7 +935,7 @@ static void test_a_throwing_apply_slice_fails_one_write_and_restores_the_engines
 	{
 		FixedRanges ranges(32);
 		DocIndexer::seams.throw_in_slice = true;
-		CHECK_EQ(http_call("RESTORE", "/throws/?commit", body, "application/x-ndjson", &reply) / 100, 2);
+		CHECK_EQ(http_call("RESTORE", "/throws/?commit", body, "application/x-ndjson", &reply) / 100, 5);   // one left unwritten
 		CHECK_FALSE(DocIndexer::seams.throw_in_slice.load());   // it threw
 	}
 	std::size_t failed = 0;
