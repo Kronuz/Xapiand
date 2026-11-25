@@ -21,8 +21,8 @@ Nothing.
 | Criterion | Evidence |
 |---|---|
 | A1 | test 261124-160815-50fda7 (prospect:c4e3e64), rerun 261124-181031-a6c46d at prospect:c99e6be (only the TSan guard changed: heap checks identical elsewhere); mutant `mutant/prospect-pool-reader-transient/scan-through-pool` 261124-160817-d40a36 (killed on the heap CHECK; not rerun: check_fields' scan is unchanged) |
-| A2 | build-test 261124-160820-8db0ed (c4e3e64), reruns at the round's end; CI |
-| A3 | strict 261124-160830-97749f (base prospect:44303965ec66, fix prospect:c4e3e64, A/A) |
+| A2 | build-test 261124-183855-4a24fa (c4e3e64), reruns at the round's end; CI |
+| A3 | strict 261124-183856-4ceebf (base prospect:44303965ec66, fix prospect:c4e3e64, A/A) |
 | A4 | [artifact] CHANGELOG.md (new file; prospect had none) |
 
 ## Result
@@ -36,3 +36,5 @@ check_fields scans a transient pool reader: 416 B less heap per segment (640 -> 
 - prospect had no CHANGELOG.md: created.
 - The repeat build was not removed (lead's request to try): it needs a termdict API change outside the file set; numbers in docs/perf/fielddict-pool-reader.md. A3 not rerun because the code under test did not change (the A3 job's inputs exclude the test file).
 - TSan: the heap probe is compiled out under ThreadSanitizer (its runtime defines operator new); CI's linux-tsan failed at prospect:e6cfcd5 on that.
+
+- (lead) Reviewer probe 261124-181643-324353 failed to compile (its own probe: `format` ambiguous between prospect and strata); its fixed rerun 261124-182925-f7af69 passed. A3 at c99e6be (4ceebf): heap 640 -> 224 B per segment after the check; first pooled query +1.37 µs (4 fields) and +1.30 µs (10) per segment, as in 97749f.
