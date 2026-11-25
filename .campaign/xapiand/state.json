@@ -13514,7 +13514,9 @@
     },
     "field-check-at-map": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "prospect-pool-reader-transient"
+      ],
       "base": "cfa20b4191cc93ba7287d00e9b574f28ac31765b",
       "branch": "quest/xapiand/field-check-at-map",
       "checks": [
@@ -13549,7 +13551,7 @@
       "risk": "high",
       "status": "active",
       "title": "strata checks a segment's field ids wherever it maps",
-      "updated": "2026-11-24T12:38:17",
+      "updated": "2026-11-24T16:00:24",
       "worktree": "../strata-wt/xapiand/field-check-at-map"
     },
     "field-table": {
