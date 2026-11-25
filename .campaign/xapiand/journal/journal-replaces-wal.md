@@ -55,6 +55,11 @@ fix 8 of 8 runs pass, L1 test 3 of 3; mutant pressure (spawned off the turn) 3 o
 checkpoint off the turn) fails. TSan mutant: not queued; the old code passed TSan at 3d5ce3627, so TSan does not catch
 it reliably, and the value test catches both mutants without it.
 
+| Finding | Test job | Mutant (must fail) |
+|---|---|---|
+| T1 (checkpoint off the turn; class: every index write on the chore without a turn holder awaiting it) | 261125-043517-a4b25b; TSan 261125-043535-432e87, 261125-043538-76be33 | pressure 261125-043520-724b20 (mutant/jrw-t1-pressure), full 261125-043523-718f1e (mutant/jrw-t1-full) |
+
+
 Session 21 (2026-11-24), durability review round 3 (CHANGES at Xapiand:98ea84a70): J1b, S1, A1 blocking (L1-T done
 in session 20); N9, N11, N12 nits; N10 left.
 
@@ -72,10 +77,6 @@ main thread before the loops. "Miss" is resolve's branch where `<path>/strata` d
 | through a symlink whose target is `J` or under it (`alias/x`, `alias -> J`) | **J1b**: the same identity walk (canonical resolves the link) | **J1b**: 400 | unreachable | moved |
 | through a file of `J` (`J/layout/x`, any spelling) | lexical 400, or **J1b** (ENOTDIR: the walk starts at the file, its parent is `J`) | 400 | unreachable | n/a |
 | held at start: a directory inside `J` from a build before J1/J1b (an index, artifact-named directories fencing another index) | n/a | n/a | n/a | moved to `<J>.strays/` before the host scans, the log names both paths (J1, kept); its bytes are kept; its old path answers 400 (above); every other index serves, the fenced one included. **N12**: a rename that fails (EXDEV: `J` a mount or a symlink to another volume) ends the start naming EXDEV, the directory and the remedy |
-
-| Finding | Test job | Mutant (must fail) |
-|---|---|---|
-| T1 (checkpoint off the turn; class: every index write on the chore without a turn holder awaiting it) | 261125-043517-a4b25b; TSan 261125-043535-432e87, 261125-043538-76be33 | pressure 261125-043520-724b20 (mutant/jrw-t1-pressure), full 261125-043523-718f1e (mutant/jrw-t1-full) |
 
 Value tests (test_pool, one per transition): case spellings and `alias/x` create nothing and answer invalid on
 create and without create (fails without J1b: the case spellings create directories inside `J` on APFS, the alias
