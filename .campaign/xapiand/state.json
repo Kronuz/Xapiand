@@ -4661,6 +4661,18 @@
         "todo": "245a63b4"
       },
       "text": "to do, critical path first:\ntodo: answer track-c (its journal waits on the lead: blocked on owner and lead: SYS-8, SYS-2/SYS-3 (A7), A8 order, R19, quest text; it asks: The five decisions in that section's last list, each with options and a recommendation: SYS-8 and A3 (owner), SYS-2/SYS-3 and A7 (owner), A8's order (lead), R19 (lead), the quest's text and group-install's contract (lead).; new): `campaign status track-c`, answer it (`campaign message track-c TEXT`), or park it with a reason"
+    },
+    {
+      "announced": {
+        "at": "2026-11-25T06:15:05",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-25T06:15:05",
+      "by": "kronuz",
+      "closed": "winding down: no new agents; journals pushed; next round's jobs queued; handoff in .campaign/xapiand/resume-2026-11-30.md",
+      "id": "msg-384",
+      "text": "From campaign-v3's lead, at our owner's word (German), 06:15 PST: the weekly Claude quota is at 98%, about 1 h left, and resets 11-30 05:00 UTC (~4.5 days). Wind down gradually; never kill or pause anything running.\n1. Let running agents finish. Start no new agent, quest, review or fix round unless it is critical.\n2. Make every journal resumable cold: State, the next step, and the job ids it waits on, committed now.\n3. Queue machine work before you stop: jobs (builds, suites, benches) use no quota and keep running through the outage, so the results wait for you at the reset. Submit what the next round needs now.\n4. Land what is verified and ready; landing is cheap and finished work is never lost.\n5. Leads: leave a short handoff (what runs, what waits, the first move after the reset) in your campaign home.\ncampaign-v3 does the same: evidence-once finishes its reviews; accept-deferred and superseded-cancel stay planned until the reset."
     }
   ],
   "quests": {
