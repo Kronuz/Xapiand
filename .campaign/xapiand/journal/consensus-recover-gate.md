@@ -1,6 +1,6 @@
 # consensus-recover-gate: journal
 
-State: working
+State: waiting on jobs 261125-034814-cbfb1c 261125-034822-6f0c97 261125-034825-3c9017
 Quest: .campaign/xapiand/quests/consensus-recover-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,13 +9,11 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Lifecycle table (below) written; next the gate in Driver::recover.
+Code round done at consensus:b6a604a (pushed); evidence jobs queued.
 
 ## Next
 
-1. Gate in Driver::recover (driver.h), Worker::retains_suffix (worker.h), Core::retains_suffix public (core.h).
-2. test/driver_recover_gate_test.cc (A1 values), mutant gate-after-start in test/driver_mutants.py.
-3. docs/DRIVER.md, CHANGELOG.md (A3); verify + mutant job.
+1. Read the three jobs and CI; paste the brief's table; set ready for review.
 
 ## Lifecycle: recover to Start
 
@@ -41,7 +39,7 @@ So on every refused path the only write is the journal's own table reopen of a c
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
@@ -52,14 +50,38 @@ jobs no journal names), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | 261125-034822-6f0c97 (the four recover_gate cases at consensus:b6a604a); 261125-034825-3c9017 (`--fails-without`, mutant gate-after-start: lone "refused attempt 1: the row holds the recovered term" and follower "accepted, it recovers term 1" fail) |
+| A2 | 261125-034814-cbfb1c (build-test); CI on the pushed branch |
+| A3 | consensus docs/DRIVER.md "Recover gate" (gate, reason text), CHANGELOG.md 2026-11-25 at consensus:b6a604a |
+
+Local iteration (not evidence): the mutant also fails recover_gate_accepts; recover_gate_closed
+survives it, since a matching closed record resumes its term with no election, so Start changes
+no state there. Under the mutant every other driver_test case passes.
+
+msg (lead, Detent's answer): Worker::recover is unchanged (its signature and behavior; the gate is
+only in Driver::recover, Worker gains the accessor retains_suffix). consensus main had not moved
+past 217481b at 03:50; no merge needed yet.
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+consensus:b6a604a. `Driver::recover(id, restore, closed, accept, token)` and `recover_refused`
+(include/consensus/driver.h), `Core::retains_suffix` public (core.h), `Worker::retains_suffix`
+(worker.h). Tests in test/driver_test.cc (`recover_gate_lone`, `_closed`, `_follower`,
+`_accepts`), mutant `gate-after-start` in test/driver_mutants.py. How it works: docs/DRIVER.md,
+"Recover gate". Leaves open: nothing in consensus; strata-journal-behind consumes it.
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- The gate runs synchronously inside Driver::recover, after Worker::recover and reopen and before
+  any turn, not in admit() beside Start: typed init and the pre-Start reclaim then never run for
+  a refused group (fewer writes than D7 allows).
+- A refused row is `opened` and fenced, so `close` retires it through the existing fenced path
+  (with `opened` false its retirement never ran and close hung). `fence_seen` is set: the call
+  carries the refusal, so the Sink hears no Fenced and peers get no Gone.
+- Byte equality is checked against a control: the same disk snapshot restarted with no group
+  opened, since every host start begins a new turn-log segment
+  (`l...-turns-000N`). The refused restart's files equal the idle restart's exactly.
+- A second recover on a row already open: unchanged (X15). A refused row fails it with `fenced`;
+  an accepted, started one completes it without rechecking its `accept`.
+- Tests live in driver_test.cc (not a new file): CMakeLists.txt is outside the file set, and
+  consensus_driver_test already builds with the mutant include.
