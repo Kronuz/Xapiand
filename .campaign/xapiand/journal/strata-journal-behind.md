@@ -1,6 +1,6 @@
 # strata-journal-behind: journal
 
-State: working: D5 on the quest branch (step 1); the design revised per the design review at strata:4c5536f7, pushed.
+State: waiting on jobs 261125-033043-326a1d 261125-033050-247c98 261125-033054-178f63 261125-033057-a58c2b 261125-033101-eb5028 261125-033114-38a2d6 261125-033117-9af144 261125-033120-14f397 261125-033123-d47653 261125-033126-adce3d 261125-033134-b6ba15
 Quest: .campaign/xapiand/quests/strata-journal-behind.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -25,6 +25,31 @@ replaced. D-2 C5 threshold; D-3 a learner check_stage case with a mutant; D-6, D
 value API, exact signature (Contracts). Done: all in the doc at strata:4c5536f7; D5 builds here, the
 gate and applied-term stay other quests'.
 
+D5 built at strata:e084e32d, pushed (step 1). group.hh: fused checkpoint item (checkpoint_work: capture,
+sync, commit or pin), `awaiting` peers across flights (cleared by Installed/CaughtUp/Removed/
+LeadershipLost/Fenced, and by forget_awaiting at each checkpoint for a non-leader or a non-member),
+pin_wanted, start_pinning/pinning_checkpoint (one at a time, counted as a task), the Busy retry
+(releases_ counter, release_awaiter woken by install_released, fence and teardown). install.hh:
+list_pin factored out of make_pin; make_pin refuses P_H != P_b; check_stage refuses a staged head
+!= the bundle's position (install_failed). Found while making simulation_group_corruption pass: a
+replica repaired by a requested reinstall checkpointed with epoch 0 while consensus's epoch had
+advanced, so every later checkpoint was refused InvalidCheckpoint (the Driver reports any discarded
+capture so); D5 made it fatal once that replica led. Fixed: reinstall_once keeps RepairCompleted's
+epoch, the capture names it; dispatch forwards an unawaited RepairCompleted too.
+
+Local (quiet light, macOS Release): group_install_bundle_test restart (6 cases: P_H = B after
+activation; 0 writes past: B 7; 5 past: B 13) and busy (3 seeds: installs at 13 after 2 flights held
+in the Sending order); group_install_test all cases; simulation_group_corruption ok; group suite 33
+of 33 after the fixes below. Mutants killed locally: no-busy-retry (busy: never installs in 6
+flights), pin-at-head (restart: never installs), stage-head-unchecked, repair-epoch-dropped (sim
+corruption: the cluster never settles).
+
+Model (job adce3d's script .scratch/xapiand/strata-journal-behind/d5_retry_model.py over the
+reviewer's d5_flight_model.py): 54 of 54 fixed timings install under the retry, 16000 of 16000
+jittered learners. Worst 49 flights at rpc_timeout 40 ms and c = 2000 ms: the flights before the
+pinning checkpoint's own duration elapses, not Busy losses (flights ~ c / (rpc_timeout + 1.5 s)).
+
+Session 2 notes follow.
 Session 2 notes follow.
 
 Session 2 (2026-11-25), design round after the durability review (CHANGES: F1, F2, N1-N4). The
@@ -85,14 +110,22 @@ States (the doc's table has the index, journal and compare columns):
 
 ## Next
 
-1. Lead: Blocked on 2, 3 and 4; a design-lens review of docs/design/journal-binding.md.
-2. On 4's yes: build D5 on this branch (step 1: fused checkpoint, pin flow, check_stage head by
-   position); C2 (the install-restart probe as a group test, mutant `pin-at-head`), C5 (fused vs
-   split quorum latency), simulation_group_corruption green.
-3. Once 2 and 3 land: step 3 (binding read on the chore before recover, D2 in the gate, D4, the term
-   in check_stage, the position check removed); C1, C3, C4, C6; group-open.md rewritten (N3); N1.
+1. Read jobs above; on green, ready for review (durability re-review of D5 at e084e32d).
+2. C5 (D-2): not built this launch. No group latency bench exists (bench/ has none for strata::group);
+   it needs a real-disk, threaded 3-voter harness with a learner installing during periodic
+   checkpoints, fused vs split, under `quiet exclusive`. Proposed as the next step on this branch.
+3. Step 3 once consensus:recover-gate and strata:applied-term land (other quests).
 
 ## Blocked on
+
+6. (lead) docs/mechanisms/group-install.md and replication-group.md still say the pin is "at or past"
+   the bundle (D16); both are outside this file set. Options: (a) widen the file set to them and I
+   update them to D5 (recommend); (b) the lead edits them at landing.
+7. (lead, not this quest) Pre-existing, seen while choosing voters seeds: ungated storage schedules
+   28, 46 and 52 (outside the suite's seeds) fail "the cluster settles" at the merge base too (a
+   leader fenced by a short write on its manifest log); 14 joins them under D5's interleaving. And 8
+   mutants in test/group/mutants.py no longer apply at the merge base (first-commit-unsynced, four
+   catalog ones, read-on-loop, bounded-as-stored, bounded-at-bound). For hunt.md.
 
 1. (lead, not blocking this quest) Consensus 6d710cb's own pins (task 477a7d3, completion 3061516,
    journal f66c16e, faultlab 1ac0b17, crc32c 52889db) fail strata's build: completion's PosixIO now
@@ -179,6 +212,22 @@ strata:31821753 (the position check in group.hh's adopt) stands refused by revie
 replaces it.
 
 ## Rulings I made
+
+- Session 3: the Busy retry holds the checkpoint serializer while it waits (bounded by the flight's
+  release, snapshot_timeout at the latest); it retries only when a flight explains the refusal (one in
+  progress or released since the attempt began), else throws as before.
+- Session 3: a refused learner check (check_stage head) throws install_failed, not damage: the source
+  is wrong, not the learner's bytes; the stage is swept as for any refused complete stage.
+- Session 3: the repair epoch fix is in this quest (group.hh, file set): D5 cannot pass its sim
+  without it. Its class: every capture after a repair; the checkpoint is the only capture path.
+- Session 3: repair_test refusal's oracle reads a write below the install's boundary from the source's
+  log (an install past the writes is D5's normal outcome); voters_test's D109 seeds are re-chosen
+  (3, 24, 27, 45, 49, 51, 60): which schedules leave a replica behind depends on the chore's item
+  count, and 8, 12, 16, 18, 23 now catch up by log (a checkpoint pending at 1 until its node's cut
+  holds the schedule's one checkpoint slot; the merge base shows the same pending-then-cancelled
+  checkpoint on another seed).
+- Session 3: install_test's leader pins at its bundle before applying past it (make_pin refuses
+  otherwise).
 
 - The check runs on create too (recover() serves both): a journal holding no group over an index
   with state is P_H > E with the new log's E (0), the "journal missing" refusal. Before, replay
