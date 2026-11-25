@@ -4631,6 +4631,21 @@
         ]
       },
       "text": "set strata-journal-behind: unlocks frees include/strata/group/group.hh, test/group/**, docs/mechanisms/group-open.md, CMakeLists.txt, CHANGELOG.md for strata-journal-behind; frees test/** for format-freeze; frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete; frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this"
+    },
+    {
+      "announced": {
+        "at": "2026-11-25T06:02:14",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-25T06:02:13",
+      "by": "campaign",
+      "closed": "track-c started on its kept branch; documentation contributor launched",
+      "id": "msg-382",
+      "settles": {
+        "todo": "06826f95"
+      },
+      "text": "to do, critical path first:\ntodo: start track-c (launchable; new): `campaign start track-c`, or park it with a reason"
     }
   ],
   "quests": {
