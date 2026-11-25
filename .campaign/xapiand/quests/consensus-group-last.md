@@ -4,31 +4,27 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 (status, branch, checks, reviews) is in `state.json`: `campaign status consensus-group-last`.
 
 ## Outcome
-
-<The behavior that exists when this quest lands, in one paragraph.>
+`Driver::GroupState` reports `last`, the group's log end (its last index) once `recover` returns, so a
+consumer can compare a recovered log with what it already applied before it touches its own state.
+Nothing else changes: no new call, no behavior change.
 
 ## Acceptance criteria
-
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 A test recovers a group from a log with N entries (and from a closed record, and from a checkpoint
+  plus a tail) and asserts `state(id).last` equals the worker's `last_index()` in each case, and that it
+  advances with appends; a mutant that reports `committed` instead is killed (`--fails-without`).
+- A2 The suite passes: the `build-test` check.
+- A3 [artifact] `CHANGELOG.md` names the field.
 
 ## Contracts
-
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+Provides `consensus:group-last` (one field in `Driver::GroupState`). Consumed by
+`strata-journal-behind`. Detent's lead is told before landing (consensus is shared).
 
 ## Decisions
-
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 2026-11-24: split from journal-replaces-wal's durability review round 3, finding S1 (a journal
+  older than its index corrupts the index); the contributor's Blocked on 13 names this API.
 
 ## May land early
-
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+Nothing: one field.
 
 ## Tasks
 

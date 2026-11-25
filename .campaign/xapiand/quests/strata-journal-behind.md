@@ -4,33 +4,41 @@ Risk: high. The lead writes this quest; contributors read it and never edit it. 
 (status, branch, checks, reviews) is in `state.json`: `campaign status strata-journal-behind`.
 
 ## Outcome
-
-<The behavior that exists when this quest lands, in one paragraph.>
+A strata group whose recovered log ends before what its index already applied (P_H > E: the journal put
+back from an older copy, a copy of a running data root, a plain-mode power cut on macOS) refuses at open
+before anything on disk changes: `group::open` reads E from `Driver::state(id).last` after `recover`, and
+`adopt` on recovery's path (not an install's activation) throws `group_fenced` naming P_H and E before
+`resume` and the file set's recover. Every file stays byte-equal. Sound pairs (P_b <= P_H <= E) open as
+today.
 
 ## Acceptance criteria
-
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 Value tests: a group whose log is cut back below its applied head (clean stop, and after a crash)
+  refuses with both positions in the message and leaves every index and volume file byte-equal; a sound
+  group after a crash replays (P_H, E] and serves every acknowledged write. A mutant without the check
+  fails the first test (`--fails-without`).
+- A2 The suite passes: the `build-test` check.
+- A3 [artifact] `docs/mechanisms/` states the open's three refusals (index older, journal older, journal
+  missing) and what each leaves on disk; `CHANGELOG.md` names it.
 
 ## Contracts
-
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+Consumes `consensus:group-last`; provides `strata:journal-behind`. journal-replaces-wal bumps its strata
+and consensus pins to these and confirms with the reviewer's stalejournal probe (261124-220619-fb40f3).
 
 ## Decisions
-
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 2026-11-24: journal-replaces-wal's durability review round 3, S1, blocking. The check lives in
+  strata (one place), not in Xapiand decoding consensus's and strata's formats (the contributor's Blocked
+  on 13 rules that out).
 
 ## May land early
-
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+Nothing: the refusal and its tests land together.
 
 ## Tasks
 
 <The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
 after T0)`. Each merges into the quest branch on its own tests.>
+
+## Review
+
+One `durability` review, strong tier at effort max: is every recovery path (clean stop, crash, closed
+record, checkpoint plus tail, an install's activation excluded on purpose) checked before the first write;
+can a sound group ever be refused (E read before the log's tail is recovered)?
