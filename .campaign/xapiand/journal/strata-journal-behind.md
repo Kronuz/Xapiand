@@ -9,15 +9,40 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Session 1 (2026-11-25). Pins bumped to consensus 6d710cb and its wave (task 477a7d3, completion
+3061516, journal f66c16e, faultlab 1ac0b17, crc32c 52889db), group_tests building under quiet light.
+The check is in group.hh (open reads E after recover/create; adopt refuses P_H > E first).
+
+Lifecycle at open (P_b the recovered bundle, P_H strata's durable head `ix_->applied()`, E
+`driver.state(id).last` read on the loop in the continuation of `driver.recover`/`create`, so after
+the log's tail is recovered and before any election can append). The check runs first in `adopt`,
+before `resume`, the quarantine release and the file set's recover: nothing on disk changes before it.
+
+| Path at open | P_b | P_H | E | Result |
+|---|---|---|---|---|
+| clean stop (close checkpoints to committed, keeps the closed record) | the close's bundle | = P_b (commit precedes publish) | >= committed >= P_b | opens, nothing replayed |
+| crash with tail | last bundle | >= P_b (a commit whose publish was lost) | >= P_H: apply is bounded by the durable commit index (consensus core.h deliver), persisted after its entries | replays (P_H, E] |
+| closed record (reopen in process, or after restart) | the close's bundle | >= P_b (in process: applied, past the durable head) | the record's last must match the log's (core.h:323) | resumes its term |
+| checkpoint plus tail | the checkpoint's | >= P_b | >= P_H as for a crash | replays (P_H, E] |
+| stage complete, consensus persisted the install (resume activates) | boundary B | old index's <= its commit index < B (an install at or below the commit index is refused CaughtUp, core.h:767; a requested reinstall keeps its suffix, so E >= its old last); half-activated: B | >= B (the log's base) | passes; resume activates |
+| install activation (activate_image) | B | replaced by the image's B | not read: `adopt(b, true, nullopt)` | no check, on purpose |
+| index damaged at open (open_index quarantines, deferred index) | any | 0 | any | never refused; reinstalls |
+| journal created (the host holds no group) over an index with state | none | > 0 | the new log's end | refused P_H > E (journal missing) |
+| log damaged (bounded) | - | - | - | journal loses the group inside recover, before adopt |
+| journal put back older (copy, plain-mode power cut) | <= P_H | > E | older log's end | **refused P_H > E**, nothing written |
+| index put back older | > P_H | | | refused P_b > P_H after resume (unchanged) |
+
+A sound group is never refused: every sound row has P_H <= E at the moment E is read.
 
 ## Next
 
-1. <step>
+1. Tests in test/group/journal_behind_test.cc (clean stop, crash, journal missing refuse byte-equal;
+   sound crash replays (P_H, E]); mutant `journal-behind-unchecked` in mutants.py.
+2. docs/mechanisms/group-open.md, CHANGELOG.md; verify + mutant jobs; push.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
