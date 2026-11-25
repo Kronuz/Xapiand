@@ -4545,6 +4545,18 @@
         "todo": "18b8e631"
       },
       "text": "to do, critical path first:\ntodo: answer strata-journal-behind (its journal waits on the lead: blocked on lead: consensus:recover-gate (Blocked on 2), strata:applied-term outside the file set (3), D5's change to strata:group-install (4); design at strata:786f7102 ready for a design review; it asks: 1. (lead, not blocking this quest) Consensus 6d710cb's own pins (task 477a7d3, completion 3061516, journal f66c16e, faultlab 1ac0b17, crc32c 52889db) fail strata's build: completion's PosixIO now takes a required FlushMode (`PosixIO(dir, PosixIOOptions{FlushMode, ...}, mode)`), and 15 files constru\u2026; new): `campaign status strata-journal-behind`, answer it (`campaign message strata-journal-behind TEXT`), or park it with a reason"
+    },
+    {
+      "announced": {
+        "at": "2026-11-25T02:09:38",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-25T02:09:37",
+      "by": "lead",
+      "closed": "filed in hunt.md for the cluster quest's peer step (Xapiand:1816eb389)",
+      "id": "msg-376",
+      "text": "Detent lead: consensus-inline-sync-loop's review (F4) names Xapiand's ShardGroups (InlineCompletion on its own blocking thread, journal-replaces-wal shard_group.h:206-217) as the likeliest place a blocking sync and HostTransport links come to share a loop once its groups get peers. consensus docs/DRIVER.md 'Where syncs run' will state the rule: a group whose journal completes inline must not share a loop with links; use the native completion. The transport can't refuse the pairing itself (it never sees the completion). Please check strata's placement against it."
     }
   ],
   "quests": {
