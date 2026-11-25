@@ -1,6 +1,6 @@
 # rocksdb-parity: journal
 
-State: waiting on jobs 261125-013258-77d915 261124-231353-1ad1c6
+State: waiting on jobs 261125-020618-9f6c9c 261125-020620-96fc88 261125-020622-cd1920 261125-020625-245609 261125-020725-4543a9 261125-020727-610311 261125-020751-9cf6ff 261125-013258-77d915 261124-231353-1ad1c6
 Quest: .campaign/xapiand/quests/rocksdb-parity.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -28,7 +28,37 @@ Launch 1 (2026-11-24): first commit, gap table, one strata-only task.
    within noise. Identity (light): fillseq --after readall, get digest eb2a3ad93b05aafe, 1,000,000
    hits on both base and fix.
 
+4. Task 7 step 2 (launch 2), strata:34791d51 (code, tests), strata:e2c18e42 (note), strata:54b4c043
+   (probe `bench/kv/probes/rocksdb-parity/runs-readall.sh`):
+   - Runs at any size: `run_bytes` is gone; a segment whose range overlaps no other is a run.
+     Light probe (`run_bytes = 0` build, shared host): tenx1 fillseq wamp 1.17-1.30 -> 0.575,
+     62 segments (one per flush, about 1 MiB each); RocksDB in the same session 0.642, 103 files.
+   - Run cap: `merge_policy::max_runs` = 64; past it `cap_runs` merges the key-adjacent window (no
+     other segment between, up to the merge factor) writing the fewest bytes per segment removed.
+     Simulation, 200 sequential 12 MiB flushes: 60 segments, write amp 1.80 (none at cap 1000).
+   - Range index: `key_ranges` (`include/strata/core/key_ranges.hh`): mapped runs by first key,
+     binary-searched; the rest (overlapping, unmapped) probed by position. `lookup_key` (every
+     upsert's read) and `get` use it; `index_ranges()` rebuilds it after every `segs_` change
+     (flush x2, merge publish, checkpoint install, open, close, destroy, warm twins, heal) and after
+     `run_merges` maps segments; a list of another length or an unfinished rebuild probes all.
+     Debug build confirmed 62 runs of 62 segments after tenx1 fillseq (debug line not committed).
+     Without it (the `run_bytes = 0` build) the fill ran 0.3 us/op slower on the writer: every
+     upsert's `lookup_key` walked 62 segments.
+   - Light probes (3 interleaved, shared host at load 50+): fill CPU 3.29 -> 1.97-2.08 us/op;
+     readall after fillseq 369k -> 323-333k ops/s in one session, 390k -> 442k in another: noise;
+     the exclusive job decides. Identity: get digest eb2a3ad93b05aafe, 1,000,000 hits, A and B.
+   - Mutant branches (each one change on strata:34791d51): `mutant/rocksdb-parity/size-gate`
+     (runs need 4 MiB, baeda3b4), `no-cap` (97d5d86b), `no-key-ranges` (find probes all, 6aaa31e3).
+
 ## Next
+
+0. Read jobs: tests 261125-020618-9f6c9c (e2c18e42); mutants 261125-020620-96fc88 (size-gate,
+   must fail only at merge_policy_test:387), 261125-020622-cd1920 (no-cap, only 345 and 416),
+   261125-020625-245609 (no-key-ranges, only 437-441); strict smoke 261125-020725-4543a9; exclusive
+   A/B with A/A 261125-020727-610311 (A = strata:31fcb7b3, B = 54b4c043; runs set 3 trials plus
+   readall over runs 3 trials); full suite 261125-020751-9cf6ff (tests outside the file set may
+   count on sequential keyed segments merging: a failure there is "Blocked on"). Keep or revert
+   step 2 on the exclusive rows; put them in `sorted-runs.md` "Measured" and Result.
 
 1. Read build-test 261125-013258-77d915 at strata:31fcb7b3 and the RocksDB rows
    261124-231353-1ad1c6 (tenx1, twox1 at strata:19ddcbd0); put the fillseq rows against RocksDB in
@@ -112,7 +142,13 @@ journal test, before it lands):
 
 ## Blocked on
 
-Nothing.
+Nothing blocks step 2. One question for the lead, default taken (64): the run cap trades search
+cost for bytes written. An index of text documents keyed in order (auto-increment ids) now holds
+up to 64 segments where the tiers held about 16, and each segment costs a query its setup
+(query-gap H20: 16 segments cost 1.03-1.58x before P6). Options: (a) keep 64 (KV parity: tenx1
+fillseq writes each byte once); (b) cap by layout, high for keys-and-stored layouts, the tier
+budget where postings exist; (c) lower the cap to 16 and accept rewrites past it. Recommendation:
+(a) now, (b) when a query row on a sequentially keyed text index is measured.
 
 ## Evidence
 
@@ -139,6 +175,13 @@ rows of 261124-231353-1ad1c6. Open: step 2 (range index, run cap, settling flush
 - Task 7's first step passes key ranges only for mapped segments: an unmapped candidate stays
   unranged, so nothing settles until every candidate is mapped (the policy's own rule), and the
   merge scheduler never maps a cold segment just to decide.
+- Task 7 step 2: `run_bytes` removed rather than lowered: the per-segment costs it stood for are
+  a count, so the cap counts runs (D9's "caps the run count by per-segment fixed costs").
+- `max_runs` = 64: about twice the segments the tiers hold at their largest (8 a tier, about four
+  tiers to the 2.5 GiB half-maximum); RocksDB caps nothing (103 SSTs after tenx1 fillseq). It is
+  the default only; see "Blocked on" for the search-cost side.
+- The range index covers the index's own `lookup_key` and `get`; snapshots and views keep the
+  walk, scans keep opening every run past their start (both listed under Limits in the note).
 - Lead's narrowed file set (2026-11-25, for strata-journal-behind): the branch's seven paths
   (`include/strata/core/index_merge.hh`, `merge_policy.hh`, `test/background_merge_test.cc`,
   `test/merge_policy_test.cc`, `bench/kv/ab.py`, `docs/design/rocksdb-parity.md`,
