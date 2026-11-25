@@ -1,6 +1,6 @@
 # field-check-at-map: journal
 
-State: ready for review
+State: waiting on jobs 261124-205541-baf5c2 261124-205543-2d1c17 261124-205545-8c5e65 261124-205555-96bca6 261124-205557-765a8d 261124-205559-b94bac 261124-205601-16b399 261124-205609-44e9fc (review fixes at strata:0d39c221)
 Quest: .campaign/xapiand/quests/field-check-at-map.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -94,6 +94,18 @@ Void, not evidence: A3 passes before prospect c99e6be and the rows 261124-190110
 ## Result
 
 The map checks a segment's field ids wherever it maps (`vouch` in `index.hh`, called from `open_body_of`). Eager open with the check at the map costs what today's open costs (Xapiand's `verify_fields` loop): d1000s10 dirty 59,867 B against 59,896 B (aa 59,892), resident 224,051 against 224,088; open p50 2,225 us against 2,174 (aa 2,080), CPU 2,248 against 2,184 (aa 2,095), inside the spread; d1000s4 likewise (dirty 30,147 against 30,167). The record stays 200 B (strata:239d51e4); the remaining gap was prospect's cached pool reader (prospect:c99e6be, its own quest), which also takes 4.2 KB per index off `today` at d1000s10. Rows and method: `docs/perf/eager-open.md` "The A3 rows over prospect's transient pool reader"; mechanism: `docs/mechanisms/field-check.md`.
+
+## Review fixes (correctness review, CHANGES: F1 blocking; strata:0d39c221, pushed)
+
+| Finding | Fix | Confirming job | Fails without |
+|---|---|---|---|
+| F1 harness runs leftover builds | `ab.sh` `guard` in row, heap, identity: prints `sides:` (identity too), exits 3 when proto's strata != this tree, base/aa != $JOB_REF_BASE, or a prospect != $JOB_REF_PROSPECT (sides' prospects agree when unset); `bench/eager_open/test_guard.sh` stamps matching and mismatched fake builds; method sentence in eager-open.md | 261124-205543-2d1c17 | mutant (ab.sh without the guard) 261124-205545-8c5e65 |
+| N1 double "corrupt segment:" prefix | `open_segment::fail(what, rewrap)`: a `corrupt_segment` is rethrown as it is; test asserts one prefix at the lazy first read | 261124-205541-baf5c2 | mutant n1 261124-205601-16b399 |
+| N3 wake/heal/install untested | `field_check_map_test`: wake after demote, heal, install (eager and lazy target) from the reviewer's P1-P3 | 261124-205541-baf5c2 | mutants twin (claim dropped on twin) 261124-205555-96bca6, heal 261124-205557-765a8d, install (both records) 261124-205559-b94bac |
+| N6 hashes | eager-open.md cites 58f381's identity hashes, the rows' query hashes named as such | docs | n/a |
+| reviewer probes | rerun at the head | 261124-205609-44e9fc | n/a |
+
+Class swept (F1): the three subcommands that run binaries from OUT (row, heap, identity) share `guard`; `test_guard.sh` runs each against each mismatch (stale proto, stale base, other prospect) and the matching case. Left to the hunt list: N2 (prospect naming the field), N4, N5. The A3 rows and A2 stand (harness and test only; their jobs built and printed their sides). Mutant commits are dangling local objects (`~/.scratch/xapiand/field-check-at-map/mut`).
 
 ## Rulings I made
 
