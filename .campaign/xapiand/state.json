@@ -30417,6 +30417,12 @@
         "test/merge_policy_test.cc",
         "test/kv*",
         "test/index_*",
+        "test/catalog_host_test.cc",
+        "test/cold_hooks.hh",
+        "test/defer_io_test.cc",
+        "test/reclaim_backlog_test.cc",
+        "test/shared_read_test.cc",
+        "test/write_buffer_test.cc",
         "fuzz/**",
         "docs/design/rocksdb-parity.md",
         "docs/design/standalone-turn-log.md",
@@ -30437,7 +30443,7 @@
       "risk": "high",
       "status": "active",
       "title": "strata matches or beats RocksDB on every gate row",
-      "updated": "2026-11-25T00:24:27",
+      "updated": "2026-11-25T03:54:13",
       "worktree": "../strata-wt/xapiand/rocksdb-parity"
     },
     "rocksdb-spec": {
