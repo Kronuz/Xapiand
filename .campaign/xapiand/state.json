@@ -4321,6 +4321,18 @@
         ]
       },
       "text": "journal-sync-mode landed: unlocks journal-replaces-wal (until journal-sync-mode met: `campaign set journal-replaces-wal status=active`); frees test/** for format-freeze; frees include/strata/core/**, test/**, docs/mechanisms/**, CMakeLists.txt for rocksdb-parity; frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete; frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T18:55:09",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T18:55:09",
+      "by": "kronuz",
+      "closed": "noted: file-holds installed (agent-campaign:4155433)",
+      "id": "msg-361",
+      "text": "campaign skill: agent-campaign:4155433 installed (file-holds).\n1. msg-93 fixed: a quest never holds files against a quest it needs (directly or through other quests' needs) or is parked until, so pin-wave's parked dependents no longer block it. start, status and set agree. pin-wave needs no --force now.\n2. msg-87 fixed: set ID files= on a quest that holds files refuses a widening into another holder's files, naming it and the shared globs; narrow the set or wait with needs=. There is no override flag.\n3. Note: after=split-detent only orders landings; it never separated the writers. relay-mirror-idle-wake and split-detent still both list service.cc: narrow one."
     }
   ],
   "quests": {
