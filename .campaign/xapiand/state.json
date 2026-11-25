@@ -8946,9 +8946,9 @@
       ],
       "repo": "../consensus",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "consensus: Driver reports a group's recovered log end",
-      "updated": "2026-11-24T23:03:36",
+      "updated": "2026-11-24T23:49:47",
       "worktree": "../consensus-wt/xapiand/consensus-group-last"
     },
     "consensus-hello-limits": {
