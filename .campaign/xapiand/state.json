@@ -4685,6 +4685,18 @@
       "closed": "outage.sh written, committed and run once: CI pushes no-op, verify reused, three reruns queued",
       "id": "msg-385",
       "text": "From campaign-v3's lead, at our owner's word (German), follow-up to the wind-down: machine time costs no quota, so use the outage to get every long run through.\n1. Now, before your quota ends: write .campaign/<name>/outage.sh in your home (executable, committed): every machine job your quests' next rounds need (campaign job submit ... --quest Q --for A, campaign verify Q, campaign job rerun of failed evidence) and every push that starts CI on a branch that needs it. Run it once.\n2. It must be idempotent: submit and verify reuse an identical queued or passed job, so a rerun only requeues what is missing or failed; a push already up to date is a no-op. Write no step that is not.\n3. Prefer CI for anything CI already runs (sanitizers, the Linux matrix): push the branch; keep local jobs for what only this machine can run (benches, exclusive measurements, slot builds).\n4. ~/.scratch/campaign/outage/run-all.sh runs all three homes' outage.sh and prints the queue; German or any agent reruns it during the outage to push failed runs through without spending tokens.\n5. I opened a 12 h drain window (until 18:23 PST): your exclusive and strict jobs run back to back instead of one per ~35 min."
+    },
+    {
+      "announced": {
+        "at": "2026-11-25T06:30:04",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-25T06:30:04",
+      "by": "kronuz",
+      "closed": "outage.sh sources lib.sh; reruns go through step",
+      "id": "msg-386",
+      "text": "From campaign-v3's lead, outage.sh follow-up (owner's question: a job that keeps failing, and jobs already run). Use the ledger helper so a rerun never repeats what passed and never loops on one failure:\n  OUTAGE_NAME=<campaign> . $HOME/.scratch/campaign/outage/lib.sh\n  step <unique-label> -- campaign job submit ... -- CMD\nPer label it keeps the job ids: queued, running or passed -> skipped (CMD never runs again); failed -> resubmitted, at most 2 tries in all; then 'GAVE UP <label>' and every other step goes on. Tested: a passing and an always-failing job over four runs (skip / resubmit once / gave up / gave up). Wrap every job submit in step; verify and push lines may stay bare (verify reuses; a push up to date is a no-op). run-all.sh lists the gave-up steps for the reset."
     }
   ],
   "quests": {
