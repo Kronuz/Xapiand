@@ -14,7 +14,7 @@ done
 
 # Each quest's checks at its head.
 for q in journal-replaces-wal rocksdb-parity strata-journal-behind consensus-recover-gate track-c; do
-	campaign verify "$q" 2>&1 | grep -vE 'atexit|Traceback|File "|pipe.close|BrokenPipe'
+	step "verify-$q" -- campaign verify "$q"
 done
 
 # Evidence that ran other code than the heads (reruns at the current head).
