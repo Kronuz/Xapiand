@@ -44,6 +44,9 @@ of 33 after the fixes below. Mutants killed locally: no-busy-retry (busy: never 
 flights), pin-at-head (restart: never installs), stage-head-unchecked, repair-epoch-dropped (sim
 corruption: the cluster never settles).
 
+Jobs at strata:e084e32d: tests 261125-033043-326a1d passed (install-bundle, install, sim corruption, repair,
+voters, journal-behind); the rest queued when this session ended.
+
 Model (job adce3d's script .scratch/xapiand/strata-journal-behind/d5_retry_model.py over the
 reviewer's d5_flight_model.py): 54 of 54 fixed timings install under the retry, 16000 of 16000
 jittered learners. Worst 49 flights at rpc_timeout 40 ms and c = 2000 ms: the flights before the
