@@ -1,6 +1,6 @@
 # field-check-at-map: journal
 
-State: waiting on jobs 261124-205541-baf5c2 261124-205543-2d1c17 261124-205545-8c5e65 261124-205555-96bca6 261124-205557-765a8d 261124-205559-b94bac 261124-205601-16b399 261124-205609-44e9fc (review fixes at strata:0d39c221)
+State: ready for review (jobs running: A3 aab22b a00a3e, A2 d9a59d, mutant 7f00f1, build-test)
 Quest: .campaign/xapiand/quests/field-check-at-map.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -104,6 +104,8 @@ The map checks a segment's field ids wherever it maps (`vouch` in `index.hh`, ca
 | N3 wake/heal/install untested | `field_check_map_test`: wake after demote, heal, install (eager and lazy target) from the reviewer's P1-P3 | 261124-205541-baf5c2 | mutants twin (claim dropped on twin) 261124-205555-96bca6, heal 261124-205557-765a8d, install (both records) 261124-205559-b94bac |
 | N6 hashes | eager-open.md cites 58f381's identity hashes, the rows' query hashes named as such | docs | n/a |
 | reviewer probes | rerun at the head | 261124-205609-44e9fc | n/a |
+
+Results at strata:0d39c221 (lead): A1 baf5c2, guard 2d1c17 (mutant 8c5e65 killed), mutants twin 96bca6, heal 765a8d, n1 16b399 killed, probes 44e9fc passed. Install mutant b94bac SURVIVED, and rightly: it dropped the claim on the install's own copies (`index_checkpoint.hh:59,68`), which hold the bytes `load_files` just checked (manifest identity and footer crc bind them); the field ids there are unobservable except against a payload forged past the stored checksum (tried: a changed id is "stored checksum", not the field check). The check an install rests on is `load_files(source, theirs, whole=true)` (`index_open.hh:449`): mutant install-load (whole skips the claim) fails the test locally (rc 134) and is queued as 261124-211943-7f00f1 at 571f1d7f. No code change; docs-only strata:539fa10e (field-check.md says which check the install rests on and that the pool reader is no longer cached). Brief listed A2/A3/A4 for rerun at the new head (the harness and engine changes): queued once: A3 aab22b (d1000s4), a00a3e (d1000s10), A2 d9a59d, build-test via verify.
 
 Class swept (F1): the three subcommands that run binaries from OUT (row, heap, identity) share `guard`; `test_guard.sh` runs each against each mismatch (stale proto, stale base, other prospect) and the matching case. Left to the hunt list: N2 (prospect naming the field), N4, N5. The A3 rows and A2 stand (harness and test only; their jobs built and printed their sides). Mutant commits are dangling local objects (`~/.scratch/xapiand/field-check-at-map/mut`).
 
