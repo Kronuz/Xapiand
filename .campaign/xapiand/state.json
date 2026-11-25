@@ -4359,6 +4359,21 @@
       "id": "msg-364",
       "notice": "skill installed 415543381cec09bf864b42d067ed8ca5e358e7ab",
       "text": "campaign skill: agent-campaign:4155433 installed here, 9 commits: agent-campaign:8999516 file-holds: set files= refuses widening into a holder's files; agent-campaign:eefeb40 file-holds: format the cross-overlap warning; journal: blocked on cli.py; agent-campaign:c972859 file-holds: set refuses outright; no --force on set; agent-campaign:8b51087 file-holds: journal: waiting on the evidence round; agent-campaign:ed7b2ea file-holds: journal: A1 green; shards pending; agent-campaign:b1820e2 file-holds: a holder that waits for a quest never blocks its start; agent-campaign:8cd3cd6 file-holds: journal: round 2 (A1, A4) submitted; agent-campaign:5e96ecc file-holds: journal moves to the campaign-v3 home; agent-campaign:4155433 Merge branch 'main' into quest/campaign-v3/file-holds"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T18:55:44",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T18:55:44",
+      "by": "campaign",
+      "closed": "unparked; fresh contributor reruns A3 with prospect at c99e6be",
+      "id": "msg-365",
+      "settles": {
+        "todo": "83db3b0c"
+      },
+      "text": "to do, critical path first:\ntodo: unpark field-check-at-map (until prospect-pool-reader-transient met; new): `campaign set field-check-at-map status=active`, or park it again with a reason"
     }
   ],
   "quests": {
