@@ -35274,6 +35274,43 @@
       "title": "Field-aware strata index",
       "updated": "2026-11-08T13:25:27"
     },
+    "strata-journal-behind": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSTRATA_BUILD_TESTS=ON >/dev/null && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [
+        "consensus:group-last"
+      ],
+      "files": [
+        "include/strata/group/group.hh",
+        "test/group/**",
+        "docs/mechanisms/**",
+        "CHANGELOG.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [
+        "consensus-group-last"
+      ],
+      "provides": [
+        "strata:journal-behind"
+      ],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "strata: a group whose journal is behind its index refuses at open",
+      "updated": "2026-11-24T22:46:51"
+    },
     "strata-journal-pin": {
       "accepted": {
         "durability": {
