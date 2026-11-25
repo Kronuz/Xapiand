@@ -531,6 +531,8 @@ strata: `group-catalog` (item 4), which `core` step c waits on.
 
 ## Blocked on
 
+12 answered (lead, 2026-11-24): src/engine/strata/io_options.h and tests/test_io_options.cc added to the file set.
+
 12. (2026-11-24, session 18) Outside the file set, changed (required to build at the bumped pins: PosixIOOptions'
     mode is required and `full_flush_ordering` is gone): src/engine/strata/io_options.h (`posix_io_options()` maps
     the switch to the mode) and tests/test_io_options.cc (its two checks read `flush_mode`). Recommend: add both to
