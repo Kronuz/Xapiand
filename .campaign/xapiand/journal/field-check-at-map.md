@@ -85,7 +85,7 @@ Head strata:093bb965 (docs over strata:aaf38cd2, the merge of main). Real builds
 | A1 | 261124-190113-7d240b (head aaf38cd2); mutant 261124-120815-138f97 (--fails-without: passed; vouch::check unchanged since) |
 | A2 | 261124-193029-58f381 (identity, rebuilt at prospect c99e6be) |
 | A3 | d1000s4 261124-191203-86c495, d1000s10 261124-191208-75ce14: all four measures (open p50, open CPU, dirty, resident) of proto eager inside the base/A/A `today` band |
-| A4 | build-test via `campaign verify field-check-at-map` and CI |
+| A4 | build-test 261124-195702-86fcdb (queued by verify at strata:093bb965) and CI |
 | A5 | `docs/mechanisms/field-check.md`, `docs/perf/eager-open.md` (strata) |
 | A6 | <pending CI> |
 
