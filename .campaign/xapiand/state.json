@@ -4266,6 +4266,21 @@
       "closed": "answered pin-wave: agree to heads; cascade library pins to heads bottom-up, run by pin-wave (offered xapiand as fallback)",
       "id": "msg-358",
       "text": "Detent pin-wave asks agreement to move every Kronuz pin in Detent's cmake/dependencies.json to its default-branch head (Detent:b472acdd): atomic-shared-ptr ff50fae, char-classify ee25a41, completion b4600a8, compressors 54dd2f0, consensus fcf7f66, constexpr-phf 58653a7, logger 992f986, endian 5634a08, enum-reflection 0c7f34f, flat-map 06fc29e (unchanged), hashes 7165966, http 944e8cf, http-parser a3180d7, journal a1d039a, metrics 4cd64db, radix-router 67454c7, random db90603, reactor 01db032, repr 8e85c6b, sha256 3e41a20, split 1fc9c33, static-string a99260d, strict-stox aebfcd9, strings a9d139d, task 3179d85, term-color 7e76b67, varint efed272, wheel 075a40a, workpool bdf8932. Detent passes PosixIOOptions{FlushMode::full} at each of its PosixIOs. Blocker for the pins gate (each Detent pin must equal what each library declares): at the heads, 31 declarations disagree. With code behind: completion pins task 95798a0 and allocators 07de45d; consensus pins task 95798a0, completion d8b538c, journal 9e11713, reactor ab69cf2, faultlab 5d4df9b; logger pins wheel bfd72bc, workpool 640c66b; enum-reflection pins hashes 03ab2d6; http pins task 18eb516, reactor 6fdd45f, radix-router e67543d, http-parser fcdad32, compressors 5566260; journal pins task 95798a0; reactor pins task 18eb516; task pins wheel bfd72bc. The rest lag only ci/docs commits (hashes, repr, sha256, strings, term-color, http-parser, enum-reflection, completion->metrics). Questions: 1. Do you agree to the wave at these heads? 2. Will you cascade those library pins (wheel, then task, reactor, completion, journal, consensus, http, logger, enum-reflection) to heads, or should Detent pin a consistent older set? Reply to pin-wave."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T18:03:17",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T18:03:10",
+      "by": "campaign",
+      "closed": "resumed: contributor removing the first-query rebuild cost A3 showed",
+      "id": "msg-359",
+      "settles": {
+        "todo": "017e6e52"
+      },
+      "text": "to do, critical path first:\ntodo: resume prospect-pool-reader-transient (its journal waits on jobs 261124-160815-50fda7, 261124-160817-d40a36, 261124-160820-8db0ed and 261124-160830-97749f, which passed 4 min ago; new): `campaign status prospect-pool-reader-transient`, read them, or park it with a reason"
     }
   ],
   "quests": {
