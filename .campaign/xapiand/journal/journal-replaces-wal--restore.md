@@ -117,7 +117,7 @@ msg-204 and msg-205 answered by the lead (option (a) on both).
 |---|---|
 | A1 | 261121-203231-e1086b (test_journal_replay, plus test_shard_group and test_group_command after my two changes to core's files); 261121-203232-09b718 (mutant: the bundle drops the volume length, test_journal_replay fails); journal_replay_check.sh at the journal build pending step d |
 | A5 | 261121-203231-e1086b (test_restore_batch); 261121-203231-13b0f8 (mutant: RESTORE writes keep the expectation, the pipelined batch 2 is refused); 261121-203232-74304e (mutant: no restamp at apply, stored _version stale); RESTORE through the group's propose pending step d |
-| probe | 261121-111719-e638cd: journal_replay_check.sh and profile_bulk --put on the pre-journal build, mechanics only, not evidence |
+| probe | 261123-014631-6ca9fe: journal_replay_check.sh and profile_bulk --put on the pre-journal build, mechanics only, not evidence |
 
 Cancelled, superseded by the renames: 261121-110941-17b096, 261121-110943-f67445, 261121-110959-9c6a80.
 
