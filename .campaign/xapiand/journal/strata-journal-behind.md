@@ -1,6 +1,6 @@
 # strata-journal-behind: journal
 
-State: blocked on lead: consensus:recover-gate (Blocked on 2), strata:applied-term outside the file set (3), D5's change to strata:group-install (4); design at strata:786f7102 ready for a design review
+State: waiting on the design review of journal-binding.md at strata:786f7102 (lead launched it 2026-11-25); Blocked on 2-4 and Q1-Q3 are answered with its verdict (msg-1).
 Quest: .campaign/xapiand/quests/strata-journal-behind.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
