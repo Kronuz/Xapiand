@@ -31,7 +31,7 @@ jobs no journal names), and answer each message by its id (msg-N).
 |---|---|
 | A1 | plain: 261124-225614-d4ca21 (`driver_test group_last`: plain log, checkpoint plus tail, held-turn staged entry; `driver_close_test group_last_closed`); mutant `group-last-committed` (reports `committed`): 261124-225605-635aa9 --fails-without |
 | A2 | build-test 261124-225604-857136 |
-| A3 | [artifact] consensus `CHANGELOG.md`, 2026-11-24 Added: first bullet names `Driver::GroupState::last` (consensus-group-last:3fac26f) |
+| A3 | `CHANGELOG.md`: "Driver::GroupState::last" |
 
 ## Result
 
