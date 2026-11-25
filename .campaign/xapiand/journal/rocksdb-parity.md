@@ -1,6 +1,6 @@
 # rocksdb-parity: journal
 
-State: waiting on jobs 261125-041712-dedde3 261125-041728-c7bab8 261125-035437-7398ae 261125-020727-610311
+State: waiting on jobs 261125-044001-59906a 261125-043931-f778e3 261125-041712-dedde3 261125-041728-c7bab8
 Quest: .campaign/xapiand/quests/rocksdb-parity.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -85,9 +85,26 @@ Launch 1 (2026-11-24): first commit, gap table, one strata-only task.
    - Jobs: strict smoke 261125-041712-dedde3, exclusive A/B with A/A 261125-041728-c7bab8 (after
      the smoke), both at strata:3292724f, `--ref PROSPECT=prospect@c99e6be`.
 
+7. Lead's decision (2026-11-25, quest Decisions): the run cap follows the layout's read shape.
+   strata:60e6cf55: `segment_policy<Layout>::max_runs` (primary 0, `document_layout`
+   `merge_policy::run_cap` = 64) initializes `basic_index_options::policy.max_runs`; an explicit
+   value overrides. merge_policy's own default stays `run_cap` (its tests use runs). index_test:
+   each layout's default (static_assert + options), a key-ordered load keeps 40 runs in
+   document_layout, merges by tiers (< 20) in `layout<keys_plugin>` (the default policy, the
+   search layout's shape; strata has no postings plugin), and max_runs 64 overrides (== 40).
+   Local (quiet light): index, merge_policy, background_merge pass. Mutant
+   `mutant/rocksdb-parity/layout-cap` (options ignore the layout) -> job 261125-043931-f778e3, must
+   fail only at index_test.cc:1862 and 1889. Full suite 261125-044001-59906a at 60e6cf55 (7398ae
+   cancelled before it started; `campaign verify` holds build-test to the round's end, so a plain
+   job, as the lead's 7398ae). sorted-runs.md states the rule and names a run-aware query path as
+   the follow-up that could lift the postings cap; search-runs.md points at it (strata:5f3ec344,
+   docs only, not pushed: the push would cancel 60e6cf55's CI).
+
 ## Next
 
-0. msg-1: read 261125-041712-dedde3 and 261125-041728-c7bab8; put the exclusive table (A, A2, B,
+00. Read suite 261125-044001-59906a and mutant 261125-043931-f778e3.
+0. msg-1: read 261125-041712-dedde3 and 261125-041728-c7bab8 (still at strata:3292724f: the probe
+   sets max_runs explicitly, so the layout default does not change it); put the exclusive table (A, A2, B,
    C) in `docs/perf/search-runs.md` "Exclusive A/B" and the note's "Why 64" numbers; answer msg-1
    with them. Light numbers already pass 10% p99 on every TOP_10 row (see Blocked on).
 0a. Full suite 261125-035437-7398ae at strata:7ba472a4 (the lead merged
@@ -191,7 +208,7 @@ test/catalog_host_test.cc, test/cold_hooks.hh, test/defer_io_test.cc, test/recla
 test/shared_read_test.cc, test/write_buffer_test.cc. Widen to them, then the quest branch
 fast-forwards to ff7b4d97.
 
-msg-1's verdict (light probe; exclusive pending): 64 runs costs search more than 10% p99 on every
+Resolved by the lead's decision (step 7). Was: msg-1's verdict (light probe; exclusive pending): 64 runs costs search more than 10% p99 on every
 TOP_10 row (term 2.5x, AND 1.5x, phrase 1.17x) on a sequentially keyed text index, against the
 tiers' 4 segments. `merge_policy::max_runs` is strata's default for every layout, prospect's search
 layout included (prospect's `basic_index_options<search_layout>` takes the default policy), so
@@ -232,6 +249,10 @@ rows of 261124-231353-1ad1c6. Open: step 2 (range index, run cap, settling flush
 `run_bytes`).
 
 ## Rulings I made
+
+- Layout cap: the number lives on `segment_policy` (the layout's existing declaration of its read
+  shape), not a new trait; `merge_policy::run_cap` names 64 once, and a bare `merge_policy` keeps
+  it as its default so its own tests keep runs on.
 
 - Task 7 chosen for launch 1 (reasons under the gap table).
 - Task 7's first step passes key ranges only for mapped segments: an unmapped candidate stays
