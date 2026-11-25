@@ -53,6 +53,8 @@ Nothing queued: the fix is outside the file set.
 
 Queued strict A3 rows at strata:6dc38c77 (docs-only over 239d51e4), BASE strata:cfa20b4 as before, PROSPECT prospect:c99e6be, same commands as a057fa/a2c903: d1000s4 261124-190110-6a800d, d1000s10 261124-190112-00d680. No code change, so A1 (73466a) stands and the A1 mutant is not rerun. Then: write the rows into docs/perf/eager-open.md, `campaign verify field-check-at-map`, ready for review. Note: `campaign brief` says main changed 12 files since the branch point; the lead merges main (or tells me to).
 
+Update: main was merged into the branch (strata:aaf38cd2, catalog split only; no field-check or harness path changed), which cancelled my two jobs (185647, 185649). Already queued by someone else at aaf38cd2 (not mine): A3 rows d1000s4 261124-190110-6a800d and d1000s10 261124-190112-00d680 with PROSPECT prospect:c99e6be and BASE strata main 49fca948 (the merge's main parent, a fairer base than cfa20b4). I kept those and cancelled my duplicates. I queued A1 at head 261124-190113-7d240b and A2 identity at prospect c99e6be 261124-190127-e6a947 (BASE cfa20b4). Then build-test via `campaign verify` at the end.
+
 ## Next
 
 1. On the lead's ruling: option 1 -> rerun A3 d1000s10 (and d1000s4) with PROSPECT at the
