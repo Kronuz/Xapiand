@@ -7337,7 +7337,7 @@
         "xapiand:search-fanout",
         "xapiand:cluster-routes"
       ],
-      "reason": "parked by the lead: its 11-21 jobs stand; resume with a fresh contributor once both land",
+      "reason": "waits only on journal-replaces-wal (consensus-join-v2 landed); resume with a fresh contributor at its landing",
       "repo": ".",
       "risk": "high",
       "status": "blocked",
@@ -7370,7 +7370,7 @@
         "journal-replaces-wal",
         "consensus-join-v2"
       ],
-      "updated": "2026-11-24T12:41:11",
+      "updated": "2026-11-25T05:59:38",
       "worktree": "../Xapiand-wt/xapiand/cluster"
     },
     "cluster-api": {
