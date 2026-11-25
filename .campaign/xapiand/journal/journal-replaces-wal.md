@@ -1,9 +1,54 @@
 # journal-replaces-wal: journal
 
-State: ready for review (L1 test fix at Xapiand:0fffbb26a, pushed); jobs 261124-222236-8c886d (test) and 261124-222240-69101c (mutant L1 rerun) queued. Next: the lead reads them; `campaign accept ... durability --confirm` is the lead's.
+State: blocked on lead: design check of the lifecycle table (session 21, J1b and S1 classes, below). S1's refusal needs strata (Blocked on 13).
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
+
+Session 21 (2026-11-24), durability review round 3 (CHANGES at Xapiand:98ea84a70): J1b, S1, A1 blocking (L1-T done
+in session 20); N9, N11, N12 nits; N10 left.
+
+Lifecycle extension (fourth round on this mechanism: the design check comes before any J1b or S1 code). Two classes.
+
+J1b, any path that reaches the journal's directory. States are how an index path relates to the journal's
+directory `J` on disk; `J`'s identity (device, inode, following a symlink) is read once by `set_journal`, on the
+main thread before the loops. "Miss" is resolve's branch where `<path>/strata` does not open (ENOENT, ENOTDIR).
+
+| Path state | create pin (PUT, RESTORE) | pin without create (GET, search) | reopen of an existing index | node start |
+|---|---|---|---|---|
+| outside | creates and opens | 404 `No such database` | opens; no added syscall (the check runs on a miss only, cheap-reopen D2) | nothing |
+| lexically at or inside `J` (`//`, `/./`, `..`, `%2E`) | 400 reserved name, no syscall (J1, kept) | 400 | unreachable: never created | moved (row "held at start") |
+| another spelling of `J` or an ancestor of it on a case-folding volume (`.Xapiand/journal/x`, `.XAPIAND/JOURNAL/`) | **J1b**: on the miss, the deepest existing ancestor is canonicalized and it and each physical parent compared with `J` by device and inode; a match is 400 naming `J`, before `create_index_directory` | **J1b**: the same check before `index_not_created`: 400, not 404 | unreachable: no index directory exists under `J` (refused at create, moved at start) | moved |
+| through a symlink whose target is `J` or under it (`alias/x`, `alias -> J`) | **J1b**: the same identity walk (canonical resolves the link) | **J1b**: 400 | unreachable | moved |
+| through a file of `J` (`J/layout/x`, any spelling) | lexical 400, or **J1b** (ENOTDIR: the walk starts at the file, its parent is `J`) | 400 | unreachable | n/a |
+| held at start: a directory inside `J` from a build before J1/J1b (an index, artifact-named directories fencing another index) | n/a | n/a | n/a | moved to `<J>.strays/` before the host scans, the log names both paths (J1, kept); its bytes are kept; its old path answers 400 (above); every other index serves, the fenced one included. **N12**: a rename that fails (EXDEV: `J` a mount or a symlink to another volume) ends the start naming EXDEV, the directory and the remedy |
+
+Value tests (test_pool, one per transition): case spellings and `alias/x` create nothing and answer invalid on
+create and without create (fails without J1b: the case spellings create directories inside `J` on APFS, the alias
+on every platform); a name outside creates, reopens and serves (the existing pool tests); held at start: a stray index directory and four artifact-named directories made under `J` move, and a
+second index committed before the start reads back after it. The reviewer's journalcase probe (e2b871) is the
+confirming job.
+
+S1, the journal and the index out of step. P_H is strata's durable head (`index.applied()`), P_b the recovered
+bundle's position, E the recovered log's end (consensus's last index after `driver.recover`). Sound pairs have
+P_b <= P_H <= E: an entry is durable before it applies, and a bundle publishes only after strata committed it.
+
+| State at open | first open after start | reopen in this process |
+|---|---|---|
+| journal holds no group (none, lost) and the index holds state | J2 (kept): refused before the group is built, nothing touched; **text fixed**: names DUMP/RESTORE and that only the journal the index last stopped with may be put back, never an older copy | unreachable (the host holds its group) |
+| sound, clean stop (P_b = P_H = E) | opens, nothing replayed | opens with the closed record, no election |
+| sound, after a crash (P_b <= P_H <= E) | replays (P_H, E] (strata skips at or below P_H) | n/a |
+| index older than the journal (P_b > P_H: the index's directory put back from a copy) | strata fences before the file set's recover (group.hh:1181); **new**: the open refuses with errc::corrupt naming P_b and P_H through the same path as D1, every index file byte-equal | unreachable |
+| journal older than the index (P_H > E: put back from an earlier copy, a copy of a running data root, a plain-mode power cut on macOS) | **S1**: refuse before `resume` and the file set's recover, naming P_H and E, nothing on disk touched; needs E before adopt, which strata's open does not expose: Blocked on 13 | unreachable: the host holds the journal with its owner lock |
+
+Value tests: index older refuses and keeps every file byte-equal (Xapiand, this round); journal older at a clean
+stop and journal older after a crash refuse and keep every file byte-equal (written with the strata bump that
+exposes E; the stalejournal probe fb40f3 confirms then). Sound pairs: test_an_acknowledged_write_survives_a_kill
+and test_a_cold_pin_reads_what_the_log_replays (existing).
+
+A1 and the nits change no state: `check_may_block` in quiesce() and the allow rows; N11 maps TooLarge and
+DuplicateRequest to 500; N9 makes the pressure counters monotonic (placed minus the largest count a published
+checkpoint covered, so overlapping checkpoints never subtract twice and the count never wraps).
 
 Session 20 (2026-11-24), L1's unit test (lead's step): mutant 261124-201402-16805d left the log-bound test passing.
 
@@ -599,6 +644,26 @@ search_views.cc, the request tests, power_loss_check.sh, run_all.sh, docs). One 
 strata: `group-catalog` (item 4), which `core` step c waits on.
 
 ## Blocked on
+
+13. (2026-11-24, session 21) S1 needs E, the recovered log's end, before strata's adopt touches the file set; nothing
+    strata or consensus exposes gives it to Xapiand before `open_blocking` returns, and by then `files_.recover` has
+    truncated `app.vol-N`. The journal's table holds a closed group's journal Frontier and sequence, not a consensus
+    index; reading E from it means decoding consensus's checkpoint and strata's bundle in Xapiand, a second
+    implementation of two formats, and still misses a group left open by a crash. The API I need (the lead opens
+    the strata quest; I did not edit strata or consensus):
+    - consensus `Driver`: `std::optional<Index> last_index(GroupId id) const` (the open worker's
+      `Worker::last_index()`; absent for an id not open), or a `last` field in `Driver::GroupState`.
+    - strata `group::open()`: after `driver.recover(...)`, read E = `driver.last_index(id_)` and hand it to
+      `recover(b, E)`. In `adopt` on recovery's path (not an install's activation), before `resume` and
+      `files_.recover`: when `ix_->applied().index > E`, throw `group_fenced` (or a `journal_behind` type) with
+      text naming both, e.g. "strata::group: strata's durable head P_H = 1234 is past the recovered log's end
+      E = 1200: the journal is older than the index". Nothing is written before the throw (the open's failure
+      path fences the group locally and closes its row, as today).
+    - Xapiand then (this quest, a few lines plus the two tests in the table): the open's existing refusal path names
+      it with errc::corrupt; the stalejournal probe (fb40f3) confirms.
+    Recommend: the strata quest above, then a bump here; the J2 text and docs fix land now. Alternative: accept S1
+    as a documented operator hazard until then (docs state that only the journal the index last stopped with may be
+    put back), which this round ships either way.
 
 12 answered (lead, 2026-11-24): src/engine/strata/io_options.h and tests/test_io_options.cc added to the file set.
 
