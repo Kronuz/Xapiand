@@ -37,9 +37,14 @@ const int DB_OPEN                       = engine::DB_OPEN;                      
 const int DB_WRITABLE                   = 0x00010000;  // Opens as writable.
 const int DB_RESTORE                    = 0x00020000;  // Flag database as being restored
 const int DB_DISABLE_AUTOCOMMIT         = 0x00080000;  // Disable autocommit
-const int DB_DISABLE_WAL                = 0x00100000;  // Disable open WAL file
 const int DB_DISABLE_WRITES             = 0x00200000;  // Disable write operations
-const int DB_SYNCHRONOUS_WAL            = 0x00400000;  // Using synchronous WAL
+
+// A request's levels (docs/design/cluster-release.md D4), flags of its use of an index. The defaults are
+// ack=quorum (answered once applied, with its verdict), refresh=false and read=prefix.
+const int DB_ACK_NONE                   = 0x00040000;  // ack=none: a write answers once placed in the log, before it applies
+const int DB_REFRESH                    = 0x00100000;  // refresh=true: a write refreshes the index before it answers
+const int DB_REFRESH_WAIT_FOR           = 0x00400000;  // refresh=wait_for: a write answers once every read sees it
+const int DB_LINEARIZABLE               = 0x00800000;  // read=linearizable: a read sees every write committed before it
 
 const int DB_RETRIES                    = 10;     // Number of tries to do an operation on a shard or document
 
@@ -76,16 +81,24 @@ inline bool has_db_disable_autocommit(int flags) {
 	return (flags & DB_DISABLE_AUTOCOMMIT) == DB_DISABLE_AUTOCOMMIT;
 }
 
-inline bool has_db_disable_wal(int flags) {
-	return (flags & DB_DISABLE_WAL) == DB_DISABLE_WAL;
-}
-
 inline bool has_db_disable_writes(int flags) {
 	return (flags & DB_DISABLE_WRITES) == DB_DISABLE_WRITES;
 }
 
-inline bool has_db_synchronous_wal(int flags) {
-	return (flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL;
+inline bool has_db_ack_none(int flags) {
+	return (flags & DB_ACK_NONE) == DB_ACK_NONE;
+}
+
+inline bool has_db_refresh(int flags) {
+	return (flags & DB_REFRESH) == DB_REFRESH;
+}
+
+inline bool has_db_refresh_wait_for(int flags) {
+	return (flags & DB_REFRESH_WAIT_FOR) == DB_REFRESH_WAIT_FOR;
+}
+
+inline bool has_db_linearizable(int flags) {
+	return (flags & DB_LINEARIZABLE) == DB_LINEARIZABLE;
 }
 
 inline std::string readable_flags(int flags) {
@@ -97,8 +110,10 @@ inline std::string readable_flags(int flags) {
 	if (has_db_writable(flags)) values.push_back("DB_WRITABLE");
 	if (has_db_restore(flags)) values.push_back("DB_RESTORE");
 	if (has_db_disable_autocommit(flags)) values.push_back("DB_DISABLE_AUTOCOMMIT");
-	if (has_db_disable_wal(flags)) values.push_back("DB_DISABLE_WAL");
 	if (has_db_disable_writes(flags)) values.push_back("DB_DISABLE_WRITES");
-	if (has_db_synchronous_wal(flags)) values.push_back("DB_SYNCHRONOUS_WAL");
+	if (has_db_ack_none(flags)) values.push_back("DB_ACK_NONE");
+	if (has_db_refresh(flags)) values.push_back("DB_REFRESH");
+	if (has_db_refresh_wait_for(flags)) values.push_back("DB_REFRESH_WAIT_FOR");
+	if (has_db_linearizable(flags)) values.push_back("DB_LINEARIZABLE");
 	return strings::join(values, "|");
 }

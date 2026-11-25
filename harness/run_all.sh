@@ -32,7 +32,7 @@
 #   unit     C++ unit tests via ctest (needs a -DBUILD_TESTS=ON build)
 #   e2e      doc-driven functional E2E: the docs' own assertions (e2e_assert.py, with the newman pinned in harness/package.json)
 #   tls      the e2e suite over HTTPS (pinned newman) and the TLS refusals (tls_check.sh)
-#   recovery WAL crash recovery: kill -9 after uncommitted writes -> restart replays (wal_recovery_check.sh)
+#   recovery crash recovery: kill -9 after an uncommitted RESTORE -> restart recovers from the journal (journal_replay_check.sh)
 #   load     quick functional bulk load (index_fortune)
 #   stress   short concurrent soak with read-back verification (stress_fortune)
 #   bench    index/query benchmark (loadtest.py)
@@ -186,8 +186,8 @@ run_tls() {
 }
 
 run_recovery() {
-	echo "== [recovery] WAL crash recovery =="
-	if BIN="$BIN" "$HARNESS_DIR/wal_recovery_check.sh"; then pass "recovery"; else fail "recovery"; fi
+	echo "== [recovery] journal crash recovery =="
+	if BIN="$BIN" "$HARNESS_DIR/journal_replay_check.sh"; then pass "recovery"; else fail "recovery"; fi
 }
 
 run_load() {

@@ -83,11 +83,8 @@ public:
 	~Shard() override;
 
 
-	task::task<WriteResult> add(Document& doc, WriteArgs args) override;
-	task::task<WriteResult> replace(docid did, Document& doc, WriteArgs args) override;
-	task::task<WriteResult> replace_by_key(const std::string& key, Document& doc, WriteArgs args) override;
-	task::task<void> erase(docid did, bool local, std::optional<rev> expected_version) override;
-	task::task<docid> erase_by_key(const std::string& key, bool local, std::optional<rev> expected_version) override;
+	task::task<PreparedWrite> prepare(WriteOp op, docid did, const std::string& key, Document* doc, WriteArgs args) override;
+	task::task<WriteResult> apply(const PreparedWrite& prepared, Document* doc) override;
 	task::task<void> commit(Transaction transaction) override;
 	task::task<void> begin_transaction(bool flushed) override;
 	task::task<void> commit_transaction() override;
@@ -134,12 +131,42 @@ public:
 	// The shard's field table, in id order, as of its last applied write.
 	std::vector<DeclaredField> declared_fields() const;
 
+	// A write the shard's replication group applied to its index (cluster-release D3): raises the verdict's refusal
+	// and checks the id and version prepare predicted. The apply marked the shard (applied_by_group).
+	WriteResult landed(const PreparedWrite& prepared, const ::strata::verdict& verdict);
+
+	// The shard's group applied a command to its index (a write, a replay): reads owe a refresh, the index a commit.
+	// The group's apply calls it on its chore, before the write's answer, whatever level the write was proposed at.
+	void applied_by_group() noexcept;
+
+	// The shard's group committed its index (a checkpoint): nothing is owed a commit, the revision is the manifest's,
+	// and the view is refreshed past whatever applied since the capture. Call it on the group's chore.
+	void checkpointed();
+
+	// Rethrows the exception being handled, a failure of the shard's group, as an engine error of its kind: a fence
+	// marks the index for replacement. Call only inside a catch block.
+	[[noreturn]] void rethrow_failure() const;
+
 private:
 	std::unique_ptr<Handle> handle_;
 	bool writable_;
 	bool host_;
 	Chores* chores_;
 };
+
+class StrataDocument;
+
+// The index's transaction for a prepared write, built against `table`, the field table of the index it applies
+// to: a field the table lacks is declared by the transaction. `doc` is the prepared document (null for an erase).
+// Every voter builds it at apply from the same command, so a field an earlier entry declared resolves the same.
+prospect::transaction transaction_of(const PreparedWrite& prepared, StrataDocument* doc, const ::strata::field_table& table);
+
+// Appends the prepared write to `t` (a batch's transaction): a field an earlier write of `t` declared keeps that
+// declaration.
+void append_write(prospect::transaction& t, const PreparedWrite& prepared, StrataDocument* doc, const ::strata::field_table& table);
+
+// The id and version the index assigned to an accepted write, checked against the ones prepare predicted.
+WriteResult assigned(const ::strata::verdict& verdict, const PreparedWrite& prepared);
 
 struct Opened {
 	std::unique_ptr<Shard> shard;

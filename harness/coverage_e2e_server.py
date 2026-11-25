@@ -228,7 +228,7 @@ VERB_ROWS = {
     "count": ("t", None, 200), "dump": ("t", None, 200), "flush": ("t", None, 405), "info": ("t", None, 200),
     "lock": ("t", None, 405), "move": ("t", None, 405), "open": ("t", None, 501), "quit": ("t", None, 405),
     "restore": ("sink", VERB_BODY, 400), "search": ("t", None, 200), "unlock": ("t", None, 405),
-    "update": ("sink", VERB_BODY, 204), "upsert": ("sink", VERB_BODY, 204), "wal": ("t", None, 400),
+    "update": ("sink", VERB_BODY, 204), "upsert": ("sink", VERB_BODY, 204),
 }
 NOT_ALLOWED = {"status": 405, "type": "Method Not Allowed"}
 NOT_IMPLEMENTED = {"status": 501, "type": "Not Implemented"}
@@ -259,8 +259,6 @@ def verb_answer(label, verb, r, status_want):
         eq(label + " body", (r.json["count"], r.json["total"]), (4, 4))
     elif verb == "restore":
         error(label + " body", r, 400, "Bad Request: Invalid request body")
-    elif verb == "wal":
-        check(label + " body", r.json["message"].startswith("Bad Request: This operation can only be executed on a single shard"), repr(r.body[:120]))
 
 
 @group
@@ -301,7 +299,7 @@ def routing(n):
     r = n.call("OPTIONS", "/")
     status("OPTIONS /", r, 200)
     allow = [v.strip() for v in r.header("Allow").split(",")]
-    eq("OPTIONS Allow", [v for v in allow if v != "WAL"], VERBS)
+    eq("OPTIONS Allow", allow, VERBS)
     eq("OPTIONS has no body", r.body, b"")
     eq("OPTIONS /t/d1 Allow", n.call("OPTIONS", "/t/d1").header("Allow"), r.header("Allow"))
 
@@ -471,7 +469,7 @@ def edges(n):
     """Refusals over several indexes, content types of every answer, odd URLs, split and chunked bodies."""
     seed(n)
     n.call("PUT", "/u/e1?commit", {"n": 1})
-    for method, path, body in (("CHECK", "/t,u/", None), ("WAL", "/t,u/", None), ("PUT", "/t,u/", {"a": 1}),
+    for method, path, body in (("CHECK", "/t,u/", None), ("PUT", "/t,u/", {"a": 1}),
                                ("UPSERT", "/t,u/x", {"a": 1}), ("DELETE", "/t,u/x", None), ("INFO", "/t,u/", None)):
         error("%s %s" % (method, path), n.call(method, path, body), 400, "Bad Request: Method can only be used with single indexes")
     error("GET metadata over two indexes", n.call("GET", "/t,u/:mykey"), 400, "Bad Request: Method can only be used with single indexes")
@@ -502,7 +500,7 @@ def edges(n):
     eq("PUT with Expect: 100-continue", (r.status, r.json["_id"]), (200, "d9"))
 
     error("a command that is no metadata", n.call("GET", "/t/:bogus"), 404, "Not Found: Metadata not found")
-    for command in (":search", ":count", ":commit", ":dump", ":check", ":wal"):
+    for command in (":search", ":count", ":commit", ":dump", ":check"):
         error("GET /%s" % command, n.call("GET", "/" + command), 400, "Bad Request: Index path '' is empty or outside the data directory")
     error("GET /:restore", n.call("GET", "/:restore"), 400, "Bad Request: Invalid request body")
     eq("GET /:info", n.call("GET", "/:info").json["name"], "covnode")
@@ -646,7 +644,6 @@ def metadata(n):
     check("all metadata names the key", "mykey" in r.json, repr(r.json))
     error("PUT :schema", n.call("PUT", "/t/:schema", {"a": 1}), 400, "Bad Request: Metadata ':schema' is read-only")
     error("PUT :metrics", n.call("PUT", "/t/:metrics", {"a": 1}), 400, "Bad Request: Metadata ':metrics' is read-only")
-    error("PUT :wal", n.call("PUT", "/t/:wal", {"a": 1}), 400, "Bad Request: HTTP Mappings must use GET or POST method")
     error("PUT of the id's high mark", n.call("PUT", "/t/:_id_high", {"a": 1}), 400)
     eq("UPDATE metadata", n.call("UPDATE", "/t/:mykey", {"a": 1}).status, 501)
     eq("PATCH metadata", n.call("PATCH", "/t/:mykey", {"a": 1}).status, 501)
@@ -686,7 +683,7 @@ def metadata(n):
 
 @group
 def databases(n):
-    """The database as a resource: settings and schema, flush, commit, check, WAL."""
+    """The database as a resource: settings and schema, flush, commit, check."""
     seed(n)
     r = n.call("GET", "/t/")
     status("GET a database", r, 200)
@@ -716,7 +713,7 @@ def databases(n):
     r = n.call("CHECK", "/t/")
     status("CHECK", r, 200)
     r = n.call("WAL", "/t/")
-    check("WAL answers", r.status in (200, 405, 400), "-> %d" % r.status)
+    check("WAL is no method", r.status in (405, 400), "-> %d" % r.status)
     r = n.call("FLUSH", "/t/")
     eq("FLUSH names no index", r.status, 405)
     r = n.call("QUIT", "/t/")

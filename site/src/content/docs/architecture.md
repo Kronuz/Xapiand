@@ -5,8 +5,8 @@ title: "Architecture Overview"
 Xapiand is one process that serves a REST API over HTTP and keeps its indexes on
 local disk. Requests run as tasks on one event loop per processor; each shard of an index is
 a [strata](https://github.com/Kronuz/strata) segment store searched through
-[prospect](https://github.com/Kronuz/prospect), both linked in as libraries; and a
-write-ahead log per shard covers what the last commit does not hold. This page
+[prospect](https://github.com/Kronuz/prospect), both linked in as libraries; and every
+shard is a replication group of one voter whose journal holds each write before it is answered. This page
 explains how those pieces fit and what happens to a write and to a search.
 
 Two companion pages go deeper:
@@ -18,20 +18,21 @@ Two companion pages go deeper:
 
 ## The process
 
-```d2 alt="Xapiand's process: clients reach the HTTP loops; their requests reach the index registry, which holds the strata indexes; device work runs on the work pool, log lines go to the WAL writers, and the control loop commits and stops the node"
+```d2 alt="Xapiand's process: clients reach the HTTP loops; their requests reach the index registry, which holds the strata indexes; device work runs on the work pool, writes go through the shards' groups to the journal, and the control loop commits and stops the node"
 direction: right
 Clients: "Clients\n(JSON, YAML, MessagePack)"
 HTTP: "HTTP loops\n(one per processor)"
 Registry: "Index registry\n(pins, turns, views)"
 Engine: "strata + prospect\n(one index per shard)"
 Pool: "WorkPool\n(device work)"
-WAL: "WAL writers"
+Groups: "Group loop + chores\n(the journal)"
 Control: "Control loop\n(autocommit, signals, stop)"
 Clients -> HTTP
 HTTP -> Registry: "tasks"
 Registry -> Engine
 Engine -> Pool: "chores"
-Registry -> WAL: "log lines"
+Registry -> Groups: "commands"
+Groups -> Engine: "apply"
 Control -> Registry: "commits"
 ```
 
@@ -42,8 +43,8 @@ Each box is a set of threads with one job:
 | Control loop | 1, the main thread | Node setup, signals, the minute housekeeping, the debounced autocommit, the stop |
 | HTTP loops | one per processor (`--processors`, all of the machine's by default) | Connections, request parsing, the views (the request handlers) as tasks, query parsing, document preparation |
 | WorkPool | one per hardware thread | Chores: opens, refreshes, commits, closes, blob reads and writes, large-body decoding, directory walks, merges |
-| WAL writers | half the processors, 1 to 10 (`--writers`) | Appending log lines |
-| fsync threads | half the processors, 1 to 10 | The debounced fsync of the log |
+| Group loop | 1 | The journal: every shard's group proposes, logs and syncs its entries here |
+| Group chores | 2 | Applying each group's committed entries to its index and blob volumes, and its checkpoints |
 
 The rule that holds it together: **a loop never blocks**. A task that has to wait
 awaits a timer, an event, an index's turn or a chore. Anything that touches a
@@ -67,7 +68,7 @@ is a task on that same loop:
    is decoded in a chore, so a large document does not hold the loop. A `RESTORE`
    body streams: each batch is parsed in a chore while the batch before it is
    indexed. A blob (a stored file that is not JSON, YAML or MessagePack) too large
-   to buffer streams to disk in chores, up to 4 GiB.
+   to buffer streams into its shard's group as chunk entries, up to 4 GiB.
 3. **Routing.** The method and the URL's shape (an index, a document id, a
    `:command`) select a view from one route table.
 4. **Slices.** A view runs in slices of 200 µs. A search yields its loop between
@@ -79,18 +80,19 @@ is a task on that same loop:
 ## Indexes on disk
 
 An index is a directory. Its shards are subdirectories, and each shard holds a
-strata index, the shard's write-ahead log and its blob volumes:
+strata index and its group's blob volumes; the journal of every shard's group is
+one directory of the node:
 
 ```text
 <data>/
 ├── .xapiand/
 │   ├── node              the node's name
-│   └── indexes/          every index's settings and, by default, its schema
+│   ├── indexes/          every index's settings and, by default, its schema
+│   └── journal/          every shard's group log and checkpoints
 └── twitter/              an index with the default 5 shards
     ├── .__1/
     │   ├── strata/       segments, live-docs files, manifests
-    │   ├── wal.*         the write-ahead log
-    │   └── docdata.*     blob volumes
+    │   └── app.vol-*     blob volumes
     ├── .__2/
     └── …
 ```
@@ -120,43 +122,44 @@ process's file-descriptor limit) it closes the least used first.
 ```text
 the view (HTTP loop)          the index's turn               later
 ────────────────────          ────────────────               ─────
-schema -> engine document     strata applies it              autocommit: 1 s after the
-pick the shard                  (docid, version, key)          last write, at most 8-10 s
-blobs -> docdata (chore)      log line queued                commit: segments, manifest,
-                              turn released                    fsync; revision + 1
+schema -> engine document     prepare: version, key, blobs   autocommit: 1 s after the
+pick the shard                propose the command; the       last write, at most 8-10 s
+                                group logs and applies it    commit: the group's checkpoint
+                              turn released                    (segments, manifest); revision + 1
 ```
 
 1. **Prepare.** The view resolves the index's settings and schema (both cached,
    and read once however many requests ask for them at once). The schema turns the
    document into the engine's form: terms with positions, values by slot, the
    stored record (the document as MessagePack) and its key, the document id.
-2. **Apply.** Under the index's turn strata checks the expected version, assigns
-   the docid and the new version, and adds the document to its write buffer. The
-   log line is queued in the same turn, so the log's order is the apply's order.
-3. **Answer.** The write is acknowledged once it is applied and its log line is
-   queued. With `?commit` the response waits for a commit; otherwise the write
-   schedules the autocommit, which commits the index 1 s after its last write,
-   3 s after each write while writes keep coming, and never later than 8 to 10 s
-   after the first uncommitted one.
-4. **Commit.** A commit syncs the blob volumes, then strata writes the buffered
-   documents as segments and a new manifest and fsyncs them. The index's revision
-   goes up by one and the log gets a commit line. Commits of one index coalesce:
+2. **Propose.** Under the index's turn the shard prepares the write against the
+   index as the writes before it left it (the expected version, the key, the
+   blobs compressed once) and proposes it as one command to the shard's group.
+   The group logs it in the journal and applies it in log order: strata assigns
+   the docid and the new version and adds the document to its write buffer, and
+   the blobs go to the group's volumes.
+3. **Answer.** At `ack=quorum`, the default, the write is acknowledged once the
+   journal holds it and the group applied it; at `ack=none`, once the journal
+   holds it. `refresh=true` (and `?commit`, which is `ack=quorum&refresh=true`)
+   refreshes the index before the answer. The write schedules the autocommit,
+   which commits the index 1 s after its last write, 3 s after each write while
+   writes keep coming, and never later than 8 to 10 s after the first
+   uncommitted one.
+4. **Commit.** A commit is the group's checkpoint: strata writes the buffered
+   documents as segments and a new manifest and syncs them, and the journal keeps
+   only what the checkpoint does not hold. The index's revision goes up by one.
+   Commits of one index coalesce:
    a writer whose writes a running commit already covers waits for that one.
 
 **Visibility.** A read refreshes the index first when anything was applied since
 the last refresh, so a read sees every acknowledged write, committed or not.
 
-**Durability.** A write is durable once its index commits. Before that it is in
-strata's buffer and in the log: a WAL writer appends the line, and the fsync that
-follows is debounced to within a few seconds. A crash or a power loss can lose
-the latest acknowledged writes that were not committed. Opening an index replays
-the log lines its last commit does not hold and commits them. Replay is
-idempotent: each line carries the version it wrote and applies only as the next
-version of its document. A log that does not read back is quarantined, not
-deleted.
+**Durability.** A write is durable once it is answered: the journal holds it.
+Opening an index applies the entries its last checkpoint does not hold before
+the index serves anything, so a crash loses no acknowledged write.
 
-`RESTORE` writes no log: it indexes in batches and commits at its end, so a
-restore that a crash interrupts is run again.
+`RESTORE` goes through the group too: its documents are proposed in batches, one
+command per batch.
 
 ## The search path
 
@@ -186,9 +189,10 @@ restore that a crash interrupts is run again.
 `SIGTERM` or `SIGINT` stops the node. It waits for the requests in flight, then
 stops in a fixed order within one budget of 35 s: the HTTP service stops and lets
 admitted writes finish, the waiting autocommits are dropped (closing an index
-commits what it has pending), every index commits and closes, and the logs and
-the fsync threads finish. A stop that does not end within the budget logs what
-was still running and exits with status 75; the next start replays the logs.
+commits what it has pending), and every index checkpoints its group and closes.
+A stop that does not end within the budget logs what was still running and exits
+with status 75; the next start applies what the journal holds past each
+checkpoint.
 [Stopping the node](/Xapiand/options#stopping-the-node) gives the details and the
 exit statuses.
 

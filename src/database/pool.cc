@@ -34,11 +34,14 @@
 #include <system_error>           // for std::system_error
 #include <thread>                 // for std::this_thread
 #include <unordered_map>          // for std::unordered_map
-#include <utility>                // for std::exchange
+#include <utility>                // for std::exchange, std::pair
+
+#include <sys/stat.h>             // for stat, dev_t, ino_t
 
 #include "at_end.h"               // for at_end::assert_none
 #include "database/flags.h"       // for readable_flags
 #include "database/shard.h"       // for Shard
+#include "database/shard_group.h" // for ShardGroups
 #include "completion/posix.h"     // for kronuz::journal::PosixIO
 #include "engine/strata/io_options.h"  // for engine::strata::posix_io_options
 #include "engine/error.h"         // for engine::Error, engine::errc
@@ -357,7 +360,21 @@ ShardEndpoint::take_turn(int flags, task::cancel_token cancel)
 		assert(*held == 0 && "a task holds one index's turn at most");
 		++*held;
 	}
-	co_return Turn(std::move(guard), held, index_);
+	Turn taken(std::move(guard), held, index_);
+	if (unapplied_) {
+		co_await caught_up();   // what this holder prepares or reads includes the last ack=none write
+		unapplied_ = false;
+	}
+	co_return taken;
+}
+
+
+task::task<void>
+ShardEndpoint::caught_up()
+{
+	if (group_) {
+		co_await ::caught_up(*group_);
+	}
 }
 
 
@@ -499,7 +516,7 @@ struct DatabasePool::Shutdown {
 	std::size_t pending = 0;  // the partitions whose shutdown has not ended
 	bool done = false;
 	bool reported = false;
-	std::vector<std::string> failed;  // the keys whose commit failed: their WAL replays them at the next open
+	std::vector<std::string> failed;  // the keys whose commit failed: their journal replays them at the next open
 };
 
 
@@ -531,8 +548,57 @@ create_index_directory(const std::string& dir, const std::string& path)
 	}
 }
 
+// The path lexically normal, absolute when `like` is, without a trailing separator.
+std::filesystem::path
+comparable_path(const std::string& path, bool absolute)
+{
+	namespace fs = std::filesystem;
+	auto out = (absolute ? fs::absolute(path) : fs::path(path)).lexically_normal();
+	if (out.has_parent_path() && out.filename().empty()) {
+		out = out.parent_path();
+	}
+	return out;
+}
+
+// Whether `path` is `directory` or inside it, by their names.
+bool
+inside(const std::string& path, const std::string& directory)
+{
+	namespace fs = std::filesystem;
+	const bool absolute = fs::path(path).is_absolute() || fs::path(directory).is_absolute();
+	const auto p = comparable_path(path, absolute);
+	const auto d = comparable_path(directory, absolute);
+	return std::mismatch(d.begin(), d.end(), p.begin(), p.end()).first == d.end();
+}
+
+// Whether `path` names the directory `id` identifies, or a place under it, by any spelling (a case-folding volume, a
+// symlink): its deepest existing ancestor, made physical, is that directory or under it, by device and inode.
+bool
+reaches(const std::string& path, const std::pair<dev_t, ino_t>& id)
+{
+	namespace fs = std::filesystem;
+	std::error_code ec;
+	fs::path at(path);
+	while (!at.empty() && !fs::exists(at, ec)) {
+		at = at.parent_path();
+	}
+	auto physical = fs::canonical(at.empty() ? fs::path(".") : at, ec);
+	if (ec) {
+		return false;
+	}
+	for (;; physical = physical.parent_path()) {
+		struct stat st;
+		if (::stat(physical.c_str(), &st) == 0 && st.st_dev == id.first && st.st_ino == id.second) {
+			return true;
+		}
+		if (!physical.has_relative_path()) {
+			return false;
+		}
+	}
+}
+
 // A pin's failure as the engine's error: an absent index is not_found, a closed catalog not_available, and
-// strata's own failures are translated; anything else (the WAL replay's) leaves as it is.
+// strata's own failures are translated; anything else (the group's recovery) leaves as it is.
 [[noreturn]] void
 rethrow_pin_failure(const std::string& path)
 {
@@ -575,13 +641,17 @@ DatabasePool::make_host(std::size_t soft_open, const IndexSweep& sweep)
 	h.resolve = [this](const IndexCatalog::opening& op) -> std::unique_ptr<kronuz::journal::IO> {
 		namespace fs = std::filesystem;
 		const std::string path(op.key);
+		// The journal's directory holds the journal's files only: an index there would break its next scan.
+		if (!journal_.empty() && inside(path, journal_)) {
+			throw engine::Error(engine::errc::invalid, "Index path " + repr(path) + " is inside the journal's directory " + repr(journal_) + ", a reserved name");
+		}
 		if (index_io_) {
 			return strata::counted_io::make(op.counts, [&] { return index_io_(path); });
 		}
 		const auto dir = (fs::path(path) / "strata").string();
 		const auto open = [&] {
 			return strata::counted_io::make(op.counts, [&] {
-				return std::make_unique<kronuz::journal::PosixIO>(dir, 0600, engine::strata::posix_io_options());
+				return std::make_unique<kronuz::journal::PosixIO>(dir, engine::strata::posix_io_options());
 			});
 		};
 		// The directory's open is its existence check: a reopen pays no separate stat (cheap-reopen D2).
@@ -591,6 +661,10 @@ DatabasePool::make_host(std::size_t soft_open, const IndexSweep& sweep)
 		} catch (const std::system_error& exc) {
 			if (exc.code() != std::errc::no_such_file_or_directory && exc.code() != std::errc::not_a_directory) {
 				throw;
+			}
+			// Another spelling of the journal's directory (J1b): checked on a miss only, so a reopen pays nothing.
+			if (journal_id_ && reaches(path, *journal_id_)) {
+				throw engine::Error(engine::errc::invalid, "Index path " + repr(path) + " is the journal's directory " + repr(journal_) + " or inside it under another spelling, a reserved name");
 			}
 			if (!op.create) {
 				throw strata::index_not_created("No such database: " + path);
@@ -620,7 +694,11 @@ DatabasePool::make_host(std::size_t soft_open, const IndexSweep& sweep)
 	};
 	h.open_payload = [this](const IndexCatalog::opening& op, prospect::index& index, std::optional<ShardEndpoint>& entry) {
 		entry.emplace(*this, op.key);
-		entry->open_blocking(index);
+		entry->open_blocking(*op.io, index);
+	};
+	// The group's close, outside the chore's lease and before the index's (D169): its checkpoint covers what it applied.
+	h.close_payload = [](ShardEndpoint& entry, prospect::index&) {
+		entry.close_group();
 	};
 	h.commit = [](ShardEndpoint& entry, prospect::index&) {
 		entry.commit_blocking();
@@ -645,7 +723,6 @@ DatabasePool::DatabasePool(engine::AsioHost& timers, size_t database_pool_size, 
 	turn_timeout_(DB_TIMEOUT),
 	buffered_docs_cap_(0),
 	readers_per_index_(readers_per_index),
-	wal_writer_(nullptr),
 	detached_(0)
 {
 	WorkPool::Options options;
@@ -666,6 +743,19 @@ DatabasePool::DatabasePool(engine::AsioHost& timers, size_t database_pool_size, 
 	for (auto& catalog : catalogs_) {
 		catalog->start();
 	}
+}
+
+
+void
+DatabasePool::set_journal(const std::string& directory)
+{
+	groups_ = std::make_unique<ShardGroups>(directory);
+	journal_ = comparable_path(directory, false).string();
+	struct stat st;
+	if (::stat(directory.c_str(), &st) != 0) {
+		throw std::system_error(errno, std::generic_category(), "The journal's directory " + repr(directory));
+	}
+	journal_id_.emplace(st.st_dev, st.st_ino);
 }
 
 
@@ -957,7 +1047,7 @@ DatabasePool::flush(task::cancel_token cancel)
 			continue;   // closed since the snapshot: its close committed it
 		}
 		try {
-			co_await pinned->commit(DB_OPEN | DB_WRITABLE, true, cancel);
+			co_await pinned->commit(DB_OPEN | DB_WRITABLE, cancel);
 		} catch (const engine::Error& error) {
 			L_WARNING("Flushing {} failed: {}", repr(slot.key), error.description());
 		}
@@ -971,8 +1061,7 @@ DatabasePool::finish()
 	L_CALL("DatabasePool::finish()");
 
 	finished_.store(true);
-	names_.request_stop();   // the names' build is a task of that loop (name-index D5)
-	control_.store(nullptr);  // the loop that ran the detached tasks stops: from now on they run where they are started
+	names_.request_stop();   // the names' build is a task of the control loop (name-index D5)
 }
 
 
@@ -990,7 +1079,7 @@ DatabasePool::join(std::chrono::steady_clock::time_point wakeup)
 	}
 	if (!std::exchange(state.reported, true)) {
 		for (const auto& key : state.failed) {
-			L_WARNING("The last commit of {} failed: its WAL replays it at the next open", repr(key));
+			L_WARNING("The last commit of {} failed: its journal replays it at the next open", repr(key));
 		}
 	}
 	return true;

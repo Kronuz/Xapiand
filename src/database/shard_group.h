@@ -1,0 +1,292 @@
+/*
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+#pragma once
+
+#include <array>                   // for std::array
+#include <atomic>                  // for std::atomic
+#include <cstddef>                 // for std::size_t
+#include <functional>              // for std::function
+#include <cstdint>                 // for std::uint64_t
+#include <map>                     // for std::map
+#include <memory>                  // for std::unique_ptr
+#include <mutex>                   // for std::mutex
+#include <optional>                // for std::optional
+#include <string>                  // for std::string
+#include <string_view>             // for std::string_view
+#include <thread>                  // for std::thread
+#include <vector>                  // for std::vector
+
+#include "completion/posix.h"      // for kronuz::journal::PosixIOOptions
+#include "database/command.h"      // for Command
+#include "engine/document.h"       // for engine::Document
+#include "engine/error.h"          // for engine::errc
+#include "engine/shard.h"          // for engine::PreparedWrite
+#include "prospect/index.hh"       // for prospect::index, prospect::transaction
+#include "completion/seam.h"      // for kronuz::journal::InlineCompletion
+#include "journal/host.h"          // for kronuz::journal::Host
+#include "strata/group/answer.hh"  // for strata::group::answer, strata::group::ack
+#include "strata/group/group.hh"   // for strata::group::group, strata::group::loop
+#include "task.hh"                 // for task::blocking_scheduler, task::cancel_source
+
+
+// A shard's replication group applies its commands through this application (docs/design/cluster-release.md
+// D3, D12, D16; docs/mechanisms/journal-durability.md). Its files are the group's file set beside the index:
+// blob volumes `vol-N` and chunked commands' staging `stage-ID`. Every function reads the entry's starting state
+// only, so a replica, a replay and a retry agree: blobs are written at the offsets the state names, never
+// appended, and volume numbers are allocated in log order.
+
+// The bytes past which apply rotates a volume (32 GiB).
+inline constexpr std::uint64_t VOLUME_BYTES = 32ull << 30;
+
+// What the group keeps beside strata, in its checkpoint bundle (contract xapiand:volume-file-set).
+struct ShardGroupState {
+	// A chunked command whose final entry has not applied, by id (its id names its term): the volume its upload
+	// stream writes (0 until its first upload chunk).
+	struct Open {
+		std::uint64_t upload = 0;
+		bool operator==(const Open&) const = default;
+	};
+
+	std::uint64_t volume = 1;      // the volume blobs are written into
+	std::uint64_t length = 0;      // its length
+	std::uint64_t next = 2;        // the next volume number apply allocates
+	std::map<std::uint64_t, Open> open;
+
+	bool operator==(const ShardGroupState&) const = default;
+};
+
+// Where a command's blobs land: per write, per blob, (volume, offset); and the state after them.
+struct BlobPlacement {
+	std::vector<std::vector<std::pair<std::uint64_t, std::uint64_t>>> at;
+	std::vector<std::uint64_t> sealed;   // volumes rotated out, in order
+	ShardGroupState after;
+};
+
+// Places a command's blob records from `state`: in the current volume, rotating it when a record would take it
+// past VOLUME_BYTES; a record staged in an upload stream stays in its upload's volume.
+BlobPlacement place_blobs(const ShardGroupState& state, const Command& command, std::uint64_t id = 0);
+
+// A prepared write as its command's (D3): the target, the leader's expectation and the document's bytes as prepare
+// left them (null `doc` for an erase). ShardApplication::transaction reads it back on every voter.
+CommandWrite command_write(const engine::PreparedWrite& prepared, engine::Document* doc);
+
+std::string volume_name(std::uint64_t volume);
+std::string staging_name(std::uint64_t id);
+
+// A stored blob's locator in a document's data, by content type: its record's codec (Locator::Type::stored, or
+// zstd_compressed_stored as prepare compressed it), volume, offset and size. Prepare leaves volume 0, which apply
+// replaces with the record's place (contract xapiand:volume-file-set).
+struct StoredPlace {
+	std::string ct_type;
+	std::uint8_t type = 0;   // a Locator::Type
+	std::uint64_t volume = 0;
+	std::uint64_t offset = 0;
+	std::uint64_t size = 0;
+};
+
+// The document data `bytes` with each place's stored locator set; an empty `bytes` stays empty.
+std::string place_stored(std::string bytes, const std::vector<StoredPlace>& places);
+
+// The codec of `ct_type`'s locator in the document data `bytes` (Locator::Type::stored when it has none).
+std::uint8_t stored_type(std::string_view bytes, std::string_view ct_type);
+
+// A stored blob read back from its record in volume `volume` of the group's file set: the record as apply wrote it,
+// decompressed per the locator's codec. The file is read through `directory`, off the group's chore: a document names
+// only records its entry wrote before the document was visible.
+std::string read_stored(kronuz::journal::IO& directory, std::uint8_t type, std::uint64_t volume, std::uint64_t offset, std::uint64_t size);
+
+class ShardApplication {
+public:
+	using layout = prospect::search_layout;
+	using state = ShardGroupState;
+
+	// `index` is the catalog slot's (D169): the transactions are built against its field table at apply.
+	explicit ShardApplication(const prospect::index& index) : index_(&index) { }
+
+	void effects(const state& s, const strata::group::entry& e, strata::group::file_set& files);
+	std::optional<prospect::transaction> transaction(const state& s, const strata::group::entry& e) const;
+	void advance(state& s, const strata::group::entry& e);
+	std::string encode(const state& s) const;
+	state decode(std::string_view bytes) const;
+
+	// Called on the group's chore once a command applied, before its answer: the shard's reads owe a refresh
+	// (engine::strata::Shard::applied_by_group), whatever level the command was proposed at.
+	std::function<void()> applied;
+
+private:
+	// The command an entry applies, its staged bytes read by its effects (they read the file set; the
+	// transaction, which follows them at the same entry, cannot).
+	struct Resolved {
+		std::uint64_t index = 0;
+		std::optional<Command> command;   // none: not a command, or a final whose chunks were retired
+		std::uint64_t id = 0;             // a final's
+	};
+
+	const Resolved& resolved(const state& s, const strata::group::entry& e) const;
+
+	const prospect::index* index_;
+	mutable Resolved resolved_;
+};
+
+
+// A shard's retained log between checkpoints (consensus's `log_bytes` and `log_entries`): what replay re-applies
+// after a crash and what the group holds in memory. A placement past half of either schedules a checkpoint, which
+// cuts the log, so no write meets the bound (docs/mechanisms/journal-durability.md, "The log's bound").
+inline constexpr std::size_t LOG_BYTES = 16 * COMMAND_ENTRY_BYTES;
+inline constexpr std::size_t LOG_ENTRIES = 65536;
+
+// Where the process's journal lives, relative to the data directory: inside `.xapiand`, the namespace Xapiand
+// owns, so it takes no name a user index can have.
+inline constexpr const char* JOURNAL_DIRECTORY = ".xapiand/journal";
+
+// The process's journal (docs/design/cluster-release.md D2): one journal host over a directory of the data root, the
+// group loop that runs its Driver on a thread of its own, and the chore threads the groups apply on. A shard's group
+// borrows its catalog slot's directory and index (D169), so the catalog opens and closes it (ShardEndpoint). Every
+// group is closed before this is destroyed.
+class ShardGroups {
+public:
+	using group_type = strata::group::group<ShardApplication>;
+
+	// The journal host over `directory`, made when missing; `chores` threads apply the groups' entries.
+	// A directory inside `directory` is not the journal's (its files are plain): one left by an earlier build, which let
+	// an index be made there, is moved to `directory + ".strays"`, so the host's scan never takes it for its own.
+	explicit ShardGroups(const std::string& directory, std::size_t chores = 2);
+	~ShardGroups();
+
+	ShardGroups(const ShardGroups&) = delete;
+	ShardGroups& operator=(const ShardGroups&) = delete;
+
+	strata::group::loop& loop() noexcept { return *loop_; }
+	task::scheduler_ref chore(kronuz::consensus::GroupId id) noexcept;
+
+	// A lone voter's group of the index with `uuid` (its id and journal identity), with the record its last close
+	// in this process kept, so the reopen resumes its term with no election.
+	group_type::config config(const std::array<char, 16>& uuid);
+	void closed(kronuz::consensus::GroupId id, std::optional<std::string> record);
+
+	static kronuz::consensus::GroupId group_id(const std::array<char, 16>& uuid) noexcept;
+
+	// Whether the journal holds group `id`, read on the loop: stored, closed or bounded (recovered by its open). None
+	// or lost, the open would create the group afresh.
+	bool holds(kronuz::consensus::GroupId id);
+
+	// The journal's directory, as constructed: the pool refuses an index path inside it.
+	const std::string& directory() const noexcept { return directory_; }
+
+	// The options the journal's IO was built with (engine::strata::posix_io_options()): `--full-flush-ordering`
+	// reaches the turn log's ordering barrier, and its per-volume warning names the switch (D10).
+	const kronuz::journal::PosixIOOptions& io_options() const noexcept { return io_options_; }
+	// The journal host's IO: a file it opens syncs in the options' flush mode.
+	kronuz::journal::IO& journal_io() noexcept { return host_->io(); }
+
+private:
+	// A task scheduler driven by a thread of its own until end().
+	struct Driven {
+		task::blocking_scheduler scheduler;
+		std::atomic<bool> quit{false};
+		std::thread thread;
+		void begin();
+		void wake();
+		void end();
+		task::scheduler_ref ref() { return task::scheduler_ref::of(scheduler); }
+	};
+
+	std::string directory_;
+	kronuz::journal::PosixIOOptions io_options_;
+	kronuz::journal::InlineCompletion io_;
+	std::unique_ptr<kronuz::journal::Host> host_;
+	Driven loop_thread_;
+	std::vector<std::unique_ptr<Driven>> chores_;
+	std::unique_ptr<strata::group::loop> loop_;
+	task::cancel_source stop_;
+	std::atomic<bool> turns_done_{false};
+	std::atomic<bool> driver_done_{false};
+	std::mutex closed_mtx_;
+	std::map<kronuz::consensus::GroupId, std::string> closed_;   // under closed_mtx_
+};
+
+
+// A shard's group and its application, over the catalog slot's directory and index.
+struct ShardGroup {
+	ShardApplication app;
+	ShardGroups::group_type group;
+	kronuz::journal::IO* directory;   // the slot's, where the file set lives; blobs are read through it
+	std::optional<ChunkedIds> ids;   // this leader's chunked-command ids, on the loop
+	std::atomic<std::uint64_t> checkpointed{0};   // the log index the last checkpoint() published through
+	// Run on the chore after every checkpoint() publishes, with the index as it committed it: the engine's view
+	// follows the commit (engine::strata::Shard::checkpointed).
+	std::function<void()> on_checkpoint;
+	// Takes the shard's turn and runs checkpoint() in it (ShardEndpoint::checkpoint_in_turn): a pinned proposer's,
+	// which holds no turn (Proposer::pinned).
+	std::function<task::task<void>()> checkpoint_in_turn;
+
+	// The log placed and the part a published checkpoint cut, counted at each placement on the loop: the pressure
+	// trigger's measure (L1). All four only grow: a checkpoint raises `cut_*` to what was placed before it began, so
+	// checkpoints that overlap never subtract twice; entries placed during a checkpoint stay counted.
+	std::atomic<std::size_t> placed_bytes{0}, placed_entries{0}, cut_bytes{0}, cut_entries{0};
+	std::size_t log_bytes() const noexcept { const auto cut = cut_bytes.load(); return placed_bytes.load() - cut; }
+	std::size_t log_entries() const noexcept { const auto cut = cut_entries.load(); return placed_entries.load() - cut; }
+
+	ShardGroup(ShardGroups& groups, kronuz::journal::IO& directory, prospect::index& index);
+	~ShardGroup();
+
+	// A placement left the log at or past half its bound in bytes or entries: the pressure trigger (L1).
+	bool pressed() const noexcept { return log_bytes() >= LOG_BYTES / 2 || log_entries() >= LOG_ENTRIES / 2; }
+
+	// Blocks the calling thread (never the loop or the chore) until the group applied everything committed when
+	// it was called: a linearizable read's barrier (D4). `at`, if any, then reads the state and the index on the chore.
+	void catch_up(const std::function<void(const ShardGroupState&, prospect::index&)>& at = {});
+
+	// Blocks the calling thread until the abort of each chunked command `ids` names is placed (D12, A9): the leader's
+	// ready point ends what its term's earlier proposers left open, so their files are freed.
+	void abort_open(const std::vector<std::uint64_t>& ids);
+};
+
+// What a proposer holds (T1, docs/mechanisms/journal-durability.md "Who writes the index"): the shard's turn (a
+// document write, a RESTORE's batch, an upload's final entry) or only a pin (an upload's chunks, an abort). A checkpoint
+// writes the index, so it runs in the turn: a pinned proposer takes it for one.
+enum class Proposer { in_turn, pinned };
+
+// The engine's error for consensus's refusal of a proposal: errc::busy (a 503) for one that passes with time (a full
+// log, busy, not the leader, not ready); errc::internal (a 500) for the rest, a proposer's bug (N11).
+engine::errc refusal_kind(kronuz::consensus::RejectReason reason) noexcept;
+
+// Proposes `entry` on the group's loop from any scheduler and answers on the caller's: handler.h's ProposeEntry. A
+// closing group raises errc::not_available. A full log (LogFull) checkpoints, in the turn, and proposes again; a log
+// still full, or a refusal that passes with time (busy, not the leader, not ready), raises errc::busy naming
+// consensus's reason (a 503); any other refusal (too large, a duplicate request) is a proposer's bug, errc::internal.
+// A proposer in the turn whose placement left the log pressed checkpoints before it answers (L1).
+task::task<strata::group::answer> propose_entry(ShardGroup& shard_group, std::string entry, strata::group::ack level, Proposer proposer);
+
+// Awaits, from any scheduler and on the caller's, until the group applied everything committed when it was called: a
+// linearizable read's barrier (D4), and what a write prepared after an `ack=none` write waits for (D3).
+task::task<void> caught_up(ShardGroup& shard_group);
+
+// This leader's next chunked-command id (D12), drawn on the loop from the term it sees now.
+task::task<std::uint64_t> next_chunked_id(ShardGroup& shard_group);
+
+// A checkpoint of the group (D16), started on its loop from any scheduler and answered on the caller's: the shard's
+// commit, the pressure trigger's and a full log's. It writes the index on the chore, so its caller holds the shard's
+// turn (T1). Never from a commit hook (D169): the checkpoint's chore takes the index's write lease. The group's
+// `on_checkpoint`, if any, then runs on the chore.
+task::task<void> checkpoint(ShardGroup& shard_group);

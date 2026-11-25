@@ -39,6 +39,7 @@
 #include <new>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <time.h>
 #include <vector>
@@ -52,6 +53,7 @@
 #include "database/data.h"
 #include "database/handler.h"
 #include "database/pool.h"
+#include "database/shard_group.h"
 #include "database/utils.h"
 #include "endpoint.h"
 #include "engine/chores.h"
@@ -386,6 +388,7 @@ public:
 		DocIndexer::seams.stale_on_term.clear();
 		DocIndexer::seams.serial = false;
 		DocIndexer::seams.busy_placement_shard = 0;
+		DocIndexer::seams.pending_bytes = 0;
 	}
 };
 
@@ -674,13 +677,20 @@ static void test_a_restore_prepares_and_writes_its_objects_off_its_loop() {
 		DocIndexer::stats.reset();
 		const auto loop_before = loop_cpu_ms();
 		const auto process_before = process_cpu_ms();
-		CHECK_EQ(http_call("RESTORE", "/" + index + "/?commit", body, "application/x-ndjson") / 100, 2);
+		const auto began = std::chrono::steady_clock::now();
+		std::string reply;
+		const auto status = http_call("RESTORE", "/" + index + "/?commit", body, "application/x-ndjson", &reply);
+		const auto wall_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - began).count();
+		CHECK_EQ(status / 100, 2);
 		const auto loop_ms = loop_cpu_ms() - loop_before;
 		const auto process_ms = process_cpu_ms() - process_before;
 		const auto children = DocIndexer::stats.children.load();
 		const auto peak = DocIndexer::stats.peak_children.load();
-		std::fprintf(stderr, "  restore of %d documents %s: loop %.1f ms of the process's %.1f ms CPU; %zu children at most, %zu at once\n", documents,
-			on_loop ? "on the loop" : "in chores", loop_ms, process_ms, children, peak);
+		std::fprintf(stderr, "  restore of %d documents %s: %d in %lld ms; loop %.1f ms of the process's %.1f ms CPU; %zu children at most, %zu at once\n", documents,
+			on_loop ? "on the loop" : "in chores", status, static_cast<long long>(wall_ms), loop_ms, process_ms, children, peak);
+		if (status / 100 != 2) {
+			std::fprintf(stderr, "  its answer (0: none within the client's 60 s): %.300s\n", reply.c_str());
+		}
 		CHECK_GT(process_ms, 200.0);   // long enough to tell
 		if (!on_loop && children > 1) {   // a pool of 5 threads or more
 			CHECK_GT(peak, std::size_t{1});
@@ -691,6 +701,53 @@ static void test_a_restore_prepares_and_writes_its_objects_off_its_loop() {
 	const auto chores_ms = loop_cpu("offloop", false);
 	std::fprintf(stderr, "  loop CPU: %.1f ms with the objects in chores, %.1f ms on the loop\n", chores_ms, on_loop_ms);
 	CHECK_LT(chores_ms, on_loop_ms * 0.2);   // 0.06-0.09 measured; 0.34 with the restore fan-out off
+}
+
+
+// A RESTORE's writes share the log's entries, and the syncs each entry waits for: its prepared objects stay pending
+// across the body's chunks, a shard proposes a command per entry's worth of them, and the id counter rides in the
+// last one. 400 objects of 3 KB each, ~1.2 MB, into an index of one shard: updates of new ids, prepared on the loop
+// one by one; plain objects, prepared in chores; plain objects of numeric ids, which move the id counter. A command
+// per body chunk was 18 entries; one per update 400; the counter's own command one more per slice.
+static void test_a_restores_writes_share_their_log_entries() {
+	constexpr int documents = 400;
+	enum class Kind { update, plain, numeric };
+	auto lines = [](int first, int count, Kind kind) {
+		std::string body;
+		for (int i = first; i < first + count; ++i) {
+			std::string text;
+			for (int w = 0; w < 300; ++w) {
+				text += "word" + std::to_string((i * 131 + w * 7) % 20011) + " ";
+			}
+			const auto id = kind == Kind::numeric ? std::to_string(i) : "\"e" + std::to_string(i) + "\"";
+			body += R"({"_id":)" + id + (kind == Kind::update ? R"(,"_op_type":"update")" : "") + R"(,"n":)" + std::to_string(i) + R"(,"text":")" + text + "\"}\n";
+		}
+		return body;
+	};
+	std::uint64_t counted[3] = {};
+	for (const auto kind : {Kind::update, Kind::plain, Kind::numeric}) {
+		const std::string index = kind == Kind::update ? "entries_update" : kind == Kind::plain ? "entries_plain" : "entries_numeric";
+		create_index(index, 1);
+		CHECK_EQ(http_call("RESTORE", "/" + index + "/?commit", lines(1, 10, kind), "application/x-ndjson") / 100, 2);   // the schema exists after it
+		const auto endpoints = engine::sync_wait(XapiandManager::resolve_index_endpoints(Endpoint(index), true));
+		auto pin = engine::sync_wait(XapiandManager::manager()->database_pool->pin(Endpoint(endpoints[0].path), DB_WRITABLE));
+		auto* group = pin.entry().group();
+		CHECK(group != nullptr);
+		if (group == nullptr) {
+			continue;
+		}
+		const auto before = group->group.applied();
+		const auto began = std::chrono::steady_clock::now();
+		CHECK_EQ(http_call("RESTORE", "/" + index + "/?commit", lines(11, documents, kind), "application/x-ndjson") / 100, 2);
+		const auto wall_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - began).count();
+		const auto entries = group->group.applied() - before;
+		counted[static_cast<int>(kind)] = entries;
+		std::fprintf(stderr, "  %d %s: %llu log entries in %lld ms\n", documents,
+			kind == Kind::update ? "updates on the loop" : kind == Kind::plain ? "plain objects in chores" : "plain objects of numeric ids",
+			static_cast<unsigned long long>(entries), static_cast<long long>(wall_ms));
+		CHECK_LE(entries, static_cast<std::uint64_t>(8));
+	}
+	CHECK_LE(counted[static_cast<int>(Kind::numeric)], counted[static_cast<int>(Kind::plain)]);   // the counter in their entries
 }
 
 
@@ -864,8 +921,9 @@ static void test_a_miss_defers_every_later_write_of_its_id() {
 
 
 // An apply slice that fails before its writes (a pin or a turn that cannot be had, here a thrown slice) fails its
-// shard's next write alone, and the rest retry, each its own result as one request each would have; the engine's chores
-// are restored: no engine runs its chores inline afterwards, and a later RESTORE writes.
+// shard's next write alone, and the rest retry, each its own result as one request each would have, the RESTORE answering
+// the failure's 5xx; the engine's chores are restored: no engine runs its chores inline afterwards, and a later RESTORE
+// writes.
 static void test_a_throwing_apply_slice_fails_one_write_and_restores_the_engines_chores() {
 	create_index("throws", 5);
 	CHECK_EQ(http_call("RESTORE", "/throws/?commit", R"({"_id":"seed","v":1})" "\n", "application/x-ndjson") / 100, 2);   // the schema exists: no range of one
@@ -877,7 +935,7 @@ static void test_a_throwing_apply_slice_fails_one_write_and_restores_the_engines
 	{
 		FixedRanges ranges(32);
 		DocIndexer::seams.throw_in_slice = true;
-		CHECK_EQ(http_call("RESTORE", "/throws/?commit", body, "application/x-ndjson", &reply) / 100, 2);
+		CHECK_EQ(http_call("RESTORE", "/throws/?commit", body, "application/x-ndjson", &reply) / 100, 5);   // one left unwritten
 		CHECK_FALSE(DocIndexer::seams.throw_in_slice.load());   // it threw
 	}
 	std::size_t failed = 0;
@@ -900,7 +958,7 @@ static void test_a_throwing_apply_slice_fails_one_write_and_restores_the_engines
 // A write that fails and marks the index stale ends its slice, so the later writes of the shard run after the index is
 // replaced, in a slice of their own, as one request each would: with the failing write, the run has one more slice
 // than the same run with no failure (a slice takes a shard's whole sub-run unless it ends), the failing write alone
-// fails, and every other object is stored.
+// fails, and every other object is stored. The RESTORE then answers the failure's 503, not 200.
 static void test_a_stale_marking_failure_ends_its_slice() {
 	create_index("stale_a", 5);
 	create_index("stale_b", 5);
@@ -911,7 +969,7 @@ static void test_a_stale_marking_failure_ends_its_slice() {
 	for (int k = 1; k <= 60; ++k) {
 		body += R"({"_id":"k)" + std::to_string(k) + R"(","v":1})" "\n";
 	}
-	auto run = [&](const std::string& index, const std::string& failing, std::size_t& slices, std::size_t& failed, std::string& total) {
+	auto run = [&](const std::string& index, const std::string& failing, std::size_t& slices, std::size_t& failed, std::string& total, int& status) {
 		std::atomic<std::size_t> counted{0};
 		std::string reply;
 		{
@@ -922,7 +980,7 @@ static void test_a_stale_marking_failure_ends_its_slice() {
 				counted.fetch_add(1);
 				co_return;
 			};
-			CHECK_EQ(http_call("RESTORE", "/" + index + "/?commit", body, "application/x-ndjson", &reply) / 100, 2);
+			status = http_call("RESTORE", "/" + index + "/?commit", body, "application/x-ndjson", &reply);
 		}
 		slices = counted.load();
 		failed = 0;
@@ -935,8 +993,11 @@ static void test_a_stale_marking_failure_ends_its_slice() {
 	};
 	std::size_t without_slices = 0, without_failed = 0, with_slices = 0, with_failed = 0;
 	std::string without_total, with_total;
-	run("stale_a", "", without_slices, without_failed, without_total);
-	run("stale_b", "k1", with_slices, with_failed, with_total);
+	int without_status = 0, with_status = 0;
+	run("stale_a", "", without_slices, without_failed, without_total, without_status);
+	run("stale_b", "k1", with_slices, with_failed, with_total, with_status);
+	CHECK_EQ(without_status, 200);
+	CHECK_EQ(with_status, 503);   // an object the server left unwritten: the RESTORE answers its status, never 200
 	std::fprintf(stderr, "  slices %zu without a failure, %zu with one; failed %zu; stored %s\n", without_slices, with_slices, with_failed, with_total.c_str());
 	CHECK_EQ(without_failed, std::size_t{0});
 	CHECK_EQ(with_failed, std::size_t{1});
@@ -1000,6 +1061,26 @@ static void test_an_update_sees_the_earlier_objects_of_its_stream() {
 	body += R"({"_id":"a","first":1},{"_id":"a","_op_type":"update","second":2}])";
 	CHECK_EQ(http_call("RESTORE", "/barrier/?commit", body) / 100, 2);
 
+	// Updates whose writes are pending (after a plain object, so the schema reads their ids): the second of an id
+	// waits for the first's, which another id's does not.
+	const std::string updates = R"([{"_id":"s","n":0},{"_id":"u","_op_type":"update","first":1},{"_id":"v","_op_type":"update","first":1},)"
+		R"({"_id":"u","_op_type":"update","second":2},{"_id":"v","_op_type":"update","second":2}])";
+	CHECK_EQ(http_call("RESTORE", "/pending/?commit", updates) / 100, 2);
+	// An update of the id a pending object of no id takes, in a sharded index of numeric ids: a twin index, restored
+	// the same way without the update, names that id.
+	std::string new_id;
+	for (const std::string index : {"pending_twin", "pending_new"}) {
+		create_index(index, 5);
+		CHECK_EQ(http_call("RESTORE", "/" + index + "/?commit", R"([{"_id":1,"n":1}])") / 100, 2);   // numeric ids
+	}
+	std::string twin;
+	CHECK_EQ(http_call("RESTORE", "/pending_twin/?commit", R"([{"first":1}])", "application/json", &twin) / 100, 2);
+	if (const auto items = field_of(json_of(twin), "items"); items.size() == 1) {
+		new_id = field_of(items.at(0), "id").to_string();
+	}
+	CHECK(!new_id.empty());
+	CHECK_EQ(http_call("RESTORE", "/pending_new/?commit", R"([{"first":1},{"_id":)" + new_id + R"(,"_op_type":"update","second":2}])") / 100, 2);
+
 	// Two pieces with a pause: the update is the first object of the second batch.
 	std::string first_piece;
 	for (int i = 1; i <= 40; ++i) {
@@ -1012,11 +1093,11 @@ static void test_an_update_sees_the_earlier_objects_of_its_stream() {
 	}
 	CHECK_EQ(http_call_pieces("RESTORE", "/boundary/?commit", {first_piece, second_piece}, "application/x-ndjson", 500ms) / 100, 2);
 
-	for (const auto* path : {"/barrier/a", "/boundary/c"}) {
+	for (const auto& path : {std::string("/barrier/a"), std::string("/boundary/c"), std::string("/pending/u"), std::string("/pending/v"), "/pending_new/" + new_id}) {
 		std::string reply;
 		CHECK_EQ(http_call("GET", path, "", "application/json", &reply), 200);
 		const auto obj = json_of(reply);
-		std::fprintf(stderr, "  GET %s: %s\n", path, obj.to_string().c_str());
+		std::fprintf(stderr, "  GET %s: %s\n", path.c_str(), obj.to_string().c_str());
 		CHECK_EQ(field_of(obj, "first").to_string(), std::string("1"));
 		CHECK_EQ(field_of(obj, "second").to_string(), std::string("2"));
 	}
@@ -1138,8 +1219,10 @@ static void test_each_chunk_of_a_streamed_restore_starts_light() {
 		pieces.push_back(piece);
 	}
 	// One round per chunk on any build: a slow prepare (TSan) splits a chunk into rounds, and a later round's
-	// placement continues the chunk's budget, heavy by count.
+	// placement continues the chunk's budget, heavy by count. Each round is written before the next, so each chunk
+	// places its own.
 	FixedRanges ranges(5);
+	DocIndexer::seams.pending_bytes = 1;
 	lanes::Seam seam(lanes::Mode::record_chunks);
 	CHECK_EQ(http_call_pieces("RESTORE", "/lanestream/?commit", pieces, "application/x-ndjson", 150ms) / 100, 2);
 	std::lock_guard<std::mutex> lk(lanes::chunks_mtx);
@@ -1170,7 +1253,7 @@ static void test_a_restores_results_are_freed_as_one_buffer() {
 	const auto endpoints = engine::sync_wait(XapiandManager::resolve_index_endpoints(Endpoint("results"), true));
 	query_field_t query_field;
 	std::optional<DocIndexer> indexer;
-	indexer.emplace(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, true, true, query_field, engine::inline_chores());
+	indexer.emplace(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, true, true, query_field, engine::inline_chores());
 	std::vector<MsgPack> batch;
 	for (int i = 1; i <= objects; ++i) {
 		batch.push_back(MsgPack({{"_id", "r" + std::to_string(i)}, {"n", i}}));
@@ -1241,29 +1324,44 @@ static void test_a_restores_objects_are_freed_off_its_loop() {
 #endif
 }
 
-int main() {
+// Runs every case, or the one its argument names.
+int main(int argc, char** argv) {
+	const std::string_view only = argc > 1 ? argv[1] : "";
+	int ran = 0;
+	const auto run = [&](std::string_view name, void (*test)()) {
+		if (only.empty() || only == name) {
+			++ran;
+			test();
+		}
+	};
+#define RUN(test) run(#test, test)
 	RunningNode node;
 	if (!node.ready()) {
 		std::fprintf(stderr, "FAIL: the node did not become ready\n");
 		return 1;
 	}
-	test_a_search_of_many_hits_yields_its_loop_between_hits();
-	test_a_restored_record_is_compressed_once_and_reads_back();
-	test_a_restore_prepares_and_writes_its_objects_off_its_loop();
-	test_a_sharded_restore_matches_its_serial_model();
-	test_new_numeric_ids_match_their_serial_model();
-	test_a_write_missed_since_placement_is_placed_afresh();
-	test_a_miss_defers_every_later_write_of_its_id();
-	test_a_throwing_apply_slice_fails_one_write_and_restores_the_engines_chores();
-	test_a_stale_marking_failure_ends_its_slice();
-	test_a_failed_placement_read_defers_its_terms_to_the_serial_path();
-	test_an_update_sees_the_earlier_objects_of_its_stream();
-	test_schema_changes_commit_in_input_order();
-	test_a_light_request_runs_ahead_of_heavy_turns();
-	test_a_request_after_a_heavy_one_starts_light();
-	test_each_chunk_of_a_streamed_restore_starts_light();
-	test_a_restores_results_are_freed_as_one_buffer();
-	test_a_restores_objects_are_freed_off_its_loop();
+	RUN(test_a_search_of_many_hits_yields_its_loop_between_hits);
+	RUN(test_a_restored_record_is_compressed_once_and_reads_back);
+	RUN(test_a_restore_prepares_and_writes_its_objects_off_its_loop);
+	RUN(test_a_restores_writes_share_their_log_entries);
+	RUN(test_a_sharded_restore_matches_its_serial_model);
+	RUN(test_new_numeric_ids_match_their_serial_model);
+	RUN(test_a_write_missed_since_placement_is_placed_afresh);
+	RUN(test_a_miss_defers_every_later_write_of_its_id);
+	RUN(test_a_throwing_apply_slice_fails_one_write_and_restores_the_engines_chores);
+	RUN(test_a_stale_marking_failure_ends_its_slice);
+	RUN(test_a_failed_placement_read_defers_its_terms_to_the_serial_path);
+	RUN(test_an_update_sees_the_earlier_objects_of_its_stream);
+	RUN(test_schema_changes_commit_in_input_order);
+	RUN(test_a_light_request_runs_ahead_of_heavy_turns);
+	RUN(test_a_request_after_a_heavy_one_starts_light);
+	RUN(test_each_chunk_of_a_streamed_restore_starts_light);
+	RUN(test_a_restores_results_are_freed_as_one_buffer);
+	RUN(test_a_restores_objects_are_freed_off_its_loop);
+	if (ran == 0) {
+		std::fprintf(stderr, "FAIL: no case is named %.*s\n", static_cast<int>(only.size()), only.data());
+		return 1;
+	}
 	if (testh::failures != 0) {
 		std::fprintf(stderr, "%d of %d checks FAILED\n", testh::failures, testh::checks);
 		return 1;

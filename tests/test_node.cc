@@ -41,6 +41,7 @@
 #include <cstring>
 #include <filesystem>
 #include <functional>
+#include <future>
 #include <limits>
 #include <map>
 #include <memory>
@@ -54,6 +55,7 @@
 #include <variant>
 #include <vector>
 
+#include <execinfo.h>
 #include <signal.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -69,6 +71,7 @@
 #include "database/pool.h"
 #include "database/schemas_lru.h"
 #include "database/shard.h"
+#include "database/shard_group.h"
 #include "database/utils.h"
 #include "database/wide_search.h"
 #include "pool_support.h"
@@ -76,7 +79,6 @@
 #include "logger.h"
 #include "cast.h"
 #include "serialize.h"
-#include "engine/chores.h"
 #include "engine/host.h"
 #include "engine/document.h"
 #include "engine/error.h"
@@ -95,11 +97,6 @@
 using namespace std::chrono_literals;
 
 struct PoolTestAccess {
-	static void set_chores(ShardEndpoint& entry, std::unique_ptr<engine::Chores> chores) {
-		entry.chores = std::move(chores);
-		entry.engine_->use_chores(entry.chores.get());
-	}
-	static std::unique_ptr<engine::Chores> take_chores(ShardEndpoint& entry) { return std::move(entry.chores); }
 	static prospect::index& index(ShardEndpoint& entry) { return *entry.index_; }
 	static engine::Shard& engine(ShardEndpoint& entry) { return *entry.engine_; }
 };
@@ -110,7 +107,7 @@ using A = PoolTestAccess;
 
 const std::shared_ptr<XapiandManager>& manager();
 
-constexpr int WRITE = DB_WRITABLE | DB_CREATE_OR_OPEN;   // with the WAL and the autocommit, as a node writes
+constexpr int WRITE = DB_WRITABLE | DB_CREATE_OR_OPEN;   // with the autocommit, as a node writes
 constexpr int WRITE_QUIET = WRITE | DB_DISABLE_AUTOCOMMIT;
 
 template <typename F>
@@ -135,6 +132,7 @@ public:
 				std::fprintf(stderr, "  FAIL %s: hung (schemas: %llu loads, %llu joined, %llu waiting; settings: %llu loads, %llu joined, %llu waiting)\n", name_,
 					static_cast<unsigned long long>(manager()->schemas->loads()), static_cast<unsigned long long>(manager()->schemas->joined()), static_cast<unsigned long long>(manager()->schemas->waiting()),
 					static_cast<unsigned long long>(manager()->index_settings_resolver->loads()), static_cast<unsigned long long>(manager()->index_settings_resolver->joined()), static_cast<unsigned long long>(manager()->index_settings_resolver->waiting()));
+				dump_stacks();   // where it hangs, for the log
 				std::_Exit(1);
 			}
 		});
@@ -145,6 +143,18 @@ public:
 	}
 
 private:
+	// Every thread's stack, to stderr: sample(1) on macOS, gdb where it is installed.
+	static void dump_stacks() {
+		const auto pid = std::to_string(::getpid());
+#ifdef __APPLE__
+		const auto cmd = "sample " + pid + " 2 -file watchdog_sample.txt >/dev/null 2>&1 && cat watchdog_sample.txt >&2";
+#else
+		const auto cmd = "gdb -p " + pid + " -batch -ex 'thread apply all bt' >&2 2>/dev/null";
+#endif
+		std::fflush(nullptr);
+		[[maybe_unused]] const int status = std::system(cmd.c_str());
+	}
+
 	const char* name_;
 	std::atomic<bool> done_{false};
 	std::thread thread_;
@@ -345,52 +355,44 @@ private:
 	std::thread thread_;
 };
 
-// Holds the next flush chore of an index until released.
-class GateChores final : public engine::Chores {
+// Holds the thread that drives a scheduler (a group's chore) from its next item until release(): what it would run
+// after waits.
+class SchedulerHold {
+	struct State {
+		std::mutex m;
+		std::condition_variable cv;
+		bool released = false;
+		std::atomic<bool> entered{false};
+	};
+
 public:
-	explicit GateChores(std::unique_ptr<engine::Chores> inner) : inner_(std::move(inner)) { }
-
-	void arm() {
-		std::lock_guard<std::mutex> lk(m_);
-		armed_ = true;
-		gate_ = std::make_shared<task::event>();
+	explicit SchedulerHold(task::scheduler_ref scheduler) {
+		auto* held = new std::shared_ptr<State>(state_);
+		const bool posted = scheduler.post_call([](void* arg) {
+			const std::unique_ptr<std::shared_ptr<State>> held(static_cast<std::shared_ptr<State>*>(arg));
+			auto& state = **held;
+			state.entered = true;
+			std::unique_lock<std::mutex> lk(state.m);
+			state.cv.wait(lk, [&] { return state.released; });
+		}, held);
+		if (!posted) {
+			delete held;
+		}
+		CHECK(posted);
 	}
-	bool entered() const { return entered_.load(); }
+	~SchedulerHold() { release(); }
+
+	bool entered() const { return state_->entered.load(); }
 	void release() {
-		std::shared_ptr<task::event> gate;
 		{
-			std::lock_guard<std::mutex> lk(m_);
-			gate = gate_;
+			std::lock_guard<std::mutex> lk(state_->m);
+			state_->released = true;
 		}
-		if (gate) {
-			gate->set();
-		}
-	}
-
-	task::task<void> run(engine::ChoreClass cls, std::function<void()> fn) override {
-		if (cls == engine::ChoreClass::flush) {
-			std::shared_ptr<task::event> gate;
-			{
-				std::lock_guard<std::mutex> lk(m_);
-				if (armed_) {
-					armed_ = false;
-					gate = gate_;
-				}
-			}
-			if (gate) {
-				entered_ = true;
-				co_await *gate;
-			}
-		}
-		co_await inner_->run(cls, std::move(fn));
+		state_->cv.notify_all();
 	}
 
 private:
-	std::unique_ptr<engine::Chores> inner_;
-	std::mutex m_;
-	bool armed_ = false;
-	std::shared_ptr<task::event> gate_;
-	std::atomic<bool> entered_{false};
+	std::shared_ptr<State> state_ = std::make_shared<State>();
 };
 
 engine::Document make(const std::string& key) {
@@ -404,6 +406,18 @@ engine::Document make(const std::string& key) {
 // The port of the test process's node.
 const test_utils::ReservedPort node_port;
 
+// A SIGABRT's sender and the aborting thread's stack, to stderr, then the default action: an abort that printed
+// nothing (a child's log ended right before it) names its frames.
+void abort_stack_handler(int, siginfo_t* info, void*) {
+	char line[96];
+	const int n = std::snprintf(line, sizeof line, "SIGABRT (code %d, from pid %d, this pid %d):\n", info->si_code, static_cast<int>(info->si_pid), static_cast<int>(::getpid()));
+	(void)::write(2, line, static_cast<std::size_t>(n));
+	void* frames[64];
+	backtrace_symbols_fd(frames, backtrace(frames, 64), 2);
+	::signal(SIGABRT, SIG_DFL);
+	::raise(SIGABRT);
+}
+
 // The node of the test process: a manager whose control loop runs on its own thread, serving on a port of its own,
 // in a data directory of its own.
 class RunningNode {
@@ -416,6 +430,9 @@ public:
 		sa.sa_flags = SA_RESTART | SA_SIGINFO;
 		sa.sa_sigaction = traceback::collect_callstack_sig_handler;
 		::sigaction(SIGUSR2, &sa, nullptr);
+		sa.sa_flags = SA_SIGINFO | SA_RESETHAND;
+		sa.sa_sigaction = abort_stack_handler;
+		::sigaction(SIGABRT, &sa, nullptr);
 
 		const auto root = std::filesystem::current_path() / name;
 		if (!keep) {
@@ -716,27 +733,27 @@ private:
 };
 
 // A commit that takes 400 ms runs as a task of the control loop (the autocommit), and the loop keeps answering its
-// probe the whole time: nothing on it waits for the commit.
+// probe the whole time: nothing on it waits for the commit. The commit is the group's checkpoint, which captures on
+// the group's chore: holding that chore holds the commit.
 static void test_the_control_loop_is_free_during_a_slow_commit() {
 	Watchdog watchdog("slow commit");
 	Pulse pulse;
 	const auto endpoints = endpoints_of("slow_commit");
 	auto entry = pin_index(*manager()->database_pool, endpoints[0].path, WRITE);
-	auto gate = std::make_unique<GateChores>(A::take_chores(entry.entry()));
-	auto* raw = gate.get();
-	A::set_chores(entry.entry(), std::move(gate));
 	Shard shard = use_index(entry, WRITE);
 	engine::sync_wait(shard.ready());
 	engine::sync_wait(shard.add_document(make("K1")));   // schedules the autocommit
-	raw->arm();                                           // and the commit it starts waits for release()
+	auto* group = entry.entry().group();
+	CHECK(group != nullptr);
+	SchedulerHold hold(manager()->database_pool->groups()->chore(group->group.id()));   // the commit waits for release()
 	CHECK(entry->is_modified());
 
 	const auto before = manager()->control_lag().snapshot();
-	CHECK(eventually([&] { return raw->entered(); }));   // the autocommit's commit chore is held
+	CHECK(eventually([&] { return hold.entered(); }));   // the group's chore is held
 	std::this_thread::sleep_for(400ms);
 	CHECK(entry->is_modified());                          // still not committed
 	const auto during = manager()->control_lag().snapshot();
-	raw->release();
+	hold.release();
 	CHECK(eventually([&] { return !entry->is_modified(); }));
 
 	const auto lag = lag_between(before, during);
@@ -954,11 +971,11 @@ static ChildResult run_child(F&& body, std::chrono::seconds limit) {
 	return result;
 }
 
-// How long the stop took: from the child's SHUTDOWN_AT line to its "Exiting" line (the logs' own clock, so the
-// process teardown after it, slow under a sanitizer, is not counted).
-static long long stop_ms(const std::string& log) {
+// How long the stop took: from the child's SHUTDOWN_AT line to its "Exiting" line, or to the line `marker` starts
+// (the logs' own clock, so the process teardown after it, slow under a sanitizer, is not counted).
+static long long stop_ms(const std::string& log, const char* marker = "Exiting with unfinished writes abandoned") {
 	const auto at = log.find("SHUTDOWN_AT ");
-	const auto exiting = log.find("Exiting with unfinished writes abandoned");
+	const auto exiting = log.find(marker);
 	if (at == std::string::npos || exiting == std::string::npos) {
 		return -1;
 	}
@@ -1065,6 +1082,76 @@ static void test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has
 	}
 }
 
+// The child: an autocommit of `late` that holds its turn, suspended in a checkpoint whose group chore is held, when
+// the shutdown starts; a second autocommit of it fires while the shutdown drains the control loop.
+[[noreturn]] static void late_autocommit_child(const char* log_path) {
+	std::freopen(log_path, "w", stderr);
+	std::setvbuf(stderr, nullptr, _IONBF, 0);
+	Logging::handlers.push_back(std::make_unique<StderrLogger>());
+	RunningNode node("node_late_autocommit_data", std::to_string(abandon_port.port()));
+	if (!node.ready()) {
+		std::_Exit(2);
+	}
+	manager()->shutdown_write_bound = 2000ms;
+	if (http_call(abandon_port.port(), "PUT", "/late/1", R"({"n":1})").rfind("HTTP/1.1 2", 0) != 0) {
+		std::_Exit(6);
+	}
+	const auto endpoint = endpoints_of("late")[0];
+	std::unique_ptr<SchedulerHold> chore;
+	{
+		// The first write's autocommit ends before the chore is held: the held chore then has none of its work.
+		auto pin = pin_index(*manager()->database_pool, endpoint.path, WRITE);
+		if (pin.entry().group() == nullptr) {
+			std::_Exit(3);
+		}
+		if (!eventually([&] { return !pin->is_modified() && manager()->database_pool->detached() == 0; }, 10s)) {
+			std::_Exit(7);
+		}
+		chore = std::make_unique<SchedulerHold>(manager()->database_pool->groups()->chore(pin.entry().group()->group.id()));
+		if (!eventually([&] { return chore->entered(); })) {
+			std::_Exit(8);
+		}
+	}
+	// Placed while its apply is held, so the index is modified and the write's autocommit (200 ms) takes the turn and
+	// waits in the checkpoint for the held chore: it is still detached when the shutdown starts.
+	if (http_call(abandon_port.port(), "PUT", "/late/2?ack=none", R"({"n":2})").rfind("HTTP/1.1 202", 0) != 0) {
+		std::_Exit(9);
+	}
+	if (!eventually([] { return manager()->database_pool->detached() != 0; }, 10s)) {
+		std::_Exit(10);
+	}
+	XapiandManager::schedule_autocommit(endpoint);   // the next one fires 200 ms into the shutdown's drain
+	const auto now = static_cast<long long>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+	L(-LOG_NOTICE, NOTICE_COL, "SHUTDOWN_AT {}", now);
+	manager()->shutdown(now, now);
+	std::this_thread::sleep_for(60s);   // the shutdown ends the process
+	std::_Exit(5);
+}
+
+// A detached task (a timer's autocommit) that fires while the shutdown drains the control loop runs on that loop,
+// not on the draining thread: there it would wait for the turn or the commit of a task of that loop, which only that
+// thread resumes. The drain before the HTTP stop leaves it its two graces (2 x 250 ms in a 2 s bound), though the
+// autocommit cannot end. The stop ends in its bound, abandoning the index whose checkpoint cannot run, and leaves the
+// autocommit suspended in that checkpoint running: destroying its frame would leave the group a waiter to resume.
+static void test_an_autocommit_during_the_shutdown_drain_runs_on_the_control_loop() {
+	const char* log_path = "node_late_autocommit.log";
+	const auto result = run_child([&] { late_autocommit_child(log_path); }, 90s);
+	CHECK(result.exited);
+	CHECK_EQ(result.code, 75);   // EX_TEMPFAIL: the checkpoint's chore is held, so the index is abandoned
+	const auto log = read_file(log_path);
+	const bool left = log.find("The control loop's unfinished tasks are left running") != std::string::npos;
+	CHECK(left);
+	const auto http_in = stop_ms(log, "Stop 1: the HTTP service");
+	CHECK_GE(http_in, 0);
+	CHECK_LE(http_in, 2000 - 2 * 250 + 300);   // not at the deadline, with no time left for the requests
+	const auto stopped_in = stop_ms(log);
+	CHECK_GE(stopped_in, 0);
+	CHECK_LT(stopped_in, 2000 + 800);
+	if (result.code != 75 || !left || http_in < 0 || http_in > 2000 - 2 * 250 + 300 || stopped_in < 0 || stopped_in >= 2000 + 800) {
+		std::fprintf(stderr, "%s\n", log.c_str());
+	}
+}
+
 // ---- a write whose client half-closes after its body ----
 
 static const test_utils::ReservedPort half_close_port;
@@ -1151,7 +1238,6 @@ static void test_a_put_whose_client_half_closes_completes_durably() {
 // ---- a commit of a list of indexes whose client half-closes ----
 
 static const test_utils::ReservedPort half_close_list_port;
-static constexpr int NO_LOG = WRITE_QUIET | DB_DISABLE_WAL;   // only a commit keeps the write
 
 // The child: a write applied to hcl_kept and not committed, then a half-closed POST /hcl_new,hcl_kept/:commit whose
 // resolution of hcl_new waits in its settings load (the reserved index's turn is held) while the server reads the EOF.
@@ -1166,8 +1252,8 @@ static constexpr int NO_LOG = WRITE_QUIET | DB_DISABLE_WAL;   // only a commit k
 	}
 	auto& pool = *manager()->database_pool;
 	{
-		auto entry = pin_index(pool, endpoints_of("hcl_kept")[0].path, NO_LOG);
-		Shard shard = use_index(entry, NO_LOG);
+		auto entry = pin_index(pool, endpoints_of("hcl_kept")[0].path, WRITE_QUIET);
+		Shard shard = use_index(entry, WRITE_QUIET);
 		engine::sync_wait(shard.add_document(make("K1")));
 	}
 	const auto reserved = endpoints_of(".xapiand/indexes");
@@ -1392,8 +1478,7 @@ static void test_a_registry_that_cannot_close_ends_the_stop_at_the_bound() {
 	std::_Exit(0);
 }
 
-// The stop: the HTTP service, then the autocommits, the indexes, the write-ahead logs and the fsync threads (the
-// logs after the indexes, since closing an index appends to its log).
+// The stop: the HTTP service, then the autocommits, then the indexes (each group checkpoints at its close).
 static void test_the_stop_runs_in_its_stated_order() {
 	const char* log_path = "node_order.log";
 	const auto result = run_child([&] { ordered_stop_child(log_path); }, 60s);
@@ -1401,7 +1486,7 @@ static void test_the_stop_runs_in_its_stated_order() {
 	CHECK_EQ(result.code, 0);
 	const auto log = read_file(log_path);
 	std::size_t at = 0;
-	for (const char* step : {"Stop 1: the HTTP service", "Stop 2: the autocommits", "Stop 3: the indexes", "Stop 4: the write-ahead logs", "Stop 5: the fsync threads"}) {
+	for (const char* step : {"Stop 1: the HTTP service", "Stop 2: the autocommits", "Stop 3: the indexes"}) {
 		const auto found = log.find(step, at);
 		CHECK(found != std::string::npos);
 		if (found == std::string::npos) {
@@ -1525,7 +1610,8 @@ static void test_a_search_batch_skips_a_missing_index() {
 // A batch pins its indexes together (cheap-reopen D3): every present index of several batches is found once, and a
 // missing one among them is skipped, not a failure of the pins beside it.
 static void test_a_search_batch_pins_its_indexes_together() {
-	Watchdog watchdog("a search batch pins its indexes together");
+	// 24 creates, writes and commits pay ~37 full device flushes each (886 F_FULLFSYNC, 21 s on macOS, job 23729b).
+	Watchdog watchdog("a search batch pins its indexes together", 120s);
 	constexpr int N = 24;
 	Endpoints endpoints;
 	for (int i = 0; i < N; ++i) {
@@ -2253,7 +2339,7 @@ static void test_an_existing_id_written_again_lands_on_its_shard() {
 		{
 			auto pin = pin_index(*manager()->database_pool, endpoints[held].path, WRITE_QUIET);
 			auto shard = use_index(pin, WRITE_QUIET);
-			engine::sync_wait(shard.replace_document_term(term, std::move(std::get<1>(prepared)), flushed, false));
+			engine::sync_wait(shard.replace_document_term(term, std::move(std::get<1>(prepared)), flushed));
 			CHECK_EQ(pin.entry().engine().dirty(), !flushed);   // buffered until a commit or a read refreshes it
 		}
 		if (restored) {
@@ -2304,14 +2390,14 @@ struct OffHashId {
 	engine::docid seat(std::size_t shard, const std::string& n) const {
 		auto pin = pin_index(*manager()->database_pool, endpoints[shard].path, WRITE_QUIET);
 		auto use = use_index(pin, WRITE_QUIET);
-		return engine::sync_wait(use.replace_document_term(term, std::move(std::get<1>(prepare(n))), true, false)).did;
+		return engine::sync_wait(use.replace_document_term(term, std::move(std::get<1>(prepare(n))), true)).did;
 	}
 
 	// Erases the id on `shard` by its key, in one turn of that shard.
 	void erase(std::size_t shard) const {
 		auto pin = pin_index(*manager()->database_pool, endpoints[shard].path, WRITE_QUIET);
 		auto use = use_index(pin, WRITE_QUIET);
-		engine::sync_wait(use.delete_document_term(term, false, false));
+		engine::sync_wait(use.delete_document_term(term, false));
 	}
 
 	bool holds(std::size_t shard) const {
@@ -2339,7 +2425,7 @@ static void test_a_replace_that_must_exist_writes_only_where_the_key_is() {
 			doc.add_value(DB_SLOT_VERSION, Serialize::version(*expected));
 		}
 		try {
-			engine::sync_wait(use.replace_document(did, std::move(doc), false, false, true, must_exist));
+			engine::sync_wait(use.replace_document(did, std::move(doc), false, true, must_exist));
 		} catch (const engine::Error& error) {
 			return error.kind;
 		}
@@ -2421,7 +2507,7 @@ static void test_a_replace_by_term_of_an_id_erased_since_its_lookup_places_it_af
 	auto replace = host.start(db.replace_document_term(x.term, std::move(std::get<1>(prepared)), true));
 	CHECK(eventually([&] { return host.idle(); }));
 	CHECK_FALSE(replace.done());   // the lookup waits on the turn
-	auto erase = host.start(use.delete_document_term(x.term, false, false));
+	auto erase = host.start(use.delete_document_term(x.term, false));
 	CHECK(eventually([&] { return host.idle(); }));
 	CHECK_FALSE(erase.done());   // the erase waits behind the lookup
 	hold->release();
@@ -2447,7 +2533,7 @@ static void test_a_patch_of_an_id_erased_since_its_read_patches_the_new_document
 	auto use = use_index(erasing, WRITE_QUIET);
 	auto hold = std::make_unique<HoldTurn>(entry.entry(), WRITE);
 	ParkHost host;
-	auto erase = host.start(use.delete_document_term(x.term, false, false));
+	auto erase = host.start(use.delete_document_term(x.term, false));
 	CHECK(eventually([&] { return host.idle(); }));
 	CHECK_FALSE(erase.done());   // the erase waits on the turn
 	DatabaseHandler db(x.endpoints, WRITE);
@@ -3217,6 +3303,120 @@ static void test_the_admission_peaks_rise_under_load() {
 	CHECK_GE(metric("xapiand_scheduler_demoted_peak"), 1.0);
 }
 
+// ---- the levels (docs/design/cluster-release.md D4) ----
+
+// An index of one shard holding a document, committed by its autocommit and refreshed, so nothing holds its turn and a
+// read takes none: the pin of its shard.
+static IndexPin levels_index(const std::string& name) {
+	create_index(name, 1);
+	CHECK_EQ(call("PUT", "/" + name + "/seed?commit", R"({"n":"seed"})").status, 204);
+	auto pin = pin_index(*manager()->database_pool, endpoints_of(name)[0].path, WRITE);
+	CHECK(eventually([&] { return !pin->is_modified(); }, 10s));
+	CHECK(pin.entry().group() != nullptr);
+	CHECK_FALSE(pin.entry().engine().dirty());
+	return pin;
+}
+
+// Holds the chore that applies the index's entries: a placed write stays unapplied until release().
+static std::unique_ptr<SchedulerHold> hold_apply(IndexPin& pin) {
+	auto hold = std::make_unique<SchedulerHold>(manager()->database_pool->groups()->chore(pin.entry().group()->group.id()));
+	CHECK(eventually([&] { return hold->entered(); }));
+	return hold;
+}
+
+static std::future<Reply> call_async(const std::string& method, const std::string& path, const std::string& body = "") {
+	return std::async(std::launch::async, [=] { return call(method, path, body); });
+}
+
+static bool answered(std::future<Reply>& reply, std::chrono::milliseconds within) {
+	return reply.wait_for(within) == std::future_status::ready;
+}
+
+// ack=quorum, the default, answers once the write applied: while its apply is held, the PUT waits, and its answer
+// then carries the verdict (204).
+static void test_ack_quorum_answers_once_applied() {
+	Watchdog watchdog("ack=quorum answers once applied", 60s);
+	auto pin = levels_index("ack_quorum");
+	auto hold = hold_apply(pin);
+	auto put = call_async("PUT", "/ack_quorum/a", R"({"n":"a"})");
+	CHECK_FALSE(answered(put, 500ms));   // placed, not applied
+	hold->release();
+	CHECK(answered(put, 10s));
+	CHECK_EQ(put.get().status, 204);
+	CHECK_EQ(text_of(call("GET", "/ack_quorum/a"), "n"), "a");
+}
+
+// ack=none answers 202 once the write is placed in the log, before it applies, with no version. A read=prefix read
+// then serves the last refresh, which misses it; a read=linearizable read waits for the apply and sees it.
+static void test_ack_none_answers_at_placement_and_linearizable_reads_wait_for_it() {
+	Watchdog watchdog("ack=none answers at placement", 60s);
+	auto pin = levels_index("ack_none");
+	auto hold = hold_apply(pin);
+	auto put = call_async("PUT", "/ack_none/a?ack=none&echo", R"({"n":"a"})");
+	CHECK(answered(put, 10s));   // placed while its apply is held
+	const auto placed = put.get();
+	CHECK_EQ(placed.status, 202);
+	CHECK_EQ(version_of(placed), -1);   // no version before it applies
+	CHECK_EQ(call("GET", "/ack_none/a?read=prefix").status, 404);
+	auto linearizable = call_async("GET", "/ack_none/a?read=linearizable");
+	CHECK_FALSE(answered(linearizable, 500ms));   // waits for the apply
+	hold->release();
+	CHECK(answered(linearizable, 10s));
+	const auto read = linearizable.get();
+	CHECK_EQ(read.status, 200);
+	CHECK_EQ(text_of(read, "n"), "a");
+	CHECK_EQ(version_of(call("GET", "/ack_none/a")), 1);
+	CHECK_EQ(call("PUT", "/ack_none/b?ack=none", R"({"n":"b"})").status, 202);
+	CHECK_EQ(version_of(call("PUT", "/ack_none/b?echo", R"({"n":"b2"})")), 2);   // prepared after b applied
+}
+
+// refresh=true refreshes before the answer (the shard is left clean), and so does ?commit, which means
+// ack=quorum&refresh=true; refresh=false leaves the refresh to the next read. refresh=wait_for answers once every
+// read sees the write: at ack=none it waits for the apply. Levels the node does not know answer 400.
+static void test_refresh_levels_and_commit() {
+	Watchdog watchdog("the refresh levels and ?commit", 60s);
+	auto pin = levels_index("refresh_levels");
+	const auto& engine = pin.entry().engine();
+	CHECK_EQ(call("PUT", "/refresh_levels/a?refresh=true", R"({"n":"a"})").status, 204);
+	CHECK_FALSE(engine.dirty());
+	CHECK_EQ(call("PUT", "/refresh_levels/b", R"({"n":"b"})").status, 204);
+	CHECK(engine.dirty());   // applied, and refreshed only by the next read
+	CHECK_EQ(text_of(call("GET", "/refresh_levels/b"), "n"), "b");
+	CHECK_FALSE(engine.dirty());
+	CHECK_EQ(call("PUT", "/refresh_levels/c?commit", R"({"n":"c"})").status, 204);
+	CHECK_FALSE(engine.dirty());
+	{
+		auto hold = hold_apply(pin);
+		auto put = call_async("PUT", "/refresh_levels/d?ack=none&refresh=wait_for", R"({"n":"d"})");
+		CHECK_FALSE(answered(put, 500ms));   // placed, waiting for its apply
+		hold->release();
+		CHECK(answered(put, 10s));
+		CHECK_EQ(put.get().status, 202);
+	}
+	CHECK_EQ(text_of(call("GET", "/refresh_levels/d?read=prefix"), "n"), "d");
+	for (const char* query : {"?ack=all", "?refresh=soon", "?commit&ack=none", "?commit&refresh=wait_for", "?commit&refresh=false"}) {
+		CHECK_EQ(call("PUT", std::string("/refresh_levels/e") + query, R"({"n":"e"})").status, 400);
+	}
+	CHECK_EQ(call("GET", "/refresh_levels/a?read=leader").status, 400);
+}
+
+// A RESTORE at ack=none answers 202 with each object accepted and no version; its writes then read back.
+static void test_a_restore_at_ack_none_reports_no_versions() {
+	Watchdog watchdog("a RESTORE at ack=none", 60s);
+	create_index("restore_none", 1);
+	const auto reply = call("RESTORE", "/restore_none/?ack=none&echo", R"({"_id":"r1","n":"1"})" "\n" R"({"_id":"r2","n":"2"})" "\n", "application/x-ndjson");
+	CHECK_EQ(reply.status, 202);
+	const auto items = field_of(reply, "items");
+	CHECK(items.is_array());
+	CHECK_EQ(items.size(), 2u);
+	for (const auto& item : items) {
+		CHECK(item.find("_id") != item.end());   // accepted, not an error
+		CHECK_EQ(item.size(), 1u);               // and no _version
+	}
+	CHECK_EQ(text_of(call("GET", "/restore_none/r2?read=linearizable"), "n"), "2");
+	CHECK_EQ(version_of(call("GET", "/restore_none/r1")), 1);
+}
+
 // HEAD answers with the status and headers a GET would, and no body (RFC 9110 9.3.2), a miss included; OPTIONS lists
 // the verbs the node routes, and none it does not (STORE).
 static void test_head_has_no_body_and_options_lists_the_routed_verbs() {
@@ -3778,6 +3978,7 @@ int main(int argc, char** argv) {
 		{"test_the_stop_runs_in_its_stated_order", test_the_stop_runs_in_its_stated_order},
 		{"test_a_registry_that_cannot_close_ends_the_stop_at_the_bound", test_a_registry_that_cannot_close_ends_the_stop_at_the_bound},
 		{"test_the_http_grace_follows_the_time_left_in_the_budget", test_the_http_grace_follows_the_time_left_in_the_budget},
+		{"test_an_autocommit_during_the_shutdown_drain_runs_on_the_control_loop", test_an_autocommit_during_the_shutdown_drain_runs_on_the_control_loop},
 		{"test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has_time", test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has_time},
 		{"test_a_second_signal_ends_the_shutdowns_wait", test_a_second_signal_ends_the_shutdowns_wait},
 		{"test_a_put_whose_client_half_closes_completes_durably", test_a_put_whose_client_half_closes_completes_durably},
@@ -3849,6 +4050,10 @@ int main(int argc, char** argv) {
 		{"test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted", test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted},
 		{"test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled", test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled},
 		{"test_the_admission_peaks_rise_under_load", test_the_admission_peaks_rise_under_load},
+		{"test_ack_quorum_answers_once_applied", test_ack_quorum_answers_once_applied},
+		{"test_ack_none_answers_at_placement_and_linearizable_reads_wait_for_it", test_ack_none_answers_at_placement_and_linearizable_reads_wait_for_it},
+		{"test_refresh_levels_and_commit", test_refresh_levels_and_commit},
+		{"test_a_restore_at_ack_none_reports_no_versions", test_a_restore_at_ack_none_reports_no_versions},
 		{"test_head_has_no_body_and_options_lists_the_routed_verbs", test_head_has_no_body_and_options_lists_the_routed_verbs},
 		{"test_a_new_index_gets_the_replicas_asked_below_and_above_the_default", test_a_new_index_gets_the_replicas_asked_below_and_above_the_default},
 		{"test_a_node_over_the_cap_answers_a_wildcard", test_a_node_over_the_cap_answers_a_wildcard},

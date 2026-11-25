@@ -320,7 +320,7 @@ Format: page, verdict, why; then one line per stale or wrong claim (`L<line>` is
   - L24 "thewhole" typo (stale, minor)
   - L30-39 field list -> matches single-shard answer (endpoint, uuid, revision, doc_count, last_id, doc_del, av_length, doc_len_lower, doc_len_upper, has_positions) and multi-shard answer (adds shards, drops uuid and revision): src/database/handler.cc:1996-2064 (current)
 - `reference-guide/wal.md` | **stale** | recovery is at each index's next writable open, not at startup; spelling/synonym entries are never produced; the WAL verb and HTTP RESTORE bypass are not mentioned
-  - L16-19 "it recovers on startup by replaying the WAL" -> index shards replay lazily when first opened writable; only the registry shards open at startup: src/database/shard.cc:491-502; docs/mechanisms/wal-replay.md "Failure" (stale)
+  - L16-19 "it recovers on startup by replaying the WAL" -> index shards replay lazily when first opened writable; only the registry shards open at startup: src/database/shard.cc:491-502; docs/mechanisms/journal-durability.md "Failure" (stale)
   - L6-7 "spelling and synonym updates" -> no HTTP or indexing path calls add_spelling/remove_spelling; no synonym writes: docs/design/xapiand-on-strata.md:71 (stale)
   - L29-31 "Certain internal paths ... most notably a command-line restore" -> an HTTP RESTORE also opens with DB_DISABLE_WAL: src/server/search_views.cc:1663 (stale, minor)
   - L26-27 `--writers`, `--wal-writer-cache-size` -> exist: src/opts.cc:154-156,179-180 (current)
@@ -626,7 +626,7 @@ One section per area docs-site-refresh must cover. "Pages" are the existing page
 
 - Pages: `architecture.md`, `architecture/dependencies.md`, `architecture/internals.md`, `basics.md`, `about.md`, `welcome.md`. `internals.md` names ten paths that do not exist (`src/server/http*`, `src/url_parser.*`, `src/worker.*`, `src/server/base_*`, `src/booleanParser/`, `src/logger.*`, `src/msgpack.h`, `src/geospatial/htm.cc`); `dependencies.md` counts 59 Kronuz libraries where `CMakeLists.txt` declares 56 and omits strata, prospect, queryparser, analysis, snowball, unicode, task, namegen and constexpr-phf.
 - In code, on no page: the engine seam (`src/engine/`, strata behind prospect) and what crosses it; the control loop and per-processor HTTP loops; requests as tasks that yield at 200 us slices; the `WorkPool` for device work; reader views (a search reads a published view, never holds its index); lazy WAL replay at the first writable open; the index registry and lease; the DataStorage blob store; the shutdown sequence; `:metrics` and the reactor-lag probe; the 35 s stop bound and exit codes 65/70/75.
-- Write from: `ARCHITECTURE.md` (its "Clustering" and "Serialization" sections are themselves stale: check before copying), `docs/mechanisms/{strata-engine,requests-on-the-reactor,engine-write-path,reader-views,wal-replay,index-registry-and-lease,control-plane,wide-search,lua-bounds,text-queries}.md`, `docs/design/xapiand-on-strata.md`, strata `docs/ARCHITECTURE.md`, prospect `docs/ARCHITECTURE.md`, `CMakeLists.txt` for the library list (regenerate the table from it).
+- Write from: `ARCHITECTURE.md` (its "Clustering" and "Serialization" sections are themselves stale: check before copying), `docs/mechanisms/{strata-engine,requests-on-the-reactor,engine-write-path,reader-views,journal-durability,index-registry-and-lease,control-plane,wide-search,lua-bounds,text-queries}.md`, `docs/design/xapiand-on-strata.md`, strata `docs/ARCHITECTURE.md`, prospect `docs/ARCHITECTURE.md`, `CMakeLists.txt` for the library list (regenerate the table from it).
 - Keep the value-encoding paragraph for after `sortable-encoding` lands (`docs/mechanisms/value-encoding.md`).
 
 ### 2. Features
@@ -682,7 +682,7 @@ One section per area docs-site-refresh must cover. "Pages" are the existing page
 - In code, on no page: WAL: replay is lazy (an index's shards replay at the first writable open), `WAL /index/` returns the log, the log carries no spelling or synonym writes;
 - In code, on no page: `CHECK`, `COMMIT`, `FLUSH` (`?databases`, `?clients`), `QUIT`; `:metrics` and the 35 `xapiand_*` series; shutdown (35 s, second signal, exit 75) is on `options.md` only;
 - In code, on no page: `DELETE /index/` answers 501 (not implemented): there is no way to delete an index over HTTP, and no page says so outside the two `indexes/delete-api.md` banners.
-- Write from: `src/server/search_views.cc:1497-1790` (flush, quit, commit, dump, restore, wal, check), `src/main.cc:640-712,840-895`, `src/xapian_data_guard.h`, `docs/mechanisms/wal-replay.md`, `harness/cli_roundtrip_check.sh`, `harness/restore_stream_check.sh`.
+- Write from: `src/server/search_views.cc:1497-1790` (flush, quit, commit, dump, restore, wal, check), `src/main.cc:640-712,840-895`, `src/xapian_data_guard.h`, `docs/mechanisms/journal-durability.md`, `harness/cli_roundtrip_check.sh`, `harness/restore_stream_check.sh`.
 - `docs-upgrade-page` writes the alpha.9/alpha.10 path; `backups.md` links to it rather than restating it.
 
 ### Site infrastructure (not a page)

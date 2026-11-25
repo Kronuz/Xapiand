@@ -42,30 +42,33 @@ A signal reaches a task on the control loop, which runs `shutdown_checks`: the l
 `try_shutdown` retries (up to about 45 s measured). Then `join()` runs on the main thread, with one deadline, `XapiandManager::shutdown_write_bound` after it starts (35 s: the longer of a turn's deadline,
 `DB_TIMEOUT` = 30 s, and the reactors' default grace, 5 s, plus the 5 s reserve for the registry and the responses). Every step below ends by it:
 
-1. The housekeeping stops, the signal read is cancelled, and the control tasks drain (`drain_control`).
+1. The housekeeping stops, the signal read is cancelled, and the control tasks drain (`drain_control`) until what is left of the budget is the HTTP stop's two graces: a detached task that
+   cannot end (an autocommit waiting for an index a request or a held chore keeps) does not take the requests' time.
 2. **Stop 1, the HTTP service**: `http::HttpAsioService::stop()` on a thread of its own (`shutdown_wait::wait`, `src/shutdown_wait.h`). It requests every session's and request's token, closes the acceptors, lets the sessions finish
    within the grace, closes the sockets stalled peers still hold, lets them finish within a second grace, then stops the loops: `stop()` returns within twice the grace. `join()` sets the grace from the
    budget that is left when this step starts, `max(250 ms, (left - 5 s) / 2)` (`XapiandManager::http_shutdown_grace`): 15 s when nothing else took time, so the stop takes at most 30 s and 5 s remain for the
    autocommits and the registry. An admitted write waits for its turn for at most `DB_TIMEOUT` (30 s) from its admission, which is before this step, so it applies or answers 503 within twice the grace and is not
    destroyed while the budget has time; its client is answered only when that happens within the first grace, since the connections of what is left are cut after it. A stalled client holds the stop for the first grace.
-   A read ends at its next checkpoint; a write still waiting when the grace runs out (the drains took the budget) is left suspended for the phases below.
+   A read ends at its next checkpoint; a write still waiting when the grace runs out is left suspended for the phases below.
    Then the tasks left suspended on the stopped loops (on a turn, a chore, a body read) go, in task's teardown phases (task `docs/design/cancellation.md` D8):
    `IndexChores::cancel_all()` drops every index's queued chores (their awaiters resume with `task::cancelled`) and waits for the running ones; `HttpAsioService::close()` closes
    every reactor's scheduler (`post` drops, `spawn` destroys its task); then `destroy_roots()` destroys the tasks still suspended on them, which releases their turns and shard uses before the indexes close. A task is counted by its
    frame, and the control plane's published wakes are cleared by a scope guard, so a destroyed task leaves no count and no dead event behind.
-3. **Stop 2, the autocommits**: the scheduler stops; the waits that had not fired are dropped, because closing an index commits what it has pending. Then it drains. The control loop
-   stops, and its scheduler closes and destroys its roots: every root that may hold a pin is gone before Stop 3 awaits every pin (x-pool C24).
+3. **Stop 2, the autocommits**: the scheduler stops; the waits that had not fired are dropped, because closing an index commits what it has pending. Then it drains, and the control tasks
+   with it, to the deadline. A task still unfinished there is inside index work (a turn, a commit, a group's checkpoint) whose awaiters its frame may not outlive, so the stop warns ("The control
+   loop's unfinished tasks are left running") and is abandoned with the loop running. Otherwise the control loop stops, and its scheduler closes and destroys its roots: every root that may hold
+   a pin is gone before Stop 3 awaits every pin (x-pool C24).
 4. **Stop 3, the indexes**: `DatabasePool::finish()` and `join()` await the catalog's shutdown, which commits each index through its entry and closes it once unpinned, polling in
    slices of at most 500 ms.
-5. **Stop 4, the write-ahead logs** finish (closing an index appended to them, so they come after the indexes); **Stop 5, the fsync threads** finish.
+5. **Stop 4, the journal** finishes (closing an index appends to it, so it comes after the indexes; see `journal-durability.md`); **Stop 5, the fsync threads** finish.
 6. The hosts are destroyed before the service whose io_contexts they post to; then the registry (and with it the `WorkPool`), the logs and the schemas.
 
 D16 states this order: the acceptors close at the start of `join()`, after the clients wait, and the loops stop before the indexes close (the registry closes on the main thread, so it needs none). The
 order is logged (`Stop 1` to `Stop 5`) and tested (`test_node`: `test_the_stop_runs_in_its_stated_order`).
 
 If the service has not stopped by the deadline, or an index is still in use at it, the stop logs what was unfinished (requests in flight per loop, and each index whose turn or references are held), keeps
-the service alive for the thread that still waits in it, finishes the write-ahead logs and the fsync threads, and exits with status 75 (`EX_TEMPFAIL`) after flushing the log, without destroying what the abandoned
-threads use. A write that was not acknowledged was never promised to be durable; an acknowledged one is in the log.
+the service alive for the thread that still waits in it, finishes the journal and the fsync threads, and exits with status 75 (`EX_TEMPFAIL`) after flushing the log, without destroying what the abandoned
+threads use. A write that was not acknowledged was never promised to be durable; an acknowledged one is in the journal.
 
 A second SIGINT or SIGTERM from the start of `join()` on (`XapiandManager::shutdown_signals`, counted by the signal handler) ends the wait and the registry's at once, with the same report and exit.
 The worst case after the graceful wait for clients is the one bound, 35 s, and the flush of the logs, which has no limit of its own. The control tasks' and the autocommits' drains end by the same deadline.

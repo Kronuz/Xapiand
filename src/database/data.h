@@ -163,6 +163,12 @@ public:
 		offset(volume == -1 ? 0 : offset),
 		size(volume == -1 ? 0 : size) { }
 
+	// A copy or a move views its own holder where the source viewed the source's.
+	Locator(const Locator& other);
+	Locator(Locator&& other) noexcept;
+	Locator& operator=(const Locator& other);
+	Locator& operator=(Locator&& other) noexcept;
+
 	void data(std::string_view new_data);
 
 	void data(std::string&& new_data);
@@ -191,6 +197,9 @@ class Data {
 	std::vector<Locator> pending;
 
 	void feed(std::string&& new_serialized, std::string&& new_version);
+
+	// Reads the locators from `serialized`: each views these bytes.
+	void parse();
 
 	void flush(const std::vector<Locator>& ops);
 

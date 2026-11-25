@@ -29,7 +29,7 @@
 // catalog opens, wakes, replaces and closes; a request names an index only through an IndexPin. Nothing in it
 // makes a thread wait for another: a pin is awaited as a task, and a turn is an async mutex with a deadline.
 
-#include "config.h"               // for XAPIAND_DATA_STORAGE
+#include "config.h"
 
 #include <atomic>               // for std::atomic
 #include <chrono>               // for std::chrono, std::chrono::steady_clock
@@ -43,6 +43,8 @@
 #include <string>               // for std::string
 #include <utility>              // for std::pair
 #include <vector>               // for std::vector
+
+#include <sys/types.h>          // for dev_t, ino_t
 
 #include "database/name_index.h"  // for NameIndex
 #include "endpoint.h"           // for Endpoints, Endpoint
@@ -74,11 +76,12 @@ constexpr double DB_TIMEOUT = 30.0;
 
 class Shard;
 class Locator;
-class DatabaseWALWriter;
-class ReplayTarget;
-class DataStorage;
 class DatabasePool;
 class IndexPin;
+class ShardGroups;
+struct ShardGroup;
+class ChunkedUpload;
+struct CommandWrite;
 
 class WorkPool;
 class WorkGroup;
@@ -123,8 +126,8 @@ private:
 };
 
 
-// Holds an index's turn. The turn covers an operation's apply, its revision update and its WAL
-// enqueue as one unit, so the WAL's order is the apply's order. A task holds one turn at most
+// Holds an index's turn. The turn covers an operation's proposal (or apply) and its revision update as one unit,
+// so writes reach the index's log in the order they were prepared. A task holds one turn at most
 // (checked in debug builds when its host counts them). Its release checks the index in first
 // (strata's checkout contract): finished merges are published and released views freed (x-pool D5).
 class Turn {
@@ -158,49 +161,17 @@ private:
  *                                                             |_|
  */
 
-// The largest blob a streamed upload stores: a record of the data storage is at most 4 GiB - 1 bytes, framing included.
+// The largest blob a streamed upload stores; past it the request is answered 413.
 inline constexpr std::uint64_t STORED_UPLOAD_LIMIT = 0xFFFFFFFFull - 1024;
-
-// A blob being written to a volume of its own, chunk by chunk (docs/design/phase7c.md D9). Each step is a chore of
-// the group it is given, so the request that streams the body waits for none of them on its reactor. The record is
-// uncompressed and has the framing of any `stored` record (the content type, then the blob), so it reads back like one.
-class StoredUpload {
-public:
-	~StoredUpload();
-	StoredUpload(const StoredUpload&) = delete;
-	StoredUpload& operator=(const StoredUpload&) = delete;
-
-	// Writes a chunk of the blob. The chunks add up to the size the upload was begun with.
-	task::task<void> append(std::string chunk);
-
-	// Ends the record and syncs the volume: the blob is then durable and `locator()` names it.
-	task::task<void> end();
-
-	// Abandons the upload and removes its volume. Awaited on every path that does not end().
-	task::task<void> abort() noexcept;
-
-	// Where the record is, once end() ran.
-	ssize_t volume() const noexcept;
-	size_t offset() const noexcept;
-
-private:
-	friend class ShardEndpoint;
-	struct Impl;
-	StoredUpload(std::unique_ptr<Impl> impl, engine::Chores& chores);
-
-	std::unique_ptr<Impl> impl;
-	engine::Chores& chores;
-};
 
 
 // One index's entry (docs/design/x-pool.md D1): the catalog's payload, built in place by the open (open_payload,
-// which replays the WAL) and destroyed by the close, before the index. It holds what the catalog does not: the
+// which recovers the index's group) and destroyed by the close, before the index. It holds what the catalog does not: the
 // turn, the device chores, the engine shard over the borrowed index, the revision, the commit's flight and the
-// blob storage. It is valid only under a pin.
+// group. It is valid only under a pin.
 class ShardEndpoint : public Endpoint
 {
 	friend Shard;
-	friend ReplayTarget;
 	friend DatabasePool;
 	friend struct PoolTestAccess;  // tests/test_pool.cc
 
@@ -210,7 +181,7 @@ class ShardEndpoint : public Endpoint
 
 	mutable std::mutex mtx;  // commit_flight_, uuid_ (O(1) sections, no I/O)
 
-	// Every write on the index takes this turn: a write's apply, revision update and WAL enqueue, a refresh,
+	// Every write on the index takes this turn: a write's proposal and revision update, a refresh,
 	// a commit. A turn is held only under a pin, so with no pin it is free (the catalog's commit chore).
 	task::async_mutex turn;
 	std::unique_ptr<engine::Chores> chores;  // an IndexChores
@@ -229,24 +200,42 @@ class ShardEndpoint : public Endpoint
 	// since the last commit, which persists it.
 	std::uint64_t id_high_ = 0;
 	bool id_high_moved_ = false;
+	// With a group, the counter as the log holds it: a write that moves it past this carries it in its command.
+	std::uint64_t id_high_logged_ = 0;
 	void raise_id_high(std::uint64_t id) noexcept;
-#ifdef XAPIAND_DATA_STORAGE
-	std::unique_ptr<DataStorage> writable_storage;
-	// The next volume number nobody has: the shared writer's rollover and each streamed upload take theirs from
-	// here, so no volume has two writers (docs/design/phase7c.md D9).
-	std::atomic<std::uint64_t> next_volume_{1};
-#endif /* XAPIAND_DATA_STORAGE */
 
 	// The commit in flight, if any: a write at or below `covers` joins it.
 	struct CommitFlight;
 	std::shared_ptr<CommitFlight> commit_flight_;  // under mtx
 
-	std::atomic<int> last_flags_;            // the flags of the last write: the catalog's commit follows its WAL setting
-
 	// A write failed as only a fresh open fixes (fenced, corrupt): every use that ends hands its pin back, so the
 	// catalog replaces the index once its holders let go (x-pool D2).
 	std::atomic_bool stale_{false};
 	void note_failure(const engine::Error& error) noexcept;
+
+	// The index's replication group, a lone voter (cluster-release D2) over the slot's directory and index (D169);
+	// none while the pool has no journal. The open opens it last; the catalog's close_payload closes it.
+	std::unique_ptr<ShardGroup> group_;
+	void close_group();
+
+	// A request's commit with a group: the group's checkpoint (D16), awaited from the request, under the turn.
+	task::task<bool> commit_group();
+	// The group's checkpoint in a turn of its own, for a proposer that holds the pin and no turn (ShardGroup's
+	// checkpoint_in_turn, T1).
+	task::task<void> checkpoint_in_turn();
+
+	// A document write, under the turn: prepared on the engine, then applied by the group on every voter in log
+	// order (cluster-release D3) and acknowledged at quorum, or applied on the engine when the index has no group.
+	// Through the group, the document's stored blobs travel in its command (D3), and `upload`, if any, is the
+	// chunked upload whose final entry the write is (D12). With `batched`, the prepared write is left there for a
+	// RESTORE's batch command (D17) and nothing is proposed; the result is prepare's prediction. `at_placement`
+	// (ack=none, D4) answers once the command is placed in the log, before it applies: the result is the key alone,
+	// with no docid or version, and the next holder of the turn waits for the apply (take_turn).
+	task::task<engine::WriteResult> write_document(engine::Shard& eng, engine::WriteOp op, engine::docid did, std::string key, engine::Document* doc, engine::WriteArgs args, ChunkedUpload* upload = nullptr, CommandWrite* batched = nullptr, bool at_placement = false);
+
+	// A write answered at its placement (ack=none) has not applied yet: whoever takes the turn next waits until the
+	// group applied it, so a prepare or a written read sees it. Under the turn.
+	bool unapplied_ = false;
 
 public:
 	ShardEndpoint(DatabasePool& database_pool, std::string_view path);
@@ -255,12 +244,22 @@ public:
 
 	~ShardEndpoint();   // debug builds abort when `outstanding()` is not empty (D14)
 
+	// The index's replication group, or null when the pool has no journal. Valid under a pin.
+	ShardGroup* group() const noexcept {
+		return group_.get();
+	}
+
 	// What still uses the entry, or empty: the turn (held or awaited).
 	std::string outstanding();
 
 	// The index's turn, under the caller's pin: awaits the turn with a deadline of DB_TIMEOUT and answers
 	// engine::errc::busy when it does not come, or task::cancelled when `cancel` (the request's token) is requested first.
+	// A write left unapplied by the last holder (ack=none) applies before the turn is answered.
 	task::task<Turn> take_turn(int flags, task::cancel_token cancel = {});
+
+	// Awaits until the index's group applied everything committed before the call (cluster-release D4: a
+	// linearizable read's barrier, an ack=none write's apply); nothing without a group.
+	task::task<void> caught_up();
 
 	// Awaits a refresh when something was applied since the last one, so a read sees it (a turn and a
 	// query chore); nothing otherwise.
@@ -269,13 +268,13 @@ public:
 	// The engine, for a caller that holds a pin.
 	engine::Shard& engine();
 
-	// Commits what is applied: the blob storage, the engine, then the WAL line, all in one turn. A write
+	// Commits what is applied in one turn: the group's checkpoint, or the engine's commit without a group. A write
 	// that a commit already in flight covers joins it. True when a commit made a new revision. `cancel` ends the
 	// wait for the turn (a FLUSH's request).
-	task::task<bool> commit(int flags, bool wal, task::cancel_token cancel = {});
+	task::task<bool> commit(int flags, task::cancel_token cancel = {});
 
 	// In a turn of its own: publishes the merges that finished and syncs their output when nothing else is
-	// uncommitted (no revision, no WAL line). True while a merge is still pending or its output unsynced (x-pool D8).
+	// uncommitted (no revision). True while a merge is still pending or its output unsynced (x-pool D8).
 	task::task<bool> settle_merges(int flags);
 
 	engine::rev get_revision() const;
@@ -291,7 +290,7 @@ public:
 		return engines_inline_.load(std::memory_order_relaxed);
 	}
 
-	// The engine's uuid; the data storage's volumes carry it.
+	// The engine's uuid; the group's id is its first 8 bytes.
 	std::string uuid() const {
 		std::lock_guard<std::mutex> lk(mtx);
 		return uuid_;
@@ -302,15 +301,18 @@ public:
 private:
 	std::string uuid_;  // set by the open, under mtx
 
-	DatabaseWALWriter& wal_writer() const;
-
 	// The open's work on the catalog's index (open_payload, x-pool D6): the engine shard over it, the blob
-	// storage, and the WAL replayed with chores inline. The slot is `opening`, so no pin sees any of it first.
-	void open_blocking(prospect::index& index);
+	// storage with chores inline, then the group over `directory` and the index, recovered from its journal. The slot is
+	// `opening`, so no pin sees any of it first.
+	void open_blocking(kronuz::journal::IO& directory, prospect::index& index);
+	// The open's refusals, each logged once with its cause: an index that holds state whose group the journal lacks
+	// (nothing touched), and a failure after the group opened (the group closed first, on its loop).
+	void refuse_without_journal(ShardGroups& groups, kronuz::journal::IO& directory, prospect::index& index);
+	[[noreturn]] void refuse_opened_group(std::exception_ptr failed);
 
 	// The catalog's commit chore (x-pool D7, C24): runs with no pin held, under the chore's lease, at the bound
 	// close, at shutdown, in a replace close and in a demotion that only syncs a merge's output. With nothing
-	// applied since the last commit it writes nothing, no WAL line included (C25).
+	// applied since the last commit it makes no revision (C25).
 	void commit_blocking();
 
 	// A worker's writes on the engine, under the turn or with no pin (commit_blocking, a RESTORE's apply slice):
@@ -329,30 +331,21 @@ private:
 	};
 	static inline std::atomic<int> engines_inline_{0};
 
-	// The operations of a write, which run under the index's turn (or alone, while the index is opened and
-	// its log replayed) on the engine and the chores they are given. A write is applied, counted and logged here.
-	task::task<engine::WriteResult> do_add(engine::Shard& eng, engine::Chores& chores, int flags, engine::Document&& doc, bool wal_, bool version_);
-	task::task<engine::WriteResult> do_replace(engine::Shard& eng, engine::Chores& chores, int flags, engine::docid shard_did, engine::Document&& doc, bool wal_, bool version_, bool must_exist = false);
-	task::task<engine::WriteResult> do_replace_term(engine::Shard& eng, engine::Chores& chores, int flags, const std::string& term, engine::Document&& doc, bool wal_, bool version_);
-	task::task<void> do_delete(engine::Shard& eng, int flags, engine::docid shard_did, bool wal_, std::optional<engine::rev> expected_ = std::nullopt);
-	task::task<void> do_delete_term(engine::Shard& eng, int flags, const std::string& term, bool wal_, std::optional<engine::rev> expected_ = std::nullopt);
-	task::task<void> do_set_metadata(engine::Shard& eng, int flags, const std::string& key, const std::string& value, bool wal_);
-	task::task<void> do_add_spelling(engine::Shard& eng, int flags, const std::string& word, engine::termcount freqinc, bool wal_);
-	task::task<engine::termcount> do_remove_spelling(engine::Shard& eng, int flags, const std::string& word, engine::termcount freqdec, bool wal_);
-	task::task<bool> do_commit(engine::Shard& eng, engine::Chores& chores, int flags, bool wal_);
+	// The operations of a write, which run under the index's turn on the engine. A write is proposed through the
+	// group (or applied without one) and counted here.
+	// `at_placement` is write_document's (ack=none).
+	task::task<engine::WriteResult> do_add(engine::Shard& eng, engine::Document&& doc, bool version_, bool at_placement = false);
+	task::task<engine::WriteResult> do_replace(engine::Shard& eng, engine::docid shard_did, engine::Document&& doc, bool version_, bool must_exist = false, ChunkedUpload* upload = nullptr, bool at_placement = false);
+	task::task<engine::WriteResult> do_replace_term(engine::Shard& eng, const std::string& term, engine::Document&& doc, bool version_, ChunkedUpload* upload = nullptr, CommandWrite* batched = nullptr, bool at_placement = false);
+	task::task<void> do_delete(engine::Shard& eng, engine::docid shard_did, std::optional<engine::rev> expected_ = std::nullopt, bool at_placement = false);
+	task::task<void> do_delete_term(engine::Shard& eng, const std::string& term, std::optional<engine::rev> expected_ = std::nullopt, bool at_placement = false);
+	task::task<void> do_set_metadata(engine::Shard& eng, const std::string& key, const std::string& value);
+	task::task<void> do_add_spelling(engine::Shard& eng, const std::string& word, engine::termcount freqinc);
+	task::task<engine::termcount> do_remove_spelling(engine::Shard& eng, const std::string& word, engine::termcount freqdec);
+	task::task<bool> do_commit(engine::Shard& eng);
 
-#ifdef XAPIAND_DATA_STORAGE
-	// Blobs of the data storage: the writes run in flush chores under the turn; a read opens a reader of its own.
-	std::pair<std::string, std::string> storage_push_blobs_blocking(std::string&& doc_data);
-	task::task<std::pair<std::string, std::string>> storage_push_blobs(engine::Chores& chores, std::string doc_data);
-	task::task<void> storage_commit(engine::Chores& chores);
-
-	// Begins a streamed upload of a blob of `size` bytes with content type `ct_type` into a volume of its own. Raises
-	// ClientError when the record could not fit a volume (the request's 413).
-	task::task<std::unique_ptr<StoredUpload>> upload_begin(engine::Chores& chores, std::string ct_type, std::uint64_t size);
+	// A stored blob's record in the group's file set (D16), read where apply wrote it. Raises invalid without a group.
 	std::string storage_read_blocking(const Locator& locator);
-	std::string storage_read_blocking(std::string_view key);
-#endif /* XAPIAND_DATA_STORAGE */
 };
 
 
@@ -440,12 +433,15 @@ class DatabasePool {
 	std::atomic<double> turn_timeout_;                  // seconds a turn may be awaited before the request is told `busy`
 	std::atomic<std::uint64_t> buffered_docs_cap_;      // documents an index buffers before a write owes a flush; 0: the index's own bound
 	std::atomic<std::size_t> readers_per_index_;        // the views of one index held at once (strata R4.1's reader_records)
-	std::atomic<DatabaseWALWriter*> wal_writer_;        // the log's writer; null: the manager's
 	std::atomic<std::size_t> detached_;                 // tasks posted to the control loop that have not ended
 	std::size_t soft_open_ = 0;                         // the catalogs' soft_open together (D11)
 	std::chrono::milliseconds patience_{30s};           // how long the destructor waits for the shutdown before debug builds abort
 	// The IO of an index's files, by the index's path; empty: a PosixIO on <path>/strata. Set before the first pin.
 	std::function<std::unique_ptr<kronuz::journal::IO>(const std::string& path)> index_io_;
+	// The journal the indexes' groups log in (cluster-release D2), once set; it outlives the catalogs.
+	std::unique_ptr<ShardGroups> groups_;
+	std::string journal_;   // its directory, lexically normal, without a trailing separator
+	std::optional<std::pair<dev_t, ino_t>> journal_id_;   // its directory's device and inode, read once at set_journal
 
 	// The catalogs' timer (on the control loop), their budget, their shutdown, and the catalogs, in the order they
 	// are made: the catalogs go first, once the timer has run what is still armed (their destructors wait for them).
@@ -511,12 +507,19 @@ public:
 		return soft_open_;
 	}
 
-	// A null control also stops the names' build: it is a task of the control loop (name-index D5).
+	// A null control also stops the names' build: it is a task of the control loop (name-index D5). Its owner clears
+	// it when the loop's scheduler closes, not before: a detached task run on the thread that drains the loop could
+	// wait for a task of that loop.
 	void set_control(engine::Host* control) noexcept {
 		if (control == nullptr) {
 			names_.request_stop();
 		}
 		control_.store(control, std::memory_order_release);
+	}
+
+	// Stops the names' build, a task of the control loop, so a shutdown's drain does not wait for it.
+	void stop_names() noexcept {
+		names_.request_stop();
 	}
 
 	void set_turn_timeout(double seconds) noexcept {
@@ -532,11 +535,16 @@ public:
 		buffered_docs_cap_.store(cap, std::memory_order_relaxed);
 	}
 
-	void set_wal_writer(DatabaseWALWriter* writer) noexcept {
-		wal_writer_.store(writer, std::memory_order_release);
+	// The journal over `directory`: every index opened from here on is a lone-voter group logged there. Set before
+	// the first pin. An index path at or inside `directory` is refused (errc::invalid) before anything is created: by
+	// name first, and on a path that does not open, by the identity of its deepest existing ancestor (any spelling).
+	void set_journal(const std::string& directory);
+
+	ShardGroups* groups() const noexcept {
+		return groups_.get();
 	}
 
-	// Gives the indexes' files another IO (a test's strata::faultfs); set before the first pin. An IO with no index
+	// Gives the indexes' files another IO (a test's faultlab faultfs); set before the first pin. An IO with no index
 	// in it is a missing index, created by a create pin.
 	void set_index_io(std::function<std::unique_ptr<kronuz::journal::IO>(const std::string& path)> io) {
 		index_io_ = std::move(io);
@@ -546,8 +554,8 @@ public:
 	// end on this thread.
 	void run_detached(task::task<void> t);
 
-	// The tasks run_detached posted to the control loop that have not ended. A shutdown that stops the loop
-	// clears the control with set_control(nullptr), then runs the loop until this is zero.
+	// The tasks run_detached posted to the control loop that have not ended. A shutdown runs the loop until this is
+	// zero or its bound passes, then clears the control with set_control(nullptr) as the loop's scheduler closes.
 	std::size_t detached() const noexcept {
 		return detached_.load();
 	}

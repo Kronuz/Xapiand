@@ -6,7 +6,7 @@
 (`src/engine/shard.h`). It keeps one shard as a prospect index (the search layout of the strata segment
 core) in the shard's `strata/` directory. This slice is the write side: open and close, add, replace and
 erase by docid and by key, the version check, metadata, stats, `get` by docid with its stored data, a scan
-in docid order, transactions, and replay of the write-ahead log. Search, values and term lists are later
+in docid order, transactions, and replay of the journal (`journal-durability.md`). Search, values and term lists are later
 steps (S2, P1, P2).
 
 ## How
@@ -17,14 +17,13 @@ Shard::replace_document  -> engine::Shard::replace_by_key(key, doc, args)
    strata::Shard: find_key -> version -> finalise(doc, result) -> prospect::operation -> index.apply
                   (one operation per transaction; the verdict's docid and version must equal the
                    ones the hook saw, or the write fails as internal)
-WAL: Document::serialize() -> line -> Document::unserialize(kind, line) -> replace(did, doc)
+Journal: Document::serialize() -> command entry (D3) -> group apply: Document::unserialize(bytes) -> append_write
 ```
 
 1. **One engine per index.** `engine::kind_of(path)` says which engine a shard has: its own files
    (`strata/` or `iamglass`), else `XAPIAND_ENGINE` (`xapian` or `strata`, read once, default `xapian`), and
    the registry (`.xapiand/...`) is always Xapian. `Document(kind)` is built in the engine's own form, the
-   shard opens through `engine::open_local(kind, ...)`, and `DatabaseWAL` unserializes with the shard's
-   kind (the `:wal` dump has no shard and takes it from the log's files). The remaining half of D8 is an `IndexSettings` field saved with the index; until then a new index
+   shard opens through `engine::open_local(kind, ...)`. The remaining half of D8 is an `IndexSettings` field saved with the index; until then a new index
    takes the process default.
 2. **The key is explicit.** `Document::set_key(key)` names the document; the key is the id's type character and its
    encoded bytes, apart from the document's terms. The index is created keyed (`index_options::keyed`, fixed at creation) and holds the key as given; the id field's terms are the key field's, so a query for an id is a key leaf.
@@ -49,19 +48,20 @@ WAL: Document::serialize() -> line -> Document::unserialize(kind, line) -> repla
    `reopen()` is called; until then the shard raises `errc::database` on every call. Replacing the index bumps
    the `Core`'s epoch, and a writable handle that has not seen the latest epoch lost its unsaved writes with
    the index: its calls raise `errc::database` and its `reopen()` raises `errc::reopen`, so the node closes it
-   and the next writable open replays the log.
-7. **Values (P1) and term lists (P2).** `Document` holds values, WAL lines carry them, and `DocView::value`
+   and the next writable open replays the group's journal.
+7. **Values (P1) and term lists (P2).** `Document` holds values, command entries carry them, and `DocView::value`
    returns nothing until prospect's values plugin stores them (`src/engine/strata/values.h` is the one place
    to wire it, `tests/test_engine_strata.cc` `values_gap` flips then). `DocView::terms`, `term_details` and
    `serialize` raise `not_available` until the term-list plugin. Searching a strata shard raises it too (S2).
 
 ## Replay
 
-A WAL line is `Document::serialize()`; replay is `Document::unserialize(kind, line)` then `replace(did, doc)`.
-A replayed id above `last_docid` is a create (no lookup); one with a key finds its version by the key. Replay
-runs at a writable open, as with Xapian, so a restart serves the committed state until a write opens the
-shard; a strata shard exists from its creation, so unlike an uncommitted new Xapian shard it answers (empty)
-instead of failing the read. A transaction replays inside itself and cancels with it.
+The shard's log is its group's journal (`journal-durability.md`): an entry's write carries
+`Document::serialize()` bytes, and the group's apply unserializes them and appends the write to the index. A
+replace by key that lands at another version than its document carries is stamped with the landing version
+(`StrataDocument::stamp`). A replayed id above `last_docid` is a create (no lookup); one with a key finds its
+version by the key. A strata shard exists from its creation, so unlike an uncommitted new Xapian shard it
+answers (empty) instead of failing the read. A transaction replays inside itself and cancels with it.
 
 Replay is idempotent per line. The index assigns a version as the stored one plus one and cannot be told a
 version, so the shard stamps the version it wrote into the document before the log serializes it. A document read
@@ -70,10 +70,9 @@ older one after a newer write, changes nothing (`tests/test_engine_strata.cc` `r
 when it is exactly the next version of the document (version 1 for an absent one); a line further ahead means a
 line of the log is missing and raises `errc::corrupt`. A line whose key now lives at another id (the key was
 erased and added again after the line) is skipped. An erase has no stamp: the engine raises `doc_not_found` for a
-document that is gone, and `DatabaseWAL::execute_line` treats that as done, so a log applied twice over the
-state it produced changes nothing (`replay_idempotent`). Across restarts the revision check there against the
-manifest revision still picks the lines to replay; pending writes are lost with the process, so a replay always
-starts from the committed state.
+document that is gone, and its caller treats that as done, so a log applied twice over the
+state it produced changes nothing (`replay_idempotent`). Across restarts the group replays the entries after its
+last checkpoint, whose commit is the manifest's revision, so a replay always starts from the committed state.
 `-DCRASH_POINTS=ON` builds let `XAPIAND_STRATA_CRASH=point:n` kill the process at the n-th pass through
 `commit.before`, `commit.flushed`, `commit.after` or `replay`; `harness/strata_write_check.sh` uses them.
 
@@ -94,4 +93,4 @@ starts from the committed state.
 | Document in the engine's form, the codec | `src/engine/strata/document.{h,cc}`, `src/engine/document.cc` |
 | The shard | `src/engine/strata/shard.{h,cc}` |
 | Values adapter (gated) | `src/engine/strata/values.h` |
-| Tests | `tests/test_engine_strata.cc` (both engines); fuzz target `tests/fuzz_strata_document.cc`; `harness/strata_write_check.sh` (a node on strata: documents by id, `:wal`, kill -9 replay) |
+| Tests | `tests/test_engine_strata.cc` (both engines); fuzz target `tests/fuzz_strata_document.cc`; `harness/strata_write_check.sh` (a node on strata: documents by id, kill -9 replay) |

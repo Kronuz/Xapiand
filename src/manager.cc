@@ -40,6 +40,7 @@
 #include <regex>                                 // for std::regex
 #include <signal.h>                              // for SIGTERM, SIGINT
 #include <string>                                // for std::string, std::to_string
+#include <sys/resource.h>                        // for getrlimit, RLIMIT_FSIZE
 #include <sys/socket.h>                          // for AF_INET, sockaddr
 #include <sysexits.h>                            // for EX_IOERR, EX_NOINPUT, EX_SOFTWARE
 #include <unistd.h>                              // for ssize_t
@@ -53,8 +54,8 @@
 #include "engine/host_asio.h"                    // for engine::AsioHost
 #include "engine/sync.h"                         // for engine::sync_wait
 #include "database/schemas_lru.h"                // for SchemasLRU
+#include "database/shard_group.h"                // for JOURNAL_DIRECTORY
 #include "database/utils.h"                      // for RESERVED_TYPE, unsharded_path
-#include "database/wal.h"                        // for DatabaseWALWriter
 #include "epoch.hh"                              // for epoch::now
 #include "error.hh"                             // for error:name, error::description
 #include "xapiand_exception.h"                          // for SystemExit, Excep...
@@ -89,8 +90,6 @@
 #include "server/mime_types.h"                   // for preload_mime_types
 #include "shutdown_wait.h"                       // for shutdown_wait::wait
 #include "stopper.h"                             // for preloadStopWords
-#include "storage.h"                             // for Storage
-#include "xapiand_fsyncher.h"                    // for fsyncher (moved out of storage.h)
 #include "strict_stox.hh"                        // for strict_stoll
 #include "system.hh"                             // for get_open_files_per_proc, get_max_files_per_proc
 #include "traceback.h"                           // for traceback::{callstacks_snapshot, dump_callstacks}
@@ -282,7 +281,6 @@ XapiandManager::XapiandManager(std::chrono::steady_clock::time_point process_sta
 	  http_clients(0),
 	  schemas(std::make_unique<SchemasLRU>(opts.schema_pool_size, std::chrono::milliseconds(opts.schema_pool_timeout))),
 	  database_pool(std::make_unique<DatabasePool>(_rx->host, opts.database_pool_size, 0, readers_per_index())),
-	  wal_writer(std::make_unique<DatabaseWALWriter>("WL{:02}", opts.num_async_wal_writers)),
 	  index_settings_resolver(std::make_unique<IndexResolverLRU>(opts.resolver_cache_size, std::chrono::milliseconds(opts.resolver_cache_timeout))),
 	  state(State::RESET),
 	  node_name(opts.node_name),
@@ -297,6 +295,17 @@ XapiandManager::XapiandManager(std::chrono::steady_clock::time_point process_sta
 	  atom_sig(0)
 {
 	database_pool->set_control(&_rx->host);
+	// The journal of every index's group (cluster-release D2), in the data directory (the working one, setup()'s).
+	// Its recovery writes (a turn log's segments), so one that fails ends the start before anything is served.
+	try {
+		database_pool->set_journal(JOURNAL_DIRECTORY);
+	} catch (const std::exception& exc) {
+		struct rlimit fsize {};
+		const bool limited = ::getrlimit(RLIMIT_FSIZE, &fsize) == 0 && fsize.rlim_cur != RLIM_INFINITY;
+		L_CRIT("The journal in {} cannot be recovered: {}{}", JOURNAL_DIRECTORY, *exc.what() ? exc.what() : "unknown error",
+			limited ? strings::format(" (the process's file-size limit is {} bytes)", static_cast<unsigned long long>(fsize.rlim_cur)) : std::string());
+		throw SystemExit(EX_IOERR);
+	}
 	_rx->autocommits = std::make_unique<control::Debounce<Endpoint>>(_rx->host,
 		control::Debounce<Endpoint>::Timing{
 			std::chrono::milliseconds(opts.committer_debounce_timeout),
@@ -979,9 +988,6 @@ XapiandManager::make_servers()
 
 	// The idle housekeeping runs as a task on this loop; the autocommit is already waiting for its first write.
 	_rx->housekeeping->start();
-
-	// Start the fsynchers.
-	fsyncher();
 }
 
 
@@ -1005,12 +1011,12 @@ XapiandManager::set_ready_impl()
 
 
 void
-XapiandManager::drain_control(control::Tasks& tasks, const char* what, std::chrono::steady_clock::time_point limit)
+XapiandManager::drain_control(control::Tasks& tasks, const char* what, std::chrono::steady_clock::time_point limit, bool report)
 {
 	while ((database_pool->detached() != 0 || tasks.running() != 0) && std::chrono::steady_clock::now() < limit) {
 		run_control(10ms);
 	}
-	if (database_pool->detached() != 0 || tasks.running() != 0) {
+	if (report && (database_pool->detached() != 0 || tasks.running() != 0)) {
 		L_WARNING("{} {} tasks and {} tasks of the index registry did not end", tasks.running(), what, database_pool->detached());
 	}
 }
@@ -1058,11 +1064,14 @@ XapiandManager::join()
 		_rx->sig_reader.cancel(ec);
 	}
 
-	// The index registry's tasks that timers started (an idle close, a commit) run on the control loop, which
-	// has stopped: from now on they run on the thread that starts them, and the ones already posted run here,
-	// on this thread, until they end.
-	database_pool->set_control(nullptr);
-	drain_control(_rx->tasks, "control", deadline);
+	// The index registry's tasks that timers start (an idle close, a commit) still go to the control loop, which
+	// the drains run here: run on this thread instead, one could wait for a turn or a commit that a task of that
+	// loop holds, which only this thread resumes. The control is cleared when its scheduler closes (Stop 2).
+	database_pool->stop_names();
+	// This drain leaves the HTTP stop its two graces: a detached task that cannot end (it waits for an index that a
+	// request or a held chore keeps) must not take the requests' time; Stop 2 drains what is left to the deadline.
+	const auto http_stop = http_service ? 2 * http_shutdown_grace(shutdown_write_bound) : std::chrono::milliseconds(0);
+	drain_control(_rx->tasks, "control", deadline - http_stop, false);
 
 	// This method should finish and wait for all objects and threads to finish
 	// their work. Order of waiting for objects here matters!
@@ -1112,13 +1121,23 @@ XapiandManager::join()
 		L(-LOG_NOTICE, NOTICE_COL, "Stop 2: the autocommits");
 		_rx->autocommits->stop();
 		drain_control(_rx->autocommits->tasks(), "autocommit", deadline);
+		drain_control(_rx->tasks, "control", deadline);
 	}
 
 
-	// The control loop's tasks still suspended (an autocommit that did not run, a wait the drains gave up on) go
-	// the same way, with the loop stopped: its scheduler closes and destroys them. Every root that may hold a pin
-	// is gone before the catalog's shutdown is awaited, which waits for every pin (x-pool C24).
+	// A task of the control loop the drains left at the deadline is inside index work (a turn, a commit, a group's
+	// checkpoint) whose awaiters its frame may not outlive: destroying it would leave the group a waiter to resume.
+	// The loop is left running instead, as after an abandoned HTTP stop, and the process exits abandoning it.
+	if (!abandoned_ && (database_pool->detached() != 0 || _rx->tasks.running() != 0 || _rx->autocommits->tasks().running() != 0)) {
+		L_WARNING("The control loop's unfinished tasks are left running");
+		abandoned_ = true;
+	}
+
+	// The control loop's tasks still suspended (an autocommit that did not run) go the same way, with the loop
+	// stopped: its scheduler closes and destroys them. Every root that may hold a pin is gone before the catalog's
+	// shutdown is awaited, which waits for every pin (x-pool C24).
 	if (!abandoned_) {
+		database_pool->set_control(nullptr);   // from here a detached task runs on the thread that starts it
 		_rx->reactor.io().stop();
 		_rx->reactor.scheduler().close();
 		_rx->reactor.scheduler().destroy_roots();
@@ -1152,47 +1171,10 @@ XapiandManager::join()
 		}
 	}
 
-#if XAPIAND_DATABASE_WAL
-
-	////////////////////////////////////////////////////////////////////
-	if (wal_writer) {
-		L(-LOG_NOTICE, NOTICE_COL, "Stop 4: the write-ahead logs");
-		wal_writer->finish();
-
-		L_MANAGER("Waiting for {} WAL writer{}...", wal_writer->running_size(), (wal_writer->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the WAL writers...", "WAL writers finished!");
-		while (!wal_writer->join(500ms)) {
-			int sig = atom_sig;
-			if (sig < 0) {
-				throw SystemExit(-sig);
-			}
-		}
-	}
-
-#endif
-
-
-	////////////////////////////////////////////////////////////////////
-	auto& fsyncher_obj = fsyncher(false);
-	if (fsyncher_obj) {
-		L(-LOG_NOTICE, NOTICE_COL, "Stop 5: the fsync threads");
-		fsyncher_obj->finish();
-
-		L_MANAGER("Waiting for {} async fsync{}...", fsyncher_obj->running_size(), (fsyncher_obj->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the async fsync threads...", "Async fsync threads finished!");
-		while (!fsyncher_obj->join(500ms)) {
-			int sig = atom_sig;
-			if (sig < 0) {
-				throw SystemExit(-sig);
-			}
-		}
-	}
-
 	////////////////////////////////////////////////////////////////////
 	if (abandoned_) {
-		// Threads are still inside requests or index work that did not end, and they use the registry, the log
-		// writers and the service: leave without destroying any of them. What was acknowledged is in the log
-		// writers' files.
+		// Threads are still inside requests or index work that did not end, and they use the registry and the
+		// service: leave without destroying any of them. What was acknowledged is in the journal.
 		L(-LOG_WARNING, WARNING_COL, "Exiting with unfinished writes abandoned (see above).");
 		Logging::finish();
 		Logging::join();
@@ -1206,11 +1188,6 @@ XapiandManager::join()
 	http_service.reset();
 
 	database_pool.reset();
-
-	wal_writer.reset();
-
-
-	fsyncher_obj.reset();
 
 	schemas.reset();
 
@@ -1306,12 +1283,6 @@ XapiandManager::server_metrics_impl()
 	// committers: autocommits are tasks on the control loop, not threads; the queue is the keys waiting.
 	metrics.xapiand_committers_running.Set(static_cast<double>(_rx->autocommits->tasks().running()));
 	metrics.xapiand_committers_queue_size.Set(static_cast<double>(_rx->autocommits->pending()));
-
-	// fsync_threads:
-	metrics.xapiand_fsync_running.Set(fsyncher()->running_size());
-	metrics.xapiand_fsync_queue_size.Set(fsyncher()->size());
-	metrics.xapiand_fsync_pool_size.Set(fsyncher()->threadpool_size());
-	metrics.xapiand_fsync_capacity.Set(fsyncher()->threadpool_capacity());
 
 	metrics.xapiand_http_current_connections.Set(http_clients.load());
 

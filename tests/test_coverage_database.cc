@@ -22,7 +22,7 @@
 
 
 // Coverage tests for src/database/: a node in this process, and the requests that reach the schema (types, properties,
-// refusals), the handler (documents, updates, scripts, deletes), the shards and the WAL. Each check reads a reply's value.
+// refusals), the handler (documents, updates, scripts, deletes), the shards and their groups. Each check reads a reply's value.
 
 #include "test_harness.h"
 #include "utils_node.h"

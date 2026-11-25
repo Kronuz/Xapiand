@@ -25,19 +25,18 @@
 
 #include <algorithm>              // for std::move
 #include <cassert>                // for assert
-#include <cmath>                  // for std::floor
 #include <cstdint>                // for std::uint64_t
 #include <optional>                // for std::optional
-#include <unistd.h>                // for unlink
 #include <sys/types.h>            // for uint32_t, uint8_t, ssize_t
 
 #include "at_end.h"               // for at_end::assert_none
 #include "database/data.h"        // for Locator
 #include "database/flags.h"       // for readable_flags, DB_*
 #include "database/pool.h"        // for ShardEndpoint
+#include "database/restore_batch.h" // for RestoreBatcher, restore_results
+#include "database/shard_group.h" // for ShardGroup, ShardGroups
 #include "database/handler.h"     // for committer
 #include "database/utils.h"       // for DB_SLOT_VERSION
-#include "database/wal.h"         // for DatabaseWAL
 #include "engine/chores.h"          // for engine::Chores
 #include "engine/open.h"            // for engine::OpenOptions
 #include "engine/strata/shard.h"    // for engine::strata::borrow
@@ -52,7 +51,6 @@
 #include "repr.hh"                // for repr
 #include "reserved/fields.h"      // for ID_FIELD_NAME
 #include "serialize.h"             // for Serialize::floating
-#include "storage.h"              // for STORAGE_BLOCK_SIZE, StorageCorruptVolume...
 #include "xapiand_strings.hh"             // for strings::from_delta, strings::format
 
 #ifdef XAPIAND_RANDOM_ERRORS
@@ -80,9 +78,6 @@
 // #define L_DATABASE_WRAP_BEGIN L_DELAYED_100
 // #undef L_DATABASE_WRAP_END
 // #define L_DATABASE_WRAP_END L_DELAYED_N_UNLOG
-
-
-#define DATA_STORAGE_PATH "docdata."
 
 
 // The version a write requires, as its document asks for it in the version slot.
@@ -121,177 +116,6 @@ finalise_write(engine::Document& doc, engine::WriteResult& info)
 }
 
 
-#define STORAGE_SYNC_MODE STORAGE_FULL_SYNC
-
-// Codec for newly written data-store records. Zstandard gives ~2x LZ4's ratio at
-// LZ4-class write speed (see the storage library's bench). The codec id is stored
-// per record, so existing LZ4 volumes keep reading unchanged; only new writes use
-// this. Switch back to STORAGE_COMPRESS_LZ4 here to change it.
-#define STORAGE_COMPRESS_MODE STORAGE_COMPRESS_ZSTD
-
-
-/*
- *  ____        _        ____  _
- * |  _ \  __ _| |_ __ _/ ___|| |_ ___  _ __ __ _  __ _  ___
- * | | | |/ _` | __/ _` \___ \| __/ _ \| '__/ _` |/ _` |/ _ \
- * | |_| | (_| | || (_| |___) | || (_) | | | (_| | (_| |  __/
- * |____/ \__,_|\__\__,_|____/ \__\___/|_|  \__,_|\__, |\___|
- *                                                |___/
- */
-#ifdef XAPIAND_DATA_STORAGE
-
-// The legacy v1 data-storage header: a single in-place header block. New volumes
-// are written in the crash-safe v2 format below; this type exists only so a v2
-// DataStorage can still READ pre-existing v1 volumes (read-only).
-struct DataHeaderV1 {
-	struct DataHeaderHead {
-		uint32_t magic;
-		uint32_t offset;  // required
-		char uuid[UUID_LENGTH];
-	} head;
-
-	char padding[(STORAGE_BLOCK_SIZE - sizeof(DataHeaderV1::DataHeaderHead)) / sizeof(char)];
-
-	void init(void* param, void* args);
-	void validate(void* param, void* args);
-};
-
-
-// The v2 (dual-meta, crash-safe) data-storage header. It begins with the engine's
-// StorageMetaHead (magic, txnid, high-water, whole-block checksum) -- which is what
-// opts new volumes into the v2 format -- then the shard uuid, padded to a block.
-struct DataHeaderV2 {
-	StorageMetaHead meta;
-	char uuid[UUID_LENGTH];
-	char padding[STORAGE_BLOCK_SIZE - sizeof(StorageMetaHead) - UUID_LENGTH];
-
-	void init(void* param, void* args);
-	void validate(void* param, void* args);
-};
-
-
-#pragma pack(push, 1)
-struct DataBinHeader {
-	uint8_t magic;
-	uint8_t flags;  // required
-	uint32_t size;  // required
-
-	inline void init(void*, void*, uint32_t size_, uint8_t flags_) {
-		magic = STORAGE_BIN_HEADER_MAGIC;
-		size = size_;
-		flags = (0 & ~STORAGE_FLAG_MASK) | flags_;
-	}
-
-	inline void validate(void*, void*) {
-		if (magic != STORAGE_BIN_HEADER_MAGIC) {
-			THROW(StorageCorruptVolume, "Bad document header magic number");
-		}
-		if (flags & STORAGE_FLAG_DELETED) {
-			THROW(StorageNotFound, "Data Storage document deleted");
-		}
-	}
-};
-
-
-struct DataBinFooter {
-	uint32_t checksum;
-	uint8_t magic;
-
-	inline void init(void*, void*, uint32_t checksum_) {
-		magic = STORAGE_BIN_FOOTER_MAGIC;
-		checksum = checksum_;
-	}
-
-	inline void validate(void*, void*, uint32_t checksum_) {
-		if (magic != STORAGE_BIN_FOOTER_MAGIC) {
-			THROW(StorageCorruptVolume, "Bad document footer magic number");
-		}
-		if (checksum != checksum_) {
-			THROW(StorageCorruptVolume, "Bad document checksum");
-		}
-	}
-};
-#pragma pack(pop)
-
-
-class DataStorage : public Storage<DataHeaderV2, DataBinHeader, DataBinFooter, STORAGE_DEFAULT_IO, DataHeaderV1> {
-public:
-	int flags;
-
-	uint32_t volume;
-
-	DataStorage(std::string_view base_path_, void* param_, int flags);
-
-	bool open(std::string_view relative_path);
-};
-
-
-void
-DataHeaderV1::init(void* param, void* /*unused*/)
-{
-	auto shard = static_cast<ShardEndpoint*>(param);
-	assert(shard);
-
-	head.magic = _LEGACY_STORAGE_MAGIC;
-	strncpy(head.uuid, shard->uuid().c_str(), sizeof(head.uuid));
-	head.offset = STORAGE_START_BLOCK_OFFSET;
-}
-
-
-void
-DataHeaderV1::validate(void* param, void* /*unused*/)
-{
-	if (head.magic != _LEGACY_STORAGE_MAGIC) {
-		THROW(StorageCorruptVolume, "Bad data storage header magic number");
-	}
-
-	auto shard = static_cast<ShardEndpoint*>(param);
-	if (UUID(head.uuid) != UUID(shard->uuid())) {
-		THROW(StorageCorruptVolume, "Data storage UUID mismatch");
-	}
-}
-
-
-void
-DataHeaderV2::init(void* param, void* /*unused*/)
-{
-	auto shard = static_cast<ShardEndpoint*>(param);
-	assert(shard);
-
-	// The engine stamps meta (magic/txnid/high-water/checksum); we only carry the
-	// shard uuid so a foreign volume is rejected on open.
-	memset(uuid, 0, sizeof(uuid));
-	strncpy(uuid, shard->uuid().c_str(), sizeof(uuid));
-}
-
-
-void
-DataHeaderV2::validate(void* param, void* /*unused*/)
-{
-	// The engine has already checked the meta magic + whole-block checksum; this
-	// is the shard-domain check.
-	auto shard = static_cast<ShardEndpoint*>(param);
-	if (UUID(uuid) != UUID(shard->uuid())) {
-		THROW(StorageCorruptVolume, "Data storage UUID mismatch");
-	}
-}
-
-
-DataStorage::DataStorage(std::string_view base_path_, void* param_, int flags)
-	: Storage<DataHeaderV2, DataBinHeader, DataBinFooter, STORAGE_DEFAULT_IO, DataHeaderV1>(base_path_, param_),
-	  flags(flags)
-{
-}
-
-
-bool
-DataStorage::open(std::string_view relative_path)
-{
-	return Storage<DataHeaderV2, DataBinHeader, DataBinFooter, STORAGE_DEFAULT_IO, DataHeaderV1>::open(relative_path, flags);
-}
-#endif  // XAPIAND_DATA_STORAGE
-
-
 /*
  *  ____        _        _                    _____           _             _       _
  * |  _ \  __ _| |_ __ _| |__   __ _ ___  ___| ____|_ __   __| |_ __   ___ (_)_ __ | |_
@@ -299,7 +123,7 @@ DataStorage::open(std::string_view relative_path)
  * | |_| | (_| | || (_| | |_) | (_| \__ \  __/ |___| | | | (_| | |_) | (_) | | | | | |_
  * |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|_____|_| |_|\__,_| .__/ \___/|_|_| |_|\__|
  *                                                             |_|
- * the parts that touch the engine, the blob storage and the WAL
+ * the parts that touch the engine and the group
  */
 
 ShardEndpoint::ShardEndpoint(DatabasePool& database_pool_, std::string_view path_) :
@@ -308,8 +132,7 @@ ShardEndpoint::ShardEndpoint(DatabasePool& database_pool_, std::string_view path
 	revision(0),
 	chores(std::make_unique<IndexChores>(*database_pool_.work_pool_)),
 	modified(false),
-	applied_(0),
-	last_flags_(0)
+	applied_(0)
 {
 }
 
@@ -331,16 +154,6 @@ ShardEndpoint::~ShardEndpoint()
 }
 
 
-DatabaseWALWriter&
-ShardEndpoint::wal_writer() const
-{
-	if (auto* writer = database_pool.wal_writer_.load(std::memory_order_acquire)) {
-		return *writer;
-	}
-	return *XapiandManager::manager(true)->wal_writer;
-}
-
-
 void
 ShardEndpoint::note_failure(const engine::Error& error) noexcept
 {
@@ -353,30 +166,6 @@ ShardEndpoint::note_failure(const engine::Error& error) noexcept
 			break;
 		default:
 			break;
-	}
-}
-
-
-// The numeric id a document's stored data names (its _id, an integer from 1 to MAX_NUMERIC_ID), else 0.
-static std::uint64_t
-stored_numeric_id(const engine::Document& doc)
-{
-	Data data(doc.get_data());
-	const auto obj = data.get_obj();
-	const auto it = obj.find(ID_FIELD_NAME);
-	if (it == obj.end()) {
-		return 0;
-	}
-	const auto& value = it.value();
-	switch (value.get_type()) {
-		case MsgPack::Type::POSITIVE_INTEGER:
-			return value.u64() <= MAX_NUMERIC_ID ? value.u64() : 0;
-		case MsgPack::Type::FLOAT: {
-			const auto f = value.f64();
-			return f >= 1 && f < 0x1p63 && f == std::floor(f) ? static_cast<std::uint64_t>(f) : 0;  // 0x1p63 is MAX_NUMERIC_ID + 1
-		}
-		default:
-			return 0;
 	}
 }
 
@@ -431,77 +220,11 @@ ShardEndpoint::raise_id_high(std::uint64_t id) noexcept
 }
 
 
-// What the log replays into while the index is opened: the engine alone, with chores inline.
-class ReplayTarget final : public WalTarget {
-	ShardEndpoint& entry_;
-	engine::Shard& engine_;
-	int flags_;
-	engine::rev start_revision_;
-
-public:
-	ReplayTarget(ShardEndpoint& entry, engine::Shard& eng, int flags) :
-		entry_(entry), engine_(eng), flags_(flags), start_revision_(eng.revision()) { }
-
-	const std::string& path() const override {
-		return entry_.path;
-	}
-
-	engine::Shard& engine() override {
-		return engine_;
-	}
-
-	engine::rev start_revision() const override {
-		return start_revision_;
-	}
-
-	bool commit(bool wal) override {
-		return engine::sync_wait(entry_.do_commit(engine_, engine::inline_chores(), flags_, wal));
-	}
-
-	void replace_document(engine::docid did, engine::Document&& doc, bool commit_, bool wal, bool version) override {
-		const auto id = stored_numeric_id(doc);
-		engine::sync_wait(entry_.do_replace(engine_, engine::inline_chores(), flags_, did, std::move(doc), wal, version));
-		entry_.raise_id_high(id);  // a write the last commit missed advances the counter again
-		if (commit_) {
-			commit(wal);
-		}
-	}
-
-	void delete_document(engine::docid did, bool commit_, bool wal, bool) override {
-		engine::sync_wait(entry_.do_delete(engine_, flags_, did, wal));
-		if (commit_) {
-			commit(wal);
-		}
-	}
-
-	void set_metadata(const std::string& key, const std::string& value, bool commit_, bool wal) override {
-		engine::sync_wait(entry_.do_set_metadata(engine_, flags_, key, value, wal));
-		if (commit_) {
-			commit(wal);
-		}
-	}
-
-	void add_spelling(const std::string& word, engine::termcount freq, bool commit_, bool wal) override {
-		engine::sync_wait(entry_.do_add_spelling(engine_, flags_, word, freq, wal));
-		if (commit_) {
-			commit(wal);
-		}
-	}
-
-	void remove_spelling(const std::string& word, engine::termcount freq, bool commit_, bool wal) override {
-		engine::sync_wait(entry_.do_remove_spelling(engine_, flags_, word, freq, wal));
-		if (commit_) {
-			commit(wal);
-		}
-	}
-};
-
-
 // The open's work (open_payload, x-pool D6), in the catalog's open chore with the slot `opening`: nobody else is on
-// the index, so the replay holds no turn and its writes run their chores inline. The engine then takes the index's
-// chores. A throw fails the open, and the catalog destroys this entry, then the index.
+// the index, so the open holds no turn and runs its chores inline. The engine then takes the index's chores, and the
+// group recovers last. A throw fails the open, and the catalog destroys this entry, then the index.
 void
-ShardEndpoint::open_blocking(prospect::index& index)
+ShardEndpoint::open_blocking(kronuz::journal::IO& directory, prospect::index& index)
 {
 	L_CALL("ShardEndpoint::open_blocking()");
 
@@ -522,39 +245,127 @@ ShardEndpoint::open_blocking(prospect::index& index)
 	set_revision(engine_->revision());
 	modified.store(false, std::memory_order_relaxed);
 	{
-		// The id counter as the last commit left it; the replay below raises it past the writes that commit missed.
+		// The id counter as the last commit left it; the group's catch-up below raises it to the log's.
 		const auto stored = engine::sync_wait(engine_->metadata(std::string(ID_HIGH_METADATA)));
 		id_high_ = stored.empty() ? 0 : MsgPack::unserialize(stored).u64();
 		id_high_moved_ = false;
 	}
 
-#ifdef XAPIAND_DATA_STORAGE
-	writable_storage = std::make_unique<DataStorage>(path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS_MODE | STORAGE_SYNC_MODE);
-	{
-		// The shared writer continues in the newest volume on disk; uploads and rollovers take the numbers above it.
-		unsigned long long newest = 0;
-		try {
-			newest = writable_storage->get_volumes_range(DATA_STORAGE_PATH).second;
-		} catch (const StorageNotFound&) { }
-		writable_storage->volume = static_cast<uint32_t>(newest);
-		next_volume_.store(newest + 1, std::memory_order_relaxed);
-	}
-#endif  // XAPIAND_DATA_STORAGE
+	engine_->use_chores(chores.get());
 
-#if XAPIAND_DATABASE_WAL
-	// A log that is ahead of the committed revision is replayed by whoever opens the index: the open holds it.
-	{
-		ReplayTarget target(*this, *engine_, DB_WRITABLE | DB_OPEN);
-		DatabaseWAL wal(&target);
-		if (wal.execute()) {
-			modified.store(true, std::memory_order_relaxed);
-			// Commits the replay like any commit (readers see it, the WAL gets its COMMIT line); a failure propagates.
-			target.commit(true);
+	// The group last: it recovers on the index as the open left it (D169), and its failed open fails this one.
+	if (auto* groups = database_pool.groups()) {
+		refuse_without_journal(*groups, directory, index);
+		group_ = std::make_unique<ShardGroup>(*groups, directory, index);
+		auto* eng = &dynamic_cast<engine::strata::Shard&>(*engine_);
+		group_->app.applied = [eng] { eng->applied_by_group(); };
+		group_->on_checkpoint = [eng] { eng->checkpointed(); };
+		group_->checkpoint_in_turn = [this] { return checkpoint_in_turn(); };
+		try {
+			group_->group.open_blocking();
+		} catch (const strata::group::group_fenced& exc) {
+			// strata fenced its own open before the file set's recovery (an index older than its journal's bundle,
+			// P_b > P_H) and tore the group down: nothing was written, and every open refuses the same way.
+			group_.reset();
+			L_ERR("The index {} refuses to open: {}", repr(to_string()), exc.what());
+			throw engine::Error(engine::errc::corrupt, "The index " + to_string() + " refuses to open: " + exc.what());
+		}
+		try {
+			if (group_->group.damaged()) {
+				throw engine::Error(engine::errc::corrupt, group_->group.damage_reason());
+			}
+			// What the log committed before the open is applied before anything is served, and reads see it; the id
+			// counter is the log's.
+			std::vector<std::uint64_t> left_open;
+			std::string high;
+			group_->catch_up([&](const ShardGroupState& state, prospect::index& applied) {
+				for (const auto& chunked : state.open) {
+					left_open.push_back(chunked.first);
+				}
+				if (const auto it = applied.metadata().find(std::string(ID_HIGH_METADATA)); it != applied.metadata().end()) {
+					high = it->second;
+				}
+			});
+			// The ready point (A9): the chunked commands this term's earlier proposers left open are aborted.
+			group_->abort_open(left_open);
+			if (!high.empty()) {
+				id_high_ = std::max(id_high_, MsgPack::unserialize(high).u64());
+			}
+			id_high_logged_ = id_high_;
+			id_high_moved_ = false;
+		} catch (...) {
+			refuse_opened_group(std::current_exception());
 		}
 	}
-#endif  // XAPIAND_DATABASE_WAL
+}
 
-	engine_->use_chores(chores.get());
+
+// An index that holds state (strata applied a log position, or the file set has files) whose group the journal does
+// not hold: its journal was lost or moved. A new group would restart the log and the file set over that state
+// (deleting its blob volumes, writing new records where old locators point), so the open refuses and touches nothing.
+void
+ShardEndpoint::refuse_without_journal(ShardGroups& groups, kronuz::journal::IO& directory, prospect::index& index)
+{
+	const auto id = ShardGroups::group_id(index.manifest().uuid);
+	if (groups.holds(id)) {
+		return;
+	}
+	bool files = false;
+	for (auto cursor = directory.scan_directory(); auto name = cursor->next();) {
+		if (name->starts_with(strata::group::bundle_detail::prefix)) {
+			files = true;
+			break;
+		}
+	}
+	const auto applied = index.applied().index;
+	if (applied == 0 && !files) {
+		return;   // a new index: its group is created
+	}
+	const auto reason = strings::format("The journal in {} holds no group {:016x} for index {}, which holds state (applied through {}{}): put back the journal this index last stopped with, never an older copy, or restore the index from a dump", repr(groups.directory()), id, repr(to_string()), applied, files ? ", blob volumes" : "");
+	L_ERR("{}", reason);
+	throw engine::Error(engine::errc::corrupt, reason);
+}
+
+
+// After the group's open, a failure (a damaged replica, a catch-up that throws) closes the group on its loop before
+// the open fails: the catalog then destroys a group no longer attached. A damaged group's close skips its
+// checkpoints; its own error is the damage again, so the refusal names the first cause.
+[[noreturn]] void
+ShardEndpoint::refuse_opened_group(std::exception_ptr failed)
+{
+	std::string reason;
+	try {
+		std::rethrow_exception(failed);
+	} catch (const std::exception& exc) {
+		reason = exc.what();
+	} catch (...) {
+		reason = "unknown error";
+	}
+	if (group_->group.damaged()) {
+		reason = group_->group.damage_reason();
+	}
+	L_ERR("The index {} refuses to open: {}", repr(to_string()), reason);
+	try {
+		group_->group.close_blocking();
+	} catch (...) {
+		// The damage, or a failed checkpoint: the refusal below is the open's answer.
+	}
+	group_.reset();
+	throw engine::Error(engine::errc::corrupt, "The index " + to_string() + " refuses to open: " + reason);
+}
+
+
+// The catalog's close_payload, before the index's close: the group checkpoints what it applied and keeps its closed
+// record for a reopen in this process. A throw (fenced, a failed checkpoint) leaves its log and last bundle standing.
+void
+ShardEndpoint::close_group()
+{
+	if (!group_) {
+		return;
+	}
+	auto& group = group_->group;
+	group.close_blocking();
+	database_pool.groups()->closed(group.id(), group.closed_record());
 }
 
 
@@ -582,7 +393,7 @@ ShardEndpoint::commit_blocking()
 	L_CALL("ShardEndpoint::commit_blocking()");
 
 	if (!modified.load()) {
-		// Nothing applied since the last commit: no revision and no WAL line (C25). A finished merge's output is all
+		// Nothing applied since the last commit: no revision (C25). A finished merge's output is all
 		// the index has to sync, which its commit does without a new revision.
 		if (index_->merge_output_unsynced()) {
 			index_->commit();
@@ -601,8 +412,7 @@ ShardEndpoint::commit_blocking()
 		}
 	} unlock{*this, locked};
 	InlineEngine inline_engine(*this, "the catalog's commit chore runs on a worker");
-	const int saved = last_flags_.load();
-	engine::sync_wait(do_commit(*engine_, engine::inline_chores(), saved ? saved : (DB_WRITABLE | DB_OPEN), true));
+	engine::sync_wait(do_commit(*engine_));
 	committed_ = applied_.load();
 }
 
@@ -620,9 +430,9 @@ struct ShardEndpoint::CommitFlight {
 
 
 task::task<bool>
-ShardEndpoint::commit(int flags, bool wal_, task::cancel_token cancel)
+ShardEndpoint::commit(int flags, task::cancel_token cancel)
 {
-	L_CALL("ShardEndpoint::commit(({}), {})", readable_flags(flags), wal_);
+	L_CALL("ShardEndpoint::commit(({}))", readable_flags(flags));
 
 	if (!modified.load()) {
 		L_DATABASE("Commit on shard {} was discarded, because there are not changes", repr(to_string()));
@@ -660,7 +470,7 @@ ShardEndpoint::commit(int flags, bool wal_, task::cancel_token cancel)
 	std::exception_ptr error;
 	bool changed = false;
 	try {
-		changed = co_await do_commit(*engine_, *chores, flags, wal_);
+		changed = group_ ? co_await commit_group() : co_await do_commit(*engine_);
 		committed_ = flight->covers;
 	} catch (const engine::Error& exc) {
 		note_failure(exc);
@@ -683,6 +493,32 @@ ShardEndpoint::commit(int flags, bool wal_, task::cancel_token cancel)
 
 
 task::task<bool>
+ShardEndpoint::commit_group()
+{
+	if (!modified.load()) {
+		co_return false;
+	}
+	auto& eng = dynamic_cast<engine::strata::Shard&>(*engine_);
+	try {
+		co_await checkpoint(*group_);
+	} catch (...) {
+		eng.rethrow_failure();   // a fenced index is the catalog's to replace (x-pool D2)
+	}
+	modified.store(false, std::memory_order_relaxed);
+	set_revision(eng.revision());
+	co_return true;
+}
+
+
+task::task<void>
+ShardEndpoint::checkpoint_in_turn()
+{
+	auto turn_ = co_await take_turn(DB_WRITABLE);
+	co_await checkpoint(*group_);
+}
+
+
+task::task<bool>
 ShardEndpoint::settle_merges(int flags)
 {
 	L_CALL("ShardEndpoint::settle_merges(({}))", readable_flags(flags));
@@ -692,7 +528,7 @@ ShardEndpoint::settle_merges(int flags)
 	co_await chores->run(engine::ChoreClass::flush, [this, &pending] {
 		index_->check_in();   // publishes the merges that finished
 		if (index_->merge_output_unsynced()) {
-			index_->commit();   // nothing else is uncommitted: no revision, so no WAL line (C25)
+			index_->commit();   // nothing else is uncommitted: no revision (C25)
 		}
 		pending = index_->merges_pending() != 0 || index_->merge_output_unsynced();
 	});
@@ -701,9 +537,9 @@ ShardEndpoint::settle_merges(int flags)
 
 
 task::task<bool>
-ShardEndpoint::do_commit(engine::Shard& eng, engine::Chores& chores_, int flags, [[maybe_unused]] bool wal_)
+ShardEndpoint::do_commit(engine::Shard& eng)
 {
-	L_CALL("ShardEndpoint::do_commit(({}), {})", readable_flags(flags), wal_);
+	L_CALL("ShardEndpoint::do_commit()");
 
 	if (!modified.load()) {
 		co_return false;
@@ -711,11 +547,8 @@ ShardEndpoint::do_commit(engine::Shard& eng, engine::Chores& chores_, int flags,
 
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
-#ifdef XAPIAND_DATA_STORAGE
-	co_await storage_commit(chores_);
-#endif  // XAPIAND_DATA_STORAGE
 	const auto prior_revision = eng.revision();
-	if (id_high_moved_) {
+	if (id_high_moved_ && !group_) {
 		co_await eng.set_metadata(std::string(ID_HIGH_METADATA), MsgPack(id_high_).serialize());  // durable with its documents
 	}
 	co_await eng.commit(engine::Transaction::none);
@@ -729,39 +562,186 @@ ShardEndpoint::do_commit(engine::Shard& eng, engine::Chores& chores_, int flags,
 	assert(current_revision == prior_revision + 1);
 	L_DATABASE("Commit on shard {}: {} -> {}", repr(to_string()), prior_revision, current_revision);
 	set_revision(current_revision);
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
-		wal_writer().write_commit(
-			has_db_synchronous_wal(flags),
-			path,
-			eng.uuid(),
-			prior_revision);
-	}
-#endif
 	co_return true;
 }
 
 
 /*
- * The writes. Each runs under the index's turn: the engine's apply, the counters and the WAL line are one
- * unit, so the WAL's order is the apply's order.
+ * The writes. Each runs under the index's turn: its proposal through the group (or the engine's apply without one)
+ * and the counters are one unit.
  */
 
-task::task<engine::WriteResult>
-ShardEndpoint::do_add(engine::Shard& eng, engine::Chores& chores_, int flags, engine::Document&& doc, [[maybe_unused]] bool wal_, bool version_)
+namespace {
+
+// A write's level (D4): `quorum` answers once this replica applied it, with its verdict; `none` once it is placed.
+strata::group::ack
+ack_of(bool at_placement) noexcept
 {
-	L_CALL("ShardEndpoint::do_add(<doc>, {})", wal_);
+	return at_placement ? strata::group::ack::none : strata::group::ack::quorum;
+}
+
+// A command through the shard's group (D3), chunked past the entry limit (D12) with an id of the term the loop sees
+// now; each entry proposed on the group's loop, the answer on the caller's scheduler.
+task::task<strata::group::answer>
+propose(ShardGroup& shard_group, const Command& command, strata::group::ack level = strata::group::ack::quorum)
+{
+	const auto id = co_await next_chunked_id(shard_group);
+	const auto entries = group_proposer(shard_group, Proposer::in_turn);
+	co_return co_await propose_command(entries, command, id, level);
+}
+
+// An upload's final entry (D12): the command of the document that names its blob, proposed once. A second raises
+// errc::not_available: the first ended the upload's id whatever it applied.
+task::task<strata::group::answer>
+propose_upload_command(ShardGroup& shard_group, ChunkedUpload& upload, const Command& command, strata::group::ack level)
+{
+	if (upload.finished()) {
+		throw engine::Error(engine::errc::not_available, "The blob's upload ended: send it again");
+	}
+	upload.finish();
+	const auto entries = group_proposer(shard_group, Proposer::in_turn);
+	co_return co_await propose_upload_final(entries, upload, command, level);
+}
+
+// What the proposer of a write hears once its replica applied it: the verdict's refusal, or the result prepare
+// predicted, checked against it.
+engine::WriteResult
+landed(engine::Shard& eng, const engine::PreparedWrite& prepared, const strata::group::answer& answer)
+{
+	if (!answer.applied) {
+		throw engine::Error(engine::errc::not_available, "The write was not applied: retry it");
+	}
+	return dynamic_cast<engine::strata::Shard&>(eng).landed(prepared, *answer.applied);
+}
+
+// A command write of the id counter's metadata (docs/design/one-id.md).
+CommandWrite
+id_high_write(std::uint64_t high)
+{
+	CommandWrite write;
+	write.op = CommandOp::set_metadata;
+	write.key = std::string(ID_HIGH_METADATA);
+	write.document.bytes = MsgPack(high).serialize();
+	return write;
+}
+
+bool
+is_stored(const Locator& locator) noexcept
+{
+	return locator.type == Locator::Type::stored || locator.type == Locator::Type::lz4_compressed_stored || locator.type == Locator::Type::zstd_compressed_stored;
+}
+
+// Whether a document names a stored blob: its record lives in a group's file set, so it needs the index's group.
+bool
+names_stored(const engine::Document& doc)
+{
+	const auto bytes = doc.get_data();
+	if (bytes.empty()) {
+		return false;
+	}
+	const Data data{std::string(bytes)};
+	return std::any_of(data.begin(), data.end(), [](const Locator& locator) { return is_stored(locator); });
+}
+
+// A document's new stored blobs as its command's records (D3): each compressed here, at prepare, so every voter
+// writes the same bytes, and its locator left a placeholder at volume 0 of the record's codec and size, which apply
+// places. A placeholder already at volume 0 is `upload`'s: its record is the upload stream. `unstaged` keeps the
+// data as it was when the document changed, for the caller's retry.
+std::vector<CommandBlob>
+stage_blobs(engine::Document& doc, const ChunkedUpload* upload, std::string& unstaged)
+{
+	std::vector<CommandBlob> blobs;
+	auto bytes = doc.get_data();
+	if (bytes.empty()) {
+		return blobs;
+	}
+	std::vector<StoredPlace> places;
+	{
+		const Data data{std::string(bytes)};
+		for (const auto& locator : data) {
+			if (!is_stored(locator)) {
+				continue;
+			}
+			auto ct_type = locator.ct_type.to_string();
+			if (!locator.raw.empty()) {
+				Locator packed{locator.ct_type};
+				packed.type = Locator::Type::zstd_compressed_stored;
+				packed.data(locator.data());
+				auto& blob = blobs.emplace_back();
+				blob.ct_type = ct_type;
+				blob.record.bytes = std::string(packed.raw);
+				places.push_back({std::move(ct_type), static_cast<std::uint8_t>(packed.type), 0, 0, blob.record.bytes.size()});
+			} else if (locator.volume == 0) {
+				if (upload == nullptr) {
+					throw engine::Error(engine::errc::invalid, "A stored blob names no record");
+				}
+				blobs.push_back({std::move(ct_type), upload->record()});
+			}
+		}
+	}
+	if (!places.empty()) {
+		unstaged = bytes;
+		doc.set_data(place_stored(std::move(bytes), places));
+	}
+	return blobs;
+}
+
+}  // namespace
+
+
+task::task<engine::WriteResult>
+ShardEndpoint::write_document(engine::Shard& eng, engine::WriteOp op, engine::docid did, std::string key, engine::Document* doc, engine::WriteArgs args, ChunkedUpload* upload, CommandWrite* batched, bool at_placement)
+{
+	if (group_ == nullptr) {
+		if (upload != nullptr || batched != nullptr || (doc != nullptr && names_stored(*doc))) {
+			throw engine::Error(engine::errc::invalid, "A stored blob, a chunked upload or a batch needs the index's group");
+		}
+		const auto prepared = co_await eng.prepare(op, did, key, doc, std::move(args));
+		co_return co_await eng.apply(prepared, doc);
+	}
+	std::string unstaged;
+	std::exception_ptr failed;
+	try {
+		auto blobs = doc != nullptr ? stage_blobs(*doc, upload, unstaged) : std::vector<CommandBlob>();
+		const auto prepared = co_await eng.prepare(op, did, key, doc, std::move(args));
+		Command command;
+		command.writes.push_back(command_write(prepared, doc));
+		command.writes.back().blobs = std::move(blobs);
+		if (batched != nullptr) {
+			*batched = std::move(command.writes.back());
+			co_return prepared.result;
+		}
+		// The id counter this write moves goes in its command, so it is durable with the document.
+		const auto high = std::max(id_high_, op == engine::WriteOp::replace_key ? numeric_id(key) : std::uint64_t{0});
+		if (high > id_high_logged_) {
+			command.writes.push_back(id_high_write(high));
+		}
+		const auto level = ack_of(at_placement);
+		const auto answer = upload != nullptr ? co_await propose_upload_command(*group_, *upload, command, level) : co_await propose(*group_, command, level);
+		id_high_logged_ = std::max(id_high_logged_, high);
+		if (at_placement) {
+			unapplied_ = true;   // the turn's next holder waits for its apply
+			engine::WriteResult placed;
+			placed.term = prepared.result.term;   // no docid or version: its verdict is not known yet
+			co_return placed;
+		}
+		co_return landed(eng, prepared, answer);
+	} catch (...) {
+		failed = std::current_exception();
+	}
+	if (!unstaged.empty()) {
+		doc->set_data(std::move(unstaged));   // a retry stages the blobs again
+	}
+	std::rethrow_exception(failed);
+}
+
+
+task::task<engine::WriteResult>
+ShardEndpoint::do_add(engine::Shard& eng, engine::Document&& doc, bool version_, bool at_placement)
+{
+	L_CALL("ShardEndpoint::do_add(<doc>, {})", version_);
 
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
-
-#ifdef XAPIAND_DATA_STORAGE
-	auto pushed = co_await storage_push_blobs(chores_, doc.get_data());
-	if (!pushed.first.empty()) {
-		doc.set_data(pushed.first);
-	}
-#else
-	(void)chores_;
-#endif  // XAPIAND_DATA_STORAGE
 
 	engine::WriteArgs args;
 	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result); };
@@ -773,50 +753,23 @@ ShardEndpoint::do_add(engine::Shard& eng, engine::Chores& chores_, int flags, en
 
 	engine::WriteResult info;
 	try {
-		info = co_await eng.add(doc, args);
+		info = co_await write_document(eng, engine::WriteOp::add, 0, std::string(), &doc, std::move(args), nullptr, nullptr, at_placement);
 	} catch (const engine::Error& error) {
 		note_failure(error);
 		throw;
 	}
 	applied_.fetch_add(1, std::memory_order_relaxed);
 	modified.store(true, std::memory_order_relaxed);
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
-#ifdef XAPIAND_DATA_STORAGE
-		if (!pushed.second.empty()) {
-			doc.set_data(pushed.second);  // restore data with blobs
-		}
-#endif  // XAPIAND_DATA_STORAGE
-		wal_writer().write_replace_document(
-			has_db_synchronous_wal(flags),
-			path,
-			eng.uuid(),
-			eng.revision(),
-			info.did,
-			std::move(doc));
-	}
-#else
-	(void)flags;
-#endif
 	co_return info;
 }
 
 
 task::task<engine::WriteResult>
-ShardEndpoint::do_replace(engine::Shard& eng, engine::Chores& chores_, int flags, engine::docid shard_did, engine::Document&& doc, [[maybe_unused]] bool wal_, bool version_, bool must_exist)
+ShardEndpoint::do_replace(engine::Shard& eng, engine::docid shard_did, engine::Document&& doc, bool version_, bool must_exist, ChunkedUpload* upload, bool at_placement)
 {
-	L_CALL("ShardEndpoint::do_replace({}, <doc>, {})", shard_did, wal_);
+	L_CALL("ShardEndpoint::do_replace({}, <doc>, {})", shard_did, version_);
 
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
-
-#ifdef XAPIAND_DATA_STORAGE
-	auto pushed = co_await storage_push_blobs(chores_, doc.get_data());
-	if (!pushed.first.empty()) {
-		doc.set_data(pushed.first);
-	}
-#else
-	(void)chores_;
-#endif  // XAPIAND_DATA_STORAGE
 
 	engine::WriteResult info;
 	info.did = shard_did;
@@ -831,44 +784,21 @@ ShardEndpoint::do_replace(engine::Shard& eng, engine::Chores& chores_, int flags
 	}
 
 	try {
-		info = co_await eng.replace(shard_did, doc, args);
+		info = co_await write_document(eng, engine::WriteOp::replace, shard_did, std::string(), &doc, std::move(args), upload, nullptr, at_placement);
 	} catch (const engine::Error& error) {
 		note_failure(error);
-#ifdef XAPIAND_DATA_STORAGE
-		if (!pushed.second.empty()) {
-			doc.set_data(pushed.second);  // a retry elsewhere pushes the blobs again
-		}
-#endif  // XAPIAND_DATA_STORAGE
 		throw;
 	}
 	applied_.fetch_add(1, std::memory_order_relaxed);
 	modified.store(true, std::memory_order_relaxed);
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
-#ifdef XAPIAND_DATA_STORAGE
-		if (!pushed.second.empty()) {
-			doc.set_data(pushed.second);  // restore data with blobs
-		}
-#endif  // XAPIAND_DATA_STORAGE
-		wal_writer().write_replace_document(
-			has_db_synchronous_wal(flags),
-			path,
-			eng.uuid(),
-			eng.revision(),
-			info.did,
-			std::move(doc));
-	}
-#else
-	(void)flags;
-#endif
 	co_return info;
 }
 
 
 task::task<engine::WriteResult>
-ShardEndpoint::do_replace_term(engine::Shard& eng, engine::Chores& chores_, int flags, const std::string& term, engine::Document&& doc, [[maybe_unused]] bool wal_, bool version_)
+ShardEndpoint::do_replace_term(engine::Shard& eng, const std::string& term, engine::Document&& doc, bool version_, ChunkedUpload* upload, CommandWrite* batched, bool at_placement)
 {
-	L_CALL("ShardEndpoint::do_replace_term({}, <doc>, {}, {})", repr(term), wal_, version_);
+	L_CALL("ShardEndpoint::do_replace_term({}, <doc>, {})", repr(term), version_);
 
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
@@ -890,15 +820,6 @@ ShardEndpoint::do_replace_term(engine::Shard& eng, engine::Chores& chores_, int 
 		raise_id_high(issued);  // taken even if the write fails: a retry gets the next one
 	}
 
-#ifdef XAPIAND_DATA_STORAGE
-	auto pushed = co_await storage_push_blobs(chores_, doc.get_data());
-	if (!pushed.first.empty()) {
-		doc.set_data(pushed.first);
-	}
-#else
-	(void)chores_;
-#endif  // XAPIAND_DATA_STORAGE
-
 	engine::WriteArgs args;
 	if (version_) {
 		args.expected_version = expected_version(doc);
@@ -913,7 +834,7 @@ ShardEndpoint::do_replace_term(engine::Shard& eng, engine::Chores& chores_, int 
 	info.term = key;
 	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result); };
 	try {
-		info = co_await eng.replace_by_key(key, doc, args);
+		info = co_await write_document(eng, engine::WriteOp::replace_key, 0, key, &doc, std::move(args), upload, batched, at_placement);
 	} catch (const engine::Error& error) {
 		note_failure(error);
 		throw;
@@ -923,116 +844,80 @@ ShardEndpoint::do_replace_term(engine::Shard& eng, engine::Chores& chores_, int 
 	}
 	applied_.fetch_add(1, std::memory_order_relaxed);
 	modified.store(true, std::memory_order_relaxed);
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
-#ifdef XAPIAND_DATA_STORAGE
-		if (!pushed.second.empty()) {
-			doc.set_data(pushed.second);  // restore data with blobs
-		}
-#endif  // XAPIAND_DATA_STORAGE
-		wal_writer().write_replace_document(
-			has_db_synchronous_wal(flags),
-			path,
-			eng.uuid(),
-			eng.revision(),
-			info.did,
-			std::move(doc));
-	}
-#else
-	(void)flags;
-#endif
 	co_return info;
 }
 
 
 task::task<void>
-ShardEndpoint::do_delete(engine::Shard& eng, [[maybe_unused]] int flags, engine::docid shard_did, [[maybe_unused]] bool wal_, std::optional<engine::rev> expected_)
+ShardEndpoint::do_delete(engine::Shard& eng, engine::docid shard_did, std::optional<engine::rev> expected_, bool at_placement)
 {
-	L_CALL("ShardEndpoint::do_delete({}, {})", shard_did, wal_);
+	L_CALL("ShardEndpoint::do_delete({})", shard_did);
 
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
 	try {
-		co_await eng.erase(shard_did, true, expected_);
+		engine::WriteArgs args;
+		args.expected_version = expected_;
+		co_await write_document(eng, engine::WriteOp::erase, shard_did, std::string(), nullptr, std::move(args), nullptr, nullptr, at_placement);
 	} catch (const engine::Error& error) {
 		note_failure(error);
 		throw;
 	}
 	applied_.fetch_add(1, std::memory_order_relaxed);
 	modified.store(true, std::memory_order_relaxed);
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
-		wal_writer().write_delete_document(
-			has_db_synchronous_wal(flags),
-			path,
-			eng.uuid(),
-			eng.revision(),
-			shard_did);
-	}
-#endif
 }
 
 
 task::task<void>
-ShardEndpoint::do_delete_term(engine::Shard& eng, [[maybe_unused]] int flags, const std::string& term, [[maybe_unused]] bool wal_, std::optional<engine::rev> expected_)
+ShardEndpoint::do_delete_term(engine::Shard& eng, const std::string& term, std::optional<engine::rev> expected_, bool at_placement)
 {
-	L_CALL("ShardEndpoint::do_delete_term({}, {})", repr(term), wal_);
+	L_CALL("ShardEndpoint::do_delete_term({})", repr(term));
 
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
-	[[maybe_unused]] engine::docid shard_did = 0;
 	try {
-		shard_did = co_await eng.erase_by_key(term, true, expected_);
+		engine::WriteArgs args;
+		args.expected_version = expected_;
+		co_await write_document(eng, engine::WriteOp::erase_key, 0, term, nullptr, std::move(args), nullptr, nullptr, at_placement);
 	} catch (const engine::Error& error) {
 		note_failure(error);
 		throw;
 	}
 	applied_.fetch_add(1, std::memory_order_relaxed);
 	modified.store(true, std::memory_order_relaxed);
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
-		wal_writer().write_delete_document(
-			has_db_synchronous_wal(flags),
-			path,
-			eng.uuid(),
-			eng.revision(),
-			shard_did);
-	}
-#endif
 }
 
 
 task::task<void>
-ShardEndpoint::do_set_metadata(engine::Shard& eng, [[maybe_unused]] int flags, const std::string& key, const std::string& value, [[maybe_unused]] bool wal_)
+ShardEndpoint::do_set_metadata(engine::Shard& eng, const std::string& key, const std::string& value)
 {
-	L_CALL("ShardEndpoint::do_set_metadata({}, {}, {})", repr(key), repr(value), wal_);
+	L_CALL("ShardEndpoint::do_set_metadata({}, {})", repr(key), repr(value));
 
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
 	try {
-		co_await eng.set_metadata(key, value);
+		if (group_) {
+			CommandWrite write;
+			write.op = CommandOp::set_metadata;
+			write.key = key;
+			write.document.bytes = value;
+			Command command;
+			command.writes.push_back(std::move(write));
+			landed(eng, engine::PreparedWrite{}, co_await propose(*group_, command));
+		} else {
+			co_await eng.set_metadata(key, value);
+		}
 	} catch (const engine::Error& error) {
 		note_failure(error);
 		throw;
 	}
 	applied_.fetch_add(1, std::memory_order_relaxed);
 	modified.store(true, std::memory_order_relaxed);
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
-		wal_writer().write_set_metadata(
-			has_db_synchronous_wal(flags),
-			path,
-			eng.uuid(),
-			eng.revision(),
-			key,
-			value);
-	}
-#endif
 }
 
 
 task::task<void>
-ShardEndpoint::do_add_spelling(engine::Shard& eng, [[maybe_unused]] int flags, const std::string& word, engine::termcount freqinc, [[maybe_unused]] bool wal_)
+ShardEndpoint::do_add_spelling(engine::Shard& eng, const std::string& word, engine::termcount freqinc)
 {
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
@@ -1044,22 +929,11 @@ ShardEndpoint::do_add_spelling(engine::Shard& eng, [[maybe_unused]] int flags, c
 	}
 	applied_.fetch_add(1, std::memory_order_relaxed);
 	modified.store(true, std::memory_order_relaxed);
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
-		wal_writer().write_add_spelling(
-			has_db_synchronous_wal(flags),
-			path,
-			eng.uuid(),
-			eng.revision(),
-			word,
-			freqinc);
-	}
-#endif
 }
 
 
 task::task<engine::termcount>
-ShardEndpoint::do_remove_spelling(engine::Shard& eng, [[maybe_unused]] int flags, const std::string& word, engine::termcount freqdec, [[maybe_unused]] bool wal_)
+ShardEndpoint::do_remove_spelling(engine::Shard& eng, const std::string& word, engine::termcount freqdec)
 {
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
@@ -1072,223 +946,13 @@ ShardEndpoint::do_remove_spelling(engine::Shard& eng, [[maybe_unused]] int flags
 	}
 	applied_.fetch_add(1, std::memory_order_relaxed);
 	modified.store(true, std::memory_order_relaxed);
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
-		wal_writer().write_remove_spelling(
-			has_db_synchronous_wal(flags),
-			path,
-			eng.uuid(),
-			eng.revision(),
-			word,
-			freqdec);
-	}
-#endif
 	co_return result;
 }
 
 
 /*
- * The data storage: blobs written under the turn, read on readers of their own, all in chores.
+ * The blobs: records apply wrote in the group's file set (D16), read in chores.
  */
-#ifdef XAPIAND_DATA_STORAGE
-
-std::pair<std::string, std::string>
-ShardEndpoint::storage_push_blobs_blocking(std::string&& doc_data)
-{
-	L_CALL("ShardEndpoint::storage_push_blobs_blocking()");
-
-	std::pair<std::string, std::string> pushed;
-	if (doc_data.empty()) {
-		return pushed;
-	}
-
-	if (writable_storage) {
-		auto data = Data(std::move(doc_data));
-		for (auto& locator : data) {
-			if (locator.size == 0) {
-				data.erase(locator.ct_type);
-			}
-			if (locator.type == Locator::Type::stored || locator.type == Locator::Type::lz4_compressed_stored || locator.type == Locator::Type::zstd_compressed_stored) {
-				if (!locator.raw.empty()) {
-					uint32_t offset;
-					while (true) {
-						try {
-							if (writable_storage->closed()) {
-								writable_storage->open(strings::format(DATA_STORAGE_PATH "{}", writable_storage->volume));
-							}
-							offset = writable_storage->write(serialize_strings({ locator.ct_type.to_string(), locator.raw }));
-							break;
-						} catch (StorageEOF) {
-							writable_storage->volume = static_cast<uint32_t>(next_volume_.fetch_add(1));
-							writable_storage->open(strings::format(DATA_STORAGE_PATH "{}", writable_storage->volume));
-						} catch (const StorageLegacyReadOnly&) {
-							// The latest volume is a legacy v1 volume (read-only).
-							// Start a fresh v2 volume above it for new writes; the
-							// old v1 volumes stay readable and age out over time.
-							writable_storage->volume = static_cast<uint32_t>(next_volume_.fetch_add(1));
-							writable_storage->open(strings::format(DATA_STORAGE_PATH "{}", writable_storage->volume));
-						}
-					}
-					data.update(locator.ct_type, writable_storage->volume, offset, locator.size);
-				}
-			}
-		}
-		pushed.second = std::move(data.serialize());
-		data.flush();
-		pushed.first = std::move(data.serialize());
-	}
-	return pushed;
-}
-
-
-task::task<std::pair<std::string, std::string>>
-ShardEndpoint::storage_push_blobs(engine::Chores& chores_, std::string doc_data)
-{
-	if (doc_data.empty()) {
-		co_return std::pair<std::string, std::string>();
-	}
-	std::pair<std::string, std::string> pushed;
-	co_await chores_.run(engine::ChoreClass::flush, [&] { pushed = storage_push_blobs_blocking(std::move(doc_data)); });
-	co_return pushed;
-}
-
-
-task::task<void>
-ShardEndpoint::storage_commit(engine::Chores& chores_)
-{
-	if (writable_storage) {
-		co_await chores_.run(engine::ChoreClass::flush, [this] { writable_storage->commit(); });
-	}
-}
-
-
-// The state of a streamed upload: a storage of its own on a volume nobody else writes, and the record being streamed
-// into it. Every call that touches the device runs in a chore.
-struct StoredUpload::Impl {
-	ShardEndpoint& entry;
-	std::uint64_t volume;
-	std::unique_ptr<DataStorage> storage;
-	std::optional<DataStorage::StreamWriter> writer;
-	std::uint32_t record_offset = 0;
-	bool ended = false;
-	bool aborted = false;
-
-	Impl(ShardEndpoint& entry_, std::uint64_t volume_) : entry(entry_), volume(volume_) { }
-
-	std::string name() const {
-		return strings::format(DATA_STORAGE_PATH "{}", volume);
-	}
-};
-
-
-StoredUpload::StoredUpload(std::unique_ptr<Impl> impl_, engine::Chores& chores_) : impl(std::move(impl_)), chores(chores_) { }
-
-
-StoredUpload::~StoredUpload()
-{
-	// An upload that neither ended nor was aborted leaves a volume behind: say so, a later reclaim collects it.
-	if (impl && !impl->ended && !impl->aborted) {
-		L_WARNING("A streamed upload of {} was dropped without ending or aborting", repr(impl->name()));
-	}
-}
-
-
-ssize_t
-StoredUpload::volume() const noexcept
-{
-	return static_cast<ssize_t>(impl->volume);
-}
-
-
-size_t
-StoredUpload::offset() const noexcept
-{
-	return impl->record_offset;
-}
-
-
-task::task<void>
-StoredUpload::append(std::string chunk)
-{
-	co_await chores.run(engine::ChoreClass::flush, [this, &chunk] { impl->writer->append(chunk); });
-}
-
-
-task::task<void>
-StoredUpload::end()
-{
-	co_await chores.run(engine::ChoreClass::flush, [this] {
-		impl->record_offset = impl->writer->commit();   // the data is synced, then the volume's header publishes the record
-		impl->writer.reset();
-		impl->storage->close();
-	});
-	impl->ended = true;
-}
-
-
-task::task<void>
-StoredUpload::abort() noexcept
-{
-	if (impl->ended || impl->aborted) {
-		co_return;
-	}
-	impl->aborted = true;
-	try {
-		co_await chores.run(engine::ChoreClass::flush, [this] {
-			impl->writer.reset();
-			if (impl->storage) {
-				impl->storage->close();
-			}
-			const auto file = strings::format("{}/{}", impl->entry.path, impl->name());
-			::unlink(file.c_str());
-		});
-	} catch (...) {
-		L_EXC("Unable to remove the volume of an aborted upload");
-	}
-}
-
-
-task::task<std::unique_ptr<StoredUpload>>
-ShardEndpoint::upload_begin(engine::Chores& chores_, std::string ct_type, std::uint64_t size)
-{
-	// The record is the content type, then the blob, as a `stored` record is: the framing is written first and
-	// the blob's bytes follow.
-	static_assert(STORED_UPLOAD_LIMIT + 1024 == DataStorage::stream_max_size, "the upload limit leaves 1 KiB for the framing");
-	std::string head = serialize_string(ct_type) + serialize_length(size);
-	const std::uint64_t record = head.size() + size;
-	if (record > DataStorage::stream_max_size) {
-		THROW(PayloadTooLarge, "A stored blob has a size limit of {}", strings::from_bytes(DataStorage::stream_max_size - head.size()));
-	}
-
-	auto impl = std::make_unique<StoredUpload::Impl>(*this, next_volume_.fetch_add(1));
-	std::exception_ptr error;
-	try {
-		co_await chores_.run(engine::ChoreClass::flush, [&] {
-			if (!writable_storage) {
-				THROW(ClientError, "The index has no data storage to upload a blob to");
-			}
-			impl->storage = std::make_unique<DataStorage>(path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_SYNC_MODE);
-			impl->storage->open(impl->name());
-			impl->writer.emplace(*impl->storage, record);
-			impl->writer->append(head);
-		});
-	} catch (...) {
-		error = std::current_exception();
-	}
-	std::unique_ptr<StoredUpload> upload(new StoredUpload(std::move(impl), chores_));
-	if (error) {
-		co_await upload->abort();
-		try {
-			std::rethrow_exception(error);
-		} catch (const StorageTooLarge&) {
-			THROW(PayloadTooLarge, "A stored blob has a size limit of {}", strings::from_bytes(DataStorage::stream_max_size));
-		} catch (const StorageEOF&) {
-			THROW(PayloadTooLarge, "The blob does not fit a volume of the data storage");
-		}
-	}
-	co_return upload;
-}
-
 
 std::string
 ShardEndpoint::storage_read_blocking(const Locator& locator)
@@ -1296,28 +960,13 @@ ShardEndpoint::storage_read_blocking(const Locator& locator)
 	assert(locator.type == Locator::Type::stored || locator.type == Locator::Type::lz4_compressed_stored || locator.type == Locator::Type::zstd_compressed_stored);
 	assert(locator.volume != -1);
 
-	DataStorage reader(path, this, STORAGE_OPEN);
-	reader.open(strings::format(DATA_STORAGE_PATH "{}", locator.volume));
-	reader.seek(static_cast<uint32_t>(locator.offset));
-	return reader.read();
+	if (!group_) {
+		throw engine::Error(engine::errc::invalid, "A stored blob needs the index's group");
+	}
+	auto blob = read_stored(*group_->directory, static_cast<std::uint8_t>(locator.type), static_cast<std::uint64_t>(locator.volume), locator.offset, locator.size);
+	return serialize_strings({ locator.ct_type.to_string(), blob });
 }
 
-
-std::string
-ShardEndpoint::storage_read_blocking(std::string_view key)
-{
-	const char *p = key.data();
-	const char *p_end = p + key.size();
-	++p;  // the lead byte that says it is a locator
-	ssize_t volume = unserialize_length(&p, p_end);
-	size_t offset = unserialize_length(&p, p_end);
-	DataStorage reader(path, this, STORAGE_OPEN);
-	reader.open(strings::format(DATA_STORAGE_PATH "{}", volume));
-	reader.seek(static_cast<uint32_t>(offset));
-	return reader.read();
-}
-
-#endif  // XAPIAND_DATA_STORAGE
 
 
 /*
@@ -1372,16 +1021,6 @@ Shard::node() const
 void
 Shard::release() noexcept
 {
-#if XAPIAND_DATABASE_WAL
-	// A restore writes no log, so the log of what it replaced must not be replayed over it.
-	if (is_restore() && is_writable() && pin_) {
-		try {
-			endpoint().wal_writer().delete_wal(is_synchronous_wal(), endpoint().path);
-		} catch (...) {
-			L_EXC("Unable to delete the WAL of {}", repr(endpoint().to_string()));
-		}
-	}
-#endif
 	// A use ends with no map made outside the index's lease (x-pool D12).
 	assert(!pin_ || pin_->index_ == nullptr || pin_->index_->unleased_maps() == 0);
 	if (pin_ && pin_->stale_.load(std::memory_order_acquire)) {
@@ -1411,6 +1050,9 @@ task::task<engine::Shard*>
 Shard::engine_for_read()
 {
 	co_await ready();
+	if (has_db_linearizable(flags)) {
+		co_await endpoint().caught_up();   // read=linearizable (D4): every write committed before the read is applied
+	}
 	co_await endpoint().fresh(flags, cancel);
 	co_return &endpoint().engine();
 }
@@ -1458,11 +1100,15 @@ Shard::apply_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std:
 	assert(is_writable());
 	assert(is_write_active());
 
+	if (endpoint().group() != nullptr) {
+		co_await restore_slice(chores, writes, at, slice, missed_terms);
+		co_await finish_write(false);
+		co_return;
+	}
+
 	{
 		auto turn = co_await endpoint().take_turn(flags, cancel);
 		auto& entry = endpoint();
-		entry.last_flags_.store(flags, std::memory_order_relaxed);
-		const int write_flags = flags;
 		co_await chores.run(engine::ChoreClass::flush, [&] {
 			ShardEndpoint::InlineEngine inline_engine(entry, "a RESTORE's apply slice writes on a worker in the index's turn");
 			if (DocIndexer::seams.throw_in_slice.exchange(false)) {
@@ -1482,7 +1128,7 @@ Shard::apply_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std:
 					write.error = std::make_exception_ptr(error);
 				} else if (write.shard_did != 0) {
 					try {
-						write.info = engine::sync_wait(entry.do_replace(eng, engine::inline_chores(), write_flags, write.shard_did, std::move(write.doc), true, false, true));
+						write.info = engine::sync_wait(entry.do_replace(eng, write.shard_did, std::move(write.doc), false, true));
 					} catch (const engine::Error& error) {
 						if (engine::is_missing(error.kind)) {
 							write.missed = true;   // gone since placement: placed afresh by the caller (B1)
@@ -1495,7 +1141,7 @@ Shard::apply_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std:
 					}
 				} else {
 					try {
-						write.info = engine::sync_wait(entry.do_replace_term(eng, engine::inline_chores(), write_flags, write.term, std::move(write.doc), true, false));
+						write.info = engine::sync_wait(entry.do_replace_term(eng, write.term, std::move(write.doc), false));
 					} catch (...) {
 						write.error = std::current_exception();
 					}
@@ -1509,7 +1155,170 @@ Shard::apply_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std:
 			}
 		});
 	}
-	co_await finish_write(false, true);
+	co_await finish_write(false);
+}
+
+
+// apply_slice() through the index's group (D17): in the turn, a chore prepares the slice's writes, each an
+// unconditional replace by key, into RestoreBatcher's commands of as many writes as fit one log entry; each command
+// is then proposed in input order at the use's level, and at quorum its verdict assigns its writes' docids and
+// versions; at ack=none it answers once placed, with neither. The chore also encodes each command's entry: the loop
+// only proposes it.
+task::task<void>
+Shard::restore_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std::size_t& at, std::chrono::nanoseconds slice, std::unordered_set<std::string>& missed_terms)
+{
+	auto turn = co_await endpoint().take_turn(flags, cancel);
+	auto& entry = endpoint();
+	struct Batch {
+		Command command;                   // the writes' keys, and their bytes when `entry` is empty
+		std::vector<std::size_t> writes;   // their positions in `writes`, in the command's order
+		std::string entry;                 // the command's one log entry; empty when it is chunked
+	};
+	std::vector<Batch> batches;
+	RestoreBatcher batcher;
+	std::vector<std::size_t> filling;
+	const auto close = [&](Command command) {
+		Batch batch{std::move(command), std::exchange(filling, {}), {}};
+		if (auto entries = split_command(batch.command, 0); entries.size() == 1) {
+			batch.entry = std::move(entries.front());
+			for (auto& write : batch.command.writes) {
+				std::string().swap(write.document.bytes);   // the entry holds them
+				write.blobs.clear();
+			}
+		}
+		batches.push_back(std::move(batch));
+	};
+	// Chores of `slice` each prepare the writes until the sub-run ends, so each proposal, and the group's syncs it
+	// waits for, carries a full entry's worth of writes but the last. A test's fixed slice is one chore. The last
+	// chore closes the open command, so the loop encodes no entry. A chore that fails after the first ends the slice
+	// with the writes before it, which are proposed.
+	const auto first = at;
+	const auto limit = DocIndexer::seams.writes_per_slice.load(std::memory_order_relaxed);   // a test's fixed slice
+	bool ended = false;   // a write left the index to be replaced
+	bool done = false;    // the slice's last chore ran
+	std::exception_ptr cut;
+	std::uint64_t carried = 0;   // the id counter the slice's last command carries, durable with its writes
+	const auto close_open = [&] {
+		if (auto closed = batcher.flush()) {
+			if (entry.id_high_ > entry.id_high_logged_) {
+				carried = entry.id_high_;
+				closed->writes.push_back(id_high_write(carried));
+			}
+			close(std::move(*closed));
+		}
+	};
+	const auto prepare = [&] {
+		ShardEndpoint::InlineEngine inline_engine(entry, "a RESTORE's apply slice prepares on a worker in the index's turn");
+		if (DocIndexer::seams.throw_in_slice.exchange(false)) {
+			throw engine::Error(engine::errc::internal, "Test seam: the apply slice throws");
+		}
+		auto& eng = entry.engine();
+		const auto until = std::chrono::steady_clock::now() + slice;
+		while (at < writes.size()) {
+			const auto position = at++;
+			auto& write = writes[position];
+			if (missed_terms.count(write.term) != 0) {
+				write.missed = true;   // a later write of a term whose document left: in input order, after it
+			} else if (const auto& stale_term = DocIndexer::seams.stale_on_term; !stale_term.empty() && write.term.ends_with(stale_term)) {
+				const engine::Error error(engine::errc::reopen, "Test seam: a write marks the index stale");
+				entry.note_failure(error);
+				write.error = std::make_exception_ptr(error);
+			} else if (write.shard_did != 0 && engine::sync_wait(eng.written_key(write.term)) != write.shard_did) {
+				write.missed = true;   // gone from its docid since placement (erased, or written again): placed afresh (B1)
+				missed_terms.insert(write.term);
+			} else {
+				try {
+					CommandWrite batched;
+					write.info = engine::sync_wait(entry.do_replace_term(eng, write.term, std::move(write.doc), false, nullptr, &batched));
+					if (auto closed = batcher.add(std::move(batched), 0)) {
+						close(std::move(*closed));
+					}
+					filling.push_back(position);
+				} catch (...) {
+					write.error = std::current_exception();
+				}
+			}
+			if (write.error && entry.stale_.load(std::memory_order_acquire)) {
+				ended = true;   // the index must be replaced: the later writes reopen it, as one request each would
+				break;
+			}
+			if (limit != 0 ? at - first >= limit : std::chrono::steady_clock::now() >= until) {
+				break;
+			}
+		}
+		done = ended || limit != 0 || at >= writes.size();
+		if (done) {
+			close_open();
+		}
+	};
+	for (bool first_chore = true; !done; first_chore = false) {
+		try {
+			co_await chores.run(engine::ChoreClass::flush, prepare);
+		} catch (...) {
+			if (first_chore) {
+				throw;
+			}
+			cut = std::current_exception();
+			close_open();
+			break;
+		}
+	}
+	auto& eng = entry.engine();
+	const bool at_placement = has_db_ack_none(flags);
+	const auto level = ack_of(at_placement);
+	bool last_failed = false;
+	for (auto& batch : batches) {
+		std::exception_ptr failed;
+		try {
+			auto proposing = batch.entry.empty() ? propose(*entry.group(), batch.command, level)
+				: propose_entry(*entry.group(), std::move(batch.entry), level, Proposer::in_turn);
+			const auto answer = co_await std::move(proposing);
+			if (at_placement) {
+				entry.unapplied_ = true;
+				for (const auto position : batch.writes) {
+					writes[position].info = engine::WriteResult{0, 0, std::move(writes[position].info.term)};
+				}
+				continue;
+			}
+			landed(eng, engine::PreparedWrite{}, answer);   // a refusal raises for the whole batch
+			const auto results = restore_results(batch.command, *answer.applied);
+			for (std::size_t i = 0; i < batch.writes.size(); ++i) {
+				writes[batch.writes[i]].info = results[i];
+			}
+		} catch (...) {
+			failed = std::current_exception();
+		}
+		last_failed = failed != nullptr;
+		if (failed) {
+			for (const auto position : batch.writes) {
+				writes[position].error = failed;
+			}
+		}
+	}
+	if (carried != 0 && !last_failed) {
+		entry.id_high_logged_ = std::max(entry.id_high_logged_, carried);   // the last command carried it
+	}
+	if (entry.id_high_ > entry.id_high_logged_) {
+		// The ids the slice issued or wrote that no command carried, durable once this lands; a failure leaves it
+		// to the next write's command.
+		const auto high = entry.id_high_;
+		Command command;
+		command.writes.push_back(id_high_write(high));
+		try {
+			const auto answer = co_await propose(*entry.group(), command, level);
+			if (at_placement) {
+				entry.unapplied_ = true;
+			} else {
+				landed(eng, engine::PreparedWrite{}, answer);
+			}
+			entry.id_high_logged_ = std::max(entry.id_high_logged_, high);
+		} catch (...) {
+			L_EXC("The id counter of a RESTORE's slice was not logged");
+		}
+	}
+	if (cut) {
+		std::rethrow_exception(cut);   // the next write fails, as a slice failing before it would fail it
+	}
 }
 
 
@@ -1575,14 +1384,14 @@ Shard::collect_failure(const engine::Error& error, std::exception_ptr& eptr, siz
 
 
 task::task<bool>
-Shard::commit(bool wal_)
+Shard::commit()
 {
-	L_CALL("Shard::commit({})", wal_);
+	L_CALL("Shard::commit()");
 
 	assert(is_writable());
 	assert(is_write_active());
 
-	co_return co_await endpoint().commit(flags, wal_);
+	co_return co_await endpoint().commit(flags);
 }
 
 
@@ -1598,19 +1407,30 @@ schedule_autocommit(const Shard& shard)
 }
 
 
-// What follows a write: its commit when it asked for one, else the debounced autocommit. The write is applied
-// and logged by now. A commit whose turn times out (busy) does not fail the write, which a client would retry
-// (and an add without an id would then duplicate): the write stands, the autocommit commits it, and the
-// client is told it succeeded.
+// What follows a write: its refresh level (D4), then its commit when it asked for one, else the debounced
+// autocommit. The write is logged by now, and applied unless it was answered at placement (ack=none): refresh=true
+// and refresh=wait_for wait for that apply. A read refreshes a shard its writes left dirty first (Q-F27 (a)), so
+// on the leader's replica a write is visible to every read once applied: wait_for asks no more, and refresh=true
+// refreshes now, so no read pays it. A commit whose turn times out (busy) does not fail the write, which a
+// client would retry (and an add without an id would then duplicate): the write stands, the autocommit commits it,
+// and the client is told it succeeded.
 task::task<void>
-Shard::finish_write(bool commit_, bool wal_)
+Shard::finish_write(bool commit_)
 {
+	if (has_db_refresh(flags) || has_db_refresh_wait_for(flags)) {
+		if (has_db_ack_none(flags)) {
+			co_await endpoint().caught_up();
+		}
+		if (has_db_refresh(flags)) {
+			co_await endpoint().fresh(flags, cancel);
+		}
+	}
 	if (!commit_) {
 		schedule_autocommit(*this);
 		co_return;
 	}
 	try {
-		co_await commit(wal_);
+		co_await commit();
 	} catch (const engine::Error& error) {
 		if (error.kind != engine::errc::busy) {
 			throw;
@@ -1622,45 +1442,43 @@ Shard::finish_write(bool commit_, bool wal_)
 
 
 task::task<void>
-Shard::delete_document(engine::docid shard_did, bool commit_, bool wal_, std::optional<engine::rev> expected_)
+Shard::delete_document(engine::docid shard_did, bool commit_, std::optional<engine::rev> expected_)
 {
-	L_CALL("Shard::delete_document({}, {}, {})", shard_did, commit_, wal_);
+	L_CALL("Shard::delete_document({}, {})", shard_did, commit_);
 
 	assert(is_writable());
 	assert(is_write_active());
 
 	{
 		auto turn = co_await endpoint().take_turn(flags, cancel);
-		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
 		auto* eng = &endpoint().engine();
-		co_await endpoint().do_delete(*eng, flags, shard_did, wal_, expected_);
+		co_await endpoint().do_delete(*eng, shard_did, expected_, has_db_ack_none(flags));
 	}
-	co_await finish_write(commit_, wal_);
+	co_await finish_write(commit_);
 }
 
 
 task::task<void>
-Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, std::optional<engine::rev> expected_)
+Shard::delete_document_term(const std::string& term, bool commit_, std::optional<engine::rev> expected_)
 {
-	L_CALL("Shard::delete_document_term({}, {}, {})", repr(term), commit_, wal_);
+	L_CALL("Shard::delete_document_term({}, {})", repr(term), commit_);
 
 	assert(is_writable());
 	assert(is_write_active());
 
 	{
 		auto turn = co_await endpoint().take_turn(flags, cancel);
-		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
 		auto* eng = &endpoint().engine();
-		co_await endpoint().do_delete_term(*eng, flags, term, wal_, expected_);
+		co_await endpoint().do_delete_term(*eng, term, expected_, has_db_ack_none(flags));
 	}
-	co_await finish_write(commit_, wal_);
+	co_await finish_write(commit_);
 }
 
 
 task::task<engine::WriteResult>
-Shard::add_document(engine::Document&& doc, bool commit_, bool wal_, bool version_)
+Shard::add_document(engine::Document&& doc, bool commit_, bool version_)
 {
-	L_CALL("Shard::add_document(<doc>, {}, {})", commit_, wal_);
+	L_CALL("Shard::add_document(<doc>, {}, {})", commit_, version_);
 
 	assert(is_writable());
 	assert(is_write_active());
@@ -1668,19 +1486,18 @@ Shard::add_document(engine::Document&& doc, bool commit_, bool wal_, bool versio
 	engine::WriteResult info;
 	{
 		auto turn = co_await endpoint().take_turn(flags, cancel);
-		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
 		auto* eng = &endpoint().engine();
-		info = co_await endpoint().do_add(*eng, *endpoint().chores, flags, std::move(doc), wal_, version_);
+		info = co_await endpoint().do_add(*eng, std::move(doc), version_, has_db_ack_none(flags));
 	}
-	co_await finish_write(commit_, wal_);
+	co_await finish_write(commit_);
 	co_return info;
 }
 
 
 task::task<engine::WriteResult>
-Shard::replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_, bool wal_, bool version_, bool must_exist)
+Shard::replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_, bool version_, bool must_exist, ChunkedUpload* upload)
 {
-	L_CALL("Shard::replace_document({}, <doc>, {}, {})", shard_did, commit_, wal_);
+	L_CALL("Shard::replace_document({}, <doc>, {}, {})", shard_did, commit_, version_);
 
 	assert(is_writable());
 	assert(is_write_active());
@@ -1688,19 +1505,18 @@ Shard::replace_document(engine::docid shard_did, engine::Document&& doc, bool co
 	engine::WriteResult info;
 	{
 		auto turn = co_await endpoint().take_turn(flags, cancel);
-		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
 		auto* eng = &endpoint().engine();
-		info = co_await endpoint().do_replace(*eng, *endpoint().chores, flags, shard_did, std::move(doc), wal_, version_, must_exist);
+		info = co_await endpoint().do_replace(*eng, shard_did, std::move(doc), version_, must_exist, upload, has_db_ack_none(flags));
 	}
-	co_await finish_write(commit_, wal_);
+	co_await finish_write(commit_);
 	co_return info;
 }
 
 
 task::task<engine::WriteResult>
-Shard::replace_document_term(const std::string& term, engine::Document&& doc, bool commit_, bool wal_, bool version_)
+Shard::replace_document_term(const std::string& term, engine::Document&& doc, bool commit_, bool version_, ChunkedUpload* upload)
 {
-	L_CALL("Shard::replace_document_term({}, <doc>, {}, {}, {})", repr(term), commit_, wal_, version_);
+	L_CALL("Shard::replace_document_term({}, <doc>, {}, {})", repr(term), commit_, version_);
 
 	assert(is_writable());
 	assert(is_write_active());
@@ -1708,37 +1524,42 @@ Shard::replace_document_term(const std::string& term, engine::Document&& doc, bo
 	engine::WriteResult info;
 	{
 		auto turn = co_await endpoint().take_turn(flags, cancel);
-		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
 		auto* eng = &endpoint().engine();
-		info = co_await endpoint().do_replace_term(*eng, *endpoint().chores, flags, term, std::move(doc), wal_, version_);
+		info = co_await endpoint().do_replace_term(*eng, term, std::move(doc), version_, upload, nullptr, has_db_ack_none(flags));
 	}
-	co_await finish_write(commit_, wal_);
+	co_await finish_write(commit_);
 	co_return info;
+}
+
+
+ShardGroup*
+Shard::group() const
+{
+	return endpoint().group();
 }
 
 
 task::task<void>
-Shard::add_spelling(const std::string& word, engine::termcount freqinc, bool commit_, bool wal_)
+Shard::add_spelling(const std::string& word, engine::termcount freqinc, bool commit_)
 {
-	L_CALL("Shard::add_spelling(<word, <freqinc>, {}, {})", commit_, wal_);
+	L_CALL("Shard::add_spelling(<word, <freqinc>, {})", commit_);
 
 	assert(is_writable());
 	assert(is_write_active());
 
 	{
 		auto turn = co_await endpoint().take_turn(flags, cancel);
-		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
 		auto* eng = &endpoint().engine();
-		co_await endpoint().do_add_spelling(*eng, flags, word, freqinc, wal_);
+		co_await endpoint().do_add_spelling(*eng, word, freqinc);
 	}
-	co_await finish_write(commit_, wal_);
+	co_await finish_write(commit_);
 }
 
 
 task::task<engine::termcount>
-Shard::remove_spelling(const std::string& word, engine::termcount freqdec, bool commit_, bool wal_)
+Shard::remove_spelling(const std::string& word, engine::termcount freqdec, bool commit_)
 {
-	L_CALL("Shard::remove_spelling(<word>, <freqdec>, {}, {})", commit_, wal_);
+	L_CALL("Shard::remove_spelling(<word>, <freqdec>, {})", commit_);
 
 	assert(is_writable());
 	assert(is_write_active());
@@ -1746,30 +1567,28 @@ Shard::remove_spelling(const std::string& word, engine::termcount freqdec, bool 
 	engine::termcount result;
 	{
 		auto turn = co_await endpoint().take_turn(flags, cancel);
-		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
 		auto* eng = &endpoint().engine();
-		result = co_await endpoint().do_remove_spelling(*eng, flags, word, freqdec, wal_);
+		result = co_await endpoint().do_remove_spelling(*eng, word, freqdec);
 	}
-	co_await finish_write(commit_, wal_);
+	co_await finish_write(commit_);
 	co_return result;
 }
 
 
 task::task<void>
-Shard::set_metadata(const std::string& key, const std::string& value, bool commit_, bool wal_)
+Shard::set_metadata(const std::string& key, const std::string& value, bool commit_)
 {
-	L_CALL("Shard::set_metadata({}, {}, {}, {})", repr(key), repr(value), commit_, wal_);
+	L_CALL("Shard::set_metadata({}, {}, {})", repr(key), repr(value), commit_);
 
 	assert(is_writable());
 	assert(is_write_active());
 
 	{
 		auto turn = co_await endpoint().take_turn(flags, cancel);
-		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
 		auto* eng = &endpoint().engine();
-		co_await endpoint().do_set_metadata(*eng, flags, key, value, wal_);
+		co_await endpoint().do_set_metadata(*eng, key, value);   // a schema's or a setting's: at quorum, whatever the write's level
 	}
-	co_await finish_write(commit_, wal_);
+	co_await finish_write(commit_);
 }
 
 
@@ -1817,15 +1636,6 @@ Shard::get_metadata(const std::string& key)
 
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
-#ifdef XAPIAND_DATA_STORAGE
-	if (!key.empty() && key[0] == '\x00') {
-		// The locator of a blob: a read of the data storage, in a chore.
-		co_await ready();
-		co_await endpoint().chores->run(engine::ChoreClass::query, [&] { value = endpoint().storage_read_blocking(std::string_view(key)); });
-		co_return value;
-	}
-#endif  // XAPIAND_DATA_STORAGE
-
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			auto* eng = co_await engine_for_read();
@@ -1868,7 +1678,6 @@ Shard::get_metadata_keys()
 }
 
 
-#ifdef XAPIAND_DATA_STORAGE
 task::task<std::string>
 Shard::storage_get_stored(const Locator& locator)
 {
@@ -1881,17 +1690,6 @@ Shard::storage_get_stored(const Locator& locator)
 }
 
 
-task::task<std::unique_ptr<StoredUpload>>
-Shard::upload_begin(engine::Chores& chores, std::string ct_type, std::uint64_t size)
-{
-	L_CALL("Shard::upload_begin()");
-
-	co_await ready();
-	co_return co_await endpoint().upload_begin(chores, std::move(ct_type), size);
-}
-#endif /* XAPIAND_DATA_STORAGE */
-
-
 std::string
 Shard::to_string() const
 {
@@ -1902,11 +1700,10 @@ Shard::to_string() const
 std::string
 Shard::__repr__() const
 {
-	return strings::format(STEEL_BLUE + "<Shard {} ({}){}{}>",
+	return strings::format(STEEL_BLUE + "<Shard {} ({}){}>",
 		repr(to_string()),
 		readable_flags(flags),
-		is_writable() ? " " + DARK_STEEL_BLUE + "(writable)" + STEEL_BLUE : "",
-		is_wal_active() ? " " + DARK_STEEL_BLUE + "(active WAL)" + STEEL_BLUE : "");
+		is_writable() ? " " + DARK_STEEL_BLUE + "(writable)" + STEEL_BLUE : "");
 }
 
 
@@ -1923,7 +1720,7 @@ autocommit(DatabasePool& pool, Endpoint endpoint)
 	std::string error;
 	bool pending = false;
 	try {
-		co_await entry->commit(DB_OPEN | DB_WRITABLE, true);
+		co_await entry->commit(DB_OPEN | DB_WRITABLE);
 		pending = co_await entry->settle_merges(DB_OPEN | DB_WRITABLE);
 	} catch (const engine::Error& exc) {
 		pending = exc.kind == engine::errc::busy;   // the turn did not come: try again later

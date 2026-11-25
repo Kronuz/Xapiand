@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "config.h"               // for XAPIAND_DATA_STORAGE
+#include "config.h"
 
 #include <chrono>                 // for std::chrono::nanoseconds
 #include <cstdint>                // for std::uint64_t
@@ -70,7 +70,7 @@ struct SliceWrite {
 
 // One use of an index: its pin and the flags the user asked with. Cheap to make and to drop.
 // Every operation that can wait is a task, so the callers decide where it runs; a write takes the
-// index's turn and holds it for its apply, its revision update and its WAL line, nothing longer.
+// index's turn and holds it for its apply, its proposal and its revision update, nothing longer.
 class Shard {
 	IndexPin pin_;
 	DatabasePool* pool_;
@@ -110,14 +110,6 @@ public:
 		return !has_db_disable_autocommit(flags);
 	}
 
-	bool is_synchronous_wal() const {
-		return has_db_synchronous_wal(flags);
-	}
-
-	bool is_wal_active() const {
-		return is_writable() && !has_db_disable_wal(flags);
-	}
-
 	bool is_write_active() const {
 		return !has_db_disable_writes(flags);
 	}
@@ -133,7 +125,8 @@ public:
 	// The engine of the pinned index; raises `closed` with no pin.
 	engine::Shard& engine();
 
-	// ready(), then a refresh if something was applied since the last one, so the caller reads it.
+	// ready(), then a refresh if something was applied since the last one, so the caller reads it. With
+	// DB_LINEARIZABLE (read=linearizable, D4) the group first applies everything committed before the call.
 	task::task<engine::Shard*> engine_for_read();
 
 	// Where a write places a document: the engine's written reads (the id holding a key term, 0 for none, and the
@@ -159,20 +152,25 @@ public:
 	// final. A write does not treat a stale snapshot as retryable. Called from a catch block.
 	void collect_failure(const engine::Error& error, std::exception_ptr& eptr, size_t& valid, bool writes);
 
-	// What follows a write: its commit when it asked for one, else the debounced autocommit. A commit whose turn
-	// times out leaves the write standing (applied and logged) for the autocommit; the caller is not failed.
-	task::task<void> finish_write(bool commit_, bool wal_);
+	// What follows a write: its refresh level (DB_REFRESH, DB_REFRESH_WAIT_FOR), then its commit when it asked for
+	// one, else the debounced autocommit. A commit whose turn times out leaves the write standing (logged) for the
+	// autocommit; the caller is not failed.
+	task::task<void> finish_write(bool commit_);
 
 	// Commits what is applied; a commit that covers this caller's writes and is already in flight is joined.
-	task::task<bool> commit(bool wal_ = true);
+	task::task<bool> commit();
 
 	// A delete with an expected version removes the document only while it has that version (0: it does not exist).
-	task::task<void> delete_document(engine::docid shard_did, bool commit_ = false, bool wal_ = true, std::optional<engine::rev> expected_ = std::nullopt);
-	task::task<void> delete_document_term(const std::string& term, bool commit_ = false, bool wal_ = true, std::optional<engine::rev> expected_ = std::nullopt);
+	task::task<void> delete_document(engine::docid shard_did, bool commit_ = false, std::optional<engine::rev> expected_ = std::nullopt);
+	task::task<void> delete_document_term(const std::string& term, bool commit_ = false, std::optional<engine::rev> expected_ = std::nullopt);
 
-	task::task<engine::WriteResult> add_document(engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
-	task::task<engine::WriteResult> replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true, bool must_exist = false);
-	task::task<engine::WriteResult> replace_document_term(const std::string& term, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
+	task::task<engine::WriteResult> add_document(engine::Document&& doc, bool commit_ = false, bool version_ = true);
+	// `upload`, if any, is the chunked upload whose final entry the write is (D12).
+	task::task<engine::WriteResult> replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_ = false, bool version_ = true, bool must_exist = false, ChunkedUpload* upload = nullptr);
+	task::task<engine::WriteResult> replace_document_term(const std::string& term, engine::Document&& doc, bool commit_ = false, bool version_ = true, ChunkedUpload* upload = nullptr);
+
+	// The index's replication group, or null when the pool has no journal.
+	ShardGroup* group() const;
 
 	// A RESTORE's writes to this shard (docs/perf/x7-loop-stalls.md, fix (c)): in one turn, a chore of `chores`
 	// applies writes[at, ...) in input order for about `slice`, with the engine's chores inline, and leaves `at` where
@@ -181,22 +179,23 @@ public:
 	// across slices): the caller places them afresh, in input order.
 	task::task<void> apply_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std::size_t& at, std::chrono::nanoseconds slice, std::unordered_set<std::string>& missed_terms);
 
-	task::task<void> add_spelling(const std::string& word, engine::termcount freqinc, bool commit_ = false, bool wal_ = true);
-	task::task<engine::termcount> remove_spelling(const std::string& word, engine::termcount freqdec, bool commit_ = false, bool wal_ = true);
+private:
+	// apply_slice() through the index's group: the slice's writes as RESTORE's batch commands (D17).
+	task::task<void> restore_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std::size_t& at, std::chrono::nanoseconds slice, std::unordered_set<std::string>& missed_terms);
+
+public:
+
+	task::task<void> add_spelling(const std::string& word, engine::termcount freqinc, bool commit_ = false);
+	task::task<engine::termcount> remove_spelling(const std::string& word, engine::termcount freqdec, bool commit_ = false);
 
 	task::task<std::unique_ptr<engine::DocView>> get_view(engine::docid shard_did);
 
 	task::task<std::vector<std::string>> get_metadata_keys();
 	task::task<std::string> get_metadata(const std::string& key);
-	task::task<void> set_metadata(const std::string& key, const std::string& value, bool commit_ = false, bool wal_ = true);
+	task::task<void> set_metadata(const std::string& key, const std::string& value, bool commit_ = false);
 
-#ifdef XAPIAND_DATA_STORAGE
-	// A blob of the index's data storage: its read is a chore, on a reader of its own.
+	// A stored blob of the index's group: its read is a chore.
 	task::task<std::string> storage_get_stored(const Locator& locator);
-
-	// Begins a streamed upload of a blob into a volume of the index's data storage that nothing else writes.
-	task::task<std::unique_ptr<StoredUpload>> upload_begin(engine::Chores& chores, std::string ct_type, std::uint64_t size);
-#endif /* XAPIAND_DATA_STORAGE */
 
 	std::string to_string() const;
 

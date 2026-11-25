@@ -22,20 +22,18 @@
 # strata_write_check.sh -- the strata engine's write slice through the server, on a single node.
 #
 # Runs a node with (the index is created on strata; the registry stays Xapian) and
-# checks what the write slice serves without search (S2): documents by id, versions, deletes, and WAL
-# replay after kill -9 (the strata variant of wal_replay_check.sh, which asserts through search).
+# checks what the write slice serves without search (S2): documents by id, versions, deletes, and the journal's
+# recovery after kill -9 (journal_replay_check.sh asserts through search).
 #   write     PUT, GET, replace (version 2), DELETE; the shard is a strata directory
-#   replay    PUT N docs without a commit, kill -9, restart (a write to every shard opens it writable and
-#             replays its WAL): every document is served by id; a crash after the commit loses nothing;
-#             a write between the crashes is replayed
-#   versions  writes, replaces and deletes with known versions; kill -9; after each replay every document is at the
+#   replay    PUT N docs without a commit, kill -9, restart (a write to every shard opens it, and its group applies
+#             what the journal holds past its checkpoint): every document is served by id; a crash after the commit
+#             loses nothing; a write between the crashes is recovered
+#   versions  writes, replaces and deletes with known versions; kill -9; after each restart every document is at the
 #             version and value the model acknowledged (harness/strata_write_model.py), through a second crash
 #   commit    the node kills itself at a commit point (XAPIAND_STRATA_CRASH, a -DCRASH_POINTS=ON build): before the
 #             commit, after the segment is flushed and before the manifest, after it; random writes and deletes
-#             run until it dies; restart, replay, verify the model; crash again, verify again
-#   replaycrash  kill -9 under load, then the node kills itself in the middle of the replay, twice at different
-#             lines; the next restart converges, and so does one more crash after it
-# Usage: harness/strata_write_check.sh [write|replay|versions|commit|replaycrash ...]   (default: write replay)
+#             run until it dies; restart, verify the model; crash again, verify again
+# Usage: harness/strata_write_check.sh [write|replay|versions|commit ...]   (default: write replay)
 #        BIN=build/bin/xapiand PORT=8909 NDOCS=30
 set -u
 
@@ -92,14 +90,6 @@ served() {  # served FIRST LAST: how many of the ids are served with the right a
 	done
 	echo "$ok"
 }
-count_log() { grep -c "$2" "$RUNDIR/$1" 2>/dev/null || true; }
-wal_dump() {  # the :wal endpoint of every shard answers (it decodes the strata documents in the log)
-	local s ok=0
-	for s in 1 2 3 4 5; do
-		[ "$(http "localhost:$PORT/$IDX/.__$s/:wal")" = 200 ] && ok=$((ok + 1))
-	done
-	echo "$ok"
-}
 strata_dirs() { find "$RUNDIR/n/$IDX" -type d -name strata 2>/dev/null | wc -l | tr -d ' '; }
 glass_files() { find "$RUNDIR/n/$IDX" -name iamglass 2>/dev/null | wc -l | tr -d ' '; }
 
@@ -126,7 +116,7 @@ put_docs() {  # put_docs FIRST LAST: one PUT each, so nothing commits before the
 	done
 	sleep 1
 }
-poke() {  # a write to every shard: opens each writable, which replays its WAL (replay is lazy, as with Xapian)
+poke() {  # a write to every shard: opens each, whose group applies the journal past its checkpoint
 	local i
 	for i in $(seq 0 39); do
 		curl -s -m15 -o /dev/null -XPUT "localhost:$PORT/$IDX/poke$i" -H 'Content-Type: application/json' -d '{"poke":true}'
@@ -134,26 +124,23 @@ poke() {  # a write to every shard: opens each writable, which replays its WAL (
 }
 
 scenario_replay() {
-	echo "== [strata-write] crash, replay, crash, replay =="
+	echo "== [strata-write] crash, recover, crash, recover =="
 	rm -rf "$RUNDIR/n"
 	start_node r1.log || { fail "startup"; return; }
 	put_docs 0 "$NDOCS"   # few enough to crash before the autocommit (about 3 s)
-	[ "$(wal_dump)" = 5 ] && pass "the :wal endpoint decodes the log of every shard" || fail ":wal answered for $(wal_dump) of 5 shards"
 	crash
 
 	start_node r2.log || { fail "restart 1"; return; }
 	poke
 	local s1; s1="$(served 0 "$NDOCS")"
-	[ "$s1" = "$NDOCS" ] && pass "all $NDOCS documents are served after the first replay" || fail "after replay: $s1 of $NDOCS"
-	[ "$(count_log r2.log "Read and execute operations WAL file ('$IDX/")" -ge 1 ] && pass "the first restart replayed the WAL" || fail "no replay logged on the first restart"
-	sleep 5   # the autocommit commits the replay
+	[ "$s1" = "$NDOCS" ] && pass "all $NDOCS documents are served after the first restart" || fail "after the restart: $s1 of $NDOCS"
+	sleep 5   # the autocommit checkpoints them
 	crash
 
 	start_node r3.log || { fail "restart 2"; return; }
 	poke
 	local s2; s2="$(served 0 "$NDOCS")"
 	[ "$s2" = "$NDOCS" ] && pass "idempotent: all documents after the second crash" || fail "second crash: $s2 of $NDOCS"
-	[ "$(count_log r3.log 'WAL ERROR')" = 0 ] && pass "no WAL error" || fail "WAL error on the second restart"
 
 	http -XPUT "localhost:$PORT/$IDX/extra" -H 'Content-Type: application/json' -d '{"age":7}' > /dev/null
 	sleep 1.5
@@ -162,7 +149,6 @@ scenario_replay() {
 	poke
 	[ "$(http "localhost:$PORT/$IDX/extra")" = 200 ] && [ "$(field age)" = 7 ] && pass "the write between the crashes is served" || fail "extra after crash: $(cat "$RUNDIR/body")"
 	[ "$(served 0 "$NDOCS")" = "$NDOCS" ] && pass "and the rest is intact" || fail "rest after the third crash"
-	[ "$(count_log r4.log "Read and execute operations WAL file ('$IDX/")" -ge 1 ] && pass "that write was replayed" || fail "nothing replayed on the third restart"
 	crash
 }
 
@@ -198,9 +184,8 @@ scenario_versions() {
 	crash
 	start_node v2.log || { fail "restart 1"; return; }
 	poke
-	check_model "after the first replay"
-	[ "$(count_log v2.log "Read and execute operations WAL file ('$IDX/")" -ge 1 ] && pass "the restart replayed the WAL" || fail "no replay logged"
-	sleep 5   # the autocommit commits the replay
+	check_model "after the first restart"
+	sleep 5   # the autocommit checkpoints it
 	crash
 	start_node v3.log || { fail "restart 2"; return; }
 	poke
@@ -226,7 +211,6 @@ scenario_commit() {
 		start_node c2.log || { fail "restart ($point)"; continue; }
 		poke
 		check_model "$point: after the restart"
-		[ "$(count_log c2.log 'WAL ERROR')" = 0 ] && pass "$point: no WAL error" || fail "$point: WAL error on the restart"
 		model load 1 40
 		sleep 5
 		crash
@@ -237,30 +221,6 @@ scenario_commit() {
 	done
 }
 
-scenario_replaycrash() {
-	echo "== [strata-write] the node dies in the middle of the replay =="
-	rm -rf "$RUNDIR/n" "$MODEL"
-	start_node p1.log || { fail "startup"; return; }
-	model load 1.5 40   # under the autocommit, so the log holds all of it
-	crash
-	HOOK="replay:5" start_node p2.log || { fail "restart 1"; return; }
-	poke
-	died "the first replay" || return
-	HOOK="replay:2" start_node p3.log || { fail "restart 2"; return; }
-	poke
-	died "the second replay" || return
-	start_node p4.log || { fail "restart 3"; return; }
-	poke
-	check_model "after two crashes in the replay"
-	sleep 5
-	crash
-	start_node p5.log || { fail "restart 4"; return; }
-	poke
-	check_model "after one more crash"
-	[ "$(count_log p5.log 'WAL ERROR')" = 0 ] && pass "no WAL error" || fail "WAL error on the last restart"
-	crash
-}
-
 picked=("$@"); [ ${#picked[@]} -eq 0 ] && picked=(write replay)
 for p in "${picked[@]}"; do
 	case "$p" in
@@ -268,7 +228,6 @@ for p in "${picked[@]}"; do
 		replay) scenario_replay ;;
 		versions) scenario_versions ;;
 		commit) scenario_commit ;;
-		replaycrash) scenario_replaycrash ;;
 		*) echo "unknown scenario $p"; exit 2 ;;
 	esac
 done

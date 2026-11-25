@@ -23,12 +23,13 @@
 // The index registry (docs/design/phase7c.md D5, D6, D7): single-flight opens that never block a
 // thread, the turn every operation on an index takes (timers included), a deadline that answers
 // `busy`, the close protocol and a request racing it, one turn per task, a commit that joins the one in
-// flight, the WAL's order across writers, and the engine in host mode behind all of it. Each test opens
+// flight, the groups over the journal, and the engine in host mode behind all of it. Each test opens
 // real indexes in the working directory.
 
 #include "test_harness.h"
 
 #include <algorithm>
+#include <cctype>
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -42,9 +43,12 @@
 #include <memory>
 #include <optional>
 #include <mutex>
+#include <fstream>
+#include <iterator>
 #include <set>
 #include <string>
 #include <thread>
+#include <unordered_set>
 #include <vector>
 
 #include <signal.h>
@@ -58,7 +62,7 @@
 #include "database/pool.h"
 #include "pool_support.h"
 #include "database/shard.h"
-#include "database/wal.h"
+#include "database/shard_group.h"
 #include "engine/callbacks.h"
 #include "engine/chores.h"
 #include "engine/document.h"
@@ -68,11 +72,12 @@
 #include "engine/search.h"
 #include "engine/sync.h"
 #include "engine/strata/owed.h"
-#include "compressor_lz4.h"
+#include "completion/posix.h"
+#include "journal/host.h"
 #include "length.h"
 #include "node.h"
 #include "reactor.h"
-#include "strata/core/faultfs.hh"
+#include "faultlab/faultfs.h"
 #include "task.hh"
 #include "utype.hh"
 #include "work_pool.hh"
@@ -89,6 +94,7 @@ struct PoolTestAccess {
 	// The catalog's commit chore, as the catalog runs it (no pin held by the caller's turn).
 	static void commit_blocking(ShardEndpoint& entry) { entry.commit_blocking(); }
 	static prospect::index& index(ShardEndpoint& entry) { return *entry.index_; }
+	static ShardGroup* group(ShardEndpoint& entry) { return entry.group_.get(); }
 	static IndexCatalog::handle where(const IndexPin& pin) { return pin.pin_.where(); }
 	static void patience(DatabasePool& pool, std::chrono::milliseconds wait) { pool.patience_ = wait; }
 	// Whether nobody holds the index's turn right now.
@@ -129,6 +135,10 @@ IndexCatalog& one_catalog(DatabasePool& pool) {
 	return pool.partition(0);
 }
 
+std::string fresh_name(const char* name) {
+	return std::string("pool_test_") + name + ".db";
+}
+
 std::string fresh(const char* name) {
 	std::string path = std::string("pool_test_") + name + ".db";
 	std::filesystem::remove_all(path);
@@ -153,8 +163,8 @@ engine::errc error_kind(F&& f) {
 	return engine::errc::internal;
 }
 
-// Writes without a WAL or an autocommit (those need a manager): the registry's own behaviour.
-constexpr int WRITE = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL | DB_DISABLE_AUTOCOMMIT;
+// Writes without an autocommit (it needs a manager); without a journal, the registry's own behaviour.
+constexpr int WRITE = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_AUTOCOMMIT;
 
 // A request's pin on the index at `path` (it opens it, and creates it with WRITE's flags).
 IndexPin pin(DatabasePool& pool, const std::string& path, int flags = WRITE) {
@@ -526,6 +536,241 @@ engine::rev revision_of(Shard& shard) {
 	return shard.engine().revision();
 }
 
+// With a journal, each index is a lone-voter group over its slot's index (cluster-release D2, D169): the open opens
+// it, the pool's shutdown closes it through close_payload, which leaves it closed in the journal's table, and a new
+// process recovers it under the same id.
+void test_an_index_is_a_lone_voter_group() {
+	const auto journal = fresh("journal");
+	const auto path = fresh("group");
+	kronuz::consensus::GroupId id = 0;
+	for (int process = 0; process < 2; ++process) {
+		{
+			DatabasePool pool(control_loop(), 8);
+			pool.set_journal(journal);
+			auto entry = pin(pool, path);
+			auto* group = A::group(entry.entry());
+			REQUIRE(group != nullptr);
+			CHECK_FALSE(group->group.fenced());
+			CHECK(group->group.readable());
+			const auto mine = ShardGroups::group_id(A::index(entry.entry()).manifest().uuid);
+			CHECK_EQ(group->group.id(), mine);
+			if (process == 0) {
+				id = mine;
+			}
+			CHECK_EQ(mine, id);   // the same index, the same group
+			Shard shard = use(entry, WRITE);
+			engine::sync_wait(shard.add_document(make("K" + std::to_string(process), "v")));
+			CHECK_TRUE(engine::sync_wait(shard.commit()));
+		}
+		kronuz::journal::Host host(std::make_shared<kronuz::journal::PosixIO>(journal, kronuz::journal::PosixIOOptions{kronuz::journal::FlushMode::plain}), kronuz::journal::Identity{'X', 'H'}, kronuz::journal::HostOptions{1, kronuz::journal::TurnLogOptions{}});
+		CHECK(host.status(id) == kronuz::journal::GroupStatus::closed);
+	}
+	std::filesystem::remove_all(journal);
+	std::filesystem::remove_all(path);
+}
+
+// A write the group acknowledged is durable at its answer (D2): a process killed before any commit or close loses
+// none, and the next process's open replays it from the journal before it serves a read.
+void test_an_acknowledged_write_survives_a_kill() {
+	const auto journal = fresh("journal_kill");
+	const auto path = fresh("group_kill");
+	std::fflush(nullptr);
+	const pid_t pid = ::fork();
+	if (pid == 0) {
+		::alarm(30);
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		auto entry = pin(pool, path);
+		Shard shard = use(entry, WRITE);
+		engine::sync_wait(shard.add_document(make("Kk", "acknowledged")));
+		std::fflush(nullptr);
+		::raise(SIGKILL);   // no commit and no close: only the journal has the write
+	}
+	int status = 0;
+	::waitpid(pid, &status, 0);
+	CHECK(WIFSIGNALED(status) && WTERMSIG(status) == SIGKILL);
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		auto entry = pin(pool, path);
+		Shard shard = use(entry, WRITE);
+		auto view = engine::sync_wait(shard.get_view(1));
+		CHECK_EQ(view->data(), "acknowledged");
+	}
+	std::filesystem::remove_all(journal);
+	std::filesystem::remove_all(path);
+}
+
+// Read-your-writes on a lone voter (Q-F27 (a)): a get-by-id and a search right after an acknowledged write see it,
+// with no commit between: the group's apply leaves the shard dirty, so a read refreshes it rather than serving the
+// last periodic refresh.
+void test_a_lone_voter_reads_its_writes() {
+	const auto journal = fresh("journal_ryw");
+	const auto path = fresh("group_ryw");
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		auto entry = pin(pool, path);
+		Shard shard = use(entry, WRITE);
+		auto prepared = engine::prepare(engine::Query::term("f", "body"));
+		for (std::size_t i = 1; i <= 3; ++i) {
+			const auto data = "v" + std::to_string(i);
+			auto written = engine::sync_wait(shard.add_document(make("K" + std::to_string(i), data)));
+			auto view = engine::sync_wait(shard.get_view(written.did));
+			REQUIRE(view != nullptr);
+			CHECK_EQ(view->data(), data);
+			auto* eng = engine::sync_wait(shard.engine_for_read());
+			engine::SearchRequest request;
+			request.query = prepared.get();
+			request.maxitems = 10;
+			CHECK_EQ(engine::sync_wait(engine::search(std::vector<engine::Shard*>{eng}, request)).hits.size(), i);
+		}
+	}
+	std::filesystem::remove_all(journal);
+	std::filesystem::remove_all(path);
+}
+
+// A request body in pieces of `piece` bytes.
+class Pieces final : public DatabaseHandler::BodyChunks {
+	std::string bytes_;
+	std::size_t piece_;
+	std::size_t at_ = 0;
+
+public:
+	Pieces(std::string bytes, std::size_t piece) : bytes_(std::move(bytes)), piece_(piece) { }
+	task::task<bool> next(std::string& chunk) override {
+		if (at_ == bytes_.size()) {
+			co_return false;
+		}
+		chunk = bytes_.substr(at_, piece_);
+		at_ += chunk.size();
+		co_return true;
+	}
+};
+
+// The stored blob of `ct` in the document `did` names, read back through the shard as a request reads it.
+std::pair<Locator::Type, std::string> stored_blob(Shard& shard, engine::docid did, const std::string& ct) {
+	auto view = engine::sync_wait(shard.get_view(did));
+	const Data data(view->data());
+	for (const auto& locator : data) {
+		if (locator.ct_type.to_string() == ct) {
+			CHECK_GE(locator.volume, 1);   // placed by apply, never the prepare's placeholder
+			const auto stored = engine::sync_wait(shard.storage_get_stored(locator));
+			return {locator.type, std::string(unserialize_string_at(STORED_BLOB, stored))};
+		}
+	}
+	CHECK(false);   // no stored blob of `ct`
+	return {};
+}
+
+// A stored blob travels in its write's command (D3) and an uploaded one in its chunk entries (D12): both read back
+// byte-equal after `kill -9` with no commit and no close, from the journal's replay alone.
+void test_stored_blobs_survive_a_kill() {
+	const auto journal = fresh("journal_blobs");
+	const auto path = fresh("group_blobs");
+	std::string compressible;
+	for (int i = 0; i < 2048; ++i) {
+		compressible += "blob" + std::to_string(i % 7);
+	}
+	std::string small = "a small blob";
+	std::string uploaded;
+	for (int i = 0; i < 300000; ++i) {
+		uploaded.push_back(static_cast<char>((i * 131 + i / 7) & 0xff));
+	}
+	std::fflush(nullptr);
+	const pid_t pid = ::fork();
+	if (pid == 0) {
+		::alarm(60);
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		auto entry = pin(pool, path);
+		Shard shard = use(entry, WRITE);
+		Data data;
+		data.update(ct_type_t("text/plain"), -1, 0, 0, compressible);
+		data.update(ct_type_t("application/x-small"), -1, 0, 0, small);
+		data.flush();
+		auto doc = make("Kstored", "");
+		doc.set_data(data.serialize());
+		engine::sync_wait(shard.replace_document_term("Kstored", std::move(doc)));
+		// An upload: its chunks first, then the document as its final entry.
+		auto* group = shard.group();
+		ChunkedUpload upload(engine::sync_wait(next_chunked_id(*group)), uploaded.size(), 64 * 1024);
+		Pieces body(uploaded, 10000);
+		engine::sync_wait(propose_upload(group_proposer(*group, Proposer::pinned), upload, body));
+		Data placeholder;
+		placeholder.update(ct_type_t("video/mp4"), 0, 0, uploaded.size());
+		placeholder.flush();
+		auto up = make("Kup", "");
+		up.set_data(placeholder.serialize());
+		engine::sync_wait(shard.replace_document_term("Kup", std::move(up), false, true, &upload));
+		std::fflush(nullptr);
+		::raise(SIGKILL);   // no commit and no close: only the journal has the writes
+	}
+	int status = 0;
+	::waitpid(pid, &status, 0);
+	CHECK(WIFSIGNALED(status) && WTERMSIG(status) == SIGKILL);
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		auto entry = pin(pool, path);
+		Shard shard = use(entry, WRITE);
+		const auto [text_type, text] = stored_blob(shard, 1, "text/plain");
+		CHECK(text_type == Locator::Type::zstd_compressed_stored);   // compressed at prepare
+		CHECK(text == compressible);
+		const auto [small_type, small_read] = stored_blob(shard, 1, "application/x-small");
+		CHECK(small_type == Locator::Type::stored);
+		CHECK(small_read == small);
+		const auto [up_type, up_read] = stored_blob(shard, 2, "video/mp4");
+		CHECK(up_type == Locator::Type::stored);
+		CHECK(up_read == uploaded);
+	}
+	std::filesystem::remove_all(journal);
+	std::filesystem::remove_all(path);
+}
+
+// A RESTORE's slice through the group (D17): its writes go as batch commands, far fewer log entries than writes, and
+// each write's docid and version come from its batch's verdict.
+void test_a_restore_slice_is_batch_commands() {
+	const auto journal = fresh("journal_restore");
+	const auto path = fresh("group_restore");
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		auto entry = pin(pool, path);
+		Shard shard = use(entry, WRITE);
+		engine::sync_wait(shard.ready());
+		auto* group = shard.group();
+		REQUIRE(group != nullptr);
+		constexpr std::size_t N = 200;
+		std::vector<SliceWrite> writes(N);
+		for (std::size_t i = 0; i < N; ++i) {
+			writes[i].idx = i;
+			writes[i].term = "Kr" + std::to_string(i);
+			writes[i].doc = make(writes[i].term, "restored " + std::to_string(i));
+		}
+		const auto before = group->group.applied();
+		std::size_t at = 0;
+		std::unordered_set<std::string> missed;
+		while (at < writes.size()) {
+			engine::sync_wait(shard.apply_slice(engine::inline_chores(), writes, at, std::chrono::seconds(10), missed));
+		}
+		CHECK_LT(group->group.applied() - before, N / 10);   // N writes in a handful of commands
+		std::set<engine::docid> dids;
+		for (std::size_t i = 0; i < N; ++i) {
+			CHECK_FALSE(writes[i].error);
+			CHECK_FALSE(writes[i].missed);
+			CHECK_EQ(writes[i].info.version, 1u);
+			CHECK_EQ(writes[i].info.term, writes[i].term);
+			dids.insert(writes[i].info.did);
+		}
+		CHECK_EQ(dids.size(), N);
+		auto view = engine::sync_wait(shard.get_view(writes[N - 1].info.did));
+		CHECK_EQ(view->data(), "restored " + std::to_string(N - 1));
+	}
+	std::filesystem::remove_all(journal);
+	std::filesystem::remove_all(path);
+}
+
 // A write, a read, and a commit through a Shard.
 void test_smoke() {
 	DatabasePool pool(control_loop(), 8);
@@ -821,92 +1066,56 @@ void test_owed_flushes_do_not_reorder_writers() {
 	CHECK_EQ(engine::sync_wait(reader.engine_for_read())->doc_count(), static_cast<engine::doccount>(threads_n * per_thread));
 }
 
-// Blob I/O is device work, so it runs as chores: the blob's write is a flush chore (inside the document's turn, before
-// the apply), its commit another, and its read a query chore.
+// A blob travels in its write's command and apply writes it in the group's file set (D3, D16); its read is device
+// work, so it runs as a query chore.
 void test_blob_io_runs_in_chores() {
 	Watchdog watchdog("blob I/O");
+	const auto journal = fresh("journal_blobs");
+	const auto path = fresh("blobs");
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		auto entry = pin(pool, path);
+		auto& counting = count_chores(entry.entry());
+		Shard shard = use(entry, WRITE);
+		engine::sync_wait(shard.ready());
+		Data data;
+		data.update(ct_type_t("application/octet-stream"), -1, 0, 0, std::string("blobbytes"));
+		data.flush();
+		auto doc = make("Kblob", "");
+		doc.set_data(data.serialize());
+		const auto written = engine::sync_wait(shard.add_document(std::move(doc)));
+		auto view = engine::sync_wait(shard.get_view(written.did));
+		Data stored(view->data());
+		const Locator* locator = nullptr;
+		for (const auto& candidate : stored) {
+			if (candidate.volume != -1) {
+				locator = &candidate;
+			}
+		}
+		REQUIRE(locator != nullptr);
+		const auto queries = counting.count(engine::ChoreClass::query);
+		const auto blob = engine::sync_wait(shard.storage_get_stored(*locator));
+		CHECK_GT(counting.count(engine::ChoreClass::query), queries);  // the read was a chore
+		CHECK_TRUE(blob.find("blobbytes") != std::string::npos);
+	}
+	std::filesystem::remove_all(journal);
+	std::filesystem::remove_all(path);
+}
+
+// Without a group an index holds no stored blob: the write is refused before anything is applied.
+void test_a_stored_blob_needs_the_group() {
+	Watchdog watchdog("a stored blob needs the group");
 	DatabasePool pool(control_loop(), 8);
-	auto entry = pin(pool, fresh("blobs"));
-	auto& counting = count_chores(entry.entry());
+	auto entry = pin(pool, fresh("blobs_no_group"));
 	Shard shard = use(entry, WRITE);
-	engine::sync_wait(shard.ready());
 	Data data;
 	data.update(ct_type_t("application/octet-stream"), -1, 0, 0, std::string("blobbytes"));
 	data.flush();
 	auto doc = make("Kblob", "");
 	doc.set_data(data.serialize());
-	const auto flushes = counting.count(engine::ChoreClass::flush);
-	const auto written = engine::sync_wait(shard.add_document(std::move(doc)));
-	CHECK_GT(counting.count(engine::ChoreClass::flush), flushes);  // the blob was pushed in a chore
-	const auto commits = counting.count(engine::ChoreClass::flush);
-	CHECK_TRUE(engine::sync_wait(shard.commit()));
-	CHECK_GE(counting.count(engine::ChoreClass::flush), commits + 2);  // the storage's fsync and the engine's commit
-	auto view = engine::sync_wait(shard.get_view(written.did));
-	Data stored(view->data());
-	const Locator* locator = nullptr;
-	for (const auto& candidate : stored) {
-		if (candidate.volume != -1) {
-			locator = &candidate;
-		}
-	}
-	REQUIRE(locator != nullptr);
-	const auto queries = counting.count(engine::ChoreClass::query);
-	const auto blob = engine::sync_wait(shard.storage_get_stored(*locator));
-	CHECK_GT(counting.count(engine::ChoreClass::query), queries);  // the read was a chore
-	CHECK_TRUE(blob.find("blobbytes") != std::string::npos);
-}
-
-// The WAL's order is the apply order across writers (C6): the turn covers the apply, the revision update and the WAL
-// enqueue, so lines reach the log in the order the documents were assigned their ids.
-void test_the_wal_order_is_the_apply_order() {
-	Watchdog watchdog("the WAL order", 120s);
-	DatabasePool pool(control_loop(), 8);
-	DatabaseWALWriter writer("WL{:02}", 1);
-	pool.set_wal_writer(&writer);
-	Endpoint endpoint(fresh("walorder"));
-	constexpr int threads_n = 4;
-	constexpr int per_thread = 50;
-	{
-		auto entry = pin(pool, endpoint.path);
-		std::vector<std::thread> threads;
-		for (int t = 0; t < threads_n; ++t) {
-			threads.emplace_back([&, t] {
-				Shard shard = use(entry, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_AUTOCOMMIT);
-				for (int i = 0; i < per_thread; ++i) {
-					engine::sync_wait(shard.add_document(make("K" + std::to_string(t) + "-" + std::to_string(i), "d")));
-				}
-			});
-		}
-		for (auto& thread : threads) {
-			thread.join();
-		}
-	}
-	pool.finish();
-	CHECK_TRUE(pool.join());  // the shutdown's commit writes its line before the writer ends
-	writer.end();  // the queue drains, then the thread ends
-	writer.join(std::chrono::milliseconds(20000));
-	// The log, line by line: the ids of the replaced documents, in the order they reached it.
-	std::vector<engine::docid> logged;
-	DatabaseWAL wal(endpoint.path);
-	for (auto it = wal.begin(); it != wal.end(); ++it) {
-		const std::string line = *it;
-		const char* p = line.data();
-		const char* p_end = p + line.size();
-		(void)unserialize_length(&p, p_end);  // the revision
-		const auto type = static_cast<DatabaseWAL::Type>(unserialize_length(&p, p_end));
-		if (type == DatabaseWAL::Type::REPLACE_DOCUMENT) {
-			const auto data = decompress_lz4(std::string_view(p, p_end - p));
-			const char* q = data.data();
-			logged.push_back(static_cast<engine::docid>(unserialize_length(&q, q + data.size())));
-		}
-	}
-	CHECK_EQ(logged.size(), static_cast<std::size_t>(threads_n * per_thread));
-	for (std::size_t i = 0; i < logged.size(); ++i) {
-		if (logged[i] != i + 1) {
-			CHECK_EQ(logged[i], i + 1);
-			break;
-		}
-	}
+	CHECK(error_kind([&] { engine::sync_wait(shard.add_document(std::move(doc))); }) == engine::errc::invalid);
+	CHECK_EQ(engine::sync_wait(shard.engine_for_read())->doc_count(), 0u);
 }
 
 
@@ -1064,7 +1273,7 @@ void test_a_commit_that_times_out_leaves_the_write_standing() {
 	engine::sync_wait(shard.add_document(make("Ka", "a")));
 	{
 		HoldTurn hold(entry.entry(), WRITE);
-		engine::sync_wait(shard.finish_write(true, false));  // the commit's turn does not come: no error
+		engine::sync_wait(shard.finish_write(true));  // the commit's turn does not come: no error
 	}
 	CHECK_TRUE(entry->is_modified());
 	CHECK_TRUE(engine::sync_wait(shard.commit()));
@@ -1711,46 +1920,44 @@ void test_a_repin_after_a_reopen_is_not_a_use() {
 	CHECK_EQ(freq(), used + 1);   // a request's own pin does
 }
 
-// Indexes whose files are on `fs` (strata's faultfs), their logs and blobs on the disk at their path, and the log's
-// writer for them: a test can then fail the index's syncs, and see what the log replays.
+// Indexes whose files are on `fs` (faultlab's faultfs), their groups' journal on the disk at `journal`: a test can
+// then fail the index's syncs, and see what the journal replays.
 struct FaultyIndexes {
-	strata::faultfs::filesystem& fs;
+	kronuz::faultlab::filesystem& fs;
 	DatabasePool pool{control_loop(), 8};
-	DatabaseWALWriter writer{"WF{:02}", 1};
 
-	explicit FaultyIndexes(strata::faultfs::filesystem& fs_) : fs(fs_) {
-		pool.set_wal_writer(&writer);
+	FaultyIndexes(kronuz::faultlab::filesystem& fs_, const std::string& journal) : fs(fs_) {
+		pool.set_journal(journal);
 		pool.set_index_io([this](const std::string& path) -> std::unique_ptr<kronuz::journal::IO> {
 			std::filesystem::create_directories(path);
-			return std::make_unique<strata::faultfs::io>(fs);
+			return std::make_unique<kronuz::faultlab::io>(fs);
 		});
 	}
 	~FaultyIndexes() {
 		pool.finish();
 		(void)pool.join();
-		writer.end();
-		writer.join(std::chrono::milliseconds(20000));
 	}
 };
 
-constexpr int LOGGED = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_SYNCHRONOUS_WAL | DB_DISABLE_AUTOCOMMIT;
+constexpr int LOGGED = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_AUTOCOMMIT;
 
-// A cold key's request pin opens the index and replays its log before the pin is handed (XP2, D6): a shutdown whose
-// commit failed leaves a write in the log only, and the next process's first pin reads it.
+// A cold key's request pin opens the index and replays its journal before the pin is handed (XP2, D6): a shutdown
+// whose checkpoint failed leaves a write in the journal only, and the next process's first pin reads it.
 void test_a_cold_pin_reads_what_the_log_replays() {
 	Watchdog watchdog("a cold pin replays the log", 60s);
-	strata::faultfs::filesystem fs;
+	kronuz::faultlab::filesystem fs;
 	const auto path = fresh("cold_replay");
+	const auto journal = fresh("cold_replay_journal");
 	{
-		FaultyIndexes indexes(fs);
+		FaultyIndexes indexes(fs, journal);
 		Shard shard(pin(indexes.pool, path, LOGGED), LOGGED);
 		engine::sync_wait(shard.add_document(make("Ka", "a")));
 		CHECK_TRUE(engine::sync_wait(shard.commit()));
 		engine::sync_wait(shard.add_document(make("Kb", "b")));   // logged, not committed
-		fs.add_fault({strata::faultfs::op::sync});                 // the shutdown's commit fails
+		fs.add_fault({kronuz::faultlab::op::sync});                 // the shutdown's checkpoint fails
 	}
 	fs.clear_faults();
-	FaultyIndexes indexes(fs);
+	FaultyIndexes indexes(fs, journal);
 	Shard shard(pin(indexes.pool, path, DB_OPEN), DB_OPEN);
 	CHECK_EQ(engine::sync_wait(shard.get_view(1))->data(), "a");
 	CHECK_EQ(engine::sync_wait(shard.get_view(2))->data(), "b");
@@ -1759,18 +1966,18 @@ void test_a_cold_pin_reads_what_the_log_replays() {
 
 // A fenced index is replaced by the catalog (XP2, D2, C23): the use whose commit met the fence hands its pin back,
 // the catalog closes the index once no other holder is left, and the next pin opens it again and reads the write
-// the failed commit left in the log.
+// the failed checkpoint left in the journal.
 void test_a_fenced_index_is_replaced_and_replays_its_log() {
 	Watchdog watchdog("a fenced index is replaced", 60s);
-	strata::faultfs::filesystem fs;
+	kronuz::faultlab::filesystem fs;
 	const auto path = fresh("fenced");
-	FaultyIndexes indexes(fs);
+	FaultyIndexes indexes(fs, fresh("fenced_journal"));
 	{
 		Shard shard(pin(indexes.pool, path, LOGGED), LOGGED);
 		engine::sync_wait(shard.add_document(make("Ka", "a")));
 		CHECK_TRUE(engine::sync_wait(shard.commit()));
 		engine::sync_wait(shard.add_document(make("Kb", "b")));
-		fs.add_fault({strata::faultfs::op::sync});
+		fs.add_fault({kronuz::faultlab::op::sync});
 		CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.commit()); }) == engine::errc::database);
 		fs.clear_faults();
 		shard.release();   // the use ends: it hands its pin back
@@ -1806,15 +2013,16 @@ std::uint64_t issue(Shard& shard, const std::string& n) {
 }
 
 // The id counter (docs/design/one-id.md): a new numeric id is issued above every numeric id the shard holds or
-// issued. An explicit id advances it, a commit persists it, and a log replayed by the next open raises it past the
-// writes the last commit missed; each document keeps the id it was written with.
+// issued. An explicit id advances it, a commit persists it, and the journal replayed by the next open raises it past
+// the writes the last commit missed; each document keeps the id it was written with.
 void test_the_id_counter_persists_replays_and_advances() {
 	Watchdog watchdog("the id counter persists, replays and advances", 60s);
-	strata::faultfs::filesystem fs;
+	kronuz::faultlab::filesystem fs;
 	const auto path = fresh("id_counter");
+	const auto journal = fresh("id_counter_journal");
 	std::map<std::uint64_t, std::string> written;   // id -> n
 	{
-		FaultyIndexes indexes(fs);
+		FaultyIndexes indexes(fs, journal);
 		Shard shard(pin(indexes.pool, path, LOGGED), LOGGED);
 		written[issue(shard, "a")] = "a";
 		written[issue(shard, "b")] = "b";
@@ -1824,15 +2032,15 @@ void test_the_id_counter_persists_replays_and_advances() {
 		CHECK_TRUE(engine::sync_wait(shard.commit()));
 	}
 	{
-		FaultyIndexes indexes(fs);   // a clean reopen: the counter comes from the commit
+		FaultyIndexes indexes(fs, journal);   // a clean reopen: the counter comes from the commit
 		Shard shard(pin(indexes.pool, path, LOGGED), LOGGED);
 		written[issue(shard, "d")] = "d";
 		written[issue(shard, "e")] = "e";   // logged, not committed
-		fs.add_fault({strata::faultfs::op::sync});   // the shutdown's commit fails
+		fs.add_fault({kronuz::faultlab::op::sync});   // the shutdown's checkpoint fails
 	}
 	fs.clear_faults();
 	{
-		FaultyIndexes indexes(fs);   // the log replays d and e, past the committed counter
+		FaultyIndexes indexes(fs, journal);   // the journal replays d and e, past the committed counter
 		Shard shard(pin(indexes.pool, path, LOGGED), LOGGED);
 		written[issue(shard, "f")] = "f";
 		CHECK_TRUE(engine::sync_wait(shard.commit()));
@@ -1874,14 +2082,12 @@ void test_the_turns_end_publishes_a_finished_merge() {
 	CHECK_EQ(index.merges_pending(), 0u);
 }
 
-// The catalog's commit chore with nothing applied writes no WAL line of its own (C25): the log has the commit of the
-// write and nothing for the chore's commits, the shutdown's included.
-void test_the_commit_chore_logs_nothing_when_nothing_was_applied() {
-	Watchdog watchdog("the commit chore logs nothing", 60s);
+// The catalog's commit chore with nothing applied commits nothing of its own (C25): no revision for the chore's
+// commits, the shutdown's included.
+void test_the_commit_chore_commits_nothing_when_nothing_was_applied() {
+	Watchdog watchdog("the commit chore commits nothing", 60s);
 	DatabasePool pool(control_loop(), 8);
-	DatabaseWALWriter writer("WC{:02}", 1);
-	pool.set_wal_writer(&writer);
-	const auto path = fresh("chore_wal");
+	const auto path = fresh("chore_commit");
 	constexpr int flags = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_AUTOCOMMIT;
 	engine::rev revision;
 	{
@@ -1896,21 +2102,9 @@ void test_the_commit_chore_logs_nothing_when_nothing_was_applied() {
 	}
 	pool.finish();
 	CHECK_TRUE(pool.join());
-	writer.end();
-	writer.join(std::chrono::milliseconds(20000));
-	std::size_t commits = 0, replaces = 0;
-	DatabaseWAL wal(path);
-	for (auto it = wal.begin(); it != wal.end(); ++it) {
-		const std::string line = *it;
-		const char* p = line.data();
-		const char* p_end = p + line.size();
-		(void)unserialize_length(&p, p_end);  // the revision
-		const auto type = static_cast<DatabaseWAL::Type>(unserialize_length(&p, p_end));
-		commits += type == DatabaseWAL::Type::COMMIT ? 1 : 0;
-		replaces += type == DatabaseWAL::Type::REPLACE_DOCUMENT ? 1 : 0;
-	}
-	CHECK_EQ(replaces, 1u);
-	CHECK_EQ(commits, 1u);
+	DatabasePool next(control_loop(), 8);
+	Shard shard(pin(next, path, DB_OPEN), DB_OPEN);
+	CHECK_EQ(shard.engine().revision(), revision);   // the shutdown's commit made none either
 }
 
 // The catalog is destroyed only once its shutdown ended (C24): a pin released while the pool's destructor waits is
@@ -1970,7 +2164,7 @@ void test_a_root_destroyed_while_it_waits_for_a_pin_releases_it() {
 		loop.host.spawn([](DatabasePool& pool, std::string path) -> task::task<void> {
 			auto pinned = co_await pool.pin_chore(Endpoint(path));
 			if (pinned) {
-				co_await pinned->commit(DB_OPEN | DB_WRITABLE, true);
+				co_await pinned->commit(DB_OPEN | DB_WRITABLE);
 			}
 		}(pool, path));
 		loop.reactor.io().run_for(std::chrono::microseconds(k * 40));
@@ -2039,14 +2233,14 @@ struct GateScheduler {
 // destroys its roots (the waiter is abandoned) and destroys the scheduler (task_asio.hh's teardown phases 2-4).
 void test_a_delivery_never_posts_to_a_torn_down_scheduler() {
 	Watchdog watchdog("a delivery posts to no torn-down scheduler");
-	strata::faultfs::filesystem fs;
+	kronuz::faultlab::filesystem fs;
 	std::promise<void> gate;
 	std::shared_future<void> opens = gate.get_future().share();
 	DatabasePool pool(control_loop(), 4);
 	pool.set_index_io([&](const std::string& at) -> std::unique_ptr<kronuz::journal::IO> {
 		opens.wait();
 		std::filesystem::create_directories(at);
-		return std::make_unique<strata::faultfs::io>(fs);
+		return std::make_unique<kronuz::faultlab::io>(fs);
 	});
 	std::mutex m;
 	std::condition_variable cv;
@@ -2118,7 +2312,7 @@ void test_a_destroyed_root_that_held_a_pin_lets_the_pool_join() {
 void test_a_cancelled_pin_stops_waiting() {
 	Watchdog watchdog("a cancelled pin stops waiting");
 	std::mutex fs_mutex;
-	std::map<std::string, std::unique_ptr<strata::faultfs::filesystem>> fs;   // one per index: each locks its own
+	std::map<std::string, std::unique_ptr<kronuz::faultlab::filesystem>> fs;   // one per index: each locks its own
 	DatabasePool pool(control_loop(), 8);
 	std::promise<void> gate;
 	std::shared_future<void> opens = gate.get_future().share();
@@ -2130,9 +2324,9 @@ void test_a_cancelled_pin_stops_waiting() {
 		std::lock_guard<std::mutex> lk(fs_mutex);
 		auto& one = fs[at];
 		if (!one) {
-			one = std::make_unique<strata::faultfs::filesystem>();
+			one = std::make_unique<kronuz::faultlab::filesystem>();
 		}
-		return std::make_unique<strata::faultfs::io>(*one);
+		return std::make_unique<kronuz::faultlab::io>(*one);
 	});
 	const auto path = fresh("cancelled_pin");
 	std::thread opener([&] { (void)pin(pool, path); });
@@ -2212,8 +2406,6 @@ void test_a_cancelled_flush_stops_waiting_for_a_held_turn() {
 void test_the_autocommit_comes_back_while_a_merge_is_pending() {
 	Watchdog watchdog("the autocommit comes back", 60s);
 	DatabasePool pool(control_loop(), 8);
-	DatabaseWALWriter writer("WR{:02}", 1);   // the autocommit logs its commit
-	pool.set_wal_writer(&writer);
 	auto& gate = A::wrap_executor<GatedExecutor>(pool);
 	gate.hold();
 	Endpoint endpoint(fresh("rearm"));
@@ -2241,16 +2433,12 @@ void test_the_autocommit_comes_back_while_a_merge_is_pending() {
 	}
 	CHECK_EQ(revision_of(shard), committed);   // the merges' sync made no revision
 	CHECK_EQ(engine::sync_wait(shard.get_view(1))->data(), "d");
-	writer.end();
-	writer.join(std::chrono::milliseconds(20000));
 }
 
 // An autocommit whose turn does not come asks to come back (D8), so a busy index's write is not left uncommitted.
 void test_a_busy_autocommit_comes_back() {
 	Watchdog watchdog("a busy autocommit comes back");
 	DatabasePool pool(control_loop(), 8);
-	DatabaseWALWriter writer("WB{:02}", 1);   // the autocommit logs its commit
-	pool.set_wal_writer(&writer);
 	pool.set_turn_timeout(0.1);
 	Endpoint endpoint(fresh("busy_autocommit"));
 	auto entry = pin(pool, endpoint.path);
@@ -2265,8 +2453,6 @@ void test_a_busy_autocommit_comes_back() {
 	CHECK_FALSE(engine::sync_wait(autocommit(pool, endpoint)));
 	CHECK_FALSE(entry->is_modified());
 	CHECK_EQ(revision_of(shard), revision + 1);
-	writer.end();
-	writer.join(std::chrono::milliseconds(20000));
 }
 
 // The sweep is the only idle close (XP3): at 1 kHz it closes an unpinned idle index, and never one a use pins; with
@@ -2306,17 +2492,15 @@ void test_the_sweep_closes_only_an_unpinned_index() {
 	CHECK_TRUE(until([&] { return state_of(pool, held_path) == strata::slot_state::free; }));
 }
 
-// The shutdown commits a write left uncommitted with the entry's commit chore (XP4): its WAL COMMIT line, a revision
-// more, and the write read back by the next pool.
-void test_the_shutdown_commits_and_logs_an_uncommitted_write() {
-	Watchdog watchdog("the shutdown commits and logs", 60s);
-	const auto path = fresh("shutdown_wal");
+// The shutdown commits a write left uncommitted with the entry's commit chore (XP4): a revision more, and the write
+// read back by the next pool.
+void test_the_shutdown_commits_an_uncommitted_write() {
+	Watchdog watchdog("the shutdown commits", 60s);
+	const auto path = fresh("shutdown_commit");
 	constexpr int flags = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_AUTOCOMMIT;
 	engine::rev before;
 	{
 		DatabasePool pool(control_loop(), 8);
-		DatabaseWALWriter writer("WS{:02}", 1);
-		pool.set_wal_writer(&writer);
 		{
 			Shard shard(pin(pool, path, flags), flags);
 			engine::sync_wait(shard.add_document(make("Ka", "a")));
@@ -2326,24 +2510,7 @@ void test_the_shutdown_commits_and_logs_an_uncommitted_write() {
 		pool.finish();
 		CHECK_TRUE(pool.join());
 		CHECK_EQ(one_catalog(pool).stats().shutdown_commits, 1u);
-		writer.end();
-		writer.join(std::chrono::milliseconds(20000));
 	}
-	std::size_t commits = 0, replaces = 0;
-	{
-		DatabaseWAL wal(path);
-		for (auto it = wal.begin(); it != wal.end(); ++it) {
-			const std::string line = *it;
-			const char* p = line.data();
-			const char* p_end = p + line.size();
-			(void)unserialize_length(&p, p_end);  // the revision
-			const auto type = static_cast<DatabaseWAL::Type>(unserialize_length(&p, p_end));
-			commits += type == DatabaseWAL::Type::COMMIT ? 1 : 0;
-			replaces += type == DatabaseWAL::Type::REPLACE_DOCUMENT ? 1 : 0;
-		}
-	}
-	CHECK_EQ(replaces, 1u);
-	CHECK_EQ(commits, 1u);
 	DatabasePool pool(control_loop(), 8);
 	Shard shard(pin(pool, path, DB_OPEN), DB_OPEN);
 	CHECK_EQ(shard.engine().revision(), before + 1);
@@ -2519,6 +2686,563 @@ void test_soft_open_is_at_most_the_descriptor_cap() {
 
 }  // namespace
 
+// A request's commit with a group is the group's checkpoint (D16): its bundle covers what the writes before it applied.
+void test_a_commit_is_the_groups_checkpoint() {
+	const auto journal = fresh("journal_commit");
+	const auto path = fresh("group_commit");
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		auto entry = pin(pool, path);
+		Shard shard = use(entry, WRITE);
+		auto* group = shard.group();
+		REQUIRE(group != nullptr);
+		for (int i = 0; i < 3; ++i) {
+			engine::sync_wait(shard.add_document(make("Kc" + std::to_string(i), "c")));
+		}
+		const auto applied = group->group.applied();
+		CHECK_EQ(group->checkpointed.load(), 0u);
+		CHECK_TRUE(engine::sync_wait(shard.commit()));
+		CHECK_GE(group->checkpointed.load(), applied);
+	}
+	std::filesystem::remove_all(journal);
+	std::filesystem::remove_all(path);
+}
+
+// The id counter moves in its write's command (docs/design/one-id.md): issued ids are durable with their documents,
+// and after `kill -9` with no commit the next process issues above them.
+void test_the_id_counter_is_in_the_log() {
+	const auto journal = fresh("journal_ids");
+	const auto path = fresh("group_ids");
+	std::fflush(nullptr);
+	const pid_t pid = ::fork();
+	if (pid == 0) {
+		::alarm(30);
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		auto entry = pin(pool, path);
+		Shard shard = use(entry, WRITE);
+		engine::sync_wait(shard.replace_document_term(std::string(NEW_NUMERIC_KEY), numbered(0, "one")));
+		engine::sync_wait(shard.replace_document_term(std::string(NEW_NUMERIC_KEY), numbered(0, "two")));
+		std::fflush(nullptr);
+		::raise(SIGKILL);   // no commit: the counter is durable only if the log carries it
+	}
+	int status = 0;
+	::waitpid(pid, &status, 0);
+	CHECK(WIFSIGNALED(status) && WTERMSIG(status) == SIGKILL);
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		auto entry = pin(pool, path);
+		Shard shard = use(entry, WRITE);
+		const auto [count, high] = engine::sync_wait(shard.written_load());
+		CHECK_EQ(count, 2u);
+		CHECK_GE(high, 2u);
+	}
+	std::filesystem::remove_all(journal);
+	std::filesystem::remove_all(path);
+}
+
+// The ready point aborts what an earlier proposer of the term left open (A9): an upload whose index closed and
+// reopened in the same process resumes its term, and its final then applies nothing.
+void test_a_reopen_aborts_an_upload_left_open() {
+	Watchdog watchdog("a reopen aborts an upload", 60s);
+	const auto journal = fresh("journal_abort");
+	const auto path = fresh("group_abort");
+	{
+		DatabasePool pool(control_loop(), 8, 0, engine::default_readers_per_index, fast_sweep());
+		pool.set_journal(journal);
+		std::optional<ChunkedUpload> upload;
+		std::uint64_t term = 0;
+		{
+			Shard shard(pin(pool, path), WRITE);
+			engine::sync_wait(shard.add_document(make("Ka", "a")));
+			auto* group = shard.group();
+			REQUIRE(group != nullptr);
+			upload.emplace(engine::sync_wait(next_chunked_id(*group)), 5000, 4096);
+			Pieces body(std::string(5000, 'u'), 1000);
+			engine::sync_wait(propose_upload(group_proposer(*group, Proposer::pinned), *upload, body));
+			term = chunked_term(upload->id());
+			CHECK_TRUE(engine::sync_wait(shard.commit()));   // the sweep closes only a committed index
+		}
+		CHECK_TRUE(until([&] { return state_of(pool, path) == strata::slot_state::free; }));   // closed, its record kept
+		Shard shard(pin(pool, path), WRITE);
+		auto* group = shard.group();
+		REQUIRE(group != nullptr);
+		CHECK_EQ(engine::sync_wait(next_chunked_id(*group)) >> 32, term);   // the reopen resumed the term
+		Data placeholder;
+		placeholder.update(ct_type_t("video/mp4"), 0, 0, 5000);
+		placeholder.flush();
+		auto doc = make("Kup", "");
+		doc.set_data(placeholder.serialize());
+		CHECK(error_kind([&] { engine::sync_wait(shard.replace_document_term("Kup", std::move(doc), false, true, &*upload)); }) == engine::errc::not_available);
+	}
+	std::filesystem::remove_all(journal);
+	std::filesystem::remove_all(path);
+}
+
+// Bytes zstd does not shrink, `n` of them from `seed`.
+std::string noise(std::size_t n, std::uint32_t seed) {
+	std::string out(n, '\0');
+	for (auto& c : out) {
+		seed = seed * 1664525u + 1013904223u;
+		c = static_cast<char>(seed >> 24);
+	}
+	return out;
+}
+
+// The engine error a call raises: its kind and description (internal and empty when it raises none).
+template <typename F>
+std::pair<engine::errc, std::string> error_of(F&& f) {
+	try {
+		f();
+	} catch (const engine::Error& error) {
+		return {error.kind, error.description()};
+	}
+	return {engine::errc::internal, ""};
+}
+
+// A shard's log holds LOG_BYTES between checkpoints (L1). With no commit, writes past it at both levels and a RESTORE
+// slice past it are acknowledged (a placement in the turn past half the bound checkpoints), and so is an upload 2.5
+// times it, whose chunks hold no turn and fill the log (a chunk that meets the bound takes the turn, checkpoints
+// slowly and proposes again). Every write reads back.
+void test_a_log_past_its_bound_checkpoints_instead_of_refusing() {
+	Watchdog watchdog("a log past its bound", 300s);
+	const auto journal = fresh("journal_full");
+	const auto path = fresh("group_full");
+	// Once set, the next checkpoint's hook holds it for a second: the upload's, at its full log. Outlives the pool.
+	std::atomic<bool> slow{false};
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		auto entry = pin(pool, path);
+		Shard quorum = use(entry, WRITE);
+		Shard none = use(entry, WRITE | DB_ACK_NONE);
+		auto* group = quorum.group();
+		REQUIRE(group != nullptr);
+		group->on_checkpoint = [&slow, hook = group->on_checkpoint] {
+			if (slow.exchange(false)) {
+				std::this_thread::sleep_for(1s);
+			}
+			hook();
+		};
+		constexpr std::size_t DOC = 128 * 1024;
+		constexpr std::size_t N = 3 * LOG_BYTES / 2 / DOC;   // 1.5 times the bound per phase
+		std::map<std::string, std::uint32_t> written;        // each acknowledged write's key and its seed
+		std::size_t refused = 0;
+		const auto write = [&](Shard& shard, const std::string& key, std::uint32_t seed) {
+			try {
+				engine::sync_wait(shard.add_document(make(key, noise(DOC, seed))));
+				written[key] = seed;
+			} catch (const engine::Error&) {
+				++refused;
+			}
+		};
+		auto through = group->checkpointed.load();
+		const auto checkpointed = [&] {   // a checkpoint published since the last call
+			const auto now = group->checkpointed.load();
+			return std::exchange(through, now) < now;
+		};
+
+		for (std::size_t i = 0; i < N; ++i) {
+			write(quorum, "Kq" + std::to_string(i), static_cast<std::uint32_t>(i));
+		}
+		CHECK_EQ(refused, 0u);
+		CHECK_TRUE(checkpointed());
+		for (std::size_t i = 0; i < N; ++i) {
+			write(none, "Kn" + std::to_string(i), static_cast<std::uint32_t>(N + i));
+		}
+		CHECK_EQ(refused, 0u);
+		CHECK_TRUE(checkpointed());
+
+		std::vector<SliceWrite> writes(N);
+		for (std::size_t i = 0; i < N; ++i) {
+			writes[i].idx = i;
+			writes[i].term = "Kr" + std::to_string(i);
+			writes[i].doc = make(writes[i].term, noise(DOC, static_cast<std::uint32_t>(2 * N + i)));
+		}
+		std::size_t at = 0;
+		std::unordered_set<std::string> missed;
+		while (at < writes.size()) {
+			engine::sync_wait(quorum.apply_slice(engine::inline_chores(), writes, at, std::chrono::seconds(60), missed));
+		}
+		std::size_t failed = 0;
+		for (const auto& slice_write : writes) {
+			failed += slice_write.error || slice_write.missed ? 1 : 0;
+		}
+		CHECK_EQ(failed, 0u);
+		CHECK_TRUE(checkpointed());
+
+		const auto uploaded = noise(5 * LOG_BYTES / 2, 7);
+		slow = true;
+		engine::docid up_did = 0;
+		const auto up_refused = error_of([&] {
+			ChunkedUpload upload(engine::sync_wait(next_chunked_id(*group)), uploaded.size());
+			Pieces body(uploaded, 256 * 1024);
+			engine::sync_wait(propose_upload(group_proposer(*group, Proposer::pinned), upload, body));
+			Data placeholder;
+			placeholder.update(ct_type_t("video/mp4"), 0, 0, uploaded.size());
+			placeholder.flush();
+			auto up = make("Kup", "");
+			up.set_data(placeholder.serialize());
+			up_did = engine::sync_wait(quorum.replace_document_term("Kup", std::move(up), false, true, &upload)).did;
+		}).second;
+		CHECK_EQ(up_refused, std::string());
+		CHECK_FALSE(slow.load());   // the upload met the full log and checkpointed
+		CHECK_TRUE(checkpointed());
+		CHECK_LT(group->log_bytes(), LOG_BYTES);
+
+		CHECK_EQ(written.size(), 2 * N);
+		std::size_t differ = 0;
+		for (const auto& [key, seed] : written) {
+			const auto did = engine::sync_wait(quorum.written_key(key));
+			differ += did != 0 && engine::sync_wait(quorum.get_view(did))->data() == noise(DOC, seed) ? 0 : 1;
+		}
+		for (const auto& slice_write : writes) {
+			const auto seed = static_cast<std::uint32_t>(2 * N + slice_write.idx);
+			const auto did = slice_write.info.did;
+			differ += did != 0 && engine::sync_wait(quorum.get_view(did))->data() == noise(DOC, seed) ? 0 : 1;
+		}
+		CHECK_EQ(differ, 0u);
+		CHECK_NE(up_did, 0u);
+		if (up_did != 0) {
+			CHECK(stored_blob(quorum, up_did, "video/mp4").second == uploaded);
+		}
+	}
+	std::filesystem::remove_all(journal);
+	std::filesystem::remove_all(path);
+}
+
+// Every checkpoint writes the index on the group's chore, so it runs in the shard's turn (T1): a written read (the
+// lease-less lookup a write's placement makes) that asks while a checkpoint's hook runs waits for the checkpoint to
+// end. Both checkpoints a client starts without a COMMIT: the pressure one of a write in its turn, and the one an
+// upload's chunk, which holds no turn, runs at a full log.
+void test_a_checkpoint_holds_the_turn() {
+	Watchdog watchdog("a checkpoint holds the turn", 300s);
+	const auto journal = fresh("journal_turn");
+	const auto path = fresh("group_turn");
+	std::atomic<bool> slow{false};      // the next checkpoint's hook sleeps
+	std::atomic<bool> sleeping{false};  // the hook sleeps now
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		auto entry = pin(pool, path);
+		Shard writer = use(entry, WRITE);
+		Shard reader = use(entry, WRITE);
+		auto* group = writer.group();
+		REQUIRE(group != nullptr);
+		group->on_checkpoint = [&slow, &sleeping, hook = group->on_checkpoint] {
+			if (slow.exchange(false)) {
+				sleeping = true;
+				std::this_thread::sleep_for(500ms);
+				sleeping = false;
+			}
+			hook();
+		};
+		engine::sync_wait(writer.add_document(make("Kt", "t")));
+		// Waits for the hook to sleep, then reads: true when the read waited for the checkpoint's end.
+		const auto read_waits = [&] {
+			while (!sleeping.load()) {
+				std::this_thread::sleep_for(1ms);
+			}
+			const auto did = engine::sync_wait(reader.written_key("Kt"));
+			return did != 0 && !sleeping.load();
+		};
+
+		constexpr std::size_t DOC = 128 * 1024;
+		slow = true;
+		auto pressure = std::async(std::launch::async, read_waits);
+		auto through = group->checkpointed.load();
+		// Writes until one leaves the log pressed, and no more: no write of the writer's is in flight on the chore then.
+		for (std::size_t i = 0; i < LOG_BYTES / DOC; ++i) {
+			const bool last = group->log_bytes() + DOC >= LOG_BYTES / 2;
+			engine::sync_wait(writer.add_document(make("Kp" + std::to_string(i), noise(DOC, static_cast<std::uint32_t>(i)))));
+			if (last) {
+				break;
+			}
+		}
+		CHECK_FALSE(slow.load());   // a write's pressure checkpoint ran
+		CHECK_TRUE(pressure.get());
+		CHECK_GT(group->checkpointed.load(), through);
+
+		const auto uploaded = noise(3 * LOG_BYTES / 2, 11);
+		slow = true;
+		auto full = std::async(std::launch::async, read_waits);
+		through = group->checkpointed.load();
+		const auto up_refused = error_of([&] {
+			ChunkedUpload upload(engine::sync_wait(next_chunked_id(*group)), uploaded.size());
+			Pieces body(uploaded, 256 * 1024);
+			engine::sync_wait(propose_upload(group_proposer(*group, Proposer::pinned), upload, body));
+			engine::sync_wait(propose_abort(group_proposer(*group, Proposer::pinned), upload.id()));
+		}).second;
+		CHECK_EQ(up_refused, std::string());
+		CHECK_FALSE(slow.load());   // the upload's checkpoint at the full log ran
+		CHECK_TRUE(full.get());
+		CHECK_GT(group->checkpointed.load(), through);
+	}
+	std::filesystem::remove_all(journal);
+	std::filesystem::remove_all(path);
+}
+
+// The journal's directory holds its own files only (J1): an index path at or inside it is refused before anything
+// is created, and a directory an earlier build let an index make there is moved aside with its bytes, so the journal
+// opens: its old path stays refused, and an index committed before the start serves after it.
+void test_an_index_inside_the_journal_is_refused() {
+	namespace fs = std::filesystem;
+	const auto journal = fresh("journal_inside");
+	fs::remove_all(journal + ".strays");
+	const auto listing = [&] {
+		std::set<std::string> names;
+		for (const auto& entry : fs::directory_iterator(journal)) {
+			names.insert(entry.path().filename().string());
+		}
+		return names;
+	};
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		const auto before = listing();
+		for (const auto& inside : {journal, journal + "/groups-abc-000000001/x", journal + "/layout/x", journal + "/x/../y"}) {
+			CHECK(error_kind([&] { pin(pool, inside); }) == engine::errc::invalid);
+		}
+		CHECK(listing() == before);
+		const auto sibling = fresh("journal_insidex");   // a name that starts like the journal's is an index
+		Shard shard(pin(pool, sibling), WRITE);
+		engine::sync_wait(shard.add_document(make("Ka", "a")));
+		CHECK_TRUE(engine::sync_wait(shard.commit()));
+	}
+	fs::create_directories(journal + "/groups-abc-000000001/x/strata");
+	fs::create_directories(journal + "/x/.__1/strata");
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		CHECK_TRUE(fs::is_directory(journal + ".strays/groups-abc-000000001/x/strata"));
+		CHECK_TRUE(fs::is_directory(journal + ".strays/x/.__1/strata"));   // kept, not deleted
+		CHECK_FALSE(fs::exists(journal + "/groups-abc-000000001"));
+		CHECK_FALSE(fs::exists(journal + "/x"));
+		CHECK(error_kind([&] { pin(pool, journal + "/x/.__1", DB_OPEN); }) == engine::errc::invalid);
+		{
+			// An index committed before the start serves after it.
+			const auto sibling = fresh_name("journal_insidex");
+			Shard reader(pin(pool, sibling), WRITE);
+			CHECK_EQ(engine::sync_wait(reader.engine_for_read())->doc_count(), 1u);
+			fs::remove_all(sibling);
+		}
+		const auto path = fresh("group_inside");
+		Shard shard(pin(pool, path), WRITE);
+		engine::sync_wait(shard.add_document(make("Ka", "a")));
+		fs::remove_all(path);
+	}
+	fs::remove_all(journal);
+	fs::remove_all(journal + ".strays");
+}
+
+// An index with a stored blob, committed and closed: the path of its blob volume and the blob.
+std::pair<std::string, std::string> blob_index(const std::string& journal, const std::string& path) {
+	const auto blob = noise(300 * 1024, 4);
+	DatabasePool pool(control_loop(), 8);
+	pool.set_journal(journal);
+	Shard shard(pin(pool, path), WRITE);
+	Data data;
+	data.update(ct_type_t("application/octet-stream"), -1, 0, 0, blob);
+	data.flush();
+	auto doc = make("Kb", "");
+	doc.set_data(data.serialize());
+	engine::sync_wait(shard.replace_document_term("Kb", std::move(doc)));
+	engine::sync_wait(shard.add_document(make("Kj", "j")));
+	CHECK_TRUE(engine::sync_wait(shard.commit()));
+	return {path + "/strata/app.vol-1", blob};
+}
+
+std::string file_bytes(const std::string& name) {
+	std::ifstream in(name, std::ios::binary);
+	return std::string(std::istreambuf_iterator<char>(in), {});
+}
+
+// An index whose group the journal lost (J2): its open refuses, naming the missing journal group, and deletes and
+// writes nothing; with the journal back, the index opens and its blob reads back.
+void test_an_index_without_its_journal_refuses_and_keeps_its_volumes() {
+	Watchdog watchdog("an index without its journal", 120s);
+	namespace fs = std::filesystem;
+	const auto journal = fresh("journal_lost");
+	const auto path = fresh("group_lost");
+	fs::remove_all(journal + ".aside");
+	const auto [volume, blob] = blob_index(journal, path);
+	const auto bytes = file_bytes(volume);
+	CHECK_GT(bytes.size(), 0u);
+	fs::rename(journal, journal + ".aside");
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		for (int attempt = 0; attempt < 2; ++attempt) {
+			const auto [kind, why] = error_of([&] { pin(pool, path); });
+			CHECK(kind == engine::errc::corrupt);
+			CHECK_NE(why.find("holds no group"), std::string::npos);
+		}
+		CHECK(file_bytes(volume) == bytes);
+	}
+	fs::remove_all(journal);
+	fs::rename(journal + ".aside", journal);
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		Shard shard(pin(pool, path), WRITE);
+		const auto [type, read] = stored_blob(shard, 1, "application/octet-stream");
+		CHECK(read == blob);
+	}
+	fs::remove_all(journal);
+	fs::remove_all(path);
+}
+
+// A blob volume shorter than its bundle names (D1): the open closes the damaged group on its loop and refuses, each
+// time, naming the damage; nothing aborts, and the pool ends.
+void test_a_damaged_volume_refuses_its_index() {
+	Watchdog watchdog("a damaged volume", 120s);
+	namespace fs = std::filesystem;
+	const auto journal = fresh("journal_damaged");
+	const auto path = fresh("group_damaged");
+	const auto [volume, blob] = blob_index(journal, path);
+	fs::resize_file(volume, fs::file_size(volume) / 2);
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		for (int attempt = 0; attempt < 2; ++attempt) {
+			const auto [kind, why] = error_of([&] { pin(pool, path); });
+			CHECK(kind == engine::errc::corrupt);
+			CHECK_NE(why.find("a file shorter than the bundle names: vol-1"), std::string::npos);
+		}
+	}
+	fs::remove_all(journal);
+	fs::remove_all(path);
+}
+
+// Checkpoints that overlap (a COMMIT's, a writer's, the pressure one) cut the log's count once (N9): rounds of writes
+// each followed by two checkpoints at once leave the count at most what was placed since, never wrapped.
+void test_overlapping_checkpoints_cut_the_log_count_once() {
+	Watchdog watchdog("overlapping checkpoints", 120s);
+	const auto journal = fresh("journal_overlap");
+	const auto path = fresh("group_overlap");
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		auto entry = pin(pool, path);
+		Shard shard = use(entry, WRITE);
+		auto* group = shard.group();
+		REQUIRE(group != nullptr);
+		for (int round = 0; round < 8; ++round) {
+			for (int i = 0; i < 4; ++i) {
+				engine::sync_wait(shard.add_document(make("Ko" + std::to_string(round) + "_" + std::to_string(i), std::string(4096, 'o'))));
+			}
+			CHECK_GT(group->log_bytes(), 0u);
+			std::thread other([&] { engine::sync_wait(checkpoint(*group)); });
+			engine::sync_wait(checkpoint(*group));
+			other.join();
+			CHECK_EQ(group->log_bytes(), 0u);
+			CHECK_EQ(group->log_entries(), 0u);
+		}
+	}
+	std::filesystem::remove_all(journal);
+	std::filesystem::remove_all(path);
+}
+
+// A refusal that passes with time is a 503 (errc::busy); any other consensus refusal (an entry too large, a duplicate
+// request) is a proposer's bug, a 500 (N11).
+void test_only_a_passing_refusal_is_busy() {
+	using R = kronuz::consensus::RejectReason;
+	for (const auto reason : {R::LogFull, R::Busy, R::NotLeader, R::NotReady}) {
+		CHECK(refusal_kind(reason) == engine::errc::busy);
+	}
+	for (const auto reason : {R::TooLarge, R::DuplicateRequest, R::InvalidCheckpoint, R::InvalidRepair, R::LeaderMustTransfer, R::InvalidMembership, R::InvalidTarget, R::Current}) {
+		CHECK(refusal_kind(reason) == engine::errc::internal);
+	}
+}
+
+// Every file under `root` and its bytes, by path.
+std::map<std::string, std::string> tree_of(const std::string& root) {
+	std::map<std::string, std::string> out;
+	for (const auto& entry : std::filesystem::recursive_directory_iterator(root)) {
+		out[entry.path().string()] = entry.is_regular_file() ? file_bytes(entry.path().string()) : std::string("<dir>");
+	}
+	return out;
+}
+
+// Another spelling of the journal's directory (J1b): a symlink to it, and on a case-folding volume (APFS) its name in
+// another case, is refused with a create and without, before anything is made inside it; a name outside opens.
+void test_another_spelling_of_the_journal_is_refused() {
+	namespace fs = std::filesystem;
+	const auto journal = fresh("journal_spelling");
+	const auto alias = fresh("journal_alias");
+	fs::remove(alias);
+	std::vector<std::string> spellings{alias, alias + "/x", alias + "/sub/x", alias + "/layout/x"};
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		fs::create_directory_symlink(fs::absolute(journal), alias);
+		std::string upper = journal;
+		std::transform(upper.begin(), upper.end(), upper.begin(), [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+		const bool folds = fs::exists(upper);
+		if (folds) {
+			for (const auto& spelling : {upper, upper + "/x", upper + "/SUB/x", "./" + upper + "/x"}) {
+				spellings.push_back(spelling);
+			}
+		}
+		std::fprintf(stderr, "  the volume %s case\n", folds ? "folds" : "keeps");
+		const auto before = tree_of(journal);
+		for (const auto& spelling : spellings) {
+			const auto [created, why] = error_of([&] { pin(pool, spelling); });
+			CHECK(created == engine::errc::invalid);
+			CHECK_NE(why.find("another spelling"), std::string::npos);
+			CHECK(error_kind([&] { pin(pool, spelling, DB_OPEN); }) == engine::errc::invalid);
+		}
+		CHECK(tree_of(journal) == before);
+		const auto outside = fresh("journal_spelling_outside");
+		{
+			Shard shard(pin(pool, outside), WRITE);
+			engine::sync_wait(shard.add_document(make("Ka", "a")));
+			CHECK_TRUE(engine::sync_wait(shard.commit()));
+		}
+		CHECK(error_kind([&] { pin(pool, fresh("journal_spelling_absent"), DB_OPEN); }) == engine::errc::not_found);
+		fs::remove_all(outside);
+	}
+	fs::remove(alias);
+	fs::remove_all(journal);
+}
+
+// An index older than its journal (P_b > P_H: its directory put back from a copy taken before a later commit):
+// strata fences the open before the file set's recovery, and the open refuses naming it, each time; every file of
+// the index stays as it was.
+void test_an_index_older_than_its_journal_refuses() {
+	Watchdog watchdog("an index older than its journal", 120s);
+	namespace fs = std::filesystem;
+	const auto journal = fresh("journal_older_index");
+	const auto path = fresh("group_older_index");
+	fs::remove_all(path + ".old");
+	(void)blob_index(journal, path);
+	fs::copy(path, path + ".old", fs::copy_options::recursive);
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		Shard shard(pin(pool, path), WRITE);
+		engine::sync_wait(shard.add_document(make("Kj2", "j2")));
+		CHECK_TRUE(engine::sync_wait(shard.commit()));
+	}
+	fs::remove_all(path);
+	fs::rename(path + ".old", path);
+	const auto before = tree_of(path);
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		for (int attempt = 0; attempt < 2; ++attempt) {
+			const auto [kind, why] = error_of([&] { pin(pool, path); });
+			CHECK(kind == engine::errc::corrupt);
+			CHECK_NE(why.find("P_b > P_H"), std::string::npos);
+		}
+	}
+	CHECK(tree_of(path) == before);
+	fs::remove_all(journal);
+	fs::remove_all(path);
+}
+
 int main(int argc, char** argv) {
 	struct Case { const char* name; void (*fn)(); };
 	const Case cases[] = {
@@ -2535,8 +3259,8 @@ int main(int argc, char** argv) {
 		{"test_a_failed_commit_reaches_only_the_joined_waiters", test_a_failed_commit_reaches_only_the_joined_waiters},
 		{"test_owed_flushes_do_not_reorder_writers", test_owed_flushes_do_not_reorder_writers},
 		{"test_blob_io_runs_in_chores", test_blob_io_runs_in_chores},
-		{"test_the_wal_order_is_the_apply_order", test_the_wal_order_is_the_apply_order},
-		{"test_a_held_search_delays_no_refresh_or_commit", test_a_held_search_delays_no_refresh_or_commit},
+		{"test_a_stored_blob_needs_the_group", test_a_stored_blob_needs_the_group},
+				{"test_a_held_search_delays_no_refresh_or_commit", test_a_held_search_delays_no_refresh_or_commit},
 		{"test_readers_cap", test_readers_cap},
 		{"test_readers_cap_is_per_index", test_readers_cap_is_per_index},
 		{"test_a_search_over_more_indexes_than_records_is_served", test_a_search_over_more_indexes_than_records_is_served},
@@ -2561,7 +3285,7 @@ int main(int argc, char** argv) {
 		{"test_a_fenced_index_is_replaced_and_replays_its_log", test_a_fenced_index_is_replaced_and_replays_its_log},
 		{"test_the_id_counter_persists_replays_and_advances", test_the_id_counter_persists_replays_and_advances},
 		{"test_the_turns_end_publishes_a_finished_merge", test_the_turns_end_publishes_a_finished_merge},
-		{"test_the_commit_chore_logs_nothing_when_nothing_was_applied", test_the_commit_chore_logs_nothing_when_nothing_was_applied},
+		{"test_the_commit_chore_commits_nothing_when_nothing_was_applied", test_the_commit_chore_commits_nothing_when_nothing_was_applied},
 		{"test_the_pool_waits_for_a_pin_released_during_its_end", test_the_pool_waits_for_a_pin_released_during_its_end},
 		{"test_a_root_destroyed_while_it_waits_for_a_pin_releases_it", test_a_root_destroyed_while_it_waits_for_a_pin_releases_it},
 		{"test_a_delivery_never_posts_to_a_torn_down_scheduler", test_a_delivery_never_posts_to_a_torn_down_scheduler},
@@ -2572,13 +3296,30 @@ int main(int argc, char** argv) {
 		{"test_the_autocommit_comes_back_while_a_merge_is_pending", test_the_autocommit_comes_back_while_a_merge_is_pending},
 		{"test_a_busy_autocommit_comes_back", test_a_busy_autocommit_comes_back},
 		{"test_the_sweep_closes_only_an_unpinned_index", test_the_sweep_closes_only_an_unpinned_index},
-		{"test_the_shutdown_commits_and_logs_an_uncommitted_write", test_the_shutdown_commits_and_logs_an_uncommitted_write},
+		{"test_the_shutdown_commits_an_uncommitted_write", test_the_shutdown_commits_an_uncommitted_write},
 		{"test_the_sweeps_close_syncs_a_merges_output", test_the_sweeps_close_syncs_a_merges_output},
 		{"test_a_write_to_a_demoted_index_applies_after_one_promote", test_a_write_to_a_demoted_index_applies_after_one_promote},
 		{"test_a_third_owed_answer_is_internal", test_a_third_owed_answer_is_internal},
 		{"test_soft_open_is_at_most_the_descriptor_cap", test_soft_open_is_at_most_the_descriptor_cap},
 		{"test_the_hostless_path_and_the_catalog_never_share_an_index", test_the_hostless_path_and_the_catalog_never_share_an_index},
 		{"test_the_sweep_erases_a_missing_index_negative_entries", test_the_sweep_erases_a_missing_index_negative_entries},
+		{"test_an_index_is_a_lone_voter_group", test_an_index_is_a_lone_voter_group},
+		{"test_an_acknowledged_write_survives_a_kill", test_an_acknowledged_write_survives_a_kill},
+		{"test_a_lone_voter_reads_its_writes", test_a_lone_voter_reads_its_writes},
+		{"test_stored_blobs_survive_a_kill", test_stored_blobs_survive_a_kill},
+		{"test_a_restore_slice_is_batch_commands", test_a_restore_slice_is_batch_commands},
+		{"test_a_commit_is_the_groups_checkpoint", test_a_commit_is_the_groups_checkpoint},
+		{"test_the_id_counter_is_in_the_log", test_the_id_counter_is_in_the_log},
+		{"test_a_reopen_aborts_an_upload_left_open", test_a_reopen_aborts_an_upload_left_open},
+		{"test_a_log_past_its_bound_checkpoints_instead_of_refusing", test_a_log_past_its_bound_checkpoints_instead_of_refusing},
+		{"test_a_checkpoint_holds_the_turn", test_a_checkpoint_holds_the_turn},
+		{"test_an_index_inside_the_journal_is_refused", test_an_index_inside_the_journal_is_refused},
+		{"test_an_index_without_its_journal_refuses_and_keeps_its_volumes", test_an_index_without_its_journal_refuses_and_keeps_its_volumes},
+		{"test_a_damaged_volume_refuses_its_index", test_a_damaged_volume_refuses_its_index},
+		{"test_another_spelling_of_the_journal_is_refused", test_another_spelling_of_the_journal_is_refused},
+		{"test_overlapping_checkpoints_cut_the_log_count_once", test_overlapping_checkpoints_cut_the_log_count_once},
+		{"test_only_a_passing_refusal_is_busy", test_only_a_passing_refusal_is_busy},
+		{"test_an_index_older_than_its_journal_refuses", test_an_index_older_than_its_journal_refuses},
 	};
 	for (const auto& c : cases) {
 		if (argc > 1 && std::string(c.name).find(argv[1]) == std::string::npos) {

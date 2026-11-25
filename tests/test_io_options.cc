@@ -31,9 +31,9 @@ namespace {
 void test_the_switch_reaches_the_io_options() {
 	const auto saved = opts.full_flush_ordering;
 	opts.full_flush_ordering = false;
-	CHECK(!engine::strata::posix_io_options().full_flush_ordering);
+	CHECK(engine::strata::posix_io_options().flush_mode == kronuz::journal::FlushMode::plain);
 	opts.full_flush_ordering = true;
-	CHECK(engine::strata::posix_io_options().full_flush_ordering);
+	CHECK(engine::strata::posix_io_options().flush_mode == kronuz::journal::FlushMode::full);
 	opts.full_flush_ordering = saved;
 }
 

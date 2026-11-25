@@ -66,7 +66,7 @@ using namespace std::chrono_literals;
 
 namespace {
 
-constexpr int WRITE = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL | DB_DISABLE_AUTOCOMMIT;
+constexpr int WRITE = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_AUTOCOMMIT;
 
 std::string fresh(const char* name) {
 	std::string path = std::string("reactor_requests_") + name + ".db";
@@ -492,7 +492,7 @@ static void test_a_cancelled_request_leaves_the_pin_queue() {
 		opens.wait();
 		const auto dir = (std::filesystem::path(at) / "strata").string();
 		std::filesystem::create_directories(dir);
-		return std::make_unique<kronuz::journal::PosixIO>(dir, 0600, kronuz::journal::PosixIOOptions{true, true});
+		return std::make_unique<kronuz::journal::PosixIO>(dir, kronuz::journal::PosixIOOptions{kronuz::journal::FlushMode::plain, true, true});
 	});
 	const auto path = fresh("pin_cancel");
 	std::thread opener([&] { (void)pin_index(pool, path, WRITE); });

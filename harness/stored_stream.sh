@@ -80,7 +80,7 @@ check('a big JSON body is a 413', talk(b'PUT /up/j HTTP/1.1\r\nHost: x\r\nConten
 sys.exit(1 if bad else 0)
 PY
 # A client that leaves mid-upload: the node goes on, and its volume is removed.
-before=$(find "$D/n" -name 'docdata.*' | wc -l)
+before=$(find "$D/n" -name '*vol-[0-9]*' | wc -l)
 "$PY" -I - "$PORT" <<'PY'
 import socket, sys
 s = socket.create_connection(('127.0.0.1', int(sys.argv[1])), timeout=30)
@@ -88,7 +88,7 @@ s.sendall(b'PUT /up/leaver HTTP/1.1\r\nHost: x\r\nContent-Type: application/octe
 s.close()
 PY
 sleep 3
-after=$(find "$D/n" -name 'docdata.*' | wc -l)
+after=$(find "$D/n" -name '*vol-[0-9]*' | wc -l)
 code=$(curl -s -o /dev/null -w '%{http_code}' -m 20 "localhost:$PORT/up/under" -H 'Accept: application/octet-stream')
 if [ "$after" = "$before" ] && [ "$code" = 200 ]; then echo "ok   a client that left mid-upload: $after volumes, the node still serves"; else fail "a client that left mid-upload: volumes $before -> $after, GET $code"; fi
 if grep -q "blocks on database" "$D/log"; then fail "the node logged a reactor block"; fi

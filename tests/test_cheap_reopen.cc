@@ -52,8 +52,8 @@ struct PoolTestAccess {
 
 namespace {
 
-// Writes without a WAL or an autocommit (those need a manager): what reaches the index is what a commit made durable.
-constexpr int WRITE = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL | DB_DISABLE_AUTOCOMMIT;
+// Writes without a journal or an autocommit (those need a manager): what reaches the index is what a commit made durable.
+constexpr int WRITE = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_AUTOCOMMIT;
 
 std::string fresh(const char* name) {
 	std::string path = std::string("cheap_reopen_test_") + name + ".db";

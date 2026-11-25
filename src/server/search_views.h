@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "config.h"                         // for XAPIAND_DATABASE_WAL
+#include "config.h"                         // for the build's configuration
 
 #include <chrono>                           // for std::chrono, std::chrono::steady_clock, std::chrono::time_point
 #include <condition_variable>               // for std::condition_variable

@@ -76,13 +76,6 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 			"HTTP requests summary",
 			constant_labels)
 	),
-	xapiand_wal_errors(
-		AddCounter(registry,
-			"xapiand_wal_errors",
-			"WAL errors",
-			constant_labels)
-		.Add({})
-	),
 	xapiand_uptime(
 		AddGauge(registry,
 			"xapiand_uptime",
@@ -153,34 +146,6 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 		AddGauge(registry,
 			"xapiand_committers_queue_size",
 			"Committers in the queue",
-			constant_labels)
-		.Add({})
-	),
-	xapiand_fsync_running(
-		AddGauge(registry,
-			"xapiand_fsync_running",
-			"Amount of fsync running",
-			constant_labels)
-		.Add({})
-	),
-	xapiand_fsync_queue_size(
-		AddGauge(registry,
-			"xapiand_fsync_queue",
-			"Fsync in the queue",
-			constant_labels)
-		.Add({})
-	),
-	xapiand_fsync_capacity(
-		AddGauge(registry,
-			"xapiand_fsync_capacity",
-			"Fsync queue capacity",
-			constant_labels)
-		.Add({})
-	),
-	xapiand_fsync_pool_size(
-		AddGauge(registry,
-			"xapiand_fsync_pool_size",
-			"Fsync pool size",
 			constant_labels)
 		.Add({})
 	),

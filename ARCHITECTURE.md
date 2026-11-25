@@ -37,7 +37,7 @@ utility, wire-format, HTTP-parser, compression, and metrics bundles are pulled b
 
 | Area | Where | One line |
 |---|---|---|
-| Storage engine | `src/storage.h`, `src/database/`, `src/engine/` | Haystack-style append-only volumes, WAL, schema cache, sharding, and the engine seam over strata. |
+| Storage engine | `src/database/`, `src/engine/` | Each index a lone-voter replication group whose journal is its durability, blob volumes in the group's file set, schema cache, sharding, and the engine seam over strata. |
 | Networking / reactor runtime | `src/server/`, `http_asio.h`, `src/manager.*` | Per-connection coroutines on shared-nothing `reactor::Reactor` loops; each request is a task on its loop, and device work is a chore on one `WorkPool`. No libev. |
 | Search / query | `src/query_dsl.*`, `src/aggregations/`, `src/multivalue/`, `src/engine/` | JSON/MsgPack DSL and a boolean string language, both compiling to engine queries; ES-style aggregations. |
 | Geospatial | `src/geospatial/` | Hierarchical Triangular Mesh: geometry → integer trixel ranges → numeric queries. |
@@ -91,21 +91,24 @@ svc: "HTTP service  -  a reactor pool (N loops); each request a task on its loop
   http: "HTTP\n(http::HttpAsioService)"
 }
 
-wrk: "background worker threads (plain std::thread / Thread<> / debouncers)" {
+wrk: "journal host" {
   style.fill: "#eef2f7"
-  wal: "WAL writers\n(Thread<> pool + queue)"
-  deb: "fsyncher\n(debouncer)"
+  loop: "group loop\n(journal and consensus)"
+  chore: "two chore threads\n(apply, checkpoint)"
 }
 
 store: "storage" {
   style.fill: "#eef2f7"
   dbp: "DatabasePool -> Shards"
-  vol: "Storage volumes\n(append-only, compressed)"
+  vol: "group file sets\n(blob volumes app.vol-N)"
   dbp -> vol
 }
 
 clients -> svc: "accept" {style.stroke-dash: 3}
 svc -> store: "chores on the WorkPool\n(device work)"
+store.dbp -> wrk.loop: "propose"
+wrk.loop -> wrk.chore: "committed entries"
+wrk.chore -> store.vol: "apply"
 main.manager -> svc: "start on READY"
 ```
 -->
@@ -123,8 +126,9 @@ The rules that hold the topology together:
   suspends for a turn, a chore or a slice, so the reactor thread never blocks; the only
   work that leaves a loop is a chore on the `WorkPool`. HTTP starts when the node reaches
   `READY` (`docs/mechanisms/requests-on-the-reactor.md`).
-- **Background work is off-loop.** The WAL writers are a `Thread<>` pool draining a concurrent
-  queue and the fsynchers are a debouncer; neither touches the control loop.
+- **Background work is off-loop.** The journal host runs its group loop on a thread of its own
+  and applies on two chore threads (`ShardGroups`, `src/database/shard_group.h:153`); neither
+  touches the control loop or a request's loop.
 
 ---
 
@@ -205,39 +209,25 @@ against nothing but the standard library). The libev vendored under `src/ev/`, t
 
 ## Subsystems
 
-### Storage engine (`src/storage.h`, `src/database/`)
+### Storage engine (`src/database/`)
 
-The heart is a single templated class, `Storage<Header, BinHeader, BinFooter>`
-(`storage.h:232`), parameterized on three POD structs so the same machinery
-backs three on-disk formats: document blobs (`DataStorage`, `shard.cc:154`), the
-WAL (`wal.h:125`), and a metadata fallback. **Mechanism is separated from format
-by the type system** — a clean idea, and the central one.
+Every index is a `strata::group`: a lone voter at `rf = 1`, whose journal is the index's only
+durability path ([journal durability](docs/mechanisms/journal-durability.md)). The process keeps
+one journal host over `.xapiand/journal` in the data directory (`ShardGroups`,
+`shard_group.h:153`), its group loop on a thread of its own and two chore threads the groups
+apply on. A write is prepared on the leader under the index's turn, writing nothing; the prepared
+write becomes a command (`src/database/command.h`, entries of at most `COMMAND_ENTRY_BYTES`, 1 MiB,
+larger ones split into chunk entries), proposed at quorum (`ShardEndpoint::write_document`,
+`shard.cc:604`). A write is durable once its command is in the log; a request's commit is the
+group's checkpoint (`commit_group`, `shard.cc:422`), which lets the log truncate behind it.
 
-On-disk layout of a volume: a 4 KB header block at offset 0 holding the append
-cursor `head.offset` (in 8-byte units), then a sequence of *bins*, each a
-`BinHeader` (flags + `uint32_t size`) + payload + `BinFooter`, padded to the
-next 8-byte boundary (`storage.h:577,835`). A volume tops out at ~34 GB
-(`UINT32_MAX × 8`); overflow throws `StorageEOF` and the caller rolls to the next
-volume (`shard.cc:1128`). Writes use a double scratch-buffer dance
-(`write_buffer`, `storage.h:292`) so a bin straddling a 4 KB block still only
-issues aligned `pwrite`s. Files grow via `fallocate` in geometric 1.3× steps.
-There is **no mmap** anywhere — all `pread`/`pwrite`/`lseek`, which sidesteps
-SIGBUS-on-truncation hazards. Payloads over 100 bytes are optionally LZ4-framed.
-
-This is recognizably Haystack: one append-only file per volume, an in-file write
-cursor, logical→physical lookup by `(volume, offset)` stored in the
-document's `Locator` (`data.cc`), soft deletes via a header flag. It differs in
-having no separate in-memory index file and — see [Bugs](#bugs--risks) — in
-having the per-record checksum defined but, for documents, disabled.
-
-The **WAL** (`wal.cc`) is a second `Storage` instance per shard. Its header
-carries a `slot[1016]` array recording the byte offset where each revision
-begins (`wal.cc:716`), giving O(1) seek to any revision. Replay walks volumes
-from a starting revision and re-applies operations to the engine. On corruption the
-WAL files are **quarantined, not deleted** (`wal.cc:269,737`) — the right
-instinct for a durability subsystem. Durability model: the WAL is meant to be the
-anchor, but the WAL fsync is *asynchronous by default*
-(`WAL_SYNC_MODE = STORAGE_ASYNC_SYNC`, `wal.cc:67`); more on that below.
+Every voter applies each committed entry on the group's chore through `ShardApplication`
+(`shard_group.h:115`): its effects, the strata write, then the state advance, each a function of the
+entry and the state it starts from, so a replay or a retry rewrites the same bytes. Stored blobs are
+records in the group's file set (`app.vol-N`), compressed at prepare and written positionally at the
+offsets the state names; a volume rotates past `VOLUME_BYTES` (32 GiB, `shard_group.h:56`), and the
+document's `Locator` (`data.cc`) names `(volume, offset, size)`. RESTORE batches many writes into one
+command (`Shard::restore_slice`, `shard.cc:1069`).
 
 **Schemas** are MsgPack objects in an `aging_lru` keyed by path, with CAS-style
 reconciliation on write and support for "foreign" schemas that point at another
@@ -412,7 +402,7 @@ licensing notes**, see [extraction.md](docs/design/extraction.md).
 | **Compile-time ANSI colors** | `ansi_color.hh`, `colors.h`, `color_tools.hh` | Easy | Med | Header-only tri-escape color library; only entanglement is that `colors.h` also defines logging shortcuts (split those out). |
 | **Pretty backtraces** | `traceback.*` | Moderate | Med | Symbolized backtraces, cross-thread stack dump via signal, `__cxa_throw` capture. The allocator interposition makes the full thing invasive; the backtrace/symbolize core is liftable. |
 | **HTM geospatial** | `geospatial/`, `cartesian.*` | Moderate | High | Geometry → sortable integer ranges on a sphere, with full shape support. Cut `THROW`/`strings::format` and drop the ~940 lines of matplotlib debug writers (`htm.cc:838+`). Few OSS C++ HTM impls exist. |
-| **Haystack-style store** | `storage.h` (+ `compressor_lz4.*`) | Moderate | High | Single-file append-only blob store templated on format structs. Replace `opts.*` with constructor params and stub logging. |
+| **Haystack-style store** | `Kronuz/storage` | Done | High | The append-only blob store templated on format structs, extracted; Xapiand no longer uses it (blobs are the journal's file set). |
 | **Retired libev reactor framework** | former `worker.*` / `Kronuz/server` | Retired | Low | The old Worker/BaseServer/TCP engine has been removed from Xapiand; current services ride `Kronuz/reactor` and keep protocol logic in the `*_views` layer. |
 | **Lock-free timer-wheel store** | `stash.h` | Easy | High | A novel CAS-based hierarchical slot store; near-zero deps once the trace macros are stubbed. The crown jewel of the scheduling stack. See [scheduler.md](docs/design/scheduler.md). |
 | **Cancellable timer scheduler** | `scheduler.h` (+ `stash.h`) | Moderate | High | A 24-hour multi-resolution timer wheel + a thread that runs/dispatches due tasks; tasks are cancellable. Needs a thread/pool abstraction. See [scheduler.md](docs/design/scheduler.md). |
@@ -446,27 +436,12 @@ included so each is checkable.
 
 **Storage / durability (highest value):**
 
-- **Document storage validates nothing by default.** The base
-  `StorageBinHeader::validate` / `StorageBinFooter::validate` have every check
-  commented out and the base footer has no checksum field (`storage.h:200-227`).
-  Integrity depends entirely on each consumer supplying non-inert structs; the
-  in-tree defaults are inert. A bit-flip whose `size` field survives can be
-  returned as data.
 - **LZ4 framing computes a digest it never stores or verifies.**
   `compress_lz4`/`decompress_lz4` maintain an XXH32 (`compressor_lz4.h:188`) but
   never append it on compress nor check it on decompress
-  (`compressor_lz4.h:415-436`). WAL lines and inplace-compressed blobs thus have
+  (`compressor_lz4.h:415-436`). LZ4-compressed blobs (`data.cc` still reads them) thus have
   no end-to-end integrity check; a small corruption slips through unless
   `LZ4_decompress_safe_continue` happens to fail.
-- **fsync ordering has no barrier.** `Storage::commit` writes the header (the
-  append cursor) and fsyncs the fd (`storage.h:863-890`), but the bin data was
-  written earlier with no intervening fsync. On reorder, the header can reach
-  disk advertising data that isn't there yet — silent corruption for the
-  document store (whose footer validation is inert).
-- **WAL durability is async by default.** `WAL_SYNC_MODE = STORAGE_ASYNC_SYNC`
-  (`wal.cc:67`) debounces the fsync to a background thread and returns; a crash in
-  the window can lose acknowledged writes from the WAL. Only shards explicitly
-  flagged synchronous escape this.
 - **`Data::get_accepted` can dereference null.** `accepted_by` may stay
   `nullptr` if no locator matched, but the trailing `L_DEBUG` dereferences it
   unconditionally (`data.cc:574`). Crash-on-no-acceptable-type.
@@ -542,8 +517,6 @@ included so each is checkable.
   pattern recurs and is fragile if reused.
 - **`Lexer` length cap only guards one state transition** (`Lexer.cc:111`), not
   token/quoted-string accumulation — unbounded token growth.
-- **WAL replay re-pushes blobs at new offsets**, orphaning the old ones
-  (`shard.cc:1242`) — correct but storage-amplifying on every recovery.
 - **`realloc`/`free` interposition** in the debug allocator uses a hand-rolled
   shadow-pointer scheme that mis-frees any pointer not allocated through it
   (`traceback.cc:437-488`); debug-only, but a real hazard.
@@ -557,8 +530,9 @@ included so each is checkable.
 
 The tasteful bits, for anyone reading for pleasure:
 
-- **Format-as-type-parameter** in the storage engine — one append-only engine,
-  three on-disk formats selected purely by POD structs (`storage.h:232`).
+- **Apply as a function of the entry** (`ShardApplication`, `shard_group.h:115`) — blob
+  effects written positionally at offsets the state names, so a replay, a retry and every
+  voter write the same bytes, and a locator is a function of the log.
 - **The HTM contiguous-id trick** — encoding the quadtree path as 2 bits per
   level so "all descendants" is one integer interval, turning spherical
   containment into a numeric range query (`htm.cc:679`), with big-endian
@@ -576,9 +550,6 @@ The tasteful bits, for anyone reading for pleasure:
   caught.
 - **The `Counter` fake output iterator** (`basic_string_metric.h:146`) — counts
   a `set_intersection` without materializing it; allocation-free Jaccard/Dice.
-- **WAL revision slot array** (`wal.h:63`) — O(1) seek to any revision with no
-  separate index file — and **quarantine-don't-delete** on corruption
-  (`wal.cc:269`).
 - **One-table char classification** (`chars.hh:47`) — hex value + property
   bitmask packed per byte, so every `is_*` is a load-and-mask.
 - **`switch` on hashed strings** via `_fnv1a`/`_xx` user-defined literals

@@ -31,13 +31,16 @@
 #include <cstdint>                           // for std::uint64_t
 #include <functional>                        // for std::function
 #include <memory>                            // for std::shared_ptr, std::make_shared
+#include <optional>                          // for std::optional
 #include <stddef.h>                          // for size_t
 #include <string>                            // for std::string
 #include <string_view>                       // for std::string_view
 #include <unordered_map>                     // for std::unordered_map
+#include <unordered_set>                     // for std::unordered_set
 #include <utility>                           // for std::pair
 #include <vector>                            // for std::vector
 
+#include "database/command.h"                // for Command, CommandBytes, COMMAND_ENTRY_BYTES
 #include "database/flags.h"                  // for DB_*
 #include "endpoint.h"                        // for Endpoints
 #include "engine/callbacks.h"                // for engine::KeyMaker, engine::MatchSpy
@@ -63,6 +66,14 @@ class Schema;
 class SchemasLRU;
 struct ct_type_t;
 struct query_field_t;
+class ChunkedUpload;
+struct ShardGroup;
+enum class Proposer;
+
+namespace strata::group {
+struct answer;
+enum class ack : std::uint8_t;
+}  // namespace strata::group
 
 
 engine::docid to_docid(std::string_view document_id);
@@ -167,7 +178,15 @@ private:
 
 	task::task<std::tuple<std::string, engine::Document, MsgPack>> prepare(const MsgPack& document_id, engine::rev document_ver, const MsgPack& obj, Data& data, size_t idx = 0);
 
-	task::task<DocumentInfo> index(engine::docid did, const MsgPack& document_id, engine::rev document_ver, const MsgPack& obj, Data& data, bool commit);
+public:
+	struct UploadedBlob;
+
+private:
+	// `upload`, if any, is the streamed blob the document names (index_uploaded).
+	task::task<DocumentInfo> index(engine::docid did, const MsgPack& document_id, engine::rev document_ver, const MsgPack& obj, Data& data, bool commit, const UploadedBlob* upload = nullptr);
+
+	// index_uploaded() of a blob streamed through the shard's group: the document is the upload's final entry.
+	task::task<DocumentInfo> index_uploaded_through_group(const MsgPack& document_id, engine::rev document_ver, const ct_type_t& ct_type, const UploadedBlob& blob, bool commit);
 
 	// The docid holding the term, read in the shard its id routes to (id_shard) and, on a miss, in the others, from
 	// the published views or (written) as the writes left them.
@@ -204,10 +223,6 @@ public:
 
 	void reset(const Endpoints& endpoints_, int flags_ = 0, const std::shared_ptr<std::unordered_set<std::string>>& context_ = nullptr);
 
-#if XAPIAND_DATABASE_WAL
-	task::task<MsgPack> repr_wal(engine::rev start_revision, engine::rev end_revision, bool unserialized);
-#endif
-
 	task::task<MsgPack> check();
 
 	task::task<std::tuple<std::string, engine::Document, MsgPack>> prepare(const MsgPack& document_id, engine::rev document_ver, bool stored, const MsgPack& body, const ct_type_t& ct_type);
@@ -222,19 +237,19 @@ public:
 		virtual task::task<bool> next(std::string& chunk) = 0;
 	};
 
-	// Where a streamed blob lies in the data storage of its shard.
+	// A streamed blob: the chunked command of its shard's group whose chunks hold it (D12). Its final entry is the
+	// document's write, or its abort.
 	struct UploadedBlob {
-		ssize_t volume = -1;
-		size_t offset = 0;
 		size_t size = 0;
-		size_t shard = 0;   // the shard whose storage holds it
+		size_t shard = 0;   // the shard whose group holds it
+		std::shared_ptr<ChunkedUpload> upload;
 	};
 
-	// Streams a blob of `size` bytes from `body` into the data storage of the shard that document `document_id` goes
-	// to, in chores of `chores`. The document is indexed afterwards, with index_uploaded(), in a turn of its own. An
-	// upload that fails, or whose body ends short, leaves nothing behind. Raises ClientError (a 4xx) when the blob
-	// cannot be stored: a size past the limit, or an id that does not name its shard before it is indexed.
-	task::task<UploadedBlob> upload_stored(const MsgPack& document_id, const ct_type_t& ct_type, size_t size, engine::Chores& chores, BodyChunks& body);
+	// Streams a blob of `size` bytes from `body` as chunk entries of the group of the shard that document
+	// `document_id` goes to. The document is indexed afterwards, with index_uploaded(), as the upload's final entry.
+	// An upload that fails, or whose body ends short, is aborted, so its volume is freed. Raises ClientError (a 4xx)
+	// when the blob cannot be stored: no size, or no document id to name its shard before it is indexed.
+	task::task<UploadedBlob> upload_stored(const MsgPack& document_id, size_t size, BodyChunks& body);
 
 	// index() of a `stored` document whose blob upload_stored() wrote.
 	task::task<DocumentInfo> index_uploaded(const MsgPack& document_id, engine::rev document_ver, const ct_type_t& ct_type, const UploadedBlob& blob, bool commit);
@@ -272,8 +287,8 @@ public:
 	task::task<std::vector<std::string>> get_metadata_keys();
 	task::task<std::string> get_metadata(const std::string& key);
 	task::task<std::string> get_metadata(std::string_view key);
-	task::task<void> set_metadata(const std::string& key, const std::string& value, bool commit = false, bool wal = true);
-	task::task<void> set_metadata(std::string_view key, std::string_view value, bool commit = false, bool wal = true);
+	task::task<void> set_metadata(const std::string& key, const std::string& value, bool commit = false);
+	task::task<void> set_metadata(std::string_view key, std::string_view value, bool commit = false);
 
 	// By id the document is a handle: it reads the index when its data is asked for.
 	Document get_document(engine::hitid did);
@@ -286,26 +301,109 @@ public:
 
 	// A delete with a version (not UNKNOWN_REVISION) removes the document only while it has that version, 0 for one
 	// that does not exist; else it raises errc::version_conflict with the current version.
-	task::task<void> delete_document(engine::docid did, engine::rev document_ver, bool commit = false, bool wal = true);
-	task::task<void> delete_document(std::string_view document_id, engine::rev document_ver, bool commit = false, bool wal = true);
-	task::task<void> delete_document_term(const std::string& term, engine::rev document_ver, bool commit = false, bool wal = true);
+	task::task<void> delete_document(engine::docid did, engine::rev document_ver, bool commit = false);
+	task::task<void> delete_document(std::string_view document_id, engine::rev document_ver, bool commit = false);
+	task::task<void> delete_document_term(const std::string& term, engine::rev document_ver, bool commit = false);
 
-	task::task<engine::WriteResult> add_document(engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
-	task::task<engine::WriteResult> replace_document(engine::docid did, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true, bool must_exist = false);
-	task::task<engine::WriteResult> replace_document_term(const std::string& term, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
+	task::task<engine::WriteResult> add_document(engine::Document&& doc, bool commit = false, bool version = true);
+	// `upload`, if any, is the streamed blob the document names: the document must go to its shard.
+	task::task<engine::WriteResult> replace_document(engine::docid did, engine::Document&& doc, bool commit = false, bool version = true, bool must_exist = false, const UploadedBlob* upload = nullptr);
+	task::task<engine::WriteResult> replace_document_term(const std::string& term, engine::Document&& doc, bool commit = false, bool version = true, const UploadedBlob* upload = nullptr);
 
 	task::task<MsgPack> get_document_info(std::string_view document_id, bool raw_data, bool human);
 	task::task<MsgPack> get_database_info();
 
-#ifdef XAPIAND_DATA_STORAGE
 	task::task<std::string> storage_get_stored(const Locator& locator, engine::docid did);
-#endif /* XAPIAND_DATA_STORAGE */
 
-	task::task<bool> commit(bool wal = true);
+	task::task<bool> commit();
 	task::task<void> reopen();
 
 	task::task<MsgPack> unserialize_term_id(std::string_view term_id);
 };
+
+
+// A shard's commands through its replication group, chunked past the entry limit (docs/design/cluster-release.md
+// D12; contract xapiand:chunked-command). ShardEndpoint's propose path is their caller (journal-replaces-wal core
+// step d); tests drive them through a strata::group.
+
+// Proposes one entry to the shard's group at a level and answers what its proposer heard.
+using ProposeEntry = std::function<task::task<strata::group::answer>(std::string entry, strata::group::ack level)>;
+
+// Proposes to `shard_group` from any scheduler (propose_entry) as `proposer`: in the shard's turn, or holding only its
+// pin. Valid while its index is pinned.
+ProposeEntry group_proposer(ShardGroup& shard_group, Proposer proposer);
+
+// A blob streamed through the group into a volume of its own (D12): its bytes as chunk entries of the upload
+// stream, each entry within `limit`, then the final entry of the command that names it, or its abort.
+class ChunkedUpload {
+	std::uint64_t id_;
+	std::uint64_t size_;
+	std::size_t limit_;
+	std::uint64_t offset_ = 0;   // the stream's bytes in entries so far
+	std::string pending_;        // the bytes of the next chunk
+	bool finished_ = false;
+
+	std::string chunk(std::size_t n);
+
+public:
+	ChunkedUpload(std::uint64_t id, std::uint64_t size, std::size_t limit = COMMAND_ENTRY_BYTES);
+
+	std::uint64_t id() const noexcept {
+		return id_;
+	}
+
+	std::uint64_t size() const noexcept {
+		return size_;
+	}
+
+	std::uint64_t received() const noexcept {
+		return offset_ + pending_.size();
+	}
+
+	// The chunk entries `bytes` completes; a partial chunk waits for more or for end(). Raises ClientError past
+	// the upload's size.
+	std::vector<std::string> append(std::string_view bytes);
+
+	// The last chunk entry, if bytes wait for one. Raises ClientError when the body ended short of the size.
+	std::vector<std::string> end();
+
+	// The record of the blob the final entry's write names: the upload stream's [0, size).
+	CommandBytes record() const;
+
+	// The final entry of `command`, whose write names record(). Raises errc::invalid past the entry limit.
+	std::string final_entry(const Command& command) const;
+
+	// Whether its final entry or its abort was proposed: its id applies nothing more after that entry.
+	bool finished() const noexcept {
+		return finished_;
+	}
+
+	void finish() noexcept {
+		finished_ = true;
+	}
+};
+
+// The entry that ends chunked command `id` applying nothing: its staging and its upload retire.
+std::string abort_entry(std::uint64_t id);
+
+// Proposes `command` at `level` (D12): its entry alone when it fits `limit`, else chunks of `id` into its staging
+// stream at ack::none, then its final entry at `level`. A command cut by a leader change (an entry placed outside
+// its id's term, or superseded) applied nothing and raises errc::not_available: the request is retried whole. A
+// failure after the first chunk proposes the abort before it raises.
+task::task<strata::group::answer> propose_command(const ProposeEntry& propose, const Command& command, std::uint64_t id,
+	strata::group::ack level, std::size_t limit = COMMAND_ENTRY_BYTES);
+
+// Streams `body` into `upload` at ack::none. A failure proposes the abort before it raises: a body past or short of
+// the size raises ClientError, a leader change errc::not_available.
+task::task<void> propose_upload(const ProposeEntry& propose, ChunkedUpload& upload, DatabaseHandler::BodyChunks& body);
+
+// The upload's final entry for `command` at `level`, which applies it; cut as propose_command's are.
+task::task<strata::group::answer> propose_upload_final(const ProposeEntry& propose, const ChunkedUpload& upload,
+	const Command& command, strata::group::ack level);
+
+// Proposes the abort of a command whose proposer gives it up (a failed prepare, a lost client); answers whether the
+// group placed it, and never raises. One never ended stays open until a higher term retires it.
+task::task<bool> propose_abort(const ProposeEntry& propose, std::uint64_t id);
 
 
 // What a RESTORE's run met (tests assert their case occurred): the largest range applied at once, the writes of an id
@@ -333,7 +431,8 @@ struct DocIndexerStats {
 // time slice, a step awaited on the loop with the RESTORE's handler between a range's placement and its apply,
 // one apply slice that throws before its writes, every write on the serial path (the model of a run), and the writes
 // an apply slice takes, with a step awaited on the loop between two slices (the turn released) given the term of the
-// slice's last write and whether it missed, and the shard (plus one) whose next placement read times out busy.
+// slice's last write and whether it missed, the shard (plus one) whose next placement read times out busy, and the
+// pending writes' bound in bytes (1: each round of objects is written before the next).
 struct DocIndexerSeams {
 	std::atomic<std::size_t> objects_per_prepare{0};
 	std::atomic<std::size_t> writes_per_slice{0};
@@ -343,6 +442,7 @@ struct DocIndexerSeams {
 	std::string stale_on_term;   // a write of a term ending so fails as a stale-marking error
 	std::atomic<bool> serial{false};
 	std::atomic<std::size_t> busy_placement_shard{0};
+	std::atomic<std::size_t> pending_bytes{0};
 };
 
 
@@ -350,6 +450,8 @@ struct DocIndexerSeams {
 // each to its shard, in order, on the reactor that serves the request (docs/design/phase7c.md D12). It owns no
 // thread and waits for none: it yields when its slice is spent, and the parse of the next batch runs beside it.
 class DocIndexer {
+	struct Admitted;   // an admitted object of the stream and its prepare (handler.cc)
+
 	Endpoints endpoints;
 	int flags;
 	engine::Chores& chores;
@@ -366,10 +468,22 @@ class DocIndexer {
 	size_t _indexed = 0;
 	size_t _total = 0;
 	size_t _idx = 0;
+	unsigned _unwritten_status = 0;   // the highest 5xx an object's result carries: the server left it unwritten
 	// The objects' results, MessagePack-packed into one buffer: `_at[idx]` is object idx's (offset, size) there,
 	// size 0 until it is recorded. A MsgPack per object would hold a zone of its own (8 KB), all freed in one turn.
 	std::string _packed;
 	std::vector<std::pair<size_t, size_t>> _at;
+
+	// The prepared objects not yet written, in input order: the plain runs and the updates of an id. Written together,
+	// so their batch commands fill log entries and share the group's syncs: before an update of a pending id or any
+	// other stored read is prepared, at their bound, and at the commit. Kept across batches: a body chunk holds a few
+	// objects. `_pending_terms` are their keys, `_pending_bytes` their documents' data.
+	std::vector<Admitted> _pending;
+	std::unordered_set<std::string> _pending_terms;
+	size_t _pending_bytes = 0;
+
+	// index(), and with `close` the writes still pending.
+	task::task<void> take(std::vector<MsgPack>& batch, bool close);
 
 public:
 	// The light slices a body chunk gets for its apply, after its objects are taken (D82).
@@ -380,6 +494,8 @@ public:
 	// without yielding).
 	DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool comments, const query_field_t& query_field, engine::Chores& chores, task::budget* budget = nullptr);
 
+	~DocIndexer();
+
 	DocIndexer(const DocIndexer&) = delete;
 	DocIndexer& operator=(const DocIndexer&) = delete;
 
@@ -387,7 +503,7 @@ public:
 	// of the stream, stops after `limit`, prepares and applies the rest, and records a result for each.
 	task::task<void> index(std::vector<MsgPack>& batch);
 
-	// Commits what was indexed (the closing commit of a restore).
+	// Writes what is pending and commits what was indexed (the closing commit of a restore).
 	task::task<void> commit();
 
 	size_t prepared() const noexcept {
@@ -404,6 +520,12 @@ public:
 
 	size_t total() const noexcept {
 		return _total;
+	}
+
+	// The highest server error (5xx) among the objects' results, 0 if none: an object the server failed to write
+	// makes the RESTORE's own answer that status, never a 200.
+	unsigned unwritten_status() const noexcept {
+		return _unwritten_status;
 	}
 
 	// The results, one per object in input order, as one array: an object not yet recorded is an empty map.

@@ -1,0 +1,1018 @@
+# journal-replaces-wal: journal
+
+State: ready for review; T1 (TSan finding at 1933c78f9) fixed at Xapiand:66bcd87eb (pushed at ca2a27058); waiting on jobs 261125-043517-a4b25b (T1 x20, L1 x5), mutants 261125-043520-724b20 (pressure), 261125-043523-718f1e (full), TSan 261125-043535-432e87 (L1 and T1 x20), 261125-043538-76be33 (test_pool, shard_group, node), no-wal 261125-043544-9e00b8 passed; crash (held to the round's end), CI at ca2a27058. S1 waits on strata-journal-behind (Next 0).
+Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
+
+## Doing
+
+Session 22 (2026-11-25), TSan finding T1 (CI at 1933c78f9, test_pool, test_a_log_past_its_bound_checkpoints_instead_of_refusing):
+basic_index's buffers vector, written by the pressure checkpoint's `on_checkpoint` refresh on the group's chore
+(shard_group.cc checkpoint -> Shard::checkpointed -> Core::refresh -> flush -> freeze) and read by `written_key` on the
+main thread (index->find_key) under the shard's turn. Introduced by Xapiand:f76c395e4 (L1).
+
+Thread table: every path that touches the index outside a view. "Turn" is ShardEndpoint::turn, the index's one writer
+(strata's checkout contract, x-pool D5: lease-less reads are safe only while no other thread writes).
+
+| Path | Thread | What excludes it (before the fix) |
+|---|---|---|
+| prepare (prepare_write: find_key, find_docid, fields) | caller's (loop, RESTORE's worker) | the turn |
+| written_key, written_keys, written_count | loop (RESTORE: worker via sync_wait) | the turn |
+| fresh -> Shard::refresh (index->refresh), reclaim, settle_merges, commit (no group), transactions, set_metadata, check, close/reopen | IndexChores worker or inline | the turn |
+| Turn::release -> index->check_in | the holder's | the turn (its holder) |
+| catalog's commit chore (commit_blocking: index_->commit) | catalog worker | no pin, so no turn (try_lock asserts); strata's chore bit holds group writes off |
+| group apply of a command entry (index->apply, refresh, reclaim_for_space) | group's chore | ack=quorum: the proposer holds the turn and awaits it; ack=none: the next holder's caught_up (unapplied_) |
+| applied_by_group | group's chore | atomics only (dirty, pending) |
+| checkpoint: capture (empty apply), sync_and_commit (index->commit), on_checkpoint (Core::refresh), unlink/release | group's chore | commit_group and a writer's LogFull wait: the turn. **Pressure task: nothing (no turn, no pin).** **An upload chunk's or abort's LogFull wait: nothing (pin, no turn).** |
+| catch_up, abort_open at open | group's chore | nothing serves before the open returns |
+| close's checkpoint, release_pins_held | group's chore | no pins (catalog close), after quiesce |
+| release_superseded (sources' pins: index->release commits) | group's chore | unreachable at a lone voter (no sources); the cluster quest's |
+| views: find_key via view(), get_view, search, scan, metadata | any | none needed (published views, D5) |
+
+Verdict: two rows break the rule, both from L1: the pressure checkpoint (no turn, no pin, so it also overlaps the
+catalog's demote and commit transitions) and the LogFull checkpoint of a proposer without the turn (upload chunks,
+aborts). The finding is the first; `on_checkpoint` is only where TSan caught it: the checkpoint's own sync_and_commit
+(index->commit -> flush) writes the same buffers, so moving the refresh to the loop (option 1) leaves the race.
+Moving written_key into read_applied (option 2) leaves prepare, written_count and fresh racing the same checkpoint.
+
+Model (T1): the turn is the index's one writer; a checkpoint runs only in a turn, by a pinned task.
+1. A turn holder whose placement crosses half the bound checkpoints before it answers, in its turn (the pressure
+   trigger, inline: no background task, no quiesce).
+2. A proposal that meets LogFull checkpoints and retries: in its turn when it holds one; a proposer that holds only a
+   pin (an upload's chunks, an abort) takes the turn for the checkpoint. A pinned proposer does not checkpoint at
+   half: its one path is the full log.
+3. COMMIT (commit_group) as before, in its turn.
+L1 still holds: every write past the bound is acknowledged; a turn holder's placements never pass half the bound plus
+one entry; an upload fills the log to LogFull, takes the turn, checkpoints and retries (the L1 test's upload phase).
+
+Done (Xapiand:6de9878d5, test tightened at 66bcd87eb): Proposer {in_turn, pinned} threads through group_proposer and
+propose_entry; the pressure task, quiesce and their allowlist rows are gone; ShardEndpoint::checkpoint_in_turn;
+journal-durability.md "Who writes the index". Class sweep (every index path off the loop, the table above): the two
+L1 rows now hold the turn; the commit chore is held off by no pin plus strata's lease; release_superseded is
+unreachable at rf = 1 (the cluster quest's: at rf > 1 a follower's apply holds no local turn, so its written reads
+need the model again). New test test_a_checkpoint_holds_the_turn: a written read asked while the pressure checkpoint's
+or an upload's full-log checkpoint's hook sleeps returns after it (value: the read waited). Local (build/, quiet light):
+fix 8 of 8 runs pass, L1 test 3 of 3; mutant pressure (spawned off the turn) 3 of 3 fail, mutant full (pinned
+checkpoint off the turn) fails. TSan mutant: not queued; the old code passed TSan at 3d5ce3627, so TSan does not catch
+it reliably, and the value test catches both mutants without it.
+
+| Finding | Test job | Mutant (must fail) |
+|---|---|---|
+| T1 (checkpoint off the turn; class: every index write on the chore without a turn holder awaiting it) | 261125-043517-a4b25b; TSan 261125-043535-432e87, 261125-043538-76be33 | pressure 261125-043520-724b20 (mutant/jrw-t1-pressure), full 261125-043523-718f1e (mutant/jrw-t1-full) |
+
+
+Session 21 (2026-11-24), durability review round 3 (CHANGES at Xapiand:98ea84a70): J1b, S1, A1 blocking (L1-T done
+in session 20); N9, N11, N12 nits; N10 left.
+
+Lifecycle extension (fourth round on this mechanism: the design check comes before any J1b or S1 code). Two classes.
+
+J1b, any path that reaches the journal's directory. States are how an index path relates to the journal's
+directory `J` on disk; `J`'s identity (device, inode, following a symlink) is read once by `set_journal`, on the
+main thread before the loops. "Miss" is resolve's branch where `<path>/strata` does not open (ENOENT, ENOTDIR).
+
+| Path state | create pin (PUT, RESTORE) | pin without create (GET, search) | reopen of an existing index | node start |
+|---|---|---|---|---|
+| outside | creates and opens | 404 `No such database` | opens; no added syscall (the check runs on a miss only, cheap-reopen D2) | nothing |
+| lexically at or inside `J` (`//`, `/./`, `..`, `%2E`) | 400 reserved name, no syscall (J1, kept) | 400 | unreachable: never created | moved (row "held at start") |
+| another spelling of `J` or an ancestor of it on a case-folding volume (`.Xapiand/journal/x`, `.XAPIAND/JOURNAL/`) | **J1b**: on the miss, the deepest existing ancestor is canonicalized and it and each physical parent compared with `J` by device and inode; a match is 400 naming `J`, before `create_index_directory` | **J1b**: the same check before `index_not_created`: 400, not 404 | unreachable: no index directory exists under `J` (refused at create, moved at start) | moved |
+| through a symlink whose target is `J` or under it (`alias/x`, `alias -> J`) | **J1b**: the same identity walk (canonical resolves the link) | **J1b**: 400 | unreachable | moved |
+| through a file of `J` (`J/layout/x`, any spelling) | lexical 400, or **J1b** (ENOTDIR: the walk starts at the file, its parent is `J`) | 400 | unreachable | n/a |
+| held at start: a directory inside `J` from a build before J1/J1b (an index, artifact-named directories fencing another index) | n/a | n/a | n/a | moved to `<J>.strays/` before the host scans, the log names both paths (J1, kept); its bytes are kept; its old path answers 400 (above); every other index serves, the fenced one included. **N12**: a rename that fails (EXDEV: `J` a mount or a symlink to another volume) ends the start naming EXDEV, the directory and the remedy |
+
+Value tests (test_pool, one per transition): case spellings and `alias/x` create nothing and answer invalid on
+create and without create (fails without J1b: the case spellings create directories inside `J` on APFS, the alias
+on every platform); a name outside creates, reopens and serves (the existing pool tests); held at start: a stray index directory and four artifact-named directories made under `J` move, and a
+second index committed before the start reads back after it. The reviewer's journalcase probe (e2b871) is the
+confirming job.
+
+S1, the journal and the index out of step. P_H is strata's durable head (`index.applied()`), P_b the recovered
+bundle's position, E the recovered log's end (consensus's last index after `driver.recover`). Sound pairs have
+P_b <= P_H <= E: an entry is durable before it applies, and a bundle publishes only after strata committed it.
+
+| State at open | first open after start | reopen in this process |
+|---|---|---|
+| journal holds no group (none, lost) and the index holds state | J2 (kept): refused before the group is built, nothing touched; **text fixed**: names DUMP/RESTORE and that only the journal the index last stopped with may be put back, never an older copy | unreachable (the host holds its group) |
+| sound, clean stop (P_b = P_H = E) | opens, nothing replayed | opens with the closed record, no election |
+| sound, after a crash (P_b <= P_H <= E) | replays (P_H, E] (strata skips at or below P_H) | n/a |
+| index older than the journal (P_b > P_H: the index's directory put back from a copy) | strata fences before the file set's recover (group.hh:1181); **new**: the open refuses with errc::corrupt naming P_b and P_H through the same path as D1, every index file byte-equal | unreachable |
+| journal older than the index (P_H > E: put back from an earlier copy, a copy of a running data root, a plain-mode power cut on macOS) | **S1**: refuse before `resume` and the file set's recover, naming P_H and E, nothing on disk touched; needs E before adopt, which strata's open does not expose: Blocked on 13 | unreachable: the host holds the journal with its owner lock |
+
+Value tests: index older refuses and keeps every file byte-equal (Xapiand, this round); journal older at a clean
+stop and journal older after a crash refuse and keep every file byte-equal (written with the strata bump that
+exposes E; the stalejournal probe fb40f3 confirms then). Sound pairs: test_an_acknowledged_write_survives_a_kill
+and test_a_cold_pin_reads_what_the_log_replays (existing).
+
+A1 and the nits change no state: `check_may_block` in quiesce() and the allow rows; N11 maps TooLarge and
+DuplicateRequest to 500; N9 makes the pressure counters monotonic (placed minus the largest count a published
+checkpoint covered, so overlapping checkpoints never subtract twice and the count never wraps).
+
+Done after the design check (msg-3), local quiet-light runs at build/ (-G Ninja, ASSERTS on), not evidence:
+- J1b (pool.cc `reaches`, resolve's miss branch; `journal_id_` at set_journal): test_another_spelling_of_the_journal_is_refused
+  (27 checks on APFS: the symlink alias and four case spellings, with and without a create; the journal's tree
+  unchanged; an outside name creates and an absent one is 404).
+- Held at start (J1, extended): test_an_index_inside_the_journal_is_refused also plants `x/.__1/strata`, checks it
+  moved with its bytes, its old path answers invalid, and an index committed before the start reads back (12 checks).
+- Index older than its journal (shard.cc catches strata's group_fenced from open_blocking):
+  test_an_index_older_than_its_journal_refuses (7 checks: twice errc::corrupt naming "P_b > P_H", every file of the
+  index byte-equal).
+- N9: test_overlapping_checkpoints_cut_the_log_count_once (8 rounds of two checkpoints at once, the count back to 0).
+- N11: `refusal_kind` (shard_group.h), test_only_a_passing_refusal_is_busy (every RejectReason). An oversized entry
+  never reaches consensus's TooLarge: admission throws std::length_error first (a 500 already).
+- N12: the strays move names EXDEV and the remedy (not run: no second volume in the tests).
+- J2's text and journal-durability.md ("Refusals at open" items 1 and 3, the journal-older hazard, the J1b paragraph,
+  the log's bound).
+- A1: `check_may_block("ShardGroup::quiesce")`; allow rows for the strays move, `reaches`' stats, set_journal,
+  `pressure_mtx_`, quiesce's wait and holds()' flag and wait; `async_check --strict` and `--strict --owed`: 0
+  unclassified. test_gate_tools.py 21 OK.
+- Full xapiand_test_pool OK (2,635 checks).
+
+Jobs at Xapiand:bf7668b4a (finding -> confirming job; mutants on branches mutant/jrw-r3-*, `--fails-without`; the
+N9 mutant failed 3 of 3 local runs, 16 of 25 checks):
+
+| Finding | Test job | Mutant (must fail) | Probe (confirming) |
+|---|---|---|---|
+| J1b | 261124-231558-1b3106 (full test_pool, shard_group, loop_yield, node) | j1b 261124-231602-a9e71c | reviewer's journalcase 261124-231619-cab4ba |
+| index older (S1 class) | 1b3106 | older 261124-231605-ebe75b | none (the stalejournal probe covers journal-older, Next 0) |
+| N9 | 1b3106 | n9 261124-231610-09be1d | |
+| N11 | 1b3106 | n11 261124-231614-0d6d34 | |
+| async_check (review) | CI's Build + unit + smoke (async_check --strict) at the push; 1b3106 runs the ASSERTS build with check_may_block | | |
+| S1 | after strata-journal-behind (Next 0) | | stalejournal (fb40f3's script) then |
+
+Reruns at bf7668b4a: 231639-140abf, 231640-4f4566, 231640-6dbcfa, 231641-01874e, 231642-7dc2d2, 231642-5ba24a,
+231643-d3a472, 231643-34b7e8 (all 261124-); `campaign verify`: crash 261124-231707-777023, no-wal 261124-231707-095b53; CI at the push (3d5ce3627).
+
+Session 20 (2026-11-24), L1's unit test (lead's step): mutant 261124-201402-16805d left the log-bound test passing.
+
+Cause: the mutant's diff (Xapiand:7e88de1e3) removes only the LogFull wait (`LOG_FULL_ATTEMPTS = 1`), not the
+pressure trigger its message names; the test's serial writes never outran the pressure checkpoint, so it exercised
+the trigger alone. With both removed, the old test already failed (local: "the log is full").
+
+Fix (Xapiand:0fffbb26a, test only): the upload (2.5 times LOG_BYTES) runs while the group's `on_checkpoint` hook (the
+production hook, wrapped by the test; no new seam) holds the next checkpoint for 1 s, so placements fill the log to
+its bound and a writer must wait for a checkpoint. Values asserted per phase: refused writes 0, a checkpoint
+published (`checkpointed` rose), every document (keys of 288 writes + 192 restore slice) and the 40 MiB upload read
+back byte-equal, the slow checkpoint ran during the upload. Local (quiet light, -G Ninja -j4, build/): head 13 of 13
+runs pass, 2.2 s each; wait-only mutant 11 of 11 fail (upload refused 503); both removed 3 of 3 fail (every phase).
+Also D181 (msg from the lead): journal-durability.md, "Refusals at open" item 1, states how an index moves between
+nodes (replication or DUMP/RESTORE) and that a copied directory is refused.
+
+| Finding | Test job | Mutant (must fail) |
+|---|---|---|
+| L1 (test missed the LogFull wait) | 261124-222236-8c886d at 0fffbb26a | 261124-222240-69101c: rerun of 16805d at 7c3728033 (branch mutant/jrw-r2-l1-r3, same diff on 0fffbb26a) |
+
+No other mutant or probe reruns (test-only change); round-2 jobs stand.
+
+Session 19 (2026-11-24), durability review round 2 (CHANGES at Xapiand:0ea6bd04a): L1, J1, J2, D1 blocking; N2, N5 nits.
+
+Lifecycle of a shard's group (the lead's design check is this table, per the assignment; each fixed cell names its
+fix and the class test). Classes: L1 = a proposal meets the retained-log cap; J = a client path or a stray entry
+inside the journal's directory; J2 = a group created over an index that holds state; D1 = anything thrown after
+the group opened.
+
+| State | write | checkpoint trigger | crash | journal missing | volume damaged | close | DELETE |
+|---|---|---|---|---|---|---|---|
+| opening | held by the catalog until the open returns | none | next open replays from the last bundle | **J2**: refused before the group is built, errc::corrupt naming the missing journal group; nothing created or deleted | **D1**: strata opens it damaged; open closes the group on the loop and refuses naming the damage, one log line | not reachable (the open owns the slot) | 501 (index-delete quest) |
+| catching up | held | none | replay | checked before (J2) | **D1**: catch-up throws; the same close and refusal | not reachable | 501 |
+| open | placed at its level; each placement counts toward the pressure trigger | **L1**: a placement past half the log's bytes or entries schedules one checkpoint on the loop; COMMIT and autocommit checkpoint as before | replay; every answered write is in the log | not reachable (the host holds the group) | an apply that meets damage marks it damaged | to closing | 501 |
+| checkpointing | placed meanwhile; entries past the capture stay in the log | joins: the group serializes checkpoints | replay from the previous bundle | not reachable | the checkpoint fails; the group is damaged or fenced | waits for the in-flight checkpoint; **L1**: and for the pressure task | 501 |
+| log full | **L1**: LogFull waits for a checkpoint and retries; with no progress, 503 naming the full log, never 500 | runs, cuts the log | replay (the reviewer's d069b2) | not reachable | as open | checkpoints until covered | 501 |
+| damaged | refused, replica_damaged naming the reason | refused | the next open finds it damaged again: D1 | not reachable | (already) | **D1**: close skips checkpoints, tears down on the loop | 501 |
+| closing | refused (closed: 503) | **L1**: the pressure task is not started; one in flight ends before the close | replay from the last bundle | not reachable | the close throws damaged, swallowed by the open's failure path | (already) | 501 |
+| closed | the next pin opens it | none | not running | next open: J2 | next open: D1 | none | 501 |
+
+Paths into the journal's directory (J class): a client path naming it or inside it is refused by the pool before
+resolve creates anything (J1, N6); a directory left there by an earlier build is moved aside before the host scans.
+
+Done (Xapiand:f76c395e4 fixes, Xapiand:98ea84a70 test_loop_yield; local quiet-light runs, not evidence): test_pool
+2,730 checks, test_shard_group 128, test_loop_yield 879, test_node 3,417, group_chunk_group (stride 7) 12; the four
+new tests 206 + 8 + 9 + 5 checks. Local probe runs: refusal (copy) damage ok, lost ok (refused naming the journal at
+`.xapiand/indexes/.__1`, every app file byte-equal: a node whose journal is lost refuses every index that holds state,
+system indexes included, and serves nothing until the journal is back); journalname 0 of 4 failing; journalpath FAIL
+in the reviewer's script only because its criterion counts the journal's own new group files for the allowed
+`PUT /.xapiand/x` (5 `groups-*` files): the copy in .scratch/xapiand/jrw-round2/ checks for files in a subdirectory
+and both journal paths answering 400, and passes. The RESTORE status change also moved
+test_a_throwing_apply_slice_fails_one_write's expectation to 5xx.
+
+Jobs at Xapiand:98ea84a70 (finding -> confirming job; mutant branches mutant/jrw-r2-*, `--fails-without`):
+
+| Finding | Test job | Mutant (must fail) | Probe (confirming) |
+|---|---|---|---|
+| L1 | 261124-201352-cf165a (four pool tests + test_loop_yield) | l1 261124-201402-16805d; restore-status 261124-201411-01a364 | reviewer's job-node.sh 261124-201426-429bdc; job-after.sh 261124-201427-e8ef49; fullcrash 261124-201434-2c5992 |
+| J1, N6 | cf165a | j1-refuse 261124-201404-07df1f; j1-strays 261124-201406-0ce20a | reviewer's journalname 261124-201429-92f1d4; journalpath (copy) 261124-201431-758b53 |
+| J2 | cf165a | j2 261124-201408-5abd1c | refusal (copy) 261124-201432-1276d7, case lost |
+| D1 | cf165a | d1 261124-201409-4408e8 | refusal (copy) 261124-201432-1276d7, case damage |
+
+`campaign verify`: no-wal 261124-201441-aece7b; crash held until State is ready for review (the tool). Reruns at
+98ea84a70: dc72b4, 3af3d1, 12db66, 82a484, 7f5e03, d121f9, 0976b5, 7a8cbf, 826ac3, fdb9b5, e71655, 2f1df2
+(all 261124-2014xx). N2 left (ruling 54); N3, N7 and N8 (b) the lead's.
+
+Plan (done): (1) D1 and J2 in ShardEndpoint::open_blocking; (2) J1 in the pool's resolve and ShardGroups' constructor;
+(3) L1 in propose_entry (pressure trigger, LogFull wait, 503) and the RESTORE's status; (4) N2, N5; tests in
+test_pool.cc and test_shard_group.cc, one per class transition; mutants per fix; the reviewer's probes rerun.
+
+Session 18 (2026-11-24), after journal-sync-mode landed (lead's resume):
+
+1. Xapiand:fcbf43fda merges origin/master bf2d2f40a: master's docs/ -> site/ rename carried the branch's docs/src
+   edits by rename detection; one conflict, site/.../reference-guide/wal.md (renamed on master, deleted here): kept
+   deleted. `campaign brief` lists no file outside the set from the merge.
+2. Xapiand:66a63182d pins completion b4600a8 and journal fc5c59b ahead of strata's own pins (declared before
+   prospect/strata, first declaration wins; strata 7a4284c4 builds against both: its include/ builds no PosixIO),
+   and faultlab 83fbde7 (journal's pin) for test_pool. `posix_io_options()` is `FlushMode::full` under
+   `--full-flush-ordering`, else `plain` (D177); the shard acquire, the pool's resolve and the journal host take it;
+   every test's own PosixIO opens plain. `ShardGroups::journal_io()` (the host's IO) lets
+   `test_the_journal_io_takes_the_io_options` check the mode of a file the host's IO opens (PosixFile::flush_mode),
+   not only the options it stored. Targeted (local, quiet light): io_options 3, shard_group 128, group_chunk 94,
+   group_chunk_group 12, journal_replay 92, restore_batch 701, reactor_requests 62 checks, all pass.
+3. Xapiand:5d3e7c14e docs: options.md, changelog and journal-durability.md state the two modes (plain: fsync and the
+   barrier; full: F_FULLFSYNC at both); strata-engine.md and api.md no longer name DatabaseWAL, `:wal` or `WAL`.
+4. Blocked-on items 6 and 7 were already done in session 10 (Xapiand:91113fb2f: agent-codebase.md has no WAL
+   mention, `grep -i wal` empty; Xapiand:09a223a4e: Data::flush builds its bytes apart and parse()s them, test
+   `test_a_flush_leaves_its_locators_on_its_bytes` flushes twice and a third time after a reparse; CI's ASan+UBSan
+   job runs test_shard_group). Nothing new to do there.
+5. Whole test_loop_yield at Xapiand:66a63182d (local, quiet light, plain mode): 879 of 879 checks, 18.1 s wall.
+   The RESTORE case: in chores 1,714 ms (session 17 under full flushes: 3.25-3.5 s), on the loop 2,654 ms; loop CPU
+   155.0 ms in chores against 1,007.1 ms on the loop (0.15, bound 0.2). Entries case: 2 log entries per 400 objects
+   of each kind.
+6. Evidence once at Xapiand:0ea6bd04a (pushed; CI on the push): `campaign verify` crash 261124-160741-26cfd4, no-wal
+   261124-160741-838232; reruns at head: drain 30x 160758-b7c564, A1/A4/A9 build+tests 160758-92f823, A3 160758-2e2d34
+   and 160800-a73a91, A4 160759-3536d4, restore/replay 160759-56ed44, A8 160759-d57f08, R2 160800-7adbab, A2 blob
+   crash 160800-54a48e, A5 levels and IO options 160801-9c2628, A1 abandon 30x 160801-40491e, A5 replay check
+   160801-82cbcd. New mutant (A5, --fails-without): 261124-160810-feba37 at mutant/jrw-host-mode-plain
+   (Xapiand:36ebf8002, the host's IO opens plain whatever the switch says; the IO options case must fail).
+7. Like for like (lead's ruling on 11, step 5): strict A/B/A, master bf2d2f40a's binary (built by 261124-155600-dc1640,
+   same flags: RelWithDebInfo, LTO off) against the quest's, 5 interleaved pairs each with master run twice (the
+   A/A): plain (both default) 261124-160825-6198e5, full (both `--full-flush-ordering`) 261124-160827-b2b5ef.
+   Scripts: ~/.scratch/xapiand/journal-replaces-wal/ab-modes/ (ab_modes.sh, restore_e2e.py, summary.py).
+
+Session 17 (2026-11-24), the plain RESTORE in chores (lead's message after 3016ad):
+
+1. 3016ad at ff969606f: updates fixed (400: 3 entries; 2,000 on the loop 8.95 s), plain in chores unchanged
+   (66.5 s) and test_loop_yield.cc:702 failed. Cause, from 3016ad's own counts: a plain run was written at the end
+   of each body chunk (~64 KB, ~6 objects of 10 KB): one command per chunk and shard plus the id counter's own,
+   ~3,000 entries for 2,000 objects into 5 shards (the 400-object case: 18 entries = its 18 chunks).
+2. Fix, write and fence path (for the durability reviewer):
+   - Xapiand:41893e8a6: prepared plain objects join `_pending` with the updates (one mechanism), kept across chunks;
+     written by `apply_pending` (apply_range: placement, per-shard restore_slice) at the bound, before an update of a
+     pending id or of an id a pending id-less object may take (`N` pending), before any other stored read or a schema
+     script's objects, and in `commit()` before the closing commit. The answer follows that commit: every
+     acknowledged write is applied (quorum) or placed (ack=none), as before; a crash before the answer loses only the
+     unacknowledged stream. A slice's last command carries the id counter's write (set_metadata), so the counter is
+     durable in the entry with the writes that moved it; `restore_results` answers document writes only (strata's
+     verdict lists document ops only); the counter's own proposal stays as the fallback when the last command failed.
+   - Xapiand:6d3b895ec: a slice prepares its whole sub-run (it stopped at the first closed command, so the closing
+     write went out alone and the rest as another slice: 3 entries per shard where 2 held it); the bound is 4 MiB of
+     document data per writing child (`children`), so each shard's share fills its entries.
+   - Nothing is applied before its entry is durable: every write still goes through the group's propose at its level.
+3. Tests: entries case adds numeric ids (counter must take no entry: numeric <= plain) and bounds each kind at 8 for
+   400 objects (2 measured each; 18 per-chunk); update case adds the id an id-less pending object takes (twin index
+   names it: /pending_new/2 merged). Docs Xapiand:89a406c7f.
+4. Measured (quiet light, load 10-50, worktree build; not evidence):
+   - test case, 2,000 x 10 KB into 5 shards: on the loop 3.98-6.3 s, in chores 3.25-3.5 s (was 66.5 s); loop CPU
+     ratio 0.11-0.14 (bound 0.2).
+   - e2e A/B interleaved against master's binary (afc0de180), same hold: on the loop fix 5.3-7.0 s vs master
+     6.8-8.2 s; in chores fix 4.0-4.3 s vs master 2.4-3.2 s. Node CPU fix 9.4-9.9 s vs master 22-23 s.
+   - Sync A/B (syncspy, windows per RESTORE, load 10-24): in chores master 1.32-1.45 s with 10 full flushes (0.3-0.4 s,
+     strata manifests) + barriers; fix 3.08-3.90 s with 88-89 full flushes summing 2.0-2.2 s: turn logs 41 (0.97 s),
+     group artifacts 24 (0.53 s), the journal directory 12 (0.27 s), strata manifests and dirs 10. ~31 entries of
+     ~1 MiB for 29 MB of commands. On the loop fix 3.65-3.81 s (90 full, 1.7-2.1 s) vs master 4.8-5.7 s.
+   The remaining gap in chores is the journal's full flushes per entry (~3 per 1 MiB entry: turn log, artifact,
+   directory), device-serialized across the 5 groups; master full-flushes only at commit (barrier ordering).
+5. Whole test_loop_yield (local, quiet light): 875 of 876 checks; test_each_chunk_of_a_streamed_restore_starts_light
+   saw one placement (the pending writes wait for the commit). Xapiand:2ea5d31e0 adds `seams.pending_bytes` (1: each
+   round written before the next) for that case: 9 of 9, every chunk's first slices light.
+6. Not ready for evidence (plain row above master's median): no jobs queued. Options under Blocked on.
+
+Session 16 (2026-11-24), the group-commit fix builds:
+
+1. Job 261124-060107-81fe3f failed to build: the DocIndexer constructor's cleanup destroys `_pending`
+   (vector<Admitted>) where Admitted was still incomplete. Xapiand:aec45ef9b moves its definition above the
+   constructor and includes command.h (COMMAND_ENTRY_BYTES). Same commit, write path: the apply slice's last chore
+   (`done`: index stale, a test's fixed slice, the sub-run's end, or a closed command) also closes the open command,
+   so its entry is encoded off the loop as before c2766c5bf; only a chore failing after the first leaves the close
+   to the loop (rare: the seam, or a read that throws).
+2. Xapiand:ff969606f: test_loop_yield fails when no case has the given name (a misspelled name passed).
+3. Mutants rebuilt on ff969606f (branches moved): pending-off eaf85d036, fill-off 3db6eefe3 (`done = true || ...`),
+   same-id-unchecked d327e3b9d.
+
+Session 15 (2026-11-24), the crash gate's RESTORE (test_loop_yield.cc:677), lead's assignment:
+
+1. Cause confirmed, probe 261124-054543-cc6648 at Xapiand:f845c2966 (syncspy, per-RESTORE windows): the on-loop
+   RESTORE of 2,000 updates took 112.4 s, of which 4,006 turn-log F_FULLFSYNC calls took 104.1 s (2 per update,
+   ~26 ms each, 93%); the in-chores one 57.1 s, 2,497 turn-log full flushes 53.8 s (1.25 per object: a proposal per
+   1 ms prepare slice plus the slice's id counter). Every awaited proposal waits for its own turn's syncs; the
+   serial path had one update in flight, the batched path one small command per chore. Not fsync CPU: the process
+   used 14.0 s and 4.5 s CPU. For the lead (journal/strata): a lone voter's proposal costs two turn-log full
+   flushes, not one.
+2. Fix Xapiand:c2766c5bf (write and fence path, for the durability reviewer):
+   - DocIndexer: an update/merge/patch of an id with no script or schema (`merges_stored`) waits before its read
+     only for the earlier writes of its id (key from `get_prefixed_term_id` before the prepare), not for every
+     earlier write. Its prepared write joins `_pending` (kept across body batches) and is written by
+     `apply_range` (placement, per-shard `restore_slice` batch commands, as a plain run's) before: a later object of
+     the same key, a plain run's writes (`apply_run`), any other stored read (script, schema, no id), 4 MiB of
+     pending records (PENDING_BYTES), and the closing commit (`commit()` writes the pending first). The answer is
+     written after `commit()`, so every acknowledged write is applied (quorum) or placed (ack=none) as before;
+     a crash before the answer loses at most the unacknowledged tail, as before. Nothing is applied before its
+     entry is durable: the batch commands go through the group as every RESTORE batch does.
+   - Shard::restore_slice: chores of 1 ms prepare until a command closes or the shard's run ends (a test's fixed
+     `writes_per_slice` stays one chore), then proposes; a chore failing after the first ends the slice with
+     the writes before it proposed and fails the next write, as a failing slice did. id counter unchanged (its
+     own proposal per slice).
+   Tests (Xapiand:c2766c5bf): `test_a_restores_writes_share_their_log_entries` (400 updates and 400 plain objects
+   into a one-shard index: at most 20 log entries each, by `group.applied()`), and
+   `test_an_update_sees_the_earlier_objects_of_its_stream` gains two pending ids updated twice. Xapiand:6535096f5:
+   test_loop_yield runs one case by name (mutants run only theirs). Docs Xapiand:9c9189db8.
+   Mutants (branches mutant/jrw-*): pending-off 07da015ca (entries case), fill-off e86b9fdcf (entries case),
+   same-id-unchecked 81b0c0cc8 (update case).
+   Jobs: whole test_loop_yield 261124-060107-81fe3f (at c2766c5bf); mutants 261124-060150-afcbaa,
+   261124-060152-be5e43, 261124-060154-1526c7.
+3. Finding for the lead (pre-existing, not changed): at ack=none a RESTORE's update read after a same-id write
+   only placed reads the applied state (`fresh` takes the turn, and so `caught_up`, only when the engine is dirty),
+   so it can miss that write; true of the serial path before this session too.
+
+Session 14 (2026-11-24), the drain case's missing warning and the lead's replay-check message:
+
+1. The drain case (015dd1385's test) missed only its warning (local 742fba run 1, CI TSan and ASan+UBSan; exit 75 in
+   its bound). First hypothesis (the write's autocommit checkpointed before the hold) REFUTED by probe 701cc3
+   (Xapiand:b2be5cac8, failed on run 4): DETACHED_AT_SHUTDOWN 3, then the first drain ran the control loop to the
+   deadline (the autocommit waits in the held checkpoint and cannot end), Stop 1 started 2,022 ms after the shutdown
+   with 1 ms left, the HTTP stop was abandoned ("Shutdown abandoned 2 unfinished items after waiting 1 ms"), and
+   that abandon skipped the control loop's check. Whether a 1 ms HTTP stop finished decided the warning: always
+   missed under the sanitizers, sometimes here. Cause: the stop's order (master's too), any detached task that
+   cannot end took the requests' whole budget. Fix Xapiand:2305b1335: the drain before the HTTP stop ends where the
+   stop's two graces are what is left (2 x http_shutdown_grace(bound)); Stop 2 drains the control tasks with the
+   autocommits to the deadline; control-plane.md items 1 and 3 say so. The case also checks Stop 1 starts by
+   1,800 ms (old order: never before 2,000). Xapiand:cae4f2900 (no sleep: hold the chore, write at ack=none, wait
+   for detached() != 0) was built on the refuted hypothesis; kept, since it builds the precondition from observed
+   state. Jobs: 30x 22beb7; mutants e01d6b (Xapiand:8ff8ddcd4, the first drain to the deadline) and 5d5f29
+   (Xapiand:7c744b176, 015dd1385's check off). Superseded unrun or stale: 2a8cd9, f97bf7 (cancelled).
+2. Batch-pins verdict (probe 23729b): the case took 21.4 s at load 14, of which 886 F_FULLFSYNC calls took 22.2 s
+   (per index ~37: the turns log 252, the journal directory 217, artifacts 192, the index's own 72+24+27+26). The
+   hang under the crash gate was these flushes past the 40 s default watchdog, not a pin. Xapiand:bb8036409 gives the
+   case 120 s (the wildcard case's bound). For the lead (strata/journal): fewer full flushes per create, write and
+   checkpoint is the journal host's batching.
+3. Lead msg (replay check 01a519, "a recovery that cannot write does not serve"): the node refused to serve, but died
+   with "Uncaught exception: short turn log preallocation": journal's TurnLog::preallocate throws a bare
+   runtime_error on the short write a file-size limit gives (no errno, no file). Verdict: the uncaught exception was
+   the defect. Fix Xapiand:a7b187c56: the manager reports "The journal in .xapiand/journal cannot be recovered:
+   <error> (the process's file-size limit is N bytes)" and ends the start with EX_IOERR; the check requires that
+   report and no "Uncaught exception". Check 7ce077; mutant 5c1d14 (Xapiand:e68110ef7, the report removed) must
+   fail the failure case. For the lead (journal library): a short write should continue to the error and name
+   the file and errno (EFBIG); a hunt row, not this quest.
+
+4. Lead msg (crash gate ef103c at 113722c02): test_loop_yield.cc:677, the on-loop RESTORE of 2,000 updates at
+   ?commit (the loop-CPU case) answered no 2xx after a 942 s suite run; the next, in-chores RESTORE passed, and so
+   did the earlier ?commit RESTOREs, so a bare ?commit is not refused there (the 400 is only beside ack=none). The
+   test printed no status. Hypothesis: no answer within the test client's 60 s receive timeout (status 0): each
+   on-loop update is prepared after every earlier one applied (D1), so the 2,000 are proposed one by one and each
+   waits for its own durable placement, a full device flush on macOS (~25 ms, 886 took 22 s in probe 23729b),
+   about 50 s alone and more under the gate's load; master's WAL synced once per RESTORE. CI (Linux, cheaper
+   syncs) passes the case. Xapiand:b380c36da makes the case print its status, wall time and answer. Probes 1a9289
+   (head, with the sync counts) and 4be160 (master) measure it. If confirmed, the cause is one durable sync per
+   serial write, a cost of the design (D1 with D17's batching only for plain objects), and its fix (batching a
+   RESTORE's updates into commands, or applying before durability inside one request) changes a contract: it goes
+   to Blocked on with options, not into the test's timeout.
+
+Session 13 (2026-11-24), the lead's relay (~/.scratch/xapiand/lead/jrw-relay.md) and R2:
+
+1. CI at 34553fa85 (run 45308297820): Functional E2E (docs), ASan+UBSan and TSan all failed on the same 4 E2E
+   assertions, this branch's own: docs_to_postman.py adds a bare `?commit` to every request that names none, and
+   `?commit` beside `ack=none` answers 400 (D4), so basics.md's two ack=none examples failed and the linearizable get
+   and prefix search after them saw nothing. The suites under both sanitizers were GREEN (failed: 0). Fix
+   Xapiand:6d237b1af: the two e2e blocks name `params: commit=false` (quickstart's `echo=false` precedent); the
+   generated requests checked locally (docs_to_postman.py on basics.md: `ack=none&commit=false`). Observation for
+   the lead: the generator's blanket `?commit` is a WAL-era default; with D4 every docs write is refresh=true.
+2. Crash check 261123-165000-bd1f5e (and fef4e8 at 6d6921068): test_node failed, the batch-pins case hung past its
+   40 s watchdog (item 7 of session 12); every other test passed. Probe 9e4f83 attributes its flushes per file.
+3. R2: strata pinned at 7a4284c4 (Xapiand:a2f35ed91; journal 9c7e31c, consensus 6e1122c come with it; no Xapiand
+   use of the changed group internals). Test (Xapiand:ea5ac38e8) test_shard_group
+   `test_a_seal_reads_its_volume_in_bounded_pieces`: an upload of 16 x 64 KiB + 7 applied as chunks and a final over
+   an IO recording the largest read; the seal's CRC32C is the bytes' and no read exceeds 64 KiB. Mutant: strata at
+   00eb018 through --ref (FETCHCONTENT_SOURCE_DIR_STRATA), the old whole-file seal.
+4. The shutdown-drain abort (26f9f6, SIGABRT after "Exiting with unfinished writes abandoned", nothing printed).
+   Cause by reading (strata group.hh at 7a4284c4): the drains end at the deadline with the two autocommits of
+   `late` left (one suspended in the group checkpoint whose chore the test holds, one waiting behind it); the
+   shutdown then closed the control scheduler and destroy_roots() freed their frames. strata's group keeps raw
+   pointers into such frames (a chore `call_work` the awaiter owns, `waiters_`/`readers_` resumed by fail_waiters
+   in tear_down), so Stop 3's close of `late` can resume or post a freed frame: a race with _Exit, hence once.
+   Fix Xapiand:015dd1385: a control task left at the deadline abandons the stop with the loop left running (as an
+   abandoned HTTP stop does), warning "The control loop's unfinished tasks are left running"; only an idle loop is
+   closed and its roots destroyed. The drain case checks the warning (deterministic: its mutant, the old destroy,
+   misses the line). Diagnostic kept (Xapiand:bedf01221): the test node prints a SIGABRT's sender and stack.
+   For the lead and strata: a group awaiter whose frame is destroyed stays linked (chore_awaiter, quorum and read
+   waiters have no destructor that unlinks); destroy-safe awaiters there would make destroy_roots safe everywhere.
+5. Replay check 8bf61b: recovery correct, the file-size line missing. The harness now prints the failed start's
+   log end on that miss (Xapiand:bedf01221); d250e2 shows what the node logs under `ulimit -f`.
+6. R1: the mutant is 261123-232529-f93da2 (killed, exit 1), not 4ee4de (127, never ran).
+7. Merged origin/master (Xapiand:a740b6751, clean: the docs site engine, pages.yml; master's site files taken).
+8. Session 12 item 5's verdict (loop-yield probes, 3 runs each): both sides moved. Merge base 7ff092: in chores
+   168.9-174.5 ms, on the loop 2,752-3,076 ms (0.057-0.062). Head 4fae12: in chores 227.2-273.2 ms, on the loop
+   1,546-2,005 ms (0.135-0.147). The denominator shrank 1.5-1.8x (the group applies every write on its chore, so
+   "on the loop" no longer applies there) and the numerator grew 1.3-1.6x (+55-100 ms per 2,000 documents, the loop
+   proposing each command, ~30-50 us a document). CI's 0.21-0.22 is the same shift on slower runners; the bound
+   was not changed. For the lead: the ratio's denominator no longer measures what it did; an absolute loop budget
+   per document would state the claim.
+
+Session 12 (2026-11-23), task `levels` and R1 on the quest branch (lead's assignment), then the lead's two messages:
+
+1. R1 (Xapiand:c159d38a5): the journal host's PosixIO takes `engine::strata::posix_io_options()`; test_shard_group
+   `test_the_journal_io_takes_the_io_options` (full_flush_ordering both ways, the barrier warning, a group-writable
+   directory the defaults refuse). Mutant: the host built with `PosixIO(directory)`.
+2. Levels (Xapiand:650bb198b, tests Xapiand:ea9598e6d, docs and harness Xapiand:e5d8c3a6d): ack=quorum|none,
+   refresh=false|wait_for|true, read=prefix|linearizable (and ?volatile), ?commit = ack=quorum&refresh=true, 400 on
+   unknown or contradicting levels; RESTORE takes ack. The group's apply marks the engine through
+   `ShardApplication::applied` (on the chore, before the answer, at either level); Core's dirty/pending are atomic and
+   cleared before their work. test_node: `test_ack_quorum_answers_once_applied`,
+   `test_ack_none_answers_at_placement_and_linearizable_reads_wait_for_it`, `test_refresh_levels_and_commit`,
+   `test_a_restore_at_ack_none_reports_no_versions`. Docs: basics.md "Visibility and Durability" with E2E examples
+   per level and a 400; manipulation, architecture, get and search pages, README, options, changelog;
+   journal-durability.md "Levels". harness/power_loss_check.sh (D14 tier, `--later`) replaces wal_recovery_check.sh.
+3. Lead msg (d17a82, the abandon case): reproduced at c4d06c80d by probe 261123-160215-a97282 (2 of the first 10
+   runs, host load ~59). Verdict: a real race in the shutdown, not the bound. join() cleared the registry's control
+   before draining the control loop, so an autocommit timer firing in the drain ran synchronously (run_detached's
+   sync_wait) on the draining thread; an earlier autocommit of the same index, a task of that loop, held the turn
+   or the commit flight and could only resume on that thread. The child's log: "Autocommit of 'acked' failed after
+   30s: The index is busy: its turn did not come in time", then Stop 1 thirty seconds late (the turn deadline); the
+   second failure never reached Stop 1 (the commit flight has no deadline). Fix (Xapiand:6686f9ffc): the control
+   stays set until its scheduler closes (Stop 2); the names' build stops up front (`stop_names`); finish() leaves
+   the control to its owner. Test: `test_an_autocommit_during_the_shutdown_drain_runs_on_the_control_loop` (a held
+   group chore under an autocommit, a second one fired into the drain; the stop must end in its bound). Mutant: join
+   clears the control before the drain again.
+4. Lead msg (576cc8, the wildcard over the cap hung at 91113fb2f): not reproduced (d17a82 passed it); no mechanism
+   found by reading. The watchdog now samples every thread's stack on a hang (Xapiand:03637fc50), so a recurrence
+   names its frames. The 10x test_node job at the head (261123-165247-a8e7ab) is the check. The CI failures the lead
+   lists at :2255, :2620 and :737 were fixed before this session (lead's note).
+5. Lead msg (test_loop_yield.cc:693 on CI, 3 runs): CI's numbers on this quest are 0.21 and 0.22 (142.7/674.7,
+   109.1/490.5 ms; bound 0.2, master's comment 0.06-0.09). Hypothesis: the denominator shrank, not the numerator
+   grew: through the group every write applies on its group chore, so "prepared and written on the loop" no longer
+   writes on the loop. Probes 261123-161429-7ff092 (merge base) and 261123-165249-4fae12 (head; 5784fc failed to
+   compile, the write_levels declaration) measure both sides. No verdict until they land.
+6. Out of set: the get and search API pages (`volatile`) were edited and reverted (Blocked on 10).
+7. Lead msg (crash gate 261123-165000-bd1f5e at 0e256600e: "a search batch pins its indexes together: hung"). The
+   watchdog's sample (its log, line 69395 on) shows no deadlock and no pin wait: the 16 pool workers are parked,
+   the test thread waits in sync_wait at test_node.cc:1584 (the 24-index setup's `shard.commit()`, not the batch
+   search), the control and HTTP loops idle in kevent, and the journal host's loop thread (ShardGroups::Driven,
+   InlineCompletion) is in PosixIO::sync_files for all 41 samples: 27 in fsync, 14 in fcntl at posix.h:244, the
+   durable mode's F_FULLFSYNC per device. Verdict so far: not a pin order or a pin held across a turn; every
+   group's IO completes inline on that one thread, so the setup's 24 creates, writes and checkpoints serialize
+   their durable syncs, each a full device flush on macOS, and under the host's disk load (other jobs' builds and
+   syncs) they took past the 40 s watchdog. The wildcard case (30 creates, each ?commit a checkpoint at 91113fb2f,
+   120 s watchdog) is the same shape. Probe 261123-174805-f1b77c times the case against the volume's
+   fsync+F_FULLFSYNC latency in the same job, so the ratio counts the full flushes it pays; that decides between
+   fewer syncs per create/write/checkpoint (the journal host's batching, strata's side: a finding for the lead) and
+   the watchdog's bound. test_node 30x at the head: 261123-174823-c5379e (--long, stops at the first failure).
+
+Session 11 (2026-11-23), the evidence set at the head (lead: nothing else unless a job fails):
+
+1. 261123-142137-528ce7 and 261123-142155-d17a82 had not run (109 jobs queued ahead): no verdict yet on the count
+   must-fail or on whether test_node's wildcard hang was load.
+2. A4 had no test: none read right after a write through the group. Xapiand:7ab94031a adds test_pool
+   `test_a_lone_voter_reads_its_writes` (three writes through the group, each followed by a get-by-id and a search
+   that must see it, no commit); its mutant drops `core.dirty = true;` in `Shard::applied_by_group`, so a read serves
+   the last refresh (ruling 31).
+3. The full set at 7ab94031a, fresh submits with no --after (State): every mutant pattern checked to match at the
+   head with git grep; the A3 term-staging mutant's line moved (`if (open.term < e.term)` is now
+   `if (chunked_term(id) < e.term)` in effects), the rest are the earlier commands. No job uses a ref override.
+
+Session 10 (2026-11-23), the lead's step (Blocked on 6 and 7, file set widened to data.* and agent-codebase.md):
+
+1. Xapiand:09a223a4e: Data::flush copied its locators and rebuilt `serialized` in place, so after a flush each
+   locator viewed the bytes it replaced (in place, while they were overwritten; freed once the string grew) or a
+   pending update's holder the flush then cleared. Now the flush builds its bytes apart and `parse()`s them (feed's
+   body): every locator views the Data's own bytes. Second hole, same class: a Locator moved or copied (pending's
+   vector growing) kept `raw` on the source's holder, which for a short (SSO) holder is inside the moved-from
+   object; Locator's copy and move now view their own holder when the source viewed its own. place_stored's
+   call-site reparse (Xapiand:3fc80367f) goes: one mechanism, the flush. Tests (test_shard_group):
+   `test_a_flush_leaves_its_locators_on_its_bytes` (every locator's raw inside serialize() after each flush, the
+   blob bytes read back, a reparse then replace, a copy), `test_place_stored_keeps_the_other_locators`.
+2. Xapiand:91113fb2f: docs/dev/agent-codebase.md describes the journal: the durability row (shard_group, command,
+   the group's `app.vol-N` file set), two invariants (apply is a function of entry and starting state; prepare
+   writes nothing), two traps (durable at the journal's ack, commit is the checkpoint; a locator views its Data's
+   bytes). `git grep -i wal` on it is empty; `no-wal` greps src only and is unaffected.
+3. Xapiand:ecf684865 (lead 2026-11-23: remove the storage library in this quest): its FetchContent block, the
+   STORAGE_IO_HEADER/STORAGE_TRACE_HEADER defines, src/xapiand_storage_{io,trace}.h, the storage.h includes in
+   manager.cc and database/utils.cc (outside the set; the include would not compile without the library), the
+   async allowlist row. DATA_STORAGE (option, config.h.in define, the ifdefs in handler, pool, shard,
+   search_views) goes; the stored-blob paths it gated always build. README and building.md option rows,
+   dependencies.md (row and tree), testing.md's storage paragraph and the zstd comments in CMakeLists stop naming
+   it. cmake/ and .github/ name neither. Proof: build job 261123-113717-eb5101.
+4. Xapiand:caa9a372e (lead: ARCHITECTURE.md added to the set; docs only, no job): the storage-engine row and section
+   describe the journal (host threads, prepare/propose, checkpoint as commit, ShardApplication, file-set blobs);
+   the runtime diagram's D2 source and the background-work rule name the group loop and chore threads. Each
+   storage/WAL citation: extraction row re-pointed (Kronuz/storage, done, unused); bug entries dropped: inert
+   footers (storage.h:200-227), fsync barrier (storage.h:863-890), async WAL fsync (wal.cc:67), WAL replay's blob
+   re-push (shard.cc:1242); LZ4-digest entry re-pointed from "WAL lines" to the LZ4 blobs data.cc still reads; gems:
+   format-as-type (storage.h:232) replaced by apply-as-a-function, WAL slot array (wal.h:63) dropped. No WAL,
+   storage.h or fsyncher mention is left; none was a dated record. The stale scheduler/threadpool text stays (lead's
+   separate docs item).
+5. assets/runtime.svg (lead added it to the set): re-rendered with `d2 --theme 0 --pad 20` from ARCHITECTURE.md's D2
+   source, which gains three edges (shards propose to the group loop, committed entries to the chore threads, apply
+   to the file sets) and the label "journal host"; checked from a PNG render: no WAL writers or fsyncher, nothing
+   clipped. Docs only, no job.
+6. CI 45251581577 at 41dcff35d failed at configure (zstd's `uninstall` target clashes with Xapiand's). Cause: the
+   storage library ran FetchContent_MakeAvailable(compressors) early, before strata set COMPRESSORS_ZSTD_PINNED ON,
+   so compressors took the system zstd; with it gone, prospect -> strata processes compressors first, pinned, and
+   compressors adds facebook/zstd's CMake project. Fix Xapiand:6bb073ca9: Xapiand's own zstd find moves before
+   prospect; compressors takes a found ZSTD_LIBRARY/ZSTD_INCLUDE_DIR even when pinned, so one system zstd links, as
+   on master. Not an `if(NOT TARGET uninstall)` guard: that would keep two zstd copies and give `uninstall` to zstd.
+   Why local jobs missed it: none configured fresh at ecf684865 (eb5101 was still queued), and the slot's reused
+   `build` dir caches ZSTD_LIBRARY/ZSTD_INCLUDE_DIR from earlier configures, which hides the fetch; CI configures
+   fresh. The new jobs configure in a removed `build-fresh`. Master merged: Xapiand:d322cc9b6 (clean).
+7. 261123-112555-9f402f (test_pool under ASan at a22e1537f, before any fix) passed its test (log: "100% tests passed"):
+   the UAF CI saw does not reproduce in test_pool under macOS ASan, so it is not fails-without evidence. The flush fix's
+   must-fail proof is a11289 (test_shard_group's deterministic views check, which needs no ASan to fail).
+8. CI at 90f2688fa: test_shard_group fails `REQUIRE_EQ(data.size(), 3u)` (line 322) on all three jobs. Neither the
+   master merge nor the zstd change: my own test from 09a223a4e counted wrong. A new Data holds the empty main object
+   (DATABASE_DATA_MAP), so three updates leave four locators; its first CI run was this one (earlier pushes cancelled
+   CI before tests). Fix Xapiand:c4d06c80d: the count is 4. Attribution: 528ce7 fails at line 322 at 09a223a4e itself.
+   The fix is to the test's expectation, so CI at c4d06c80d is its proof.
+9. test_node 576cc8 at 91113fb2f failed after 530 s: "a node over the cap answers a wildcard: hung (schemas: 192
+   loads, 34 joined, 0 waiting; settings: 148 loads, 6 joined, 0 waiting)", host load ~33; CI's test_node passed at
+   90f2688fa, and the flush fix does not touch the schema/settings load path. Rerun once at c4d06c80d: d17a82. If it
+   passes, the hang was load (the test's own deadline under a host 4x oversubscribed); if it hangs again, it is a bug
+   to chase.
+Observed, not changed: strata pins zstd and lz4 so segment bytes match across platforms; in Xapiand the zstd pin is
+defeated by the system zstd (as on master, where the storage library did the same). For the lead and strata before
+replicas compare segment bytes.
+Observed, not changed: no `Storage<>` is instantiated in src any more (manager.cc and database/utils.cc include
+storage.h for nothing or its magic constants; xapiand_storage_io.h is unused), yet CMakeLists still fetches the
+storage library and has DATA_STORAGE. For the lead: removing it is the WAL removal's tail (Proposed tasks).
+
+Session 9 (2026-11-23), CI at Xapiand:a22e1537f red on 6 jobs (lead's log ~/.scratch/xapiand/lead/jrw-ci.log), Xapiand:3fc80367f:
+
+1. The two asserts (pool.cc:358 take_turn, pool.cc:101 ChoreAwaiter) are the expected output of test_pool's death
+   tests (test_a_task_holds_one_turn_at_most, test_a_chore_needs_a_scheduler print "ok" right after), on master too.
+   The jobs of session 8 were RelWithDebInfo with -DASSERTS=ON, as every job of mine is.
+2. heap-use-after-free in Locator::serialize (TSan, ASan, and the E2E's 616 failures; the plain E2E's "POSITIVE_INTEGER
+   is not iterable" on UPDATE /assets/sample is the same corruption): place_stored set the codecs on the locators of a
+   Data it had flushed and flushed again; Data::flush rebuilds `serialized` while its locators still view the old
+   bytes, so the second flush read freed memory. Present since d2 (CI at Xapiand:be7dc926c shows the same 616), not
+   from session 8. Fix: the codecs are set on the flushed bytes parsed again. test_pool.cc:675 (the kill -9 child
+   ended by ASan's abort, not SIGKILL) is this too. Proof: ASan test_pool at head and at a22e1537f (State).
+3. test_loop_yield.cc:693 (chores 142.7 ms vs on-loop 674.7 ms, 0.21 > 0.2): already at the edge before session 8 (CI
+   at be7dc926c: 171.0/934.2 = 0.18; local 0.13; 0.06-0.09 in the WAL era). Cause: the group's RESTORE slice encoded
+   every batch command on the HTTP loop (split_command inside propose copies each document's bytes). The chore now
+   encodes each command's single entry and drops the writes' bytes; the loop proposes the entry. The targeted job
+   prints the new ratio; e33085 gives this machine's pre-fix numbers.
+4. origin/master merged (Xapiand:819a107b7, clean; pages.yml, AGENTS.md, agent docs).
+Not the cause of any failure: the slow-commit test's chore hold and the written_key != shard_did check (the failures
+above reproduce at be7dc926c, before both).
+
+Session 8 (2026-11-23), fix round on crash check 261123-083737-64aa68 (Xapiand:0aeec8fc9, 3 of 90 failed), Xapiand:693c91e68:
+
+1. test_pool fenced (code): the group's checkpoint threw strata::index_fenced untranslated, so error_kind() let it
+   escape and the endpoint never went stale. commit_group now translates through `engine::strata::Shard::rethrow_failure`
+   (rethrow_translated with the Core: errc::database, Core fenced), as the engine commit did.
+2. test_node dirty (:2255), revision (:2620) and the stop order (child abort: do_commit's `current == prior + 1` at
+   shard.cc:474, node_order.log in the slot) (code): the checkpoint commits the index on the group's chore and the
+   engine's Core kept pending/dirty and its last own revision. `checkpoint(group, at)` now runs `at` on the chore via
+   read_applied after it commits; commit_group passes `Shard::checkpointed()` (nothing owed, note() the manifest) and
+   sets the endpoint's revision.
+3. test_node slow commit (:737) (test): it gated the endpoint's flush chore, where the WAL-era commit ran; the group's
+   checkpoint never uses it, so nothing held the commit. The test now holds the group's chore (SchedulerHold, a
+   post_call that blocks the chore thread), where the checkpoint captures: same claim (the control loop stays free
+   during a 400 ms commit), on the commit's real path. GateChores and A::set_chores/take_chores went with it.
+4. test_loop_yield deferred==3 (code): "0 writes deferred" is deterministic, not load: restore_slice missed a write
+   only when its key was gone, so k7 erased and written again on the same shard (new docid) was replaced by key. B1
+   (and the engine's must_exist replace by docid) misses a document that left its placed docid; the check is now
+   `written_key(term) != shard_did` (strata's replace_key keeps the key's docid, so repeats in a slice still match).
+   Job 261123-101801-e33085 shows the pre-fix result at a quiet time, as the lead asked.
+Job churn: the full set I queued at 693c91e68 (crash 1c2ab1, no-wal 8f25a0, reruns 8bc6da..d7f696, mutants
+c0dc0e..4ba74e, 4f0aa1) was cancelled on the lead's word (targeted jobs first, the set once at the final commit). The
+reruns' supersession had already cancelled 1d9f09 and 58484d at 0aeec8fc9 and the old mutants.
+Observed, not changed: a later call on a group fenced earlier throws strata::group::group_fenced, which
+rethrow_translated maps to errc::internal (not database), so that endpoint would not go stale by it; the first failure
+already marks it stale. For the durability review.
+
+Session 7, round 2: the mechanism notes, testing.md, the three comments say journal; status and audit records keep their wording with wal-replay.md links repointed. The git grep leaves only changelog.md:284 and options.md:418 (they state the log's removal; changelog:70 now says journal).
+
+Session 7 (2026-11-23), docs and harness cleanup (item 5): deleted reference-guide/wal.md and mechanisms/wal-replay.md (the sidebar is generated from the content, no entry to remove); removed the WAL verb row from api.md; reworded about, basics (points at journal-durability.md), manipulation, backups, dependencies, internals, tests/coverage.md; stored_stream.sh counts `*vol-[0-9]*` files instead of `docdata.*`; search_views.h has no WAL text. Remaining hits (outside the file set, left): docs/dev/{cr1-replay,docs-site-audit,testing}.md, docs/mechanisms/{control-plane,engine-write-path,seam-fields,strata-engine}.md, docs/status/{cr1-fix,phase7c-gate-prep,phase7c-x6}.md (cr1-replay.md and cr1-fix.md link the deleted wal-replay.md), src/engine/document.h:151, src/engine/strata/document.h:149, tests/fuzz_strata_document.cc:23 (comments). In-set hits left on purpose: changelog.md:70,284 and options.md:418 (they state the log's removal).
+
+Session 6 (2026-11-23), the lead's fix round.
+
+1. Xapiand:3d20661bd: crash check 316fa1 did not compile: shard.cc still built a DataStorage whose header pieces
+   (UUID, the Storage base) came through the deleted wal.h. Nothing in production reaches it (every index is a group),
+   so the data storage goes: DataStorage and its headers, StoredUpload, upload_begin, storage_push_blobs/commit, the
+   `\x00` locator metadata read, the chores parameter of do_add/do_replace/do_replace_term/do_commit; the handler's
+   upload is the group's chunked command only (UploadedBlob is size, shard, upload). A pool with no journal refuses a
+   stored blob (ruling 21). test_blob_io_runs_in_chores reads through the group; new test_a_stored_blob_needs_the_group.
+2. Same commit, A9: test_a_reopen_aborts_an_upload_left_open failed (3847bb) because it wrote without a commit, and the
+   sweep closes only a committed index (strata catalog run_close: close_ready() needs nothing uncommitted), so the slot
+   never freed and the "reopen" pinned the same open entry, where the upload's final applied. The test commits before
+   the close now. The A9 fix-3 mutant (599a5c) shows whether the ready point's abort is what refuses the final.
+3. Xapiand:f6d8f2c65: the stale WAL text in the set (Blocked on 4 answered): config.h.in, log.h, metrics (wal errors,
+   fsync gauges), README, building/options/architecture/changelog pages, strata_write_check.sh (no :wal, no WAL log
+   lines, replaycrash scenario gone: its hook was the WAL's), engine_crash_check.sh (GRACE 0, ruling 23),
+   graceful_shutdown_check.sh, cluster/checklist.py, coverage_e2e_server.py (no WAL verb rows), one_id_mutants.sh
+   (no-replay gone), test comments, test_quarantine's names. profile_bulk.sh keeps its WAL row (ruling 22).
+4. Xapiand:0aeec8fc9: origin/master merged (campaign files only). AGENTS.md not edited: agents-md has not landed.
+
+Session 5 (2026-11-23), step e (A8). 3847bb was still running, so e went first.
+
+1. Xapiand:9068ca7ee: the WAL (wal.*), the fsyncher, the scheduler library (FetchContent block, debouncer, stash,
+   both trace headers, debounce_or_run and its test), DB_DISABLE_WAL, DB_SYNCHRONOUS_WAL, the WAL HTTP verb, the
+   `wal` argument of every write and commit, `--writers` and `--wal-writer-cache-size` (now in
+   removed_options_check.sh), the info keys, the fsync metrics sets and Stops 4-5 are gone. logger_fwd.h keeps
+   only L_NOTHING and the L_EXC stub. test_pool's WAL tests go (the log's order is apply order by construction)
+   or read the journal (FaultyIndexes keeps one; cold pin, fenced, id counter). async allowlist: the WAL rule
+   and rows go, shard_group.cc's blocking sites are classified (CI 45203739416's 8 unclassified hits);
+   `async_check --strict --owed` locally: 0 unclassified. run_all.sh's recovery layer runs journal_replay_check.sh.
+2. Xapiand:c0dc4160d: master merged (no conflicts; strata pin stays 00eb018, which contains master's e3edb426).
+3. Not done: Host::delete_group on index DELETE (Blocked on 2).
+
+Session 4 (2026-11-23): the six jobs of session 3 were still queued (18 ahead), so the code stays unbuilt; d2's job
+at head builds c, d1 and d2 together (it superseded d1's own job and mutant, resubmitted at d2).
+
+1. Xapiand:4a117e647: the journal at `.xapiand/journal` (the lead's ruling, Blocked on 1 answered).
+2. Xapiand:ed1ded9c6 (d2): no data storage with a group; `stage_blobs` compresses new stored blobs at prepare into
+   CommandBlobs with placeholders at volume 0 (codec and size), `place_stored` sets them at apply; uploads stream
+   as chunk entries (`upload_stored` through `next_chunked_id`/`propose_upload`), the document is the upload's
+   final, proposed once (`ChunkedUpload::finished`), aborted on any failure before it; a read opens
+   `app.vol-N` through the slot's directory (`read_stored`). `landed` refuses an accepted verdict with no docid
+   (a final whose upload was retired). Test: test_pool `test_stored_blobs_survive_a_kill`.
+3. Xapiand:6c44375c5 (d3): apply_slice with a group is `restore_slice`: a chore prepares the slice (do_replace_term
+   leaves a CommandWrite, `batched`), RestoreBatcher packs, each command proposed at quorum in order, verdict ->
+   `restore_results`. apply_slice/SliceWrite stay until e (the no-group path and test_loop_yield's seams use them).
+   Test: `test_a_restore_slice_is_batch_commands`.
+4. Xapiand:1fe793170 (d4, A9 fix 3): a request's commit with a group is `commit_group` (checkpoint on the loop,
+   under the turn); the hook stays a plain strata commit. The id counter rides the write's command as set_metadata
+   (`id_high_logged_`), a RESTORE slice logs it after its batches; open reads it on the chore. Ready point:
+   `catch_up` reads state.open on the chore, `abort_open` proposes aborts. Tests: `test_a_commit_is_the_groups_checkpoint`,
+   `test_the_id_counter_is_in_the_log`, `test_a_reopen_aborts_an_upload_left_open`.
+Job churn: earlier sets (b8aa54, a03d73 and their dependents; session 3's queued c/d1/A9 jobs) were cancelled
+unrun and replaced by the one set at 1fe793170 (lead: one set per head, no resubmitting per push).
+
+Session 3 (2026-11-23): merged origin/master (Xapiand:f1944bc00, clean); strata pinned at main 00eb018d (group-catalog,
+D169 (a)); chunks and restore tasks were merged by the lead (restore's three failed probes are by design, not evidence).
+Built, each its own commit, none compiled locally (jobs only):
+
+1. Xapiand:4fe9f1e91: the pin; test_group_chunk_group.cc lends its group the index (group::open_index), as a slot does.
+2. Xapiand:e2f2bc9cf (A9 fixes 1-2, shard_group.cc): a chunk or final placed outside its id's term applies nothing;
+   `Open::term` goes (the id names it; state bytes version 2); an abort (a final naming no blob of its upload)
+   retires the upload volume. chunked_id/chunked_term move to command.h. Tests: test_shard_group
+   (`test_entries_outside_their_term_apply_nothing`, `test_abort_retires_its_upload_volume`), test_group_chunk
+   (the abort frees its volume).
+3. Xapiand:089de4ba9 (step c): `ShardGroups` (shard_group.*): journal host over `.journal` in the data directory, the
+   group loop's thread, two chore threads; DatabasePool::set_journal (the manager calls it); ShardEndpoint opens its
+   `ShardGroup` last in open_blocking(directory, index) and the catalog's close_payload closes it, keeping the closed
+   record. Test: test_pool `test_an_index_is_a_lone_voter_group`.
+4. Xapiand:ffd0f8dd9 (step d1): `ShardEndpoint::write_document` prepares on the engine, `command_write`, proposes on the
+   loop at quorum through `propose_command` (ids from the loop's term), `engine::strata::Shard::landed` checks the
+   verdict and owes a refresh; set_metadata is a command; no WAL line or replay with a group; the open waits on
+   `ShardGroup::catch_up` (a read_applied barrier). Test: test_pool `test_an_acknowledged_write_survives_a_kill`
+   (fork, write, SIGKILL with no commit, reopen reads it); mutant 3e5477 routes writes to the engine.
+
+Earlier sessions:
+
+Session 2 (2026-11-21): the lead answered Blocked on 1-4 (files widened; D169 option (a), strata quest
+group-catalog builds it; this quest lands after it). Merged master (cf23fbda7). Building what does not
+need group-catalog:
+
+1. CMakeLists.txt: strata pinned at main efa5214b, `strata::group` linked into XAPIAND_OBJ, faultlab
+   e3fcfe3 fetched for test_pool (faultfs moved to faultlab, `kronuz::faultlab`).
+2. Engine split: `engine::Shard::prepare(op, did, key, doc, args)` and `apply(prepared, doc)`; add/
+   replace/replace_by_key/erase/erase_by_key are base-class wrappers over the two.
+   `engine::strata::transaction_of(prepared, doc, field_table)` builds the transaction at apply against
+   the applying index's table; apply passes prepare's expectation to strata (`expected_version`), so a
+   stale prepare is a definite version_conflict on every replica. Test tests/test_group_prepare.cc.
+3. `src/database/command.{h,cc}`: the D3 command (writes: op, did, key, expected, document bytes,
+   blobs; batch for D17; schema version) and D12's chunk and final entries, `split_command`,
+   `resolve_command`. Test tests/test_group_command.cc.
+
+## Next
+
+0. When strata-journal-behind lands (after consensus-group-last): bump the strata and consensus pins; S1's two value
+   tests in test_pool (a journal put back from a copy taken at a clean stop, and one from a copy taken while the
+   group was open after a `kill -9`: each open refuses errc::corrupt naming P_H and E, every index file byte-equal,
+   nothing applied); the open's group_fenced refusal (session 21) carries strata's text; rerun the stalejournal
+   probe (261124-220619-fb40f3's script) as the confirming job.
+
+1. Read the six jobs and CI at ffd0f8dd9; the code was written without a build, so fix compile errors first (the
+   step-c job at 089de4ba9 separates c's errors from d1's). For each job, check the log shows a complete build and
+   the named test.
+2. d2, blobs: storage_push_blobs becomes CommandBlob records compressed at prepare with placeholder locators;
+   storage_get_stored reads `app.vol-N` through the group's file set (on the chore, or a reader of the file);
+   upload_stored/index_uploaded take propose_upload/propose_upload_final (the handler.cc SEAMs); DataStorage and
+   StoredUpload go. A2's crash evidence (blob_crash_check.sh, the `crash` check) on that build.
+3. d3, RESTORE: DocIndexer::apply_shards feeds RestoreBatcher through RestorePropose (each command once the
+   previous is placed); Shard::apply_slice and SliceWrite go; journal_replay_check.sh on that build (SETTLE=0).
+4. d4: commit() awaits group.checkpoint() on the loop from a request (never from a commit hook); id_high moves into
+   the log (a set_metadata command at issue, or ShardGroupState).
+5. A9 fix 3: after catch_up in open_blocking, the leader proposes abort_entry(id) for each id in state().open; test:
+   a close with an upload in flight resumes its term at reopen and the abort retires it.
+6. e: written (session 5); Host::delete_group on index DELETE waits on Blocked on 2. Read the step-e jobs (State).
+
+Done (session 2's plan, kept for reference):
+2. c. Build against group-catalog (FETCHCONTENT_SOURCE_DIR_STRATA=/Users/kronuz/code/Kronuz/strata-wt/
+   xapiand/group-catalog, strata:096dbd04): its `group(loop&, config, jn::IO& directory, index_type& index,
+   App&, chore)` borrows the slot's index. One `strata::group::loop` per reactor loop and one
+   `journal::Host` per data directory in manager.* (restore task holds manager.*: coordinate, or the
+   lead moves the loop/host setup into pool.*); the catalog slot constructs
+   `group<ShardApplication>` over its index and IO.
+3. d. ShardEndpoint writes: prepare under the turn (engine prepare), the blobs moved from
+   storage_push_blobs into CommandBlob records (compressed at prepare, placeholder locators), then
+   `split_command` and `propose`; ack levels via `propose(level)`; the blob read path for app. volumes
+   (storage_get_stored); commit() posts a checkpoint to the group's chore (msg D169 revised: never awaited
+   from a commit hook); open_blocking's WAL replay goes. id_high: from the index at open, or into
+   ShardGroupState (decide at d).
+4. e. Delete the WAL (wal.*, fsyncher, DB_DISABLE_WAL / DB_SYNCHRONOUS_WAL and the four tests' flag,
+   options), `no-wal` check; merge racing-put-409 and resolve it in prepare_write's replace case.
+
+## Messages
+
+- msg-3 (lead, 2026-11-24): table approved; Blocked on 13 answered (consensus-group-last, then strata-journal-behind;
+  this quest lands after it). Done: J1b, A1, N9, N11, N12, the J2 text and docs, the index-older refusal, each with
+  its value test (session 21); S1's two value tests and the pin bump wait under Next.
+
+- Lead 2026-11-21 (group-catalog's contract change, D169 revised): the catalog's commit hook never
+  sync-waits on `group.checkpoint()` (commit hooks run inside chore_scope; the group's chore takes the
+  index's write lease, which waits while the chore bit is held: deadlock on any lane). The commit stays
+  a plain strata commit; the group's checkpoint runs at close through the new catalog hook
+  `close_payload`, outside the lease, before index.close(). So step d: `commit()` posts a checkpoint to
+  the group's chore (periodic or explicit), never awaited from a commit hook. Push once per round of
+  code, when only jobs remain (a push cancels the branch's CI run).
+
+- Lead 2026-11-21 (racing-put-409 lands first in src/engine/strata/shard.cc, Xapiand:01ec326b6 and
+  Xapiand:cc8c27362): a replace whose key sits at another docid is `version_conflict(found->second)`, not
+  `invalid`. Not applied ahead (test_engine_strata.cc, outside my set, still expects `invalid` until it lands):
+  when master brings it, the merge conflicts in Shard::replace; resolve it in prepare_write's replace case.
+
+## Proposed tasks (posted to the lead)
+
+The quest's own table holds: `core` (me) first; then `chunks` (handler.*, tests/test_group_chunk*,
+harness/blob_crash_check.sh) and `restore` (manager.*, tests/test_wal_replay.cc, the three WAL
+harness scripts, profile_bulk.sh) in parallel, disjoint files; then `levels` (opts.*,
+search_views.cc, the request tests, power_loss_check.sh, run_all.sh, docs). One addition, in
+strata: `group-catalog` (item 4), which `core` step c waits on.
+
+## Blocked on
+
+13 answered (lead, 2026-11-24, msg-3): consensus-group-last then strata-journal-behind; the pin bump and S1's tests are Next 0.
+
+13. (2026-11-24, session 21) S1 needs E, the recovered log's end, before strata's adopt touches the file set; nothing
+    strata or consensus exposes gives it to Xapiand before `open_blocking` returns, and by then `files_.recover` has
+    truncated `app.vol-N`. The journal's table holds a closed group's journal Frontier and sequence, not a consensus
+    index; reading E from it means decoding consensus's checkpoint and strata's bundle in Xapiand, a second
+    implementation of two formats, and still misses a group left open by a crash. The API I need (the lead opens
+    the strata quest; I did not edit strata or consensus):
+    - consensus `Driver`: `std::optional<Index> last_index(GroupId id) const` (the open worker's
+      `Worker::last_index()`; absent for an id not open), or a `last` field in `Driver::GroupState`.
+    - strata `group::open()`: after `driver.recover(...)`, read E = `driver.last_index(id_)` and hand it to
+      `recover(b, E)`. In `adopt` on recovery's path (not an install's activation), before `resume` and
+      `files_.recover`: when `ix_->applied().index > E`, throw `group_fenced` (or a `journal_behind` type) with
+      text naming both, e.g. "strata::group: strata's durable head P_H = 1234 is past the recovered log's end
+      E = 1200: the journal is older than the index". Nothing is written before the throw (the open's failure
+      path fences the group locally and closes its row, as today).
+    - Xapiand then (this quest, a few lines plus the two tests in the table): the open's existing refusal path names
+      it with errc::corrupt; the stalejournal probe (fb40f3) confirms.
+    Recommend: the strata quest above, then a bump here; the J2 text and docs fix land now. Alternative: accept S1
+    as a documented operator hazard until then (docs state that only the journal the index last stopped with may be
+    put back), which this round ships either way.
+
+12 answered (lead, 2026-11-24): src/engine/strata/io_options.h and tests/test_io_options.cc added to the file set.
+
+12. (2026-11-24, session 18) Outside the file set, changed (required to build at the bumped pins: PosixIOOptions'
+    mode is required and `full_flush_ordering` is gone): src/engine/strata/io_options.h (`posix_io_options()` maps
+    the switch to the mode) and tests/test_io_options.cc (its two checks read `flush_mode`). Recommend: add both to
+    the set (they are the switch's one place, D177); the alternative, leaving them, does not compile.
+
+11 answered (lead, 2026-11-24, msg-2): (a) with (c). The bar is measured after journal-sync-mode lands, with the journal in plain mode; not (b).
+
+11. (2026-11-24, session 17) The plain RESTORE in chores is ~3-4 s at Xapiand:89a406c7f against master's ~1.3-2.3 s
+    (A/B same hold; master's strict median 2.26 s), so the round misses the lead's bar on that row; the update row
+    passes (3.7-7.0 s vs master 4.8-8.2 s, strict median 36.4 s). Of the fix's 3.1-3.9 s, 88-89 F_FULLFSYNC calls sum
+    2.0-2.2 s: ~31 entries of 1 MiB, each a turn-log flush (41), a group artifact (24) and the journal directory (12),
+    serialized at the device across 5 groups. Master flushes 10 times (strata manifests at commit). Options:
+    (a) accept the row: the journal pays full-flush durability per entry, master does not (barrier ordering by
+        default, `--full-flush-ordering` opt-in); measure like for like with that flag on master;
+    (b) I overlap the writes with the next objects' prepares (an in-flight writer joined before a stored read, a
+        schema offer and the commit): hides at most the prepare time (~1.3 s), bounded below by the ~2 s of flushes,
+        and touches the turn rules the schema offers rely on (larger change, its own review);
+    (c) journal side (lead/Detent): one flush per entry, or a turn shared by concurrent groups' entries; the 24
+        artifacts + 12 directory flushes for 31 entries suggest 1 MiB entries take the artifact path.
+    Recommend (a) now with (c) filed: the fix moves the row from 66.5 s to ~3.5 s and the rest is the flush policy;
+    (b) only if (c) is not coming.
+
+10. (2026-11-23, done: the lead added both pages to the set; Xapiand:074e8cc5c puts the text back) Outside the file set: docs/src/content/docs/reference-guide/documents/get-api.md ("Volatile") and
+    reference-guide/search/search-api.md (the `volatile` row) still say `volatile` opens the index for writing. D4: it
+    means read=linearizable. Edited, then reverted (Xapiand:6d6921068) to keep the set. Recommend: add both and I
+    apply the reverted text (get: "`read=linearizable` (or `volatile`, which means it) waits until every write the node
+    answered before the get has applied, an `ack=none` write included; the default, `read=prefix`, reads what has
+    applied", linking basics#visibility-and-durability; search: the same row for `read`, `volatile`).
+
+6. (2026-11-23) Outside the file set, left: docs/dev/agent-codebase.md (new from master's agents-md) still describes
+   the WAL (lines 14, 71-72, 76, 80: `src/database/wal.*`, WAL replay, WAL durability). Recommend: add it to the set
+   and I reword it to the journal, as item 5's files were.
+7. (2026-11-23) Outside the file set: Data::flush (src/database/data.cc) leaves its locators' `raw` views in the bytes
+   it replaced, the root of item 2 of session 9; place_stored no longer touches locators after a flush, but any caller
+   that does is exposed. Recommend: add src/database/data.* and have flush feed() its new bytes at its end (one
+   parse), with a unit test that flushes twice under ASan. Until then, nothing in the quest depends on it.
+
+9. (2026-11-23, done in session 10 item 5) Outside the file set: assets/runtime.svg is rendered from ARCHITECTURE.md's D2 source, which now
+   shows the journal threads; the SVG still shows the WAL writers and fsyncher. Recommend: add it and I re-render
+   (`d2 --theme 0 --pad 20 <source>.d2 assets/runtime.svg`), or the lead's docs item takes it.
+8. (2026-11-23, done in session 10 item 4 after the lead widened the set) Outside the file set: ARCHITECTURE.md still describes the storage library and the WAL as current
+   (the Storage engine row and section, `storage.h` citations, the "Haystack-style store" extraction row, three
+   storage/WAL bug entries, the format-as-type gem; 17 WAL mentions). It reads as a dated close-read review, but
+   its subsystem table and sections are descriptive. Recommend: widen the set and I rewrite the storage-engine row
+   and section to the journal and drop the removed code's bug entries, or a docs quest refreshes the whole file
+   (its scheduler and threadpool text is stale too, as is dependencies.md's tree on master).
+
+Items 6 and 7 are done (session 10). Earlier items are answered below.
+
+Lead rulings, 2026-11-23:
+- 2: option (ii). Index DELETE is its own quest, index-delete (after strata-journal-pin bumps strata's journal pin
+  past journal:131eb2e, and after this quest). 501 is today's behavior on master, not a regression here.
+- 3 and 4: the file set now covers the three deleted files and every file in item 4. Removing the WAL means
+  removing it everywhere (code, options, metrics, docs, harness); do item 4 in this quest. AGENTS.md is shared
+  with agents-md, which lands first: merge master before editing it.
+- 5 (2026-11-23): the set now covers every file item 5 lists, plus docs/astro.config.mjs and docs/src/sidebar*
+  for the page's sidebar entry. Delete wal.md and wal-replay.md; fix the rest in this quest.
+
+## Evidence
+
+Jobs prove criteria by their tags; paste `campaign brief`'s generated table here when they finish.
+
+| Criterion | Evidence |
+|---|---|
+| A1 | T1 at 66bcd87eb: 261125-043517-a4b25b, TSan 261125-043535-432e87, 261125-043538-76be33; fails without (T1): 261125-043520-724b20, 261125-043523-718f1e; 261125-050945-ca33ea; 261124-201450-7f5e03; 261123-165229-26f9f6; 261124-201452-fdb9b5; no-wal 261125-043544-9e00b8; crash 261125-051006-228c96; fails without: 261123-165135-36e01f, 261123-165137-8ec228, 261123-165140-99c0aa, 261123-165142-9e1f71, 261123-165145-a60381, 261123-165147-e4c73e, 261123-165232-41ee12 |
+| A2 | 261125-050959-813250; fails without: 261123-165109-560112, 261123-165112-923dcd |
+| A3 | 261125-050947-d49979; 261125-051002-b4a141; fails without: 261123-165120-541aae, 261123-165123-cf493c, 261123-165126-61010f |
+| A4 | 261125-050953-4bf89d; 261125-050945-ca33ea; fails without: 261123-165132-60295c |
+| A5 | ci:Functional E2E (docs); 261124-021317-01a519; 261125-033435-076dd7; fails without: 261123-165154-d1a0f8, 261123-165157-ded424, 261123-165213-4ee4de, 261123-165215-2c8a56, 261123-165217-7c699d, 261123-165219-0f06b3, 261123-165221-583df2, 261123-165223-998438, 261123-165225-1c5d88, 261123-165227-d0f01f |
+| A6 | D113 (owner: Q1 (a), default ack quorum, bulk loaders choose none) and D142 (owner: Q6 as written, ?commit = ack=quorum&refresh=true; Q-F27 (a), read-your-writes served from the leader's replica); the code ships both defaults, A4's test covers Q-F27 |
+| A7 | docs/mechanisms/journal-durability.md: Every shard is a strata::group: a lone voter at rf = 1. The group's journal is the shard's only durability path |
+| A8 | 261125-051004-177d44 |
+| A9 | 261125-050945-ca33ea; fails without: 261123-165200-4ebfb3, 261123-165202-26b0dd, 261123-165205-dd6ea0 |
+
+## Result
+
+<When ready for review.>
+
+## Rulings I made
+
+Drafts, applied when the code lands; each names the contract it shapes (format-freeze reviews them).
+
+1. Blob volumes are the group's file-set files (`app.` prefix) in a positional format of their
+   own, not the storage library's block framing: D13 converts no pre-release directory, and
+   `Storage::write` appends where the file ends, which D3's retry-from-start forbids
+   (`append-on-retry`). Contract `xapiand:volume-file-set`.
+2. A blob's compressed bytes are made at prepare and carried in the command; apply writes them
+   verbatim. Then a locator's offset is a function of the log even across replicas built with
+   another zstd. Contract `xapiand:command`.
+3. The command carries `engine::Document::serialize()` bytes as D3 says; the strata transaction
+   is built at apply against the voter's own field table, so a field declared by an earlier entry
+   resolves the same on every voter.
+4. The task pin moves to strata's own (95798a02): strata::group's journal and consensus headers need
+   task's blocking_scheduler, which Xapiand's 18eb5167 lacks. A consequence of the strata bump the lead
+   assigned (CMakeLists.txt is in the set); CI tells whether anything else in Xapiand depended on 18eb5167.
+5. faultlab is fetched for test_pool only, at strata's e3fcfe3 (strata declares it only as top level).
+6. `engine::PreparedWrite` (not `Prepared`: engine/search.cc has a `Prepared` query class). Its
+   `expected` is always set by prepare for replace and replace_key (the leader's expectation, D3), the
+   key's version for erase_key, and none for erase by id (strata checks versions only by key; prepare
+   checks it). `WriteOp::none` and `replayed` stay (revised, session 5): they serve any versioned document's replay, and their
+   tests are in test_engine_strata.cc outside my set; removing them is a follow-up (Blocked on 4).
+7. A batch's transaction declares a new field once: a later write of it names the earlier declaration
+   (the table keeps the first document's kind, as sequential transactions would).
+8. Volumes rotate past 32 GiB (`VOLUME_BYTES`, master's data-storage volume bound, storage.h); locators keep
+   byte offsets. Chunked-command ids must be unique across the group's log (the proposer puts its term in
+   the high bits); a chunk of an id open in a lower term is dropped, and its final writes nothing.
+9. The command codec is LEB128 over the kinds command/chunk/final with a version byte (pre-release bytes,
+   contract `xapiand:command`/`xapiand:chunked-command`, format-freeze reviews them); `split_command`
+   stages the largest in-place bytes first until the final fits.
+10. The journal's IO completes inline (InlineCompletion) on the group loop's own thread, never a reactor's:
+    correctness first; T11 measures whether the loop's syncs sit on the write's critical path.
+11. A group's id is the first 8 bytes of its index's uuid (nonzero), its journal identity the uuid: the id
+    travels with the index directory; a copied directory's second open is refused by the loop's table.
+12. One journal host per data directory (`.journal`), two chore threads, a group on chore `id % 2`; closed
+    records kept per process (a restarted process recovers with an election).
+13. A write holds the turn across prepare, propose and the quorum answer: prepare reads the index as the previous
+    write left it. One write per index in flight; T11/Q14 decide pipelining.
+14. A9's rf > 1 cases are tested on the replica's application entry by entry (the deposed proposer's chunk
+    placed in the new term): apply is a function of entry and state, so it is the sequence every voter applies.
+15. A request's commit is the group's checkpoint (d4); the catalog's commit hook stays a bare strata commit (D169).
+16. A stored blob's record in `app.vol-N` is its bytes, zstd-compressed at prepare only when smaller; the locator's
+    type names the codec (`stored` / `zstd_compressed_stored`) and its size is the record's. Uploads are raw.
+    Contract `xapiand:volume-file-set`.
+17. A document bound for another shard than its upload's group is refused before anything is proposed
+    (ClientError), not applied then reported as master did.
+18. RESTORE's commands are proposed one after another, each awaited at quorum; D17's pipelining waits on T12.
+19. The crash check's command passes `build/bin/xapiand`; blob_crash_check.sh accepts it as the build's binary.
+20. The crash check (lead's command) configures without -G Ninja; the lead's to fix.
+18. Removing the WAL removes its user-visible surface with it (the quest's outcome): the `:wal` HTTP verb, the
+    `wal` info keys and metadata key, `--writers` and `--wal-writer-cache-size` (removed options, unknown arguments).
+19. A pool with no journal (tests, the CLI) is durable only at its commits; no second log replaces the WAL there.
+20. The mutant probes carry `--for` their criterion with `--fails-without`: the tool refuses `--fails-without`
+    with neither `--for` nor `--task`, and the lead's rule forbids `--task` for probes.
+21. A pool with no journal (tests only; the manager always sets one) holds no stored blob: a write naming one, an upload
+    or a batch is refused with `invalid` before anything applies, and a stored read raises `invalid`. The data storage
+    it used was the WAL era's second blob path; the group's file set is the one path (D16).
+22. `harness/profile_bulk.sh` keeps its WAL layer: T11 profiles master's WAL build as the baseline the journal is
+    measured against.
+23. `harness/engine_crash_check.sh` defaults GRACE to 0: an acknowledged write is in the journal before its answer, so
+    none may be missing after kill -9 (D2).
+24. The `\x00` locator metadata read (`GET /index/:<locator>`) is removed with the data storage it read.
+25. A group checkpoint leaves the engine as its own commit did: the Core owes nothing and holds the manifest's revision,
+    set on the group's chore (read_applied after the checkpoint), never from the reactor while the chore may apply.
+26. test_node's slow-commit case holds the group's chore instead of the endpoint's flush chore (the WAL-era commit's
+    path, which no commit takes now); its claim is unchanged.
+27. Data's invariant is that after construction and every flush each locator views the Data's own bytes, owned by
+    Data::flush (it parses what it built); a pending Locator views its own holder or the caller's memory
+    (`data(string_view)`), and a copy or move keeps that. Callers never reparse to work around a flush.
+28. The codebase guide drops the storage library's write-cursor invariant and footer trap with the WAL's: no
+    Storage<> volume is written in src now (the blob volumes are the group's file set).
+29. DATA_STORAGE goes with the library (lead's instruction): it no longer selected a store, only whether stored blobs
+    build; every index's group serves them, so there is one build shape. config.h stays included in pool.h and
+    shard.h (comment dropped): about twenty files read XAPIAND_* macros through transitive includes, and a lost
+    one fails silently.
+30. database/utils.cc (outside the set) loses its storage.h include and a history comment: required for the build
+    once the library is gone.
+31. A4's test reads through test_pool's Shard (get_view, engine_for_read and engine::search), not HTTP: read-your-writes
+    is the shard's refresh-before-read, the same under any handler; the mutant that serves the last refresh is the
+    dirty mark the group's apply sets.
+32. The `levels` task row's globs are widened to the quest's set where ack=none needs them: src/database/{shard,pool,
+    handler}.*, flags.h, shard_group.*, src/engine/strata/shard.*, tests/test_node.cc (all in the quest's files).
+33. ack=none answers 202 Accepted (RESTORE too): the write is placed, not applied, and its answer carries no _version
+    or docid (contract xapiand:ack-read-levels).
+34. A metadata write (a schema's, a setting's) is always proposed at quorum, whatever the request's level: a later
+    write's prepare must read the schema it changed.
+35. The turn's next holder waits for an ack=none write's apply (ShardEndpoint::unapplied_, take_turn): D3's "prepare
+    from applied state" on a lone voter, so a prepare, a placement read or a commit sees it.
+36. HTTP ?commit no longer checkpoints: it is ack=quorum&refresh=true (D4); COMMIT /idx/ is the checkpoint (Q8 (a)).
+    RESTORE takes only the ack flag: its closing commit refreshes already.
+37. Shutdown (lead msg on d17a82): the registry's control stays set until the control scheduler closes (Stop 2), so a
+    detached task never runs synchronously on the thread that drains that loop; finish() leaves the control to its
+    owner; DatabasePool::stop_names() stops the names' build up front, as set_control(nullptr) did.
+38. test_node's Watchdog samples every thread on a hang (sample on macOS, gdb where installed): a diagnostic, not a fix.
+39. The shutdown's first drain ends where the HTTP stop's two graces are what is left of the bound; Stop 2 drains
+    the control tasks with the autocommits to the deadline. The drain case builds its precondition (an autocommit
+    in a held checkpoint) from observed state, never a sleep.
+40. The batch-pins case's watchdog is 120 s, named by its flush count; fewer flushes are the journal library's.
+41. A journal that cannot be recovered ends the start with EX_IOERR and one critical line naming the directory, the
+    library's error and a finite file-size limit; it is reported in the manager (where set_journal runs), not wrapped
+    in ShardGroups.
+42. A RESTORE's prepared plain objects and updates of an id share one pending set across body chunks, written at
+    4 MiB of document data per writing child, before a stored read that could see them, and at the commit; an
+    update waits for it when its id is pending or an id-less object is (it may take that id). Ruling 18 stands: each
+    command is still proposed after the one before it answers.
+43. A RESTORE slice's last command carries the id counter's write; `restore_results` answers its document writes
+    only. The counter's own proposal stays as the fallback when that command failed.
+44. A RESTORE slice prepares its whole sub-run (bounded by the pending set), not to its first closed command.
+45. Xapiand pins completion and journal itself, declared ahead of strata's FetchContent (first declaration wins),
+    rather than waiting for a strata commit that pins them: strata's include/ builds no PosixIO, so strata 7a4284c4
+    builds against both unchanged. faultlab follows journal's pin (83fbde7) so one faultfs models the two modes.
+46. Tests that build their own PosixIO open it plain: their claims are not about power loss, and plain is the
+    product default; only test_the_journal_io_takes_the_io_options exercises full.
+47. `ShardGroups::journal_io()` exposes the host's IO so the test checks a file's mode (completion's
+    `detail::PosixFile::flush_mode`), the only observable proof the host's IO took the options.
+
+48. L1: the log's bound stays 16 MiB / 65,536 entries (LOG_BYTES, LOG_ENTRIES in shard_group.h): it bounds replay and
+    the per-open-index memory, not one write (chunks, uploads cross checkpoints). The pressure trigger is half of
+    either; a LogFull proposal runs a checkpoint and retries up to 2 + LOG_BYTES / 1 MiB times (each refused step
+    retires 1 MiB of the cut log), then 503 naming consensus's reason. Every refusal maps to errc::busy (503), never 500.
+    propose_entry keeps a copy of the entry for the retry (one memcpy per entry; ~1 MiB at most, beside its syncs).
+49. L1, RESTORE: an object whose result is a 5xx (the server left it unwritten) makes the RESTORE answer that status
+    (the highest); 4xx objects (the client's own) keep the 200, as master. test_loop_yield's stale case now expects 503.
+50. Every group checkpoint (commit, pressure, a writer's) runs the shard's `on_checkpoint` (Shard::checkpointed) on the
+    chore; the `at` parameter is gone (one hook).
+51. J1: the pool refuses an index path at or inside its journal's directory (errc::invalid, 400) in the catalog's
+    resolve, the first step of any open, client or not; src/endpoint.cc (outside the set) is not touched. A
+    directory inside the journal's directory at start moves to `<journal>.strays/` with a warning.
+52. J2: an open whose journal holds no group (none or lost) over an index with strata applied > 0 or `app.` files
+    refuses with errc::corrupt naming the missing group; checked on the loop before the group is built.
+53. D1: anything thrown after the group's open closes the group (quiesced, close_blocking on the catalog's thread)
+    and refuses with errc::corrupt naming strata's damage reason, logged once per open. N8: the lead's default (a),
+    stated with the recovery path in journal-durability.md ("Refusals at open").
+54. N2 left for the lead: an upload's final whose volume length differs from its blob's size can only come from a
+    proposer bug (ChunkedUpload::end checks the size); the apply-side reaction is a policy (fence the index for good
+    vs. retire the volume and fail the write), not a few lines.
+55. L1's test slows a checkpoint by wrapping the group's own `on_checkpoint` hook (sleep 1 s once), not by a new
+    seam in the write path: it is the only deterministic way to make placements outrun the pressure checkpoint
+    (serial writes left the wait-only mutant passing; the upload alone killed it in about 2 runs of 5).
+56. J1b: the identity walk runs only on resolve's miss (the `strata` directory does not open), with or without a
+    create, so a reopen pays no syscall (cheap-reopen D2) and a GET of a reserved spelling answers 400, not 404. An
+    existing index under the journal is unreachable (create refused, start moves directories out), so the hit path
+    needs no check. The journal's device and inode are read once at set_journal.
+57. Held at start: the strays move stays (bytes kept, both paths logged); the old path then answers 400. A move the
+    volume refuses (EXDEV) ends the start with a std::system_error naming the directory and the remedy (N12); the
+    other errors rethrow as before.
+58. The index-older refusal catches strata's `group_fenced` from `open_blocking` only (strata tore the group down
+    already, so the group is reset, not closed) and answers errc::corrupt with strata's text; other open failures
+    keep their path. strata-journal-behind's P_H > E fence is expected to arrive the same way.
+59. N9: the counts are monotonic (placed, cut); a checkpoint raises the cut to what was placed at its start (CAS
+    max). An overlap can leave the count high until the next checkpoint (the trigger fires early), never wrapped.
+60. N11: 503 for LogFull, Busy, NotLeader, NotReady; every other consensus refusal is errc::internal (500).
+61. T1: the turn is the index's one writer, and every checkpoint runs in it (journal-durability.md, "Who writes the
+    index"). Neither of the lead's two options closes the class: the checkpoint's own sync_and_commit flushes the
+    buffers on the chore (so option 1 leaves the race), and prepare, written_count and fresh read the index the same
+    way written_key does (so option 2 leaves them).
+62. T1, pressure: inline in the proposer's turn, not a background task. A background checkpoint in a turn would need
+    a pin of its own (a turn without a pin breaks commit_blocking's try_lock and lets the catalog demote or close
+    under it), and pinning from the trigger deadlocks with a close that waits for it. Inline removes the task, its
+    mutex and cv, and `quiesce` with its two allowlist rows. Cost: the write whose placement crosses half the bound
+    (one per ~8 MiB of log) answers after a checkpoint, at ack=none too; the writers behind it waited for that
+    checkpoint's turn before as well.
+63. T1, pinned proposers (upload chunks, aborts) do not checkpoint at half; their one path is a full log, where they
+    take the turn (`ShardEndpoint::checkpoint_in_turn`). Checkpointing them at half too would make the LogFull wait
+    unreachable by one upload, so its mutant (L1's 16805d) would survive the L1 test.
+64. T1: test_overlapping_checkpoints_cut_the_log_count_once calls checkpoint() off the turn from two threads with no
+    reader or writer running; kept as the counters' test (N9). Turn holders serialize checkpoints in production, so the
+    CAS-max is belt and braces now.

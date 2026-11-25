@@ -58,8 +58,6 @@ extern struct opts_t {
 	std::string uid = "";
 	std::string gid = "";
 	ssize_t num_http_servers = 1;
-	ssize_t num_async_wal_writers = 1;
-	ssize_t num_fsynchers = 1;
 	ssize_t database_pool_size = 10;
 	bool full_flush_ordering = false;          // macOS: order commits with a full flush, not the barrier (D10)
 	ssize_t max_search_indexes = 100000;       // the runaway cap: a search over more answers 400
@@ -70,7 +68,6 @@ extern struct opts_t {
 	ssize_t schema_versions_size = 1000;
 	ssize_t scripts_cache_size = 100;           // compiled scripts a thread keeps; their bytes are capped too (docs/mechanisms/lua-memory.md)
 	ssize_t resolver_cache_size = 100;
-	ssize_t wal_writer_cache_size = 100;
 	ssize_t max_clients = 10;
 	ssize_t max_files = 0;  // (0 = automatic)
 	size_t num_shards = 5;
@@ -101,11 +98,6 @@ extern struct opts_t {
 	unsigned long long committer_debounce_busy_timeout = 1000;
 	unsigned long long committer_debounce_min_force_timeout = 1000;
 	unsigned long long committer_debounce_max_force_timeout = 1000;
-	unsigned long long fsyncher_throttle_time = 0;
-	unsigned long long fsyncher_debounce_timeout = 500;
-	unsigned long long fsyncher_debounce_busy_timeout = 500;
-	unsigned long long fsyncher_debounce_min_force_timeout = 500;
-	unsigned long long fsyncher_debounce_max_force_timeout = 500;
 } opts;
 
 opts_t parseOptions(int argc, char** argv);

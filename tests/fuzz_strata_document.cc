@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-// libFuzzer target for the strata document's decoder (the bytes the write-ahead log keeps): any input
+// libFuzzer target for the strata document's decoder (the bytes the journal keeps): any input
 // decodes to a document that serializes back to the same bytes, or raises a syntax error.
 
 #include <cstddef>                 // for std::size_t

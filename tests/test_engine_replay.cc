@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-// The engine behavior that WAL replay depends on (docs/mechanisms/wal-replay.md): an explicit commit
+// The engine behavior a log's replay depends on: an explicit commit
 // publishes the replay at once and moves the revision on exactly once.
 
 #include "test_harness.h"

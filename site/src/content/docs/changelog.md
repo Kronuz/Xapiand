@@ -14,18 +14,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Docs reading controls:** An Aa button enlarges reading text and opens the reading column; desktop images and diagrams zoom when they fit larger.
 - **`--full-flush-ordering` and the barrier warning (macOS)**: on storage other than an internal Apple SSD the
   ordering barrier is not guaranteed, and the node logs one warning per volume naming the switch; the switch
-  orders commits with a full flush instead. Off by default; Linux and FreeBSD are unchanged.
+  makes every sync of the indexes and the journal a full flush. Off by default (plain: `fsync` and the barrier);
+  Linux and FreeBSD are unchanged.
+- **Write and read levels**: `ack` (`quorum`, the default, answers once the write applied, with its result;
+  `none` answers `202` once it is in the journal), `refresh` (`false`, `wait_for`, `true`) and `read` (`prefix`,
+  `linearizable`) on writes, `RESTORE` and reads. `?commit` means `ack=quorum&refresh=true` and `?volatile`
+  means `read=linearizable`.
 - **`_sort` takes the order as a string**: `{"balance": "desc"}` and
   `[{"age": "asc"}, {"balance": "desc"}]`, as Elasticsearch writes them.
 - **`:metrics` reports how late each event loop runs**: the `xapiand_reactor_lag_seconds` histogram, one
   series per HTTP loop and the control loop, from a probe that wakes every 1 ms while the loop serves requests
   and 10 times a second when idle. `XAPIAND_LAG_PROBE=0` starts the node without the probes.
 - **A stored blob past 16 MiB uploads in a stream**: a `PUT` of a `stored` document (any content type that is not JSON, YAML
-  or MsgPack) with a `Content-Length` over the 16 MiB buffered-body cap is written to the data storage as it arrives, in O(chunk)
-  memory, and the document is indexed once the blob is durable. The blob is stored uncompressed; past 4 GiB it answers `413`,
+  or MsgPack) with a `Content-Length` over the 16 MiB buffered-body cap streams into its shard's group as it arrives, in O(chunk)
+  memory, and the document is indexed as the upload's last entry. The blob is stored uncompressed; past 4 GiB it answers `413`,
   and a `POST` without an id in the URL answers `400`.
 
 ### Changed
+- **`?commit` refreshes, `COMMIT` commits**: a write is durable once the journal holds it, so `?commit` on a
+  write means `ack=quorum&refresh=true` and no longer waits for the index's commit; `COMMIT /index/` commits.
 - **The open-index pool is sized from memory**: with no `--database-pool-size` it holds what 1% of RAM covers at
   about 40 KiB per open index (about 4,200 on 16 GiB), within the open-files limit, not a fixed 200; a size you
   give wins.
@@ -67,7 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   when nothing else took time), so a write that waits for its index's turn (up to 30 s) is let finish: it applies, and its client is
   answered if the turn came within the first grace. Stalled clients can hold the stop for that grace.
 - **A shutdown waits at most 35 s after the clients are done, in all.** The HTTP service, the autocommits and the closing of every index share that bound. Past it the node logs what it abandoned (the requests in flight per loop, and the indexes
-  whose turn is held or that are still in use), flushes the write-ahead logs and exits with status 75; an index that cannot close within the bound (a hung disk, for instance) ends the stop the same way, where
+  whose turn is held or that are still in use), flushes the journal and exits with status 75; an index that cannot close within the bound (a hung disk, for instance) ends the stop the same way, where
   the wait for it used to have no limit. A second `SIGINT` or `SIGTERM` ends the wait at once. The steps are logged in order
   (`Stop 1` to `Stop 5`). A write that was answered with a 2xx is in the log when the node stops. See [Stopping the node](/Xapiand/options#stopping-the-node).
 - **A node that cannot set itself up exits.** A taken port, or any failure while the servers start, is logged and ends the process with status 70 (it used to log "Servers listening",
@@ -281,6 +288,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `char[PATH_MAX + 1]` buffer in its log message and left it unterminated for a path of `PATH_MAX` bytes or more.
 
 ### Removed
+- **The write-ahead log.** Every shard is a replication group of one voter, and its journal is the only durability path:
+  a write is answered once the journal holds it, so a crash loses no acknowledged write, and a commit is the group's
+  checkpoint. The WAL goes with its writer and fsync threads, `--writers` and `--wal-writer-cache-size` (unknown
+  arguments now), the `WAL` method and `:wal` command, the `DATABASE_WAL` build option, and the `xapiand_wal_errors`
+  and `xapiand_fsync_*` metrics. A data directory written by an earlier build is not converted: reindex or restore it.
 - **`--committers`, `--fsynchers` and `--http-servers`.** The commit threads are gone (autocommits are tasks on the control loop), the fsync pool is sized from `--processors`
   (half of them, at least 1, at most 10), and the node runs one HTTP loop per processor: `--processors N` sets both (it was capped at 10 loops, now it is not).
   The `num_committers` key of the root `GET /` statistics and the `xapiand_http_clients_*`, `xapiand_committers_capacity` and `xapiand_committers_pool_size` gauges of `:metrics` are gone.

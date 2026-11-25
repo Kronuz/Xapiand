@@ -4,10 +4,12 @@ title: "Data Manipulation"
 
 Xapiand reads its own writes: a document you index, update or delete is
 visible to the next search or get as soon as the node has answered the write.
+A write the node answered with a 2xx is in the journal and survives a crash.
 The index commits to disk 1 s after its last write (3 s while writes keep
-coming, and 8 to 10 s after the first of them at the latest), or before the
-answer when the request carries `?commit`. A write the node answered with a 2xx
-is in the write-ahead log and survives a crash either way.
+coming, and 8 to 10 s after the first of them at the latest). `?commit` on a
+write refreshes the index before the answer (`ack=quorum&refresh=true`); the
+`ack`, `refresh` and `read` levels are in
+[Visibility and Durability](/Xapiand/basics#visibility-and-durability).
 
 Every `PUT`, `POST`, `UPDATE`, `PATCH`, `UPSERT` and `DELETE` below addresses a
 document in an index by its path: in `/twitter/user/John` the index is
@@ -390,8 +392,7 @@ e2e:end -->
 ## Committing and Checking an Index
 
 The index commits on its own, as described at the top of this page. `COMMIT`
-commits an index now and answers `200 OK` once it is done; the `?commit`
-parameter does the same as part of a write:
+commits an index now and answers `200 OK` once it is done:
 
 ```rest
 COMMIT /twitter/user/

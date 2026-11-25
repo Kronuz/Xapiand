@@ -2,7 +2,7 @@
 
 # cr1-fix (CR1: WAL replay must be committed)
 
-Prototype and root cause: `docs/dev/cr1-replay.md`. Mechanism: `docs/mechanisms/wal-replay.md`.
+Prototype and root cause: `docs/dev/cr1-replay.md`. Mechanism: `docs/mechanisms/journal-durability.md`.
 
 ## State
 

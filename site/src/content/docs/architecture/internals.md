@@ -26,7 +26,7 @@ service and the stop.
 | The control loop, autocommit and the stop | `src/manager.*`, `src/control_plane.h`, `src/shutdown_wait.h` |
 | The index registry: pins, turns, chores | `src/database/pool.*` |
 | Writes, commits and blob storage of a shard | `src/database/shard.*`, `src/database/data.*` |
-| The write-ahead log | `src/database/wal.*` |
+| The journal: shard groups and their commands | `src/database/shard_group.*`, `src/database/command.*` |
 | Documents in and out, search, restore | `src/database/handler.*` |
 | Schemas and field types | `src/database/schema.*`, `src/database/schemas_lru.*`, `src/reserved/` |
 | The engine seam | `src/engine/` (the interface), `src/engine/strata/` (strata and prospect behind it) |

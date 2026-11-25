@@ -58,7 +58,7 @@ constexpr std::size_t SHARDS = 3 * K + 2;
 // The index each shard belongs to: nine indexes of one to three shards, so batches of K meet an index at their edge.
 constexpr std::uint32_t INDEX_OF[SHARDS] = {0, 1, 1, 2, 3, 3, 3, 4, 5, 5, 6, 7, 8, 8};
 constexpr int DOCS = 6;   // the fewest documents of a shard
-constexpr int WRITE = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL | DB_DISABLE_AUTOCOMMIT;
+constexpr int WRITE = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_AUTOCOMMIT;
 constexpr engine::valueno GROUP_SLOT = 21;  // the collapse value; absent on every seventh document
 constexpr engine::valueno TIED_SLOT = 22;   // a sort key many documents share
 constexpr engine::valueno UNIQUE_SLOT = 23; // a sort key no two documents share

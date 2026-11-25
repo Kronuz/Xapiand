@@ -11,7 +11,7 @@ designs in `docs/design/`, their architect reviews in `docs/reviews/`, and devel
 
 | You're touching… | Start in |
 |---|---|
-| On-disk format, durability, volumes | `src/database/{wal,data,shard}.{cc,h}`; the volume engine is the [storage](https://github.com/Kronuz/storage) library (`src/xapiand_storage_*.h` wire it); the index files are strata's (`src/engine/strata/`) |
+| On-disk format, durability, volumes | `src/database/{shard,shard_group,command,data}.{cc,h}`; each index is a `strata::group` whose journal is its durability ([journal durability](../mechanisms/journal-durability.md)); blob volumes are `app.vol-N` files in the group's file set; the index files are strata's (`src/engine/strata/`) |
 | Schema handling, field types | `src/database/schema*.{cc,h}`, `src/reserved/` |
 | HTTP API / request handling | `src/server/search_{service,views}.*`, `src/server/http_utils.h`; transport is the [http](https://github.com/Kronuz/http) library |
 | The event loop / connections | the [reactor](https://github.com/Kronuz/reactor) library; `src/manager.*` owns the services |
@@ -64,21 +64,23 @@ Entry point is `src/main.cc`; the process is orchestrated by
   region is a contiguous integer range and why geo serialization is big-endian
   (the [htm](https://github.com/Kronuz/htm) library, `src/serialize.cc`). Any change to id construction or
   endianness breaks geo indexing silently.
-- **The storage write cursor lives in the volume header**; bins are 8-byte
-  aligned and a volume is capped at 32 GiB. Don't write a bin without going
-  through the [storage](https://github.com/Kronuz/storage) library's
-  `Storage::write`/`write_buffer` (the double-buffer alignment dance).
-- **WAL replay must be idempotent w.r.t. revisions** (`wal.cc` checks
-  `revision == db_revision`). Don't add WAL ops that can't be safely re-applied.
+- **A group's apply is a function of the entry and the state it starts from**
+  (`ShardApplication`, `src/database/shard_group.h`). Effects write positionally,
+  so a replay or a retry rewrites the same bytes, and a blob's locator is a
+  function of the log. Don't make apply read what voters can differ on (a
+  clock, a file's current end, the leader's field table).
+- **Prepare writes nothing.** The leader prepares a write under the index's turn;
+  every voter applies the command, and strata refuses a stale `expected` version
+  at apply, the same on every replica.
 
 ## Traps (things that have already bitten, per the code review)
 
-- Storage/WAL integrity checking is only as strong as the framing you give it: the
-  storage library checksums its v2 volume header and hands each record's XXH32 to
-  your footer type, but the reference footer stores none. Check what Xapiand's
-  footers verify before relying on corruption detection.
-- WAL durability is **async by default**; "it's in the WAL" is not "it's on
-  disk" unless the shard is flagged synchronous.
+- A write is durable when its command is in the group's journal at the ack
+  level it was proposed with; `commit()` is the group's checkpoint, which
+  truncates the log, not the durability point. A pool with no journal (tests,
+  the CLI) is durable only at its commits.
+- A locator's `raw` views its `Data`'s bytes (`src/database/data.h`): a view
+  taken from it dies with that `Data` or its next `flush()`.
 - `query_dsl.cc::process` recurses over the query object with no depth cap, so a
   deeply nested query can exhaust the stack — be careful adding nesting, and
   consider a guard if you're in there. (The boolean-parser library builds its tree

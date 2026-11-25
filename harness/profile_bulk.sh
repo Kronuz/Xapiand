@@ -19,14 +19,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-# profile_bulk.sh BIN OUTDIR [--mult N] [--schema JSON] [--label NAME] [--port P]
+# profile_bulk.sh BIN OUTDIR [--mult N] [--schema JSON] [--label NAME] [--port P] [--put [--clients C]] [--query QS]
 #
-# Rerunnable per-layer profile of a bulk RESTORE (`sample` on macOS, `perf` on Linux via perf_sample.py). BIN is any xapiand binary
-# (RelWithDebInfo with -fno-omit-frame-pointer gives the best symbols). For each run it
-#   1. smoke: fresh node, one timed N x 1000-doc ndjson RESTORE (default N=20 -> 20000 docs),
-#      docs/s plus server user/sys CPU;
-#   2. profile: fresh node, same RESTORE sampled end to end with sample(1) or perf, attributed by
-#      thread group and by layer (rules in LAYERS below; edit them when frames change).
+# Rerunnable per-layer profile of a bulk RESTORE, or with --put of one PUT per document (`sample` on macOS, `perf` on Linux
+# via perf_sample.py). BIN is any xapiand binary (RelWithDebInfo with -fno-omit-frame-pointer gives the best symbols).
+# --query adds a query string to every write (`ack=none`, `ack=quorum`; RESTORE always carries `commit`); --clients
+# spreads the PUTs over C connections. For each run it
+#   1. smoke: fresh node, one timed load of N x 1000 docs (default N=20 -> 20000 docs), docs/s, wall ms per doc
+#      (with one PUT client, the write's critical path) plus server user/sys CPU;
+#   2. profile: fresh node, the same load sampled end to end with sample(1) or perf over a window that covers the
+#      smoke's wall time, attributed by thread group and by layer (rules in LAYERS below; edit them when frames change).
 # Writes OUTDIR/<label>.json, <label>.md and the raw <label>.sample.txt.
 # Run it under a hold: quiet strict NAME MIN "what" -- harness/profile_bulk.sh BIN OUT
 set -eu
@@ -34,7 +36,7 @@ set -eu
 . "$(dirname "$0")/env.sh"
 BIN=$1; OUT=$2; shift 2
 HARNESS_DIR=$(cd "$(dirname "$0")" && pwd) exec "$PY" -I - "$BIN" "$OUT" "$@" <<'PY'
-import sys, os, re, json, time, shutil, subprocess, http.client, resource, collections, argparse, signal
+import sys, os, re, json, time, shutil, subprocess, http.client, resource, collections, argparse, signal, threading, math
 ap = argparse.ArgumentParser()
 ap.add_argument('bin'); ap.add_argument('out')
 ap.add_argument('--mult', type=int, default=20)
@@ -42,6 +44,9 @@ ap.add_argument('--schema', default=None)
 ap.add_argument('--label', default='bulk')
 ap.add_argument('--port', type=int, default=18990)
 ap.add_argument('--dataset', default=None)
+ap.add_argument('--put', action='store_true', help='one PUT /bench/<n> per document instead of one RESTORE')
+ap.add_argument('--clients', type=int, default=1, help='--put: connections the PUTs are spread over')
+ap.add_argument('--query', default='', help='query string added to every write, e.g. ack=none')
 ap.add_argument('--sample-secs', type=int, default=0)
 ap.add_argument('--reanalyze', action='store_true', help='skip the runs; redo the analysis from OUT/<label>.sample.txt and .json')
 ap.add_argument('--min-sample-frac', type=float, default=0.25, help='invalid below this fraction of the sampling window at 1 ms (a healthy run is about 0.55)')
@@ -65,15 +70,33 @@ def start():
         except Exception: time.sleep(.5)
     p.kill(); raise SystemExit('server did not come up')
 
+def puts(k):  # client k's PUTs, documents k, k + clients, ...
+    c = http.client.HTTPConnection('localhost', a.port, timeout=60); q = f'?{a.query}' if a.query else ''
+    for n in range(k, ndocs, a.clients):
+        c.request('PUT', f'/bench/{n}{q}', body=lines[n % len(lines)], headers={'Content-Type': 'application/json'})
+        r = c.getresponse(); r.read()
+        assert r.status in (200, 201, 204), ('PUT', n, r.status)
+
 def restore(p, sampler=None):
     if a.schema:
         c = http.client.HTTPConnection('localhost', a.port, timeout=60)
         c.request('PUT', '/bench/', body=a.schema.encode(), headers={'Content-Type': 'application/json'}); r = c.getresponse(); r.read()
         assert r.status < 300, ('schema PUT', r.status)
-    c = http.client.HTTPConnection('localhost', a.port, timeout=600)
     if sampler: sampler()
     t = time.perf_counter()
-    c.request('RESTORE', '/bench/?commit', body=body, headers={'Content-Type': 'application/x-ndjson'})
+    if a.put:
+        errors = []
+        def run(k):
+            try: puts(k)
+            except BaseException as x: errors.append(x)
+        ts = [threading.Thread(target=run, args=(k,)) for k in range(a.clients)]
+        for th in ts: th.start()
+        for th in ts: th.join()
+        e = time.perf_counter() - t
+        if errors: raise errors[0]
+        return e
+    c = http.client.HTTPConnection('localhost', a.port, timeout=600)
+    c.request('RESTORE', '/bench/?commit' + (f'&{a.query}' if a.query else ''), body=body, headers={'Content-Type': 'application/x-ndjson'})
     r = c.getresponse(); r.read(); e = time.perf_counter() - t
     assert r.status in (200, 201, 204), r.status
     return e
@@ -87,13 +110,14 @@ rawp = os.path.join(a.out, f'{a.label}.sample.txt')
 if a.reanalyze:
     res = json.load(open(os.path.join(a.out, f'{a.label}.json'))); e2 = res['profile_wall_s']; shards = 0
 else:
-    res = {'label': a.label, 'docs': ndocs, 'bin': a.bin, 'schema': a.schema}
+    res = {'label': a.label, 'docs': ndocs, 'bin': a.bin, 'schema': a.schema, 'mode': 'put' if a.put else 'restore', 'clients': a.clients if a.put else None, 'query': a.query}
     # 1. smoke
     p = start(); e = restore(p); u, s = stop(p)
-    res['smoke'] = {'wall_s': e, 'docs_per_s': ndocs / e, 'user_s': u, 'sys_s': s, 'cpu_ms_per_doc': (u + s) * 1000 / ndocs}
-    # 2. profile
+    res['smoke'] = {'wall_s': e, 'docs_per_s': ndocs / e, 'wall_ms_per_doc': e * 1000 / ndocs, 'user_s': u, 'sys_s': s, 'cpu_ms_per_doc': (u + s) * 1000 / ndocs}
+    # 2. profile, over a window that covers the smoke's wall time
     p = start(); sm = []
-    secs = a.sample_secs or max(8, int(ndocs / 3000) + 4)
+    secs = a.sample_secs or max(8, int(ndocs / 3000) + 4, math.ceil(e) + 4)
+    res['sample_secs'] = secs
     sampler = [os.path.join(os.environ['HARNESS_DIR'], 'perf_sample.py'), str(p.pid), str(secs), rawp] if sys.platform.startswith('linux') else ['sample', str(p.pid), str(secs), '-file', rawp]
     def go(): sm.append(subprocess.Popen(sampler, stdout=subprocess.DEVNULL)); time.sleep(0.4)
     e2 = restore(p, go)
@@ -137,6 +161,7 @@ LOCK = re.compile(r'psynch_mutexwait|ulock_wait|psynch_rw')
 # layer -> (replaced?, regex over a frame); first frame matching, scanning leaf to root, wins
 LAYERS = [
  ('WAL (delete/write/replay)',            'replaced 7b', r'DatabaseWAL|delete_wal|delete_files|\bwal\.cc|WALWriter'),
+ ('Journal (group, consensus, turn log)', 'stays',       r'strata::group|kronuz::consensus|kronuz::journal|ShardApplication|place_blobs|encode_entry|decode_entry|split_command'),
  ('Xapian::Document in-memory build',     'replaced S1', r'Xapian::Document::Internal|Xapian::TermIterator|Xapian::Document::'),
  ('Xapian engine (add/replace/commit)',   'replaced S1', r'Glass|Xapian::|Inverter|DocumentTermList|CompressionStream|engine::xapian::|io_read_block|io_write_block|Honey|Brass'),
  ('Strata engine (add/replace/commit)',  'replaced S1', r'engine::strata::|\bstrata::|\bprospect::'),
@@ -179,8 +204,8 @@ for th, fr, s in rows:
         if cl in [n for n, r, rx in LAYERS] and dict((n, rx) for n, r, rx in LAYERS)[cl].search(f): tfun[cl][f] += s; break
     else: tfun[cl][fr[-1]] += s
 busy_total = sum(v for k, v in cnt.items() if not k.startswith(('LOCKWAIT', 'FLUSHWAIT')))
-# busiest shard-writer thread: busy + lock wait = its critical-path timeline
-dis = {th: v for th, v in perthread.items() if 'DI' in th}
+# busiest shard-writer thread (DI; else the busiest thread): busy + lock wait = its critical-path timeline
+dis = {th: v for th, v in perthread.items() if 'DI' in th} or dict(perthread)
 worst = max(dis.items(), key=lambda kv: kv[1]['busy'] + kv[1]['lockwait'] + kv[1]['flushwait']) if dis else None
 layer_rows = []
 for n, rep, _ in LAYERS + [('other/unattributed (malloc, libc, runtime)', 'stays', None)]:
@@ -234,7 +259,7 @@ res['amdahl'] = {
   'single_thread_front_end_ms_per_doc': front, 'docs_per_s_front_end_one_thread': 1000 / front if front else None,
   'note': 'CPU-bound estimates: cores x 1000 / remaining CPU ms per doc, assuming the remaining stages scale across cores'}
 # A profile whose wall samples fall far short is truncated (sample(1) caught a fraction of the load): flag it invalid.
-res['sample_secs'] = res.get('sample_secs') or (a.sample_secs or max(8, int(ndocs / 3000) + 4))
+res['sample_secs'] = res.get('sample_secs') or a.sample_secs or max(8, int(ndocs / 3000) + 4)
 sib = sorted(j['profile']['wall_samples'] for f in os.listdir(a.out) if f.endswith('.json') and f != f'{a.label}.json'
              for j in [json.load(open(os.path.join(a.out, f)))] if isinstance(j, dict) and j.get('profile', {}).get('wall_samples') and not j.get('invalid') and j.get('docs') == ndocs)
 invalid = []
@@ -246,8 +271,8 @@ res['invalid'] = '; '.join(invalid) or None
 json.dump(res, open(os.path.join(a.out, f'{a.label}.json'), 'w'), indent=1)
 layer_rows.append({'layer': 'Device-flush wait (blocked, not CPU)', 'status': 'blocked', 'samples': flush_total, 'cpu_pct': 0.0, 'cores': 0, 'critical_pct': 100.0 * crit_flush / ctot if ctot else 0, 'top_functions': []})
 layer_rows.append({'layer': 'Shard writable-checkout wait (blocked, not CPU)', 'status': 'replaced 7c', 'samples': cnt.get('LOCKWAIT:shard writable checkout', 0), 'cpu_pct': 0.0, 'cores': 0, 'critical_pct': res['critical_lockwait_pct'], 'top_functions': []})
-md = [f"# {a.label}", '', f"{ndocs} docs, binary `{a.bin}`", '',
-      f"smoke: {sm_['docs_per_s']:.0f} docs/s, wall {sm_['wall_s']:.2f} s, user {sm_['user_s']:.2f} s, sys {sm_['sys_s']:.2f} s ({sm_['cpu_ms_per_doc']:.3f} ms CPU/doc)", '',
+md = [f"# {a.label}", '', f"{ndocs} docs by " + (f"PUT over {res.get('clients') or 1} client(s)" if res.get('mode') == 'put' else 'RESTORE') + (f" with `{res['query']}`" if res.get('query') else '') + f", binary `{a.bin}`", '',
+      f"smoke: {sm_['docs_per_s']:.0f} docs/s, wall {sm_['wall_s']:.2f} s ({sm_['wall_s'] * 1000 / ndocs:.4f} ms/doc), user {sm_['user_s']:.2f} s, sys {sm_['sys_s']:.2f} s ({sm_['cpu_ms_per_doc']:.3f} ms CPU/doc)", '',
       *([f"INVALID PROFILE: {res['invalid']}", ''] if res['invalid'] else []),
       f"profile: {res['profile']['busy_cores']:.2f} busy cores over {total_samples} samples; device-flush wait {flush_total} samples ({flush_total / ndocs:.4f} ms/doc, {flush_engine / ndocs:.4f} in the engine rows), kept out of the CPU shares; critical thread {res['profile']['critical_thread']}, lock wait {res['critical_lockwait_pct']:.1f}% of its timeline", '',
       '| layer | status | % of CPU | % of critical thread | top 3 functions |', '|---|---|---:|---:|---|']

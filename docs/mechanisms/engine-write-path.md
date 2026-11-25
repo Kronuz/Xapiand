@@ -7,7 +7,7 @@ representation. For the Xapian engine that is a `Xapian::Document` (`engine::xap
 `src/engine/xapian/convert.h`). `Schema::index`, `GenerateTerms` and the handler call `add_term`,
 `add_posting`, `add_value` and `set_data` on the handle; each call goes straight into the engine's document.
 The shard writes that same object (`engine::xapian::xapian_document(doc)` in `src/engine/xapian/shard.cc`)
-and the write-ahead log serializes it (`Document::serialize`, `src/database/wal.cc`).
+and the shard's journal command carries its serialized form (`Document::serialize`; see `journal-durability.md`).
 
 ## How
 

@@ -44,20 +44,12 @@
 #define NUM_SHARDS               5                // Default number of database shards per index
 
 #define RESOLVER_CACHE_SIZE          100          // Endpoint resolver cache
-#define WAL_WRITER_CACHE_SIZE        100          // Wal writer cache
 #define SCHEMA_POOL_SIZE             100          // Maximum number of schemas in schema pool
 #define SCHEMAS_VERSIONS_CACHE_SIZE  100          // Schema versions cache
 #define DATABASE_POOL_SIZE           0            // 0: sized from physical memory (database_pool_size_for)
 #define MAX_CLIENTS                 1000          // Maximum number of open client connections
 
 
-#define NUM_ASYNC_WAL_WRITERS        0.5          // Number of database async WAL writers per CPU
-#define MAX_ASYNC_WAL_WRITERS         10
-#define MIN_ASYNC_WAL_WRITERS          1
-
-#define NUM_FSYNCHERS                0.5          // Number of threads handling the fsyncs per CPU
-#define MAX_FSYNCHERS                 10
-#define MIN_FSYNCHERS                  1
 
 #define SCHEMA_POOL_TIMEOUT                          3600000
 #define RESOLVER_CACHE_TIMEOUT                         60000
@@ -68,13 +60,6 @@
 #define COMMITTER_DEBOUNCE_MIN_FORCE_TIMEOUT            8000
 #define COMMITTER_DEBOUNCE_MAX_FORCE_TIMEOUT           10000
 
-#define FSYNCHER_THROTTLE_TIME                          1000
-#define FSYNCHER_DEBOUNCE_TIMEOUT                        500
-#define FSYNCHER_DEBOUNCE_BUSY_TIMEOUT                   800
-#define FSYNCHER_DEBOUNCE_MIN_FORCE_TIMEOUT             2500
-#define FSYNCHER_DEBOUNCE_MAX_FORCE_TIMEOUT             3500
-
-
 
 #define EV_SELECT_NAME  "select"
 #define EV_POLL_NAME    "poll"
@@ -84,7 +69,6 @@
 #define EV_PORT_NAME    "port"
 
 
-#define fallback(a, b) (a) ? (a) : (b)
 
 
 std::size_t
@@ -162,10 +146,6 @@ parseOptions(int argc, char** argv)
 
 		std::size_t num_shards = NUM_SHARDS;
 		app.add_option("--shards", num_shards, "Default number of database shards per index.");
-#if XAPIAND_DATABASE_WAL
-		std::size_t num_async_wal_writers = 0;
-		app.add_option("--writers", num_async_wal_writers, "Number of database async wal writers.");
-#endif
 		std::size_t database_pool_size = DATABASE_POOL_SIZE;
 		app.add_option("--database-pool-size", database_pool_size, "Maximum number of databases in database pool (default: what 1% of RAM holds at ~40 KiB per open index, within the descriptor limit).");
 		bool full_flush_ordering = false;
@@ -189,8 +169,6 @@ parseOptions(int argc, char** argv)
 		app.add_option("--scripts-cache-size", scripts_cache_size, "Compiled scripts each thread keeps (their bytes are also capped at 64 MiB a thread).");
 		std::size_t resolver_cache_size = RESOLVER_CACHE_SIZE;
 		app.add_option("--resolver-cache-size", resolver_cache_size, "Cache size for index resolver.");
-		std::size_t wal_writer_cache_size = WAL_WRITER_CACHE_SIZE;
-		app.add_option("--wal-writer-cache-size", wal_writer_cache_size, "Cache size wal writer.");
 
 		std::size_t max_files = 0;
 		app.add_option("--max-files", max_files, "Maximum number of files to open.");
@@ -382,12 +360,7 @@ parseOptions(int argc, char** argv)
 		o.schema_versions_size =  schema_versions_size;
 		o.scripts_cache_size = scripts_cache_size;
 		o.resolver_cache_size = resolver_cache_size;
-		o.wal_writer_cache_size = wal_writer_cache_size;
 		o.num_shards = num_shards;
-#if XAPIAND_DATABASE_WAL
-		o.num_async_wal_writers = fallback(num_async_wal_writers, std::max(MIN_ASYNC_WAL_WRITERS, std::min(MAX_ASYNC_WAL_WRITERS, static_cast<int>(std::ceil(NUM_ASYNC_WAL_WRITERS * o.processors)))));
-#endif
-		o.num_fsynchers = std::max(MIN_FSYNCHERS, std::min(MAX_FSYNCHERS, static_cast<int>(std::ceil(NUM_FSYNCHERS * o.processors))));
 
 		o.max_clients = max_clients;
 		o.max_files = max_files;
@@ -493,11 +466,6 @@ parseOptions(int argc, char** argv)
 	o.committer_debounce_min_force_timeout = COMMITTER_DEBOUNCE_MIN_FORCE_TIMEOUT;
 	o.committer_debounce_max_force_timeout = COMMITTER_DEBOUNCE_MAX_FORCE_TIMEOUT;
 
-	o.fsyncher_throttle_time = FSYNCHER_THROTTLE_TIME;
-	o.fsyncher_debounce_timeout = FSYNCHER_DEBOUNCE_TIMEOUT;
-	o.fsyncher_debounce_busy_timeout = FSYNCHER_DEBOUNCE_BUSY_TIMEOUT;
-	o.fsyncher_debounce_min_force_timeout = FSYNCHER_DEBOUNCE_MIN_FORCE_TIMEOUT;
-	o.fsyncher_debounce_max_force_timeout = FSYNCHER_DEBOUNCE_MAX_FORCE_TIMEOUT;
 
 
 

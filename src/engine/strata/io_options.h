@@ -35,10 +35,11 @@ inline void log_barrier_warning(void*, const kronuz::journal::BarrierWarning& wa
 	L_WARNING("Ordering barrier on {} ({}) is not guaranteed to flush: commits stay durable, but their order after a crash is not. Pass --full-flush-ordering to flush in full.", warning.volume, warning.source);
 }
 
-// The options of every directory IO Xapiand builds (shard acquire and the pool's resolve).
+// The options of every directory IO Xapiand builds (shard acquire, the pool's resolve, the journal host):
+// plain flushes by default, full ones under --full-flush-ordering (D177).
 inline kronuz::journal::PosixIOOptions posix_io_options() {
-	kronuz::journal::PosixIOOptions options{true, true};
-	options.full_flush_ordering = opts.full_flush_ordering;
+	using kronuz::journal::FlushMode;
+	kronuz::journal::PosixIOOptions options{opts.full_flush_ordering ? FlushMode::full : FlushMode::plain, true, true};
 	options.barrier_warning = &log_barrier_warning;
 	return options;
 }

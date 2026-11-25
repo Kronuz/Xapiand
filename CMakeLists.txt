@@ -52,8 +52,6 @@ option(BUILD_TESTS "Build all tests"                                OFF)
 option(DEBUGINFO_EXTERNALIZE "Externalize debug information"        OFF)
 
 option(TLS           "Enable HTTPS for the REST API (needs OpenSSL 3)" ON)
-option(DATABASE_WAL  "Enable database write ahead log (WAL)"         ON)
-option(DATA_STORAGE  "Enable data storage"                           ON)
 option(TRACEBACKS    "Enable tracebacks (on by default in Debug)"   OFF)
 option(ASSERTS       "Enable asserts (on by default in Debug)"      OFF)
 option(TRACKED_MEM   "Enable tracked memory allocator"              OFF)
@@ -70,7 +68,7 @@ option(CRASH_POINTS   "Let XAPIAND_STRATA_CRASH=point:n kill the process at a st
 option(ENGINE_CENSUS  "Count the facilities each request uses at the engine seam (XAPIAND_ENGINE_CENSUS=file)" OFF)
 
 
-foreach (opt DATABASE_WAL DATA_STORAGE TRACEBACKS ASSERTS TRACKED_MEM CHECK_IO_FDES LUA UUID_ENCODED UUID_GUID UUID_URN RANDOM_ERRORS CHECK_SIZES LTO)
+foreach (opt TRACEBACKS ASSERTS TRACKED_MEM CHECK_IO_FDES LUA UUID_ENCODED UUID_GUID UUID_URN RANDOM_ERRORS CHECK_SIZES LTO)
 	if (${opt})
 		set ("XAPIAND_${opt}" 1)
 		message(STATUS "Option ${opt} - on")
@@ -494,7 +492,7 @@ FetchContent_Declare(sortable     GIT_REPOSITORY https://github.com/Kronuz/sorta
 FetchContent_MakeAvailable(constexpr_phf split lru_cache errno_names base_x located_exception sortable)
 
 # Header-only libs, included by name ("phf.hh", "split.h", "lru.h", "error.hh"
-# +"errnos.h", "stash.h", "uinteger_t.hh", "base_x.hh", "sortable.hh"), so put their source dirs
+# +"errnos.h", "uinteger_t.hh", "base_x.hh", "sortable.hh"), so put their source dirs
 # on the global include path now that the vendored copies are gone.
 include_directories(
 	"${constexpr_phf_SOURCE_DIR}"
@@ -518,7 +516,7 @@ include_directories(
 
 # traceback (headers only, up front). Xapiand's trace adapters inject traceback.h into
 # the extracted libraries: workpool -> xapiand_workpool_trace.h -> traceback.h, and
-# scheduler / logger, which pull thread.hh and work_pool.hh transitively. traceback proper is fetched
+# logger, which pull thread.hh and work_pool.hh transitively. traceback proper is fetched
 # further down (its traceback.cc compiles into XAPIAND_OBJ), but its headers must be on
 # the include path BEFORE those libraries so their collateral targets can find traceback.h
 # in a full `ninja` build (CI builds every fetched target; Xapiand links none of them).
@@ -543,20 +541,9 @@ add_compile_definitions(
 	WORKPOOL_THREAD_NAME_PREFIX="Xapiand:"
 )
 
-# scheduler: the timer-wheel scheduler + debouncer, extracted from Xapiand. It is
-# header-driven (scheduler.h, debouncer.h, callable_traits.hh) and builds on stash
-# + workpool (fetched above). Its random_time helper is provided by Xapiand's
-# own random.cc, so we populate headers only and do NOT compile the library's
-# random.cc. The trace header restores L_SCHEDULER/L_DEBUG_HOOK/L_EXC/L_CALL and
-# the color palette onto Xapiand's log.h + xapiand_colors.h.
-FetchContent_Declare(scheduler GIT_REPOSITORY https://github.com/Kronuz/scheduler.git GIT_TAG d57e8fc051097d84500b4036b85daadd00c00b14)  # track tip
-FetchContent_MakeAvailable(scheduler)
-include_directories("${scheduler_SOURCE_DIR}")
-add_compile_definitions(SCHEDULER_TRACE_HEADER="xapiand_scheduler_trace.h")
-
 # logger: the lock-free, cancellable, deferred logger extracted from Xapiand and
-# modernized (std::source_location, iTerm2, backpressure, pluggable hooks). Built
-# on the scheduler. We populate headers and compile its logger.cc into XAPIAND_OBJ
+# modernized (std::source_location, iTerm2, backpressure, pluggable hooks). We
+# populate headers and compile its logger.cc into XAPIAND_OBJ
 # below; src/logger_fwd.h + log.h + xapiand_colors.h adapt its macro surface, and main.cc
 # wires its config/hooks to opts + traceback at startup. Its logger.h replaces
 # Xapiand's in-tree one (src/logger.h is now a thin shim).
@@ -576,24 +563,6 @@ include_directories("${logger_SOURCE_DIR}")
 # are all already on the FetchContent include path. The logger's backtrace hook is
 # wired to the library's traceback() (atos file:line) in main.cc.
 add_compile_definitions(TRACEBACK_HOOKS=1)
-
-# storage: the compressed append-only multi-volume blob store, extracted from
-# Xapiand. Header-only Storage<Header, BinHeader, Footer, IO> engine; on-disk
-# format byte-identical, so existing volumes read unchanged. Its deps
-# (compressors, errno-names, strict-stox, stringified) are already on the
-# FetchContent include path above. Two seams are wired to Xapiand by absolute
-# path: STORAGE_IO_HEADER -> xapiand_storage_io.h (routes every storage IO
-# through io.cc + sets the default IO policy), STORAGE_TRACE_HEADER ->
-# xapiand_storage_trace.h (the L_* logger). The async-fsync hook (the debounced
-# thread pool that used to live in storage.h, now src/xapiand_fsyncher.h) is
-# handed to the WAL at construction; the data store stays on synchronous fsync.
-FetchContent_Declare(storage GIT_REPOSITORY https://github.com/Kronuz/storage.git GIT_TAG 9f14417d24a133ab0b4ab31e452625eceb227afb)
-FetchContent_MakeAvailable(storage)
-include_directories("${storage_SOURCE_DIR}")
-add_compile_definitions(
-	STORAGE_IO_HEADER="xapiand_storage_io.h"
-	STORAGE_TRACE_HEADER="xapiand_storage_trace.h"
-)
 
 # server: RETIRED. This was the generic libev HTTP/TCP server engine (Worker reactor,
 # TCP layer, accept-loop base, BaseClient FSM) extracted from Xapiand. Every consumer
@@ -765,16 +734,33 @@ option(TASK_COUNT_FRAMES "Count live task frames for the teardown tests" OFF)
 if (TASK_COUNT_FRAMES)
 	add_compile_definitions(TASK_COUNT_FRAMES=1)
 endif ()
-FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG 18eb51672e4f306aac508bd0444f6d367eac4291)  # task main: the heavy lane (task-lanes), deadlines on Kronuz/wheel
+FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG 95798a02f68c86f070401329a05c78d326ac2579)  # task main: blocking_scheduler, which strata::group's journal and consensus drive
 FetchContent_MakeAvailable(task)
 
 # varint: the LEB128 and serialize_length codec strata consumes; pinned here so one copy builds.
 FetchContent_Declare(varint GIT_REPOSITORY https://github.com/Kronuz/varint.git GIT_TAG 4dd60a8f199c52f98af2e784d4097cc86f243eb1)
 
+# zstd: compressors' Zstandard backend (compressor_zstd.{h,cc}) compresses document
+# data and stored blobs (src/database/data.cc). Found from the system (Homebrew on
+# macOS) before any library processes compressors: compressors takes a found
+# ZSTD_LIBRARY/ZSTD_INCLUDE_DIR over fetching zstd's own CMake project (whose
+# uninstall target clashes with ours), so the binary links one zstd. Its header goes
+# on the include path, compressor_zstd.cc compiles into XAPIAND_OBJ, and libzstd
+# links below.
+find_library(ZSTD_LIBRARY NAMES zstd libzstd)
+find_path(ZSTD_INCLUDE_DIR zstd.h)
+if(NOT (ZSTD_LIBRARY AND ZSTD_INCLUDE_DIR))
+	message(FATAL_ERROR "zstd not found (document data and stored blobs are zstd-compressed); install libzstd")
+endif()
+include_directories("${ZSTD_INCLUDE_DIR}")
+
 # prospect: the search layout on the strata segment core, behind the strata engine
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
 # strata and the libraries strata links.
-FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG e3edb4266f6c2f7d48cb7fe24c58de503e7bb41f)  # strata main: catalog delivery waits through a posting post
+# journal and completion ahead of strata's pins: the flush mode PosixIO requires (journal-sync-mode, D177).
+FetchContent_Declare(completion GIT_REPOSITORY https://github.com/Kronuz/completion.git GIT_TAG b4600a82a8d30d4f63541d9c322a4ac5eceaee95)  # completion main: PosixIOOptions{FlushMode::plain|full}
+FetchContent_Declare(journal GIT_REPOSITORY https://github.com/Kronuz/journal.git GIT_TAG fc5c59b492ff8275ab8be4aa9599c6ca2ae97859)  # journal main: a Host follows its IO's flush mode
+FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 7a4284c4cdb2511d9a69613acd73ed6be36b8335)  # strata main: file-set seals stream their CRC32C (file-set-seal-streaming)
 FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG eef601dce70260cc5a58e2089168d1cf1c7a8982)  # prospect main: completion's read-only opens, damaged segments at first map
 FetchContent_MakeAvailable(prospect)
 
@@ -945,9 +931,9 @@ include_directories("${htm_SOURCE_DIR}")
 FetchContent_MakeAvailable(compressors)
 include_directories("${compressors_SOURCE_DIR}")
 
-# Headers of libraries the libraries above fetch at their own pins (scheduler.h includes stash.h, base_x.hh
-# uinteger_t.hh, http_router.h radix_router.h): their source directories go on the include path, undeclared here.
-foreach(dep stash uinteger_t radix_router)
+# Headers of libraries the libraries above fetch at their own pins (base_x.hh includes uinteger_t.hh,
+# http_router.h radix_router.h): their source directories go on the include path, undeclared here.
+foreach(dep uinteger_t radix_router)
 	FetchContent_GetProperties(${dep} SOURCE_DIR ${dep}_SOURCE_DIR POPULATED ${dep}_POPULATED)
 	if (NOT ${dep}_POPULATED)
 		message(FATAL_ERROR "${dep} is not fetched by the libraries that include it")
@@ -956,23 +942,7 @@ foreach(dep stash uinteger_t radix_router)
 endforeach ()
 add_compile_definitions(COMPRESSORS_EXCEPTION_HEADER="xapiand_exception.h")
 
-# zstd: the storage library's codec-in-header dispatch references the Zstandard
-# backend (compressor_zstd.{h,cc}), so zstd must be available now even though
-# Xapiand used only deflate + lz4 before. Found from the system (Homebrew on
-# macOS); its header goes on the include path, compressor_zstd.cc compiles into
-# XAPIAND_OBJ, and libzstd links below.
-find_library(ZSTD_LIBRARY NAMES zstd libzstd)
-find_path(ZSTD_INCLUDE_DIR zstd.h)
-if(NOT (ZSTD_LIBRARY AND ZSTD_INCLUDE_DIR))
-	message(FATAL_ERROR "zstd not found (required by the storage library's codec dispatch); install libzstd")
-endif()
-include_directories("${ZSTD_INCLUDE_DIR}")
 
-# stash traces through injectable hooks (no-op by default). Point it at a small
-# Xapiand trace header that restores the colored, logged output by mapping
-# stash's hooks onto Xapiand's log.h + xapiand_colors.h. Applies only to Xapiand's own
-# targets (defined below), not the fetched libraries.
-add_compile_definitions(STASH_TRACE_HEADER="xapiand_stash_trace.h")
 
 
 ########################################################################
@@ -1219,9 +1189,7 @@ list(APPEND XAPIAND_SRC_LIST "${htm_SOURCE_DIR}/constraint.cc")
 # The Double Metaphone encoder's out-of-line implementation (the string-similarity
 # metrics are header-only; only this encoder ships a .cc).
 list(APPEND XAPIAND_SRC_LIST "${double_metaphone_SOURCE_DIR}/double_metaphone.cc")
-# compressors (deflate + lz4 + zstd), in place of the removed
-# src/compressor_deflate.cc and src/compressor_lz4.cc. zstd was added when the
-# storage library's codec-in-header dispatch started referencing it.
+# compressors (deflate + lz4 + zstd), compiled into XAPIAND_OBJ.
 list(APPEND XAPIAND_SRC_LIST "${compressors_SOURCE_DIR}/compressor_deflate.cc")
 list(APPEND XAPIAND_SRC_LIST "${compressors_SOURCE_DIR}/compressor_lz4.cc")
 list(APPEND XAPIAND_SRC_LIST "${compressors_SOURCE_DIR}/compressor_zstd.cc")
@@ -1246,6 +1214,7 @@ target_link_libraries(XAPIAND_OBJ PUBLIC
 	analysis::cjk
 	queryparser::queryparser
 	prospect::prospect
+	strata::group
 	task::asio
 	prometheus-cpp::core
 	${ZLIB_LIBRARIES}
@@ -1894,7 +1863,7 @@ endif ()
 if (BUILD_TESTS)
 		# Pure unit tests (no Xapiand code linked). They use the tiny header-only
 		# harness in tests/test_harness.h -- no GoogleTest, no FetchContent.
-		set(XAPIAND_PURE_TESTS string debounce_or_run range_terms xapian_data_guard)
+		set(XAPIAND_PURE_TESTS string range_terms xapian_data_guard)
 		foreach (VAR_TEST ${XAPIAND_PURE_TESTS})
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
@@ -1941,6 +1910,11 @@ if (BUILD_TESTS)
 			add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
 			add_dependencies(check "${PROJECT_TEST}")
 		endforeach ()
+
+		# faultlab's faultfs, the crash model test_pool runs its indexes on; it reuses strata's completion target.
+		FetchContent_Declare(faultlab GIT_REPOSITORY https://github.com/Kronuz/faultlab.git GIT_TAG 83fbde73c008e15e64ea7aa73c4c3b9b94e0599c)  # faultlab main: plain and full syncs, journal's pin
+		FetchContent_MakeAvailable(faultlab)
+		target_link_libraries(${PROJECT_NAME}_test_pool PRIVATE faultlab::faultlab)
 
 		# Loop-lag bounds hold only without parallel neighbors.
 		set_tests_properties(test_control_plane PROPERTIES RUN_SERIAL TRUE)
