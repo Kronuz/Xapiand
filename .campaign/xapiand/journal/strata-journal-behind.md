@@ -1,6 +1,6 @@
 # strata-journal-behind: journal
 
-State: waiting on jobs 261125-004550-50832e, 261125-004551-0bc60c, 261125-004553-aab292
+State: ready for review; waiting on jobs 261125-004550-50832e (build-test), 261125-004551-0bc60c (A1 test), 261125-004553-aab292 (A1 mutant)
 Quest: .campaign/xapiand/quests/strata-journal-behind.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
