@@ -1,6 +1,6 @@
 # consensus-recover-gate: journal
 
-State: waiting on jobs 261125-034814-cbfb1c 261125-034822-6f0c97 261125-034825-3c9017
+State: ready for review
 Quest: .campaign/xapiand/quests/consensus-recover-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,11 +9,11 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Code round done at consensus:b6a604a (pushed); evidence jobs queued.
+Code round done at consensus:b6a604a (pushed); evidence jobs 261125-034814-cbfb1c (running), 261125-034822-6f0c97, 261125-034825-3c9017 (queued behind 85 jobs) and CI pending.
 
 ## Next
 
-1. Read the three jobs and CI; paste the brief's table; set ready for review.
+1. Lead: read the three jobs and CI; durability review. Before landing, merge consensus main if detent:consensus-inline-sync-loop landed (DRIVER.md only overlaps).
 
 ## Lifecycle: recover to Start
 
