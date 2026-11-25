@@ -18435,7 +18435,9 @@
         "site/src/content/docs/reference-guide/documents/get-api.md",
         "site/src/content/docs/reference-guide/search/search-api.md",
         "docs/dev/agent-codebase.md",
-        "src/database/data.*"
+        "src/database/data.*",
+        "src/engine/strata/io_options.h",
+        "tests/test_io_options.cc"
       ],
       "history": [
         {
@@ -18703,7 +18705,7 @@
         }
       },
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-24T15:44:21",
+      "updated": "2026-11-24T16:19:36",
       "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal"
     },
     "journal-seal-repeat": {
