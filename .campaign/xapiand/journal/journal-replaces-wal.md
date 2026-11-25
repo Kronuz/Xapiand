@@ -44,6 +44,17 @@ Model (T1): the turn is the index's one writer; a checkpoint runs only in a turn
 L1 still holds: every write past the bound is acknowledged; a turn holder's placements never pass half the bound plus
 one entry; an upload fills the log to LogFull, takes the turn, checkpoints and retries (the L1 test's upload phase).
 
+Done (Xapiand:6de9878d5, test tightened at 66bcd87eb): Proposer {in_turn, pinned} threads through group_proposer and
+propose_entry; the pressure task, quiesce and their allowlist rows are gone; ShardEndpoint::checkpoint_in_turn;
+journal-durability.md "Who writes the index". Class sweep (every index path off the loop, the table above): the two
+L1 rows now hold the turn; the commit chore is held off by no pin plus strata's lease; release_superseded is
+unreachable at rf = 1 (the cluster quest's: at rf > 1 a follower's apply holds no local turn, so its written reads
+need the model again). New test test_a_checkpoint_holds_the_turn: a written read asked while the pressure checkpoint's
+or an upload's full-log checkpoint's hook sleeps returns after it (value: the read waited). Local (build/, quiet light):
+fix 8 of 8 runs pass, L1 test 3 of 3; mutant pressure (spawned off the turn) 3 of 3 fail, mutant full (pinned
+checkpoint off the turn) fails. TSan mutant: not queued; the old code passed TSan at 3d5ce3627, so TSan does not catch
+it reliably, and the value test catches both mutants without it.
+
 Session 21 (2026-11-24), durability review round 3 (CHANGES at Xapiand:98ea84a70): J1b, S1, A1 blocking (L1-T done
 in session 20); N9, N11, N12 nits; N10 left.
 
@@ -984,3 +995,19 @@ Drafts, applied when the code lands; each names the contract it shapes (format-f
 59. N9: the counts are monotonic (placed, cut); a checkpoint raises the cut to what was placed at its start (CAS
     max). An overlap can leave the count high until the next checkpoint (the trigger fires early), never wrapped.
 60. N11: 503 for LogFull, Busy, NotLeader, NotReady; every other consensus refusal is errc::internal (500).
+61. T1: the turn is the index's one writer, and every checkpoint runs in it (journal-durability.md, "Who writes the
+    index"). Neither of the lead's two options closes the class: the checkpoint's own sync_and_commit flushes the
+    buffers on the chore (so option 1 leaves the race), and prepare, written_count and fresh read the index the same
+    way written_key does (so option 2 leaves them).
+62. T1, pressure: inline in the proposer's turn, not a background task. A background checkpoint in a turn would need
+    a pin of its own (a turn without a pin breaks commit_blocking's try_lock and lets the catalog demote or close
+    under it), and pinning from the trigger deadlocks with a close that waits for it. Inline removes the task, its
+    mutex and cv, and `quiesce` with its two allowlist rows. Cost: the write whose placement crosses half the bound
+    (one per ~8 MiB of log) answers after a checkpoint, at ack=none too; the writers behind it waited for that
+    checkpoint's turn before as well.
+63. T1, pinned proposers (upload chunks, aborts) do not checkpoint at half; their one path is a full log, where they
+    take the turn (`ShardEndpoint::checkpoint_in_turn`). Checkpointing them at half too would make the LogFull wait
+    unreachable by one upload, so its mutant (L1's 16805d) would survive the L1 test.
+64. T1: test_overlapping_checkpoints_cut_the_log_count_once calls checkpoint() off the turn from two threads with no
+    reader or writer running; kept as the counters' test (N9). Turn holders serialize checkpoints in production, so the
+    CAS-max is belt and braces now.
