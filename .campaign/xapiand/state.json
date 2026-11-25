@@ -4416,6 +4416,34 @@
       "closed": "answered to Detent: Xapiand reaches allocators only through tracked global new/delete (off by default) and total_allocated(); suggested a multi-thread small-allocation row",
       "id": "msg-368",
       "text": "Detent lead: resource-adoption's allocators change (one non-template out-of-line body for the hot paths; your xapiand-74) is ruled as D162: taken if a strict A/B of allocators' benches and the accounting hot paths shows no regression beyond A/A noise, else the template bodies stay with the numbers recorded. One body for both of us. It starts after pin-wave lands; say if Xapiand has a hot path we should add to the A/B."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T18:55:20",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T18:55:20",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-362",
+      "items": {
+        "field-check-at-map": "field-check-at-map (until prospect-pool-reader-transient met: `campaign set field-check-at-map status=active`)",
+        "format-freeze": "frees test/** for format-freeze",
+        "index-delete": "frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete",
+        "more-like-this": "frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this",
+        "rocksdb-parity": "frees include/strata/core/**, test/**, docs/mechanisms/**, CMakeLists.txt for rocksdb-parity"
+      },
+      "settles": {
+        "start": [
+          "field-check-at-map",
+          "format-freeze",
+          "index-delete",
+          "more-like-this",
+          "rocksdb-parity"
+        ]
+      },
+      "text": "prospect-pool-reader-transient landed: unlocks field-check-at-map (until prospect-pool-reader-transient met: `campaign set field-check-at-map status=active`); frees test/** for format-freeze; frees include/strata/core/**, test/**, docs/mechanisms/**, CMakeLists.txt for rocksdb-parity; frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete; frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this"
     }
   ],
   "quests": {
@@ -13793,18 +13821,55 @@
         "docs/perf/eager-open.md"
       ],
       "journal": "../Xapiand-wt/xapiand/field-check-at-map",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-24T22:45:42",
+          "ci": {
+            "commit": "0d39c2218888ad739f8b0c71a62ed7db04f7ea98",
+            "runs": [
+              45550030499
+            ]
+          },
+          "commit": "539fa10e52848dfd0b37278150af26c9a8b8524e",
+          "criteria": {
+            "A1": "261124-205541-baf5c2 (passed at 0d39c2218888; ignores docs-only docs/mechanisms/field-check.md), 261124-205543-2d1c17 (passed at 0d39c2218888; ignores docs-only docs/mechanisms/field-check.md); fails without: 261124-120815-138f97, 261124-205545-8c5e65, 261124-205555-96bca6, 261124-205557-765a8d, 261124-205601-16b399, 261124-211943-7f00f1",
+            "A2": "261124-211954-d9a59d",
+            "A3": "261124-211953-aab22b, 261124-211954-a00a3e",
+            "A4": "261124-212008-884d7a (the build-test check); build-test 261124-212008-884d7a (queued by verify at strata:093bb965) and CI",
+            "A5": "`docs/mechanisms/field-check.md`, `docs/perf/eager-open.md` (strata)",
+            "A6": "CI green at 0d39c2218888"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "539fa10e52848dfd0b37278150af26c9a8b8524e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261124-212008-884d7a",
+              "level": "light",
+              "seconds": 1683.5,
+              "state": "done",
+              "what": "field-check-at-map check build-test at 539fa10e5284"
+            }
+          ],
+          "final": true,
+          "from": "49fca9483b145448e247cdc073581bd748bfd19b",
+          "reason": "",
+          "tested": "539fa10e52848dfd0b37278150af26c9a8b8524e"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "strata checks a segment's field ids wherever it maps",
-      "updated": "2026-11-24T22:45:29",
+      "updated": "2026-11-24T22:46:08",
       "worktree": "../strata-wt/xapiand/field-check-at-map"
     },
     "field-table": {
