@@ -82,7 +82,7 @@ Head strata:093bb965 (docs over strata:aaf38cd2, the merge of main). Real builds
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261124-190113-7d240b (head aaf38cd2); mutant 261124-120815-138f97 (--fails-without: passed; vouch::check unchanged since) |
+| A1 | field_check_map_test 261124-205541-baf5c2 and the F1 guard test 261124-205543-2d1c17 (strata:0d39c221; docs-only since); mutants killed: 261124-120815-138f97 (vouch::check), 261124-205545-8c5e65 (F1 guard), 261124-205555-96bca6, 261124-205557-765a8d, 261124-205601-16b399, 261124-211943-7f00f1 (install load) |
 | A2 | 261124-211954-d9a59d (identity, rebuilt at prospect c99e6be) |
 | A3 | d1000s4 261124-211953-aab22b, d1000s10 261124-211954-a00a3e: all four measures (open p50, open CPU, dirty, resident) of proto eager inside the base/A/A `today` band |
 | A4 | build-test 261124-212008-884d7a (queued by verify at strata:093bb965) and CI |
