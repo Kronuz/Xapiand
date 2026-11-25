@@ -8892,6 +8892,8 @@
     "consensus-group-last": {
       "accepted": {},
       "after": [],
+      "base": "b4516ee01e41e8d14afa1d7b26a5720ced39b557",
+      "branch": "quest/xapiand/consensus-group-last",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo >/dev/null && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -8906,6 +8908,7 @@
         "test/driver_*",
         "CHANGELOG.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/consensus-group-last",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -8915,9 +8918,10 @@
       ],
       "repo": "../consensus",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "consensus: Driver reports a group's recovered log end",
-      "updated": "2026-11-24T22:46:46"
+      "updated": "2026-11-24T22:47:47",
+      "worktree": "../consensus-wt/xapiand/consensus-group-last"
     },
     "consensus-hello-limits": {
       "accepted": {},
