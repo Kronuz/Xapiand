@@ -19,7 +19,7 @@ Each row names the landed quest and its commit, quoted from the document it cite
 - A3 [decision] SYS-8 (a): the shared turn log is the journal backend, and T6 is a measurement row after the first release: D125
 - A4 [artifact] C3's gate rows and the architect's review (`track-c-c3-gate`, strata:7cd834b3d): `docs/gates/track-c-c3.md`
 - A5 [artifact] C4: D16's multiplexing and credit (`detent:transport-groups`, `detent:transport-identity`), TLS (`detent:transport-connection`), T7's rows and the control-frame gap that replaces R19's bound (`consensus-flow-bench`, consensus:122564d61; D123), and where D18's retry from a newer checkpoint and its third-failure stop are built or carried: `docs/gates/track-c-c4.md`
-- A6 [artifact] C5: `group-sim`'s simulator and linearizability checker: `docs/gates/phase-3r.md`
+- A6 [artifact] C5: the simulator and linearizability checker, carried by group-heal (group-sim was dropped): `docs/mechanisms/simulator.md`: "linearizability checker judges it"
 - A7 [artifact] SYS-2 and SYS-3 (a): `peer-transport.md` is marked superseded by the landed host transport, with its unbuilt requirements named where each is carried (D125): `docs/design/peer-transport.md`
 - A8 [artifact] Goal 5's audit (`goal5-audit`, consensus:ac323fe6e, `docs/GOAL5-AUDIT.md` in consensus), before `cluster-gate` (D123): `docs/design/track-c.md`
 - A9 [artifact] A gate report per item: C2 completed and C4 written (`track-c-gates`): `docs/gates/track-c-c4.md`
