@@ -753,3 +753,23 @@ Drafts, applied when the code lands; each names the contract it shapes (format-f
 47. `ShardGroups::journal_io()` exposes the host's IO so the test checks a file's mode (completion's
     `detail::PosixFile::flush_mode`), the only observable proof the host's IO took the options.
 
+48. L1: the log's bound stays 16 MiB / 65,536 entries (LOG_BYTES, LOG_ENTRIES in shard_group.h): it bounds replay and
+    the per-open-index memory, not one write (chunks, uploads cross checkpoints). The pressure trigger is half of
+    either; a LogFull proposal runs a checkpoint and retries up to 2 + LOG_BYTES / 1 MiB times (each refused step
+    retires 1 MiB of the cut log), then 503 naming consensus's reason. Every refusal maps to errc::busy (503), never 500.
+    propose_entry keeps a copy of the entry for the retry (one memcpy per entry; ~1 MiB at most, beside its syncs).
+49. L1, RESTORE: an object whose result is a 5xx (the server left it unwritten) makes the RESTORE answer that status
+    (the highest); 4xx objects (the client's own) keep the 200, as master. test_loop_yield's stale case now expects 503.
+50. Every group checkpoint (commit, pressure, a writer's) runs the shard's `on_checkpoint` (Shard::checkpointed) on the
+    chore; the `at` parameter is gone (one hook).
+51. J1: the pool refuses an index path at or inside its journal's directory (errc::invalid, 400) in the catalog's
+    resolve, the first step of any open, client or not; src/endpoint.cc (outside the set) is not touched. A
+    directory inside the journal's directory at start moves to `<journal>.strays/` with a warning.
+52. J2: an open whose journal holds no group (none or lost) over an index with strata applied > 0 or `app.` files
+    refuses with errc::corrupt naming the missing group; checked on the loop before the group is built.
+53. D1: anything thrown after the group's open closes the group (quiesced, close_blocking on the catalog's thread)
+    and refuses with errc::corrupt naming strata's damage reason, logged once per open. N8: the lead's default (a),
+    stated with the recovery path in journal-durability.md ("Refusals at open").
+54. N2 left for the lead: an upload's final whose volume length differs from its blob's size can only come from a
+    proposer bug (ChunkedUpload::end checks the size); the apply-side reaction is a policy (fence the index for good
+    vs. retire the volume and fail the write), not a few lines.
