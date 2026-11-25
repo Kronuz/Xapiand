@@ -44,3 +44,7 @@ strata:be00906f: `docs/design/track-c.md` "Rulings (2026-11-25)" (D125, D123, R1
 
 - Merged strata main into the branch (strata:0b4893be), as the brief asked; the two add/add conflicts were main's PARKED/HISTORY labels on otherwise equal files, resolved to main's.
 - Updated `docs/design/peer-transport.md`'s label: revision 2 passed both re-checks, and the reconciliation names the decision.
+
+## Messages
+
+- msg-1: answered. The five decisions are recorded in strata `docs/design/track-c.md` "Rulings (2026-11-25)" (strata:be00906f): D125 for SYS-8/A3 and SYS-2/SYS-3/A7, D123 for A8's order, R19 as a named item with `consensus-flow-bench` as evidence, the quest text as reconciled. `peer-transport.md` is marked superseded. State is "ready for review".
