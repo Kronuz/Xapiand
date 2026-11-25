@@ -8874,6 +8874,36 @@
       "updated": "2026-11-18T23:27:23",
       "worktree": ""
     },
+    "consensus-group-last": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo >/dev/null && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/consensus/driver.h",
+        "test/driver_*",
+        "CHANGELOG.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "consensus:group-last"
+      ],
+      "repo": "../consensus",
+      "risk": "normal",
+      "status": "planned",
+      "title": "consensus: Driver reports a group's recovered log end",
+      "updated": "2026-11-24T22:46:46"
+    },
     "consensus-hello-limits": {
       "accepted": {},
       "after": [
