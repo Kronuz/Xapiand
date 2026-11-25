@@ -577,3 +577,10 @@ quest fixes them (2 of 5 on 11-20).
 ## eager_open harness: stale binaries pass as evidence (2026-11-24)
 
 - strata bench/eager_open/ab.sh `row` without `--build` runs whatever binaries sit in the build slot's `.scratch/eo`, so a job at commit X with BASE/PROSPECT refs can measure other code (261124-190110-6a800d and 190112-00d680 ran proto 239d51e4 + prospect 4430396 while submitted at aaf38cd2 with PROSPECT c99e6be; the d1000s4 "pass" was void). Fix: `row` refuses unless each side's recorded build commit equals the requested one (or always builds), and the summary prints the sides line. Medium: evidence integrity; field-check-at-map owns the harness (bench/eager_open/** in its set).
+
+## journal-replaces-wal durability round 2 notes (2026-11-24)
+
+- N3 (owner's call, lead default: document it): `commit_blocking` clears `modified`, so a later COMMIT returns without a checkpoint or log cut; track the group's published position instead if it matters after L1.
+- N7: a stored blob's GET reads its whole record into one string (as master did); stream reads when uploads reach GiB sizes.
+- N8 option (b): serve documents and refuse only a damaged volume's blobs at rf = 1 (master's availability), if the owner prefers it over failing the index closed.
+- An index directory alone is no longer a complete index (groups and blob volumes live with the node's journal); copying an index directory to a fresh node no longer carries its writes (probe 60b5b8 "moved"). Owner's call whether index-level copy/move needs a DUMP-style export.
