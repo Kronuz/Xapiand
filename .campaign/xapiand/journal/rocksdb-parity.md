@@ -1,6 +1,6 @@
 # rocksdb-parity: journal
 
-State: working: msg-1 search row (prospect_engine against the quest's strata, 64 runs vs max_runs 0)
+State: waiting on jobs 261125-041712-dedde3 261125-041728-c7bab8 261125-035437-7398ae 261125-020727-610311
 Quest: .campaign/xapiand/quests/rocksdb-parity.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -69,12 +69,27 @@ Launch 1 (2026-11-24): first commit, gap table, one strata-only task.
      40) and stays under 20 at cap 8 (strata:d80addd0).
    - Local (quiet light): all 16 affected ctest entries pass with the edits.
 
+6. msg-1 search row (strata:3292724f probe, strata:e73c2683 notes; pushed):
+   - Probe `bench/kv/probes/rocksdb-parity/search-runs.sh` + `search_runs.py`: prospect
+     `prospect_engine` (prospect:c99e6be, task at strata's pin, one line: `STRATA_MAX_RUNS` sets
+     `merge_policy::max_runs` for `index`) built against the quest's strata; 550k Zipfian docs keyed
+     in order (zero-padded ids), 4 MiB buffer; A, A2 at max_runs 0 (tiers, built apart = A/A),
+     B at 64, C at 16; 200 term / phrase / `+a +b` queries, TOP_10 and COUNT (COUNT = identity).
+     strata has no query bench of its own (search is prospect's); new code is in bench/kv/.
+   - Light probe (shared host, 2 rounds, 500k docs, A2 = same index): A 4 segments, B 62 runs.
+     TOP_10 term p50 59 -> 440 us (7.5x), p99 317 -> 802 (2.5x); AND p50 6.4x, p99 1.5x; phrase
+     p50 3.7x, p99 1.17x; COUNT term 14x/12.9x; COUNT AND 4.0x/2.1x; COUNT phrase p99 tie 0.94.
+     0 count mismatches. About 6.6 us a run per TOP_10 term query. Indexing 43.8 s -> 20.7 s.
+   - Notes: `docs/perf/search-runs.md` (method, light table, reading), sorted-runs.md "Why 64"
+     (search fan-out binds; maps/vnodes per segment; range index negligible; RocksDB and Lucene).
+   - Jobs: strict smoke 261125-041712-dedde3, exclusive A/B with A/A 261125-041728-c7bab8 (after
+     the smoke), both at strata:3292724f, `--ref PROSPECT=prospect@c99e6be`.
+
 ## Next
 
-0. msg-1 (lead, measure a search row at 64 runs before landing): answered here: not done yet;
-   it is the next step after the suite is green: an exclusive term/phrase p50/p99 row on a text
-   index keyed in order, 64 runs against `max_runs = 0` (tiers), then the cap's mechanism named
-   in sorted-runs.md and per-layout caps if search loses.
+0. msg-1: read 261125-041712-dedde3 and 261125-041728-c7bab8; put the exclusive table (A, A2, B,
+   C) in `docs/perf/search-runs.md` "Exclusive A/B" and the note's "Why 64" numbers; answer msg-1
+   with them. Light numbers already pass 10% p99 on every TOP_10 row (see Blocked on).
 0a. Full suite 261125-035437-7398ae at strata:7ba472a4 (the lead merged
    pending/rocksdb-parity/tier-tests into the quest branch and widened the file set; the earlier
    261125-035316-b8b4f2 is cancelled). Mutants/tests/smoke read: size-gate failed only at 387, no-cap only at
@@ -176,7 +191,20 @@ test/catalog_host_test.cc, test/cold_hooks.hh, test/defer_io_test.cc, test/recla
 test/shared_read_test.cc, test/write_buffer_test.cc. Widen to them, then the quest branch
 fast-forwards to ff7b4d97.
 
-Nothing else blocks step 2. One question for the lead, default taken (64): the run cap trades search
+msg-1's verdict (light probe; exclusive pending): 64 runs costs search more than 10% p99 on every
+TOP_10 row (term 2.5x, AND 1.5x, phrase 1.17x) on a sequentially keyed text index, against the
+tiers' 4 segments. `merge_policy::max_runs` is strata's default for every layout, prospect's search
+layout included (prospect's `basic_index_options<search_layout>` takes the default policy), so
+prospect inherits this when it next moves its strata pin. Options, none taken in this step (it
+changes the mechanism): (a) per-layout default: 64 for `document_layout` (keys and stored: no
+postings, only maps and the range index pay), 0 (tiers) for layouts with postings; (b) a lower cap
+for all (C = 16 in the exclusive job shows its cost); (c) merge adjacent runs when the index is
+idle (background work under load is not free); (d) a per-run skip by term bounds: no help on text
+(every run holds the common terms), only fields that follow the key. Recommendation: (a) before
+step 2 lands, a one-line default in `segment_policy` or the layout's options plus a test; prospect
+keeps the tiers it has measured. Lead's call: it changes prospect-visible behavior.
+
+Earlier question, superseded by the numbers above: the run cap trades search
 cost for bytes written. An index of text documents keyed in order (auto-increment ids) now holds
 up to 64 segments where the tiers held about 16, and each segment costs a query its setup
 (query-gap H20: 16 segments cost 1.03-1.58x before P6). Options: (a) keep 64 (KV parity: tenx1
