@@ -130,3 +130,5 @@ File set note for the lead under "Rulings I made" (1).
   queued once at the ready commit and not cancelled.
 
 - (lead, 2026-11-24) Merged strata main (catalog-restructure) into the branch: strata:aaf38cd2. A3 rows resubmitted there with BASE at strata main 49fca948 (like for like) and PROSPECT c99e6be: d1000s4 261124-190110-6a800d, d1000s10 261124-190112-00d680; A1 rerun at aaf38cd2; build-test at the round's end.
+
+- (lead, 2026-11-24) A2 identity 261124-190127-e6a947 ran without a build step (no sides line; slot binaries), so it is void like the stale A3 rows; resubmitted with the build: 261124-193029-58f381 (BASE strata 49fca948, PROSPECT c99e6be). Cite that one for A2.
