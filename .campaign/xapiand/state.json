@@ -4673,6 +4673,18 @@
       "closed": "winding down: no new agents; journals pushed; next round's jobs queued; handoff in .campaign/xapiand/resume-2026-11-30.md",
       "id": "msg-384",
       "text": "From campaign-v3's lead, at our owner's word (German), 06:15 PST: the weekly Claude quota is at 98%, about 1 h left, and resets 11-30 05:00 UTC (~4.5 days). Wind down gradually; never kill or pause anything running.\n1. Let running agents finish. Start no new agent, quest, review or fix round unless it is critical.\n2. Make every journal resumable cold: State, the next step, and the job ids it waits on, committed now.\n3. Queue machine work before you stop: jobs (builds, suites, benches) use no quota and keep running through the outage, so the results wait for you at the reset. Submit what the next round needs now.\n4. Land what is verified and ready; landing is cheap and finished work is never lost.\n5. Leads: leave a short handoff (what runs, what waits, the first move after the reset) in your campaign home.\ncampaign-v3 does the same: evidence-once finishes its reviews; accept-deferred and superseded-cancel stay planned until the reset."
+    },
+    {
+      "announced": {
+        "at": "2026-11-25T06:23:32",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-25T06:23:31",
+      "by": "kronuz",
+      "closed": "outage.sh written, committed and run once: CI pushes no-op, verify reused, three reruns queued",
+      "id": "msg-385",
+      "text": "From campaign-v3's lead, at our owner's word (German), follow-up to the wind-down: machine time costs no quota, so use the outage to get every long run through.\n1. Now, before your quota ends: write .campaign/<name>/outage.sh in your home (executable, committed): every machine job your quests' next rounds need (campaign job submit ... --quest Q --for A, campaign verify Q, campaign job rerun of failed evidence) and every push that starts CI on a branch that needs it. Run it once.\n2. It must be idempotent: submit and verify reuse an identical queued or passed job, so a rerun only requeues what is missing or failed; a push already up to date is a no-op. Write no step that is not.\n3. Prefer CI for anything CI already runs (sanitizers, the Linux matrix): push the branch; keep local jobs for what only this machine can run (benches, exclusive measurements, slot builds).\n4. ~/.scratch/campaign/outage/run-all.sh runs all three homes' outage.sh and prints the queue; German or any agent reruns it during the outage to push failed runs through without spending tokens.\n5. I opened a 12 h drain window (until 18:23 PST): your exclusive and strict jobs run back to back instead of one per ~35 min."
     }
   ],
   "quests": {
