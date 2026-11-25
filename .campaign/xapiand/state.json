@@ -4819,6 +4819,21 @@
         "todo": "82a46430"
       },
       "text": "to do, critical path first:\ntodo: finish track-c (nothing moved it for 2 h: ready for review (strata:be00906f); to land: CI at f2358007137a (carried to be00906f2212 across clean merges): failed: CI (failure) (--no-ci REASON to land without it); listed 31 min): `campaign status track-c`\ntodo: unpark cluster (until journal-replaces-wal, consensus-join-v2 met; new): `campaign set cluster status=active`, or park it again with a reason\ntodo: start more-like-this (launchable; new): `campaign start more-like-this`, or park it with a reason\ntodo: start index-delete (launchable; new): `campaign start index-delete`, or park it with a reason"
+    },
+    {
+      "announced": {
+        "at": "2026-11-25T07:47:41",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-25T07:47:40",
+      "by": "campaign",
+      "closed": "track-c's only red CI job is FreeBSD's rsync copy-back (tests 139/139 passed twice); landing with --no-ci was denied by the permission system, so it waits for the owner",
+      "id": "msg-395",
+      "settles": {
+        "todo": "e5e11a10"
+      },
+      "text": "to do, critical path first:\ntodo: finish track-c (nothing moved it for 2 h: ready for review (strata:be00906f); to land: CI at be00906f2212: failed: CI (failure) (--no-ci REASON to land without it); listed 37 min): `campaign status track-c`"
     }
   ],
   "quests": {
