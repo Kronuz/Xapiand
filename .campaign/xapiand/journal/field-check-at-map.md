@@ -1,6 +1,6 @@
 # field-check-at-map: journal
 
-State: waiting on jobs 261124-190110-6a800d 261124-190112-00d680 (A3 rows at prospect:c99e6be)
+State: waiting on jobs 261124-191203-86c495 261124-191208-75ce14 (A3 rows, rebuilt), 261124-190113-7d240b (A1), 261124-190127-e6a947 (A2)
 Quest: .campaign/xapiand/quests/field-check-at-map.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -54,6 +54,8 @@ Nothing queued: the fix is outside the file set.
 Queued strict A3 rows at strata:6dc38c77 (docs-only over 239d51e4), BASE strata:cfa20b4 as before, PROSPECT prospect:c99e6be, same commands as a057fa/a2c903: d1000s4 261124-190110-6a800d, d1000s10 261124-190112-00d680. No code change, so A1 (73466a) stands and the A1 mutant is not rerun. Then: write the rows into docs/perf/eager-open.md, `campaign verify field-check-at-map`, ready for review. Note: `campaign brief` says main changed 12 files since the branch point; the lead merges main (or tells me to).
 
 Update: main was merged into the branch (strata:aaf38cd2, catalog split only; no field-check or harness path changed), which cancelled my two jobs (185647, 185649). Already queued by someone else at aaf38cd2 (not mine): A3 rows d1000s4 261124-190110-6a800d and d1000s10 261124-190112-00d680 with PROSPECT prospect:c99e6be and BASE strata main 49fca948 (the merge's main parent, a fairer base than cfa20b4). I kept those and cancelled my duplicates. I queued A1 at head 261124-190113-7d240b and A2 identity at prospect c99e6be 261124-190127-e6a947 (BASE cfa20b4). Then build-test via `campaign verify` at the end.
+
+Lead msg (d1000s10 190112-00d680 unchanged by the prospect fix): cause found, harness not at fault. 190110-6a800d and 190112-00d680 were submitted without `--build`, so they ran the slot's stale `.scratch/eo` binaries; the row.log header says `sides: base cfa20b4 prospect 4430396; proto strata 239d51e4 prospect 4430396`, so neither side had c99e6be (ab.sh passes FETCHCONTENT_SOURCE_DIR_PROSPECT to both sides' builds; the bench CMakeLists pin is only the fallback). 190110's pass is void as evidence too. Resubmitted with the build, BASE strata main 49fca948, PROSPECT c99e6be: d1000s4 261124-191203-86c495, d1000s10 261124-191208-75ce14. Their row.log header must name prospect c99e6be on every side; the today arm should drop ~4 KB/index.
 
 ## Next
 
