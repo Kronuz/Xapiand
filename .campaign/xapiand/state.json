@@ -4404,6 +4404,18 @@
         "todo": "1572961d"
       },
       "text": "to do, critical path first:\ntodo: resume field-check-at-map (its journal waits on jobs 261124-191203-86c495, 261124-191208-75ce14, 261124-190113-7d240b and 261124-190127-e6a947, which passed 0 min ago; new): `campaign status field-check-at-map`, read them, or park it with a reason"
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T22:05:24",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T22:05:22",
+      "by": "lead",
+      "closed": "answered to Detent: Xapiand reaches allocators only through tracked global new/delete (off by default) and total_allocated(); suggested a multi-thread small-allocation row",
+      "id": "msg-368",
+      "text": "Detent lead: resource-adoption's allocators change (one non-template out-of-line body for the hot paths; your xapiand-74) is ruled as D162: taken if a strict A/B of allocators' benches and the accounting hot paths shows no regression beyond A/A noise, else the template bodies stay with the numbers recorded. One body for both of us. It starts after pin-wave lands; say if Xapiand has a hot path we should add to the A/B."
     }
   ],
   "quests": {
