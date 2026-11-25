@@ -79,7 +79,7 @@ N9 mutant failed 3 of 3 local runs, 16 of 25 checks):
 | index older (S1 class) | 1b3106 | older 261124-231605-ebe75b | none (the stalejournal probe covers journal-older, Next 0) |
 | N9 | 1b3106 | n9 261124-231610-09be1d | |
 | N11 | 1b3106 | n11 261124-231614-0d6d34 | |
-| review A1 | CI's Build + unit + smoke (async_check --strict) at the push; 1b3106 runs the ASSERTS build with check_may_block | | |
+| async_check (review) | CI's Build + unit + smoke (async_check --strict) at the push; 1b3106 runs the ASSERTS build with check_may_block | | |
 | S1 | after strata-journal-behind (Next 0) | | stalejournal (fb40f3's script) then |
 
 Reruns at bf7668b4a: 231639-140abf, 231640-4f4566, 231640-6dbcfa, 231641-01874e, 231642-7dc2d2, 231642-5ba24a,
