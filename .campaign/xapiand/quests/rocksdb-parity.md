@@ -72,6 +72,12 @@ through Detent's lead (tasks 2, 3, 6, 9, 10, 13 and 14).
 ## Decisions
 
 - Owner, 2026-11-23: A1 is turn-log-parity's A6, unchanged (owner, 2026-11-20, replacing D143).
+- Lead, 2026-11-25 (msg-1 search row, light probe at strata:3292724f): sorted runs pay off only where
+  reads find one run by key (the range index); a postings query fans out over every run (TOP_10 term
+  p99 2.5x slower at 62 runs, about 6.6 us per extra run). So the run cap follows the layout's read
+  shape, one mechanism with one parameter: the layout declares it (key lookup: 64; postings fan-out:
+  0, tiers only), with the exclusive A/B (64, 16, 0) recorded in docs/perf/search-runs.md. A
+  run-aware query path that removes the fan-out cost is a follow-up, not this step.
 
 ## May land early
 
