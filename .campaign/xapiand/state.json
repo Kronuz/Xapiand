@@ -7525,7 +7525,7 @@
         "xapiand:search-fanout",
         "xapiand:cluster-routes"
       ],
-      "reason": "waits only on journal-replaces-wal (consensus-join-v2 landed); resume with a fresh contributor at its landing",
+      "reason": "weekly quota exhausted (campaign-v3 msg-384); unpark at the reset with a fresh contributor (journal-replaces-wal landed)",
       "repo": ".",
       "risk": "high",
       "status": "blocked",
@@ -7555,10 +7555,9 @@
       },
       "title": "Xapiand in a cluster: shard groups, membership, routing, search, API, migration",
       "until": [
-        "journal-replaces-wal",
-        "consensus-join-v2"
+        "2026-11-30T05:00"
       ],
-      "updated": "2026-11-25T05:59:38",
+      "updated": "2026-11-25T07:42:53",
       "worktree": "../Xapiand-wt/xapiand/cluster"
     },
     "cluster-api": {
