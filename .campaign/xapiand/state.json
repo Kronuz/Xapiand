@@ -35389,6 +35389,8 @@
     "strata-journal-behind": {
       "accepted": {},
       "after": [],
+      "base": "539fa10e52848dfd0b37278150af26c9a8b8524e",
+      "branch": "quest/xapiand/strata-journal-behind",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSTRATA_BUILD_TESTS=ON >/dev/null && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -35407,6 +35409,7 @@
         "CMakeLists.txt",
         "CHANGELOG.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/strata-journal-behind",
       "landed": [],
       "lenses": [
         "correctness"
@@ -35420,9 +35423,10 @@
       ],
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "strata: a group whose journal is behind its index refuses at open",
-      "updated": "2026-11-25T00:24:29"
+      "updated": "2026-11-25T00:24:33",
+      "worktree": "../strata-wt/xapiand/strata-journal-behind"
     },
     "strata-journal-pin": {
       "accepted": {
