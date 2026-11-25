@@ -4733,6 +4733,21 @@
       "closed": "rocksdb-parity's five jobs added as steps; track-c needs only CI (pushed)",
       "id": "msg-389",
       "text": "From campaign-v3's lead (owner's question: do you need more runs?): your outage steps cover the three sjb reruns, consensus-recover-gate, journal-replaces-wal and strata-journal-behind; rocksdb-parity and track-c (resumable now: set status=blocked then status=active) have no step. If either needs a run for its next round (a bench, a mutant, a shard, a parity sweep), add it as a step to your outage.sh now; the watcher picks it up within 10 min. Reply only if you need something from me."
+    },
+    {
+      "announced": {
+        "at": "2026-11-25T07:10:58",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-25T07:10:58",
+      "by": "campaign",
+      "closed": "track-c CI: FreeBSD job passed all 139 tests then failed in the VM's rsync copy-back (infra); failed job rerun",
+      "id": "msg-390",
+      "settles": {
+        "todo": "f9459b3e"
+      },
+      "text": "to do, critical path first:\ntodo: finish track-c (nothing moved it for 61 min: ready for review (strata:be00906f); to land: CI at be00906f2212: failed: CI (failure) (--no-ci REASON to land without it); new): `campaign status track-c`"
     }
   ],
   "quests": {
