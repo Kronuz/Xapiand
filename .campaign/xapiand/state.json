@@ -35304,6 +35304,44 @@
       "updated": "2026-11-23T16:53:25",
       "worktree": ""
     },
+    "strata-applied-term": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSTRATA_BUILD_TESTS=ON >/dev/null && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/strata/core/index.hh",
+        "include/strata/core/index_checkpoint.hh",
+        "include/strata/core/index_open.hh",
+        "include/strata/core/manifest*",
+        "include/strata/files/**",
+        "test/index_*",
+        "test/manifest*",
+        "docs/mechanisms/applied-term.md",
+        "CHANGELOG.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "durability"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "strata:applied-term"
+      ],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "strata: the index records the term of the entry it applied last",
+      "updated": "2026-11-25T03:31:10"
+    },
     "strata-engine-callbacks": {
       "accepted": {},
       "after": [],
