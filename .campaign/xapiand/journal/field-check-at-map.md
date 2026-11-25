@@ -89,7 +89,7 @@ Head strata:093bb965 (docs over strata:aaf38cd2, the merge of main). Real builds
 | A5 | `docs/mechanisms/field-check.md`, `docs/perf/eager-open.md` (strata) |
 | A6 | <pending CI> |
 
-Void, not evidence: A3 passes before prospect c99e6be and the rows 261124-190110-6a800d / 190112-00d680 (no build step, stale binaries naming prospect:4430396); A2 261124-190127-e6a947 (no build step); the earlier fails df0b09, fcbe11, a2c903.
+Void, not evidence: A3 passes before prospect c99e6be and the rows 261124-190110-6a800d / 190112-00d680 (no build step, stale binaries naming prospect:4430396); the first identity job (190127-e6a947) (no build step); the earlier fails df0b09, fcbe11, a2c903.
 
 ## Result
 
@@ -149,4 +149,4 @@ Class swept (F1): the three subcommands that run binaries from OUT (row, heap, i
 
 - (lead, 2026-11-24) Merged strata main (catalog-restructure) into the branch: strata:aaf38cd2. A3 rows resubmitted there with BASE at strata main 49fca948 (like for like) and PROSPECT c99e6be: d1000s4 261124-190110-6a800d, d1000s10 261124-190112-00d680; A1 rerun at aaf38cd2; build-test at the round's end.
 
-- (lead, 2026-11-24) A2 identity 261124-190127-e6a947 ran without a build step (no sides line; slot binaries), so it is void like the stale A3 rows; resubmitted with the build: 261124-193029-58f381 (BASE strata 49fca948, PROSPECT c99e6be). Cite that one for A2.
+- (lead, 2026-11-24) The first identity job (190127-e6a947) ran without a build step (no sides line; slot binaries), so it is void like the stale A3 rows; resubmitted with the build: 261124-193029-58f381 (BASE strata 49fca948, PROSPECT c99e6be). Cite that one for A2.
