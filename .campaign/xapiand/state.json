@@ -4646,6 +4646,21 @@
         "todo": "06826f95"
       },
       "text": "to do, critical path first:\ntodo: start track-c (launchable; new): `campaign start track-c`, or park it with a reason"
+    },
+    {
+      "announced": {
+        "at": "2026-11-25T06:07:34",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-25T06:07:33",
+      "by": "campaign",
+      "closed": "answered track-c's five decisions by message",
+      "id": "msg-383",
+      "settles": {
+        "todo": "245a63b4"
+      },
+      "text": "to do, critical path first:\ntodo: answer track-c (its journal waits on the lead: blocked on owner and lead: SYS-8, SYS-2/SYS-3 (A7), A8 order, R19, quest text; it asks: The five decisions in that section's last list, each with options and a recommendation: SYS-8 and A3 (owner), SYS-2/SYS-3 and A7 (owner), A8's order (lead), R19 (lead), the quest's text and group-install's contract (lead).; new): `campaign status track-c`, answer it (`campaign message track-c TEXT`), or park it with a reason"
     }
   ],
   "quests": {
