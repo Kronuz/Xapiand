@@ -22980,11 +22980,15 @@
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
+      "reason": "weekly quota exhausted (campaign-v3 msg-384); start at the reset with a fresh contributor, critical path first",
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "blocked",
       "title": "?nearest, ?fuzzy and document terms, back on strata",
-      "updated": "2026-11-20T18:21:34"
+      "until": [
+        "2026-11-30T05:00"
+      ],
+      "updated": "2026-11-25T07:42:39"
     },
     "msgpack-unpacker-limits": {
       "accepted": {},
