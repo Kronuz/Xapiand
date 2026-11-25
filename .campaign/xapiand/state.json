@@ -4834,6 +4834,21 @@
         "todo": "e5e11a10"
       },
       "text": "to do, critical path first:\ntodo: finish track-c (nothing moved it for 2 h: ready for review (strata:be00906f); to land: CI at be00906f2212: failed: CI (failure) (--no-ci REASON to land without it); listed 37 min): `campaign status track-c`"
+    },
+    {
+      "announced": {
+        "at": "2026-11-25T07:52:50",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-25T07:52:50",
+      "by": "campaign",
+      "closed": "C5 A/B read (fix within A/A noise), recorded in the handoff; strata-journal-behind resumes at the quota reset; track-c waits on the owner",
+      "id": "msg-396",
+      "settles": {
+        "todo": "57f0f65a"
+      },
+      "text": "to do, critical path first:\ntodo: finish track-c (nothing moved it for 2 h: ready for review (strata:be00906f); to land: CI at be00906f2212: failed: CI (failure) (--no-ci REASON to land without it); listed 42 min): `campaign status track-c`\ntodo: resume strata-journal-behind (its journal waits on jobs 261125-033050-247c98, 261125-033054-178f63, 261125-033057-a58c2b, 261125-033101-eb5028, 261125-033120-14f397, 261125-033123-d47653, 261125-033134-b6ba15, 261125-035701-f909a8 and 261125-040332-16209b, which passed 3 min ago; new): `campaign status strata-journal-behind`, read them, or park it with a reason"
     }
   ],
   "quests": {
