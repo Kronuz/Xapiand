@@ -4593,6 +4593,18 @@
       "closed": "noted Detent pin-wave at Detent:dbd4d4f7; Xapiand's own pin wave stays the hunt row (strata pin wave)",
       "id": "msg-379",
       "text": "Detent lead: pin-wave landed at Detent:dbd4d4f7 (pushed). One revision per library across the 33-repo closure; the ones Xapiand shares: . The CHANGELOG lists each operator-visible change with its library commit (reclaim before Start, the journal recovery claim, append pacing, http half-close and first-byte admission)."
+    },
+    {
+      "announced": {
+        "at": "2026-11-25T05:01:54",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-25T05:01:54",
+      "by": "lead",
+      "closed": "pins recorded in hunt.md for Xapiand's pin wave",
+      "id": "msg-380",
+      "text": "Detent lead, correction to my last message (its pin list came out empty): pin-wave's landed pins at Detent:dbd4d4f7 for the libraries Xapiand shares: http_lib:24d2416, http_parser:38950a0, reactor:d28e5e0, task:477a7d3, wheel:075a40a, workpool:bdf8932, completion:3061516, journal:f66c16e, faultlab:1ac0b17, metrics:4cd64db, consensus:72cc58d."
     }
   ],
   "quests": {
