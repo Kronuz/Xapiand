@@ -1,6 +1,6 @@
 # journal-replaces-wal: journal
 
-State: ready for review; T1 (TSan finding at 1933c78f9) fixed at Xapiand:66bcd87eb (pushed at ca2a27058); waiting on jobs 261125-043517-a4b25b (T1 x20, L1 x5), mutants 261125-043520-724b20 (pressure), 261125-043523-718f1e (full), TSan 261125-043535-432e87 (L1 and T1 x20), 261125-043538-76be33 (test_pool, shard_group, node), no-wal 261125-043544-9e00b8, crash (held to the round's end), CI at ca2a27058. S1 waits on strata-journal-behind (Next 0).
+State: ready for review; T1 (TSan finding at 1933c78f9) fixed at Xapiand:66bcd87eb (pushed at ca2a27058); waiting on jobs 261125-043517-a4b25b (T1 x20, L1 x5), mutants 261125-043520-724b20 (pressure), 261125-043523-718f1e (full), TSan 261125-043535-432e87 (L1 and T1 x20), 261125-043538-76be33 (test_pool, shard_group, node), no-wal 261125-043544-9e00b8 passed; crash (held to the round's end), CI at ca2a27058. S1 waits on strata-journal-behind (Next 0).
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
