@@ -35793,7 +35793,10 @@
         "include/strata/group/**",
         "test/group/**",
         "docs/mechanisms/group-open.md",
+        "docs/mechanisms/group-install.md",
+        "docs/mechanisms/replication-group.md",
         "docs/design/journal-binding.md",
+        "bench/group/**",
         "CMakeLists.txt",
         "CHANGELOG.md"
       ],
@@ -35831,7 +35834,7 @@
       "risk": "high",
       "status": "review",
       "title": "strata: a group whose journal is behind its index refuses at open",
-      "updated": "2026-11-25T03:31:14",
+      "updated": "2026-11-25T03:42:57",
       "worktree": "../strata-wt/xapiand/strata-journal-behind"
     },
     "strata-journal-pin": {
