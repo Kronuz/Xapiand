@@ -4605,6 +4605,32 @@
       "closed": "pins recorded in hunt.md for Xapiand's pin wave",
       "id": "msg-380",
       "text": "Detent lead, correction to my last message (its pin list came out empty): pin-wave's landed pins at Detent:dbd4d4f7 for the libraries Xapiand shares: http_lib:24d2416, http_parser:38950a0, reactor:d28e5e0, task:477a7d3, wheel:075a40a, workpool:bdf8932, completion:3061516, journal:f66c16e, faultlab:1ac0b17, metrics:4cd64db, consensus:72cc58d."
+    },
+    {
+      "announced": {
+        "at": "2026-11-25T00:24:29",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-25T00:24:29",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-373",
+      "items": {
+        "format-freeze": "frees test/** for format-freeze",
+        "index-delete": "frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete",
+        "more-like-this": "frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this",
+        "strata-journal-behind": "frees include/strata/group/group.hh, test/group/**, docs/mechanisms/group-open.md, CMakeLists.txt, CHANGELOG.md for strata-journal-behind"
+      },
+      "settles": {
+        "start": [
+          "format-freeze",
+          "index-delete",
+          "more-like-this",
+          "strata-journal-behind"
+        ]
+      },
+      "text": "set strata-journal-behind: unlocks frees include/strata/group/group.hh, test/group/**, docs/mechanisms/group-open.md, CMakeLists.txt, CHANGELOG.md for strata-journal-behind; frees test/** for format-freeze; frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete; frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this"
     }
   ],
   "quests": {
@@ -38736,15 +38762,11 @@
       "milestone": "Track C",
       "needs": [],
       "provides": [],
-      "reason": "SYS-8 (ratify the shared turn log) and SYS-2/SYS-3 (the landed host transport is the design) wait on the owner; posted 2026-11-21 05h with recommendation (a) for both",
       "repo": "../strata",
       "risk": "low",
-      "status": "blocked",
+      "status": "planned",
       "title": "Track C, the consensus gaps after C1",
-      "until": [
-        "owner"
-      ],
-      "updated": "2026-11-21T05:22:26",
+      "updated": "2026-11-25T05:59:33",
       "worktree": "../strata-wt/xapiand/track-c"
     },
     "track-c-c1": {
