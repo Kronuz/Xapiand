@@ -1,6 +1,6 @@
 # field-check-at-map: journal
 
-State: blocked on lead: d1000s10 memory gap is prospect's pool-reader cache placement (options under Blocked on)
+State: waiting on jobs 261124-185647-29ad76 261124-185649-bbc152 (A3 rows at prospect:c99e6be)
 Quest: .campaign/xapiand/quests/field-check-at-map.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -48,6 +48,10 @@ Measured (`~/.scratch/xapiand/field-check-at-map`, 1,000 indexes, d1000s10):
 
 Docs: strata:6dc38c77 (`docs/perf/eager-open.md` "The record's size", field-check.md), pushed.
 Nothing queued: the fix is outside the file set.
+
+## Resume (prospect-pool-reader-transient landed at prospect:c99e6be)
+
+Queued strict A3 rows at strata:6dc38c77 (docs-only over 239d51e4), BASE strata:cfa20b4 as before, PROSPECT prospect:c99e6be, same commands as a057fa/a2c903: d1000s4 261124-185647-29ad76, d1000s10 261124-185649-bbc152. No code change, so A1 (73466a) stands and the A1 mutant is not rerun. Then: write the rows into docs/perf/eager-open.md, `campaign verify field-check-at-map`, ready for review. Note: `campaign brief` says main changed 12 files since the branch point; the lead merges main (or tells me to).
 
 ## Next
 
