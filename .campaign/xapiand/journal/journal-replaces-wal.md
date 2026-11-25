@@ -1,6 +1,6 @@
 # journal-replaces-wal: journal
 
-State: implementing the durability review's round-2 fixes (L1, J1, J2, D1; N2, N5) at Xapiand:33c922879. Next: code, then targeted tests, then evidence once.
+State: waiting on jobs (round 2 at Xapiand:98ea84a70, pushed; listed under Session 19 below) and CI. Next: read them; the crash check reruns at the round's end (State ready for review); then `campaign accept ... durability --confirm` is the lead's.
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
@@ -26,7 +26,30 @@ the group opened.
 Paths into the journal's directory (J class): a client path naming it or inside it is refused by the pool before
 resolve creates anything (J1, N6); a directory left there by an earlier build is moved aside before the host scans.
 
-Plan: (1) D1 and J2 in ShardEndpoint::open_blocking; (2) J1 in the pool's resolve and ShardGroups' constructor;
+Done (Xapiand:f76c395e4 fixes, Xapiand:98ea84a70 test_loop_yield; local quiet-light runs, not evidence): test_pool
+2,730 checks, test_shard_group 128, test_loop_yield 879, test_node 3,417, group_chunk_group (stride 7) 12; the four
+new tests 206 + 8 + 9 + 5 checks. Local probe runs: refusal (copy) damage ok, lost ok (refused naming the journal at
+`.xapiand/indexes/.__1`, every app file byte-equal: a node whose journal is lost refuses every index that holds state,
+system indexes included, and serves nothing until the journal is back); journalname 0 of 4 failing; journalpath FAIL
+in the reviewer's script only because its criterion counts the journal's own new group files for the allowed
+`PUT /.xapiand/x` (5 `groups-*` files): the copy in .scratch/xapiand/jrw-round2/ checks for files in a subdirectory
+and both journal paths answering 400, and passes. The RESTORE status change also moved
+test_a_throwing_apply_slice_fails_one_write's expectation to 5xx.
+
+Jobs at Xapiand:98ea84a70 (finding -> confirming job; mutant branches mutant/jrw-r2-*, `--fails-without`):
+
+| Finding | Test job | Mutant (must fail) | Probe (confirming) |
+|---|---|---|---|
+| L1 | 261124-201352-cf165a (four pool tests + test_loop_yield) | l1 261124-201402-16805d; restore-status 261124-201411-01a364 | reviewer's job-node.sh 261124-201426-429bdc; job-after.sh 261124-201427-e8ef49; fullcrash 261124-201434-2c5992 |
+| J1, N6 | cf165a | j1-refuse 261124-201404-07df1f; j1-strays 261124-201406-0ce20a | reviewer's journalname 261124-201429-92f1d4; journalpath (copy) 261124-201431-758b53 |
+| J2 | cf165a | j2 261124-201408-5abd1c | refusal (copy) 261124-201432-1276d7, case lost |
+| D1 | cf165a | d1 261124-201409-4408e8 | refusal (copy) 261124-201432-1276d7, case damage |
+
+`campaign verify`: no-wal 261124-201441-aece7b; crash held until State is ready for review (the tool). Reruns at
+98ea84a70: dc72b4, 3af3d1, 12db66, 82a484, 7f5e03, d121f9, 0976b5, 7a8cbf, 826ac3, fdb9b5, e71655, 2f1df2
+(all 261124-2014xx). N2 left (ruling 54); N3, N7 and N8 (b) the lead's.
+
+Plan (done): (1) D1 and J2 in ShardEndpoint::open_blocking; (2) J1 in the pool's resolve and ShardGroups' constructor;
 (3) L1 in propose_entry (pressure trigger, LogFull wait, 503) and the RESTORE's status; (4) N2, N5; tests in
 test_pool.cc and test_shard_group.cc, one per class transition; mutants per fix; the reviewer's probes rerun.
 
