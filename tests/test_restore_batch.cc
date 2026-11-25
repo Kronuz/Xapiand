@@ -65,7 +65,7 @@ struct Replica {
 	explicit Replica(const char* name) : dir(std::filesystem::current_path() / name) {
 		std::filesystem::remove_all(dir);
 		std::filesystem::create_directories(dir);
-		io.emplace(dir);
+		io.emplace(dir, kronuz::journal::PosixIOOptions{kronuz::journal::FlushMode::plain});
 		index.emplace(prospect::index::create(*io, engine::strata::index_options({}), engine::strata::new_uuid()));
 		files.emplace(*io);
 		app.emplace(*index);

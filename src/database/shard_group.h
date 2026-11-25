@@ -179,6 +179,8 @@ public:
 	// The options the journal's IO was built with (engine::strata::posix_io_options()): `--full-flush-ordering`
 	// reaches the turn log's ordering barrier, and its per-volume warning names the switch (D10).
 	const kronuz::journal::PosixIOOptions& io_options() const noexcept { return io_options_; }
+	// The journal host's IO: a file it opens syncs in the options' flush mode.
+	kronuz::journal::IO& journal_io() noexcept { return host_->io(); }
 
 private:
 	// A task scheduler driven by a thread of its own until end().

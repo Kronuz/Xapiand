@@ -180,12 +180,12 @@ struct Node {
 	explicit Node(fs::path r) : root(std::move(r)) {
 		fs::create_directories(root / "host");
 		fs::create_directories(root / "shard");
-		host = std::make_unique<j::Host>(std::make_shared<j::PosixIO>(root / "host"), j::Identity{'X', 'H'}, j::HostOptions{1, j::TurnLogOptions{8u << 20, 32u << 10, 1, 4, 1u << 20}});
+		host = std::make_unique<j::Host>(std::make_shared<j::PosixIO>(root / "host", j::PosixIOOptions{j::FlushMode::plain}), j::Identity{'X', 'H'}, j::HostOptions{1, j::TurnLogOptions{8u << 20, 32u << 10, 1, 4, 1u << 20}});
 		lp = std::make_unique<sg::loop>(loop_ref(), j::completion_ref::of(inline_io), *host, 0, 7);
 		task::spawn(loop_ref(), host->driver(0).run(j::completion_ref::of(held), stop.token()), [this](std::exception_ptr) { turns_done = true; });
 		task::spawn(loop_ref(), lp->run(stop.token()), [this](std::exception_ptr) { driver_done = true; });
 		app.index = [this]() -> const prospect::index& { return *ix; };
-		io = std::make_unique<j::PosixIO>(root / "shard");
+		io = std::make_unique<j::PosixIO>(root / "shard", j::PosixIOOptions{j::FlushMode::plain});
 		ix.emplace(group_type::open_index(*io, engine::strata::index_options({}), UUID));
 		g = std::make_unique<group_type>(*lp, config(), *io, *ix, app, task::scheduler_ref::of(chore_s));
 		propose = [this](std::string entry, sg::ack level) { return g->propose(std::move(entry), level); };

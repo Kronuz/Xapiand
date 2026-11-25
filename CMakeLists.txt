@@ -757,6 +757,9 @@ include_directories("${ZSTD_INCLUDE_DIR}")
 # prospect: the search layout on the strata segment core, behind the strata engine
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
 # strata and the libraries strata links.
+# journal and completion ahead of strata's pins: the flush mode PosixIO requires (journal-sync-mode, D177).
+FetchContent_Declare(completion GIT_REPOSITORY https://github.com/Kronuz/completion.git GIT_TAG b4600a82a8d30d4f63541d9c322a4ac5eceaee95)  # completion main: PosixIOOptions{FlushMode::plain|full}
+FetchContent_Declare(journal GIT_REPOSITORY https://github.com/Kronuz/journal.git GIT_TAG fc5c59b492ff8275ab8be4aa9599c6ca2ae97859)  # journal main: a Host follows its IO's flush mode
 FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 7a4284c4cdb2511d9a69613acd73ed6be36b8335)  # strata main: file-set seals stream their CRC32C (file-set-seal-streaming)
 FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG eef601dce70260cc5a58e2089168d1cf1c7a8982)  # prospect main: completion's read-only opens, damaged segments at first map
 FetchContent_MakeAvailable(prospect)
@@ -1909,7 +1912,7 @@ if (BUILD_TESTS)
 		endforeach ()
 
 		# faultlab's faultfs, the crash model test_pool runs its indexes on; it reuses strata's completion target.
-		FetchContent_Declare(faultlab GIT_REPOSITORY https://github.com/Kronuz/faultlab.git GIT_TAG e3fcfe3ca197d40e53371dffee1497708fc438b5)
+		FetchContent_Declare(faultlab GIT_REPOSITORY https://github.com/Kronuz/faultlab.git GIT_TAG 83fbde73c008e15e64ea7aa73c4c3b9b94e0599c)  # faultlab main: plain and full syncs, journal's pin
 		FetchContent_MakeAvailable(faultlab)
 		target_link_libraries(${PROJECT_NAME}_test_pool PRIVATE faultlab::faultlab)
 

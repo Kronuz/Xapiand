@@ -596,7 +596,7 @@ DatabasePool::make_host(std::size_t soft_open, const IndexSweep& sweep)
 		const auto dir = (fs::path(path) / "strata").string();
 		const auto open = [&] {
 			return strata::counted_io::make(op.counts, [&] {
-				return std::make_unique<kronuz::journal::PosixIO>(dir, 0600, engine::strata::posix_io_options());
+				return std::make_unique<kronuz::journal::PosixIO>(dir, engine::strata::posix_io_options());
 			});
 		};
 		// The directory's open is its existence check: a reopen pays no separate stat (cheap-reopen D2).

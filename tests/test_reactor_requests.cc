@@ -492,7 +492,7 @@ static void test_a_cancelled_request_leaves_the_pin_queue() {
 		opens.wait();
 		const auto dir = (std::filesystem::path(at) / "strata").string();
 		std::filesystem::create_directories(dir);
-		return std::make_unique<kronuz::journal::PosixIO>(dir, 0600, kronuz::journal::PosixIOOptions{true, true});
+		return std::make_unique<kronuz::journal::PosixIO>(dir, kronuz::journal::PosixIOOptions{kronuz::journal::FlushMode::plain, true, true});
 	});
 	const auto path = fresh("pin_cancel");
 	std::thread opener([&] { (void)pin_index(pool, path, WRITE); });

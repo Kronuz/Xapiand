@@ -555,7 +555,7 @@ void test_an_index_is_a_lone_voter_group() {
 			engine::sync_wait(shard.add_document(make("K" + std::to_string(process), "v")));
 			CHECK_TRUE(engine::sync_wait(shard.commit()));
 		}
-		kronuz::journal::Host host(std::make_shared<kronuz::journal::PosixIO>(journal), kronuz::journal::Identity{'X', 'H'}, kronuz::journal::HostOptions{1, kronuz::journal::TurnLogOptions{}});
+		kronuz::journal::Host host(std::make_shared<kronuz::journal::PosixIO>(journal, kronuz::journal::PosixIOOptions{kronuz::journal::FlushMode::plain}), kronuz::journal::Identity{'X', 'H'}, kronuz::journal::HostOptions{1, kronuz::journal::TurnLogOptions{}});
 		CHECK(host.status(id) == kronuz::journal::GroupStatus::closed);
 	}
 	std::filesystem::remove_all(journal);

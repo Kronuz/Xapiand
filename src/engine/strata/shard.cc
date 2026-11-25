@@ -466,7 +466,7 @@ acquire(const std::string& path, bool create_missing, bool& created, const OpenO
 		}
 		auto core = std::make_unique<Core>();
 		core->dir = dir;
-		core->io = std::make_unique<kronuz::journal::PosixIO>(dir, 0600, engine::strata::posix_io_options());
+		core->io = std::make_unique<kronuz::journal::PosixIO>(dir, engine::strata::posix_io_options());
 		core->drain_timeout = host.drain_timeout;
 		core->options = index_options(host);
 		core->host = host.host;

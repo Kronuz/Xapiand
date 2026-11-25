@@ -71,7 +71,7 @@ struct Replica {
 	explicit Replica(const char* name) : dir(std::filesystem::current_path() / name) {
 		std::filesystem::remove_all(dir);
 		std::filesystem::create_directories(dir);
-		io.emplace(dir);
+		io.emplace(dir, kronuz::journal::PosixIOOptions{kronuz::journal::FlushMode::plain});
 		index.emplace(prospect::index::create(*io, engine::strata::index_options({}), engine::strata::new_uuid()));
 		files.emplace(*io);
 		app.emplace(*index);
@@ -351,7 +351,7 @@ void test_a_seal_reads_its_volume_in_bounded_pieces() {
 	std::filesystem::create_directories(dir);
 	std::size_t largest = 0;
 	{
-		kronuz::journal::PosixIO io(dir);
+		kronuz::journal::PosixIO io(dir, kronuz::journal::PosixIOOptions{kronuz::journal::FlushMode::plain});
 		auto index = prospect::index::create(io, engine::strata::index_options({}), engine::strata::new_uuid());
 		ReadBoundIO bounded(io, largest);
 		strata::group::file_set files(bounded);
@@ -486,8 +486,9 @@ void test_state_bytes() {
 	}
 }
 
-// --full-flush-ordering reaches the journal's IO (D10): the host's PosixIO takes posix_io_options(), the switch and
-// the barrier warning that names it. Those options admit a group-writable directory, which PosixIO's defaults refuse.
+// --full-flush-ordering reaches the journal's IO (D10, D177): the host's PosixIO takes posix_io_options(), a file it
+// opens syncs plain by default and full under the switch, and the barrier warning names it. Those options admit a
+// group-writable directory, which PosixIO's defaults refuse.
 void test_the_journal_io_takes_the_io_options() {
 	const auto dir = std::filesystem::current_path() / "shard_group_io_options";
 	std::filesystem::remove_all(dir);
@@ -499,8 +500,14 @@ void test_the_journal_io_takes_the_io_options() {
 		bool opened = false;
 		try {
 			ShardGroups groups(dir.string(), 1);
-			CHECK_EQ(groups.io_options().full_flush_ordering, full);
+			const auto mode = full ? kronuz::journal::FlushMode::full : kronuz::journal::FlushMode::plain;
+			CHECK(groups.io_options().flush_mode == mode);
 			CHECK(groups.io_options().barrier_warning == &engine::strata::log_barrier_warning);
+			auto file = groups.journal_io().create_exclusive("flush-mode-probe");
+			const auto* posix = dynamic_cast<const kronuz::journal::detail::PosixFile*>(file.get());
+			CHECK(posix != nullptr && posix->flush_mode() == mode);
+			file.reset();
+			std::filesystem::remove(dir / "flush-mode-probe");
 			opened = true;
 		} catch (const std::exception& e) {
 			std::fprintf(stderr, "  the journal host refused its directory: %s\n", e.what());
