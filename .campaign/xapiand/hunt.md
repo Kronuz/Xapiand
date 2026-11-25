@@ -584,3 +584,4 @@ quest fixes them (2 of 5 on 11-20).
 - N7: a stored blob's GET reads its whole record into one string (as master did); stream reads when uploads reach GiB sizes.
 - N8 option (b): serve documents and refuse only a damaged volume's blobs at rf = 1 (master's availability), if the owner prefers it over failing the index closed.
 - An index directory alone is no longer a complete index (groups and blob volumes live with the node's journal); copying an index directory to a fresh node no longer carries its writes (probe 60b5b8 "moved"). Owner's call whether index-level copy/move needs a DUMP-style export.
+- N2 (journal-replaces-wal round 2, ruling 54): an upload's final whose volume length differs from the record's size is only reachable through a proposer bug (ChunkedUpload::end checks it). Lead default: fence the index (fail closed, like N8 (a)) with a log line naming the volume; low priority, after landing.
