@@ -9381,9 +9381,9 @@
       ],
       "repo": "../consensus",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "consensus: recover refuses, before Start, a log that retains no accepted boundary",
-      "updated": "2026-11-25T03:32:13",
+      "updated": "2026-11-25T03:57:28",
       "worktree": "../consensus-wt/xapiand/consensus-recover-gate"
     },
     "consensus-request-install": {
