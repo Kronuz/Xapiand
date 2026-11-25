@@ -34,7 +34,9 @@
 #include <system_error>           // for std::system_error
 #include <thread>                 // for std::this_thread
 #include <unordered_map>          // for std::unordered_map
-#include <utility>                // for std::exchange
+#include <utility>                // for std::exchange, std::pair
+
+#include <sys/stat.h>             // for stat, dev_t, ino_t
 
 #include "at_end.h"               // for at_end::assert_none
 #include "database/flags.h"       // for readable_flags
@@ -569,6 +571,32 @@ inside(const std::string& path, const std::string& directory)
 	return std::mismatch(d.begin(), d.end(), p.begin(), p.end()).first == d.end();
 }
 
+// Whether `path` names the directory `id` identifies, or a place under it, by any spelling (a case-folding volume, a
+// symlink): its deepest existing ancestor, made physical, is that directory or under it, by device and inode.
+bool
+reaches(const std::string& path, const std::pair<dev_t, ino_t>& id)
+{
+	namespace fs = std::filesystem;
+	std::error_code ec;
+	fs::path at(path);
+	while (!at.empty() && !fs::exists(at, ec)) {
+		at = at.parent_path();
+	}
+	auto physical = fs::canonical(at.empty() ? fs::path(".") : at, ec);
+	if (ec) {
+		return false;
+	}
+	for (;; physical = physical.parent_path()) {
+		struct stat st;
+		if (::stat(physical.c_str(), &st) == 0 && st.st_dev == id.first && st.st_ino == id.second) {
+			return true;
+		}
+		if (!physical.has_relative_path()) {
+			return false;
+		}
+	}
+}
+
 // A pin's failure as the engine's error: an absent index is not_found, a closed catalog not_available, and
 // strata's own failures are translated; anything else (the group's recovery) leaves as it is.
 [[noreturn]] void
@@ -633,6 +661,10 @@ DatabasePool::make_host(std::size_t soft_open, const IndexSweep& sweep)
 		} catch (const std::system_error& exc) {
 			if (exc.code() != std::errc::no_such_file_or_directory && exc.code() != std::errc::not_a_directory) {
 				throw;
+			}
+			// Another spelling of the journal's directory (J1b): checked on a miss only, so a reopen pays nothing.
+			if (journal_id_ && reaches(path, *journal_id_)) {
+				throw engine::Error(engine::errc::invalid, "Index path " + repr(path) + " is the journal's directory " + repr(journal_) + " or inside it under another spelling, a reserved name");
 			}
 			if (!op.create) {
 				throw strata::index_not_created("No such database: " + path);
@@ -719,6 +751,11 @@ DatabasePool::set_journal(const std::string& directory)
 {
 	groups_ = std::make_unique<ShardGroups>(directory);
 	journal_ = comparable_path(directory, false).string();
+	struct stat st;
+	if (::stat(directory.c_str(), &st) != 0) {
+		throw std::system_error(errno, std::generic_category(), "The journal's directory " + repr(directory));
+	}
+	journal_id_.emplace(st.st_dev, st.st_ino);
 }
 
 

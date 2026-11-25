@@ -29,6 +29,7 @@
 #include "test_harness.h"
 
 #include <algorithm>
+#include <cctype>
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -132,6 +133,10 @@ using A = PoolTestAccess;
 IndexCatalog& one_catalog(DatabasePool& pool) {
 	CHECK_EQ(pool.partitions(), 1u);
 	return pool.partition(0);
+}
+
+std::string fresh_name(const char* name) {
+	return std::string("pool_test_") + name + ".db";
 }
 
 std::string fresh(const char* name) {
@@ -2885,7 +2890,7 @@ void test_a_log_past_its_bound_checkpoints_instead_of_refusing() {
 		CHECK_EQ(up_refused, std::string());
 		CHECK_FALSE(slow.load());   // the slow checkpoint ran during the upload
 		CHECK_TRUE(checkpointed());
-		CHECK_LT(group->log_bytes.load(), LOG_BYTES);
+		CHECK_LT(group->log_bytes(), LOG_BYTES);
 
 		CHECK_EQ(written.size(), 2 * N);
 		std::size_t differ = 0;
@@ -2909,7 +2914,8 @@ void test_a_log_past_its_bound_checkpoints_instead_of_refusing() {
 }
 
 // The journal's directory holds its own files only (J1): an index path at or inside it is refused before anything
-// is created, and a directory an earlier build let an index make there is moved aside, so the journal opens.
+// is created, and a directory an earlier build let an index make there is moved aside with its bytes, so the journal
+// opens: its old path stays refused, and an index committed before the start serves after it.
 void test_an_index_inside_the_journal_is_refused() {
 	namespace fs = std::filesystem;
 	const auto journal = fresh("journal_inside");
@@ -2930,15 +2936,27 @@ void test_an_index_inside_the_journal_is_refused() {
 		}
 		CHECK(listing() == before);
 		const auto sibling = fresh("journal_insidex");   // a name that starts like the journal's is an index
-		CHECK_TRUE(static_cast<bool>(pin(pool, sibling)));
-		fs::remove_all(sibling);
+		Shard shard(pin(pool, sibling), WRITE);
+		engine::sync_wait(shard.add_document(make("Ka", "a")));
+		CHECK_TRUE(engine::sync_wait(shard.commit()));
 	}
 	fs::create_directories(journal + "/groups-abc-000000001/x/strata");
+	fs::create_directories(journal + "/x/.__1/strata");
 	{
 		DatabasePool pool(control_loop(), 8);
 		pool.set_journal(journal);
 		CHECK_TRUE(fs::is_directory(journal + ".strays/groups-abc-000000001/x/strata"));
+		CHECK_TRUE(fs::is_directory(journal + ".strays/x/.__1/strata"));   // kept, not deleted
 		CHECK_FALSE(fs::exists(journal + "/groups-abc-000000001"));
+		CHECK_FALSE(fs::exists(journal + "/x"));
+		CHECK(error_kind([&] { pin(pool, journal + "/x/.__1", DB_OPEN); }) == engine::errc::invalid);
+		{
+			// An index committed before the start serves after it.
+			const auto sibling = fresh_name("journal_insidex");
+			Shard reader(pin(pool, sibling), WRITE);
+			CHECK_EQ(engine::sync_wait(reader.engine_for_read())->doc_count(), 1u);
+			fs::remove_all(sibling);
+		}
 		const auto path = fresh("group_inside");
 		Shard shard(pin(pool, path), WRITE);
 		engine::sync_wait(shard.add_document(make("Ka", "a")));
@@ -3027,6 +3045,133 @@ void test_a_damaged_volume_refuses_its_index() {
 	fs::remove_all(path);
 }
 
+// Checkpoints that overlap (a COMMIT's, a writer's, the pressure one) cut the log's count once (N9): rounds of writes
+// each followed by two checkpoints at once leave the count at most what was placed since, never wrapped.
+void test_overlapping_checkpoints_cut_the_log_count_once() {
+	Watchdog watchdog("overlapping checkpoints", 120s);
+	const auto journal = fresh("journal_overlap");
+	const auto path = fresh("group_overlap");
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		auto entry = pin(pool, path);
+		Shard shard = use(entry, WRITE);
+		auto* group = shard.group();
+		REQUIRE(group != nullptr);
+		for (int round = 0; round < 8; ++round) {
+			for (int i = 0; i < 4; ++i) {
+				engine::sync_wait(shard.add_document(make("Ko" + std::to_string(round) + "_" + std::to_string(i), std::string(4096, 'o'))));
+			}
+			CHECK_GT(group->log_bytes(), 0u);
+			std::thread other([&] { engine::sync_wait(checkpoint(*group)); });
+			engine::sync_wait(checkpoint(*group));
+			other.join();
+			CHECK_EQ(group->log_bytes(), 0u);
+			CHECK_EQ(group->log_entries(), 0u);
+		}
+	}
+	std::filesystem::remove_all(journal);
+	std::filesystem::remove_all(path);
+}
+
+// A refusal that passes with time is a 503 (errc::busy); any other consensus refusal (an entry too large, a duplicate
+// request) is a proposer's bug, a 500 (N11).
+void test_only_a_passing_refusal_is_busy() {
+	using R = kronuz::consensus::RejectReason;
+	for (const auto reason : {R::LogFull, R::Busy, R::NotLeader, R::NotReady}) {
+		CHECK(refusal_kind(reason) == engine::errc::busy);
+	}
+	for (const auto reason : {R::TooLarge, R::DuplicateRequest, R::InvalidCheckpoint, R::InvalidRepair, R::LeaderMustTransfer, R::InvalidMembership, R::InvalidTarget, R::Current}) {
+		CHECK(refusal_kind(reason) == engine::errc::internal);
+	}
+}
+
+// Every file under `root` and its bytes, by path.
+std::map<std::string, std::string> tree_of(const std::string& root) {
+	std::map<std::string, std::string> out;
+	for (const auto& entry : std::filesystem::recursive_directory_iterator(root)) {
+		out[entry.path().string()] = entry.is_regular_file() ? file_bytes(entry.path().string()) : std::string("<dir>");
+	}
+	return out;
+}
+
+// Another spelling of the journal's directory (J1b): a symlink to it, and on a case-folding volume (APFS) its name in
+// another case, is refused with a create and without, before anything is made inside it; a name outside opens.
+void test_another_spelling_of_the_journal_is_refused() {
+	namespace fs = std::filesystem;
+	const auto journal = fresh("journal_spelling");
+	const auto alias = fresh("journal_alias");
+	fs::remove(alias);
+	std::vector<std::string> spellings{alias, alias + "/x", alias + "/sub/x", alias + "/layout/x"};
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		fs::create_directory_symlink(fs::absolute(journal), alias);
+		std::string upper = journal;
+		std::transform(upper.begin(), upper.end(), upper.begin(), [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+		const bool folds = fs::exists(upper);
+		if (folds) {
+			for (const auto& spelling : {upper, upper + "/x", upper + "/SUB/x", "./" + upper + "/x"}) {
+				spellings.push_back(spelling);
+			}
+		}
+		std::fprintf(stderr, "  the volume %s case\n", folds ? "folds" : "keeps");
+		const auto before = tree_of(journal);
+		for (const auto& spelling : spellings) {
+			const auto [created, why] = error_of([&] { pin(pool, spelling); });
+			CHECK(created == engine::errc::invalid);
+			CHECK_NE(why.find("another spelling"), std::string::npos);
+			CHECK(error_kind([&] { pin(pool, spelling, DB_OPEN); }) == engine::errc::invalid);
+		}
+		CHECK(tree_of(journal) == before);
+		const auto outside = fresh("journal_spelling_outside");
+		{
+			Shard shard(pin(pool, outside), WRITE);
+			engine::sync_wait(shard.add_document(make("Ka", "a")));
+			CHECK_TRUE(engine::sync_wait(shard.commit()));
+		}
+		CHECK(error_kind([&] { pin(pool, fresh("journal_spelling_absent"), DB_OPEN); }) == engine::errc::not_found);
+		fs::remove_all(outside);
+	}
+	fs::remove(alias);
+	fs::remove_all(journal);
+}
+
+// An index older than its journal (P_b > P_H: its directory put back from a copy taken before a later commit):
+// strata fences the open before the file set's recovery, and the open refuses naming it, each time; every file of
+// the index stays as it was.
+void test_an_index_older_than_its_journal_refuses() {
+	Watchdog watchdog("an index older than its journal", 120s);
+	namespace fs = std::filesystem;
+	const auto journal = fresh("journal_older_index");
+	const auto path = fresh("group_older_index");
+	fs::remove_all(path + ".old");
+	(void)blob_index(journal, path);
+	fs::copy(path, path + ".old", fs::copy_options::recursive);
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		Shard shard(pin(pool, path), WRITE);
+		engine::sync_wait(shard.add_document(make("Kj2", "j2")));
+		CHECK_TRUE(engine::sync_wait(shard.commit()));
+	}
+	fs::remove_all(path);
+	fs::rename(path + ".old", path);
+	const auto before = tree_of(path);
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		for (int attempt = 0; attempt < 2; ++attempt) {
+			const auto [kind, why] = error_of([&] { pin(pool, path); });
+			CHECK(kind == engine::errc::corrupt);
+			CHECK_NE(why.find("P_b > P_H"), std::string::npos);
+		}
+	}
+	CHECK(tree_of(path) == before);
+	fs::remove_all(journal);
+	fs::remove_all(path);
+}
+
 int main(int argc, char** argv) {
 	struct Case { const char* name; void (*fn)(); };
 	const Case cases[] = {
@@ -3099,6 +3244,10 @@ int main(int argc, char** argv) {
 		{"test_an_index_inside_the_journal_is_refused", test_an_index_inside_the_journal_is_refused},
 		{"test_an_index_without_its_journal_refuses_and_keeps_its_volumes", test_an_index_without_its_journal_refuses_and_keeps_its_volumes},
 		{"test_a_damaged_volume_refuses_its_index", test_a_damaged_volume_refuses_its_index},
+		{"test_another_spelling_of_the_journal_is_refused", test_another_spelling_of_the_journal_is_refused},
+		{"test_overlapping_checkpoints_cut_the_log_count_once", test_overlapping_checkpoints_cut_the_log_count_once},
+		{"test_only_a_passing_refusal_is_busy", test_only_a_passing_refusal_is_busy},
+		{"test_an_index_older_than_its_journal_refuses", test_an_index_older_than_its_journal_refuses},
 	};
 	for (const auto& c : cases) {
 		if (argc > 1 && std::string(c.name).find(argv[1]) == std::string::npos) {

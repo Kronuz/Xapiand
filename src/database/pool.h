@@ -44,6 +44,8 @@
 #include <utility>              // for std::pair
 #include <vector>               // for std::vector
 
+#include <sys/types.h>          // for dev_t, ino_t
+
 #include "database/name_index.h"  // for NameIndex
 #include "endpoint.h"           // for Endpoints, Endpoint
 #include <string_view>         // for std::string_view
@@ -436,6 +438,7 @@ class DatabasePool {
 	// The journal the indexes' groups log in (cluster-release D2), once set; it outlives the catalogs.
 	std::unique_ptr<ShardGroups> groups_;
 	std::string journal_;   // its directory, lexically normal, without a trailing separator
+	std::optional<std::pair<dev_t, ino_t>> journal_id_;   // its directory's device and inode, read once at set_journal
 
 	// The catalogs' timer (on the control loop), their budget, their shutdown, and the catalogs, in the order they
 	// are made: the catalogs go first, once the timer has run what is still armed (their destructors wait for them).
@@ -530,7 +533,8 @@ public:
 	}
 
 	// The journal over `directory`: every index opened from here on is a lone-voter group logged there. Set before
-	// the first pin. An index path at or inside `directory` is refused (errc::invalid) before anything is created.
+	// the first pin. An index path at or inside `directory` is refused (errc::invalid) before anything is created: by
+	// name first, and on a path that does not open, by the identity of its deepest existing ancestor (any spelling).
 	void set_journal(const std::string& directory);
 
 	ShardGroups* groups() const noexcept {

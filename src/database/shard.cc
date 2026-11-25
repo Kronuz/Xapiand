@@ -260,7 +260,15 @@ ShardEndpoint::open_blocking(kronuz::journal::IO& directory, prospect::index& in
 		auto* eng = &dynamic_cast<engine::strata::Shard&>(*engine_);
 		group_->app.applied = [eng] { eng->applied_by_group(); };
 		group_->on_checkpoint = [eng] { eng->checkpointed(); };
-		group_->group.open_blocking();
+		try {
+			group_->group.open_blocking();
+		} catch (const strata::group::group_fenced& exc) {
+			// strata fenced its own open before the file set's recovery (an index older than its journal's bundle,
+			// P_b > P_H) and tore the group down: nothing was written, and every open refuses the same way.
+			group_.reset();
+			L_ERR("The index {} refuses to open: {}", repr(to_string()), exc.what());
+			throw engine::Error(engine::errc::corrupt, "The index " + to_string() + " refuses to open: " + exc.what());
+		}
 		try {
 			if (group_->group.damaged()) {
 				throw engine::Error(engine::errc::corrupt, group_->group.damage_reason());
@@ -312,7 +320,7 @@ ShardEndpoint::refuse_without_journal(ShardGroups& groups, kronuz::journal::IO& 
 	if (applied == 0 && !files) {
 		return;   // a new index: its group is created
 	}
-	const auto reason = strings::format("The journal in {} holds no group {:016x} for index {}, which holds state (applied through {}{}): restore the journal, or restore the index from a dump", repr(groups.directory()), id, repr(to_string()), applied, files ? ", blob volumes" : "");
+	const auto reason = strings::format("The journal in {} holds no group {:016x} for index {}, which holds state (applied through {}{}): put back the journal this index last stopped with, never an older copy, or restore the index from a dump", repr(groups.directory()), id, repr(to_string()), applied, files ? ", blob volumes" : "");
 	L_ERR("{}", reason);
 	throw engine::Error(engine::errc::corrupt, reason);
 }

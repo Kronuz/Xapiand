@@ -142,14 +142,17 @@ limit); a buffered body is at most 16 MiB, as before. 16 MiB is Lucene's default
 Tantivy's per-thread budget is at least 15 MB and flushes the same way; Xapian flushes every 10,000 documents.
 None refuses a write at its buffer, and neither does the group:
 
-1. **Pressure.** Each placement counts its bytes and entries on the loop (`ShardGroup::log_bytes`,
-   `log_entries`). Past half of either bound, `ShardGroup::pressure` starts one checkpoint on the group's loop
-   (never from a commit hook), holding no pin; the group's close waits for it (`quiesce`). Every checkpoint
-   subtracts what was placed before its capture.
+1. **Pressure.** Each placement counts its bytes and entries on the loop (`ShardGroup::placed_bytes`,
+   `placed_entries`); the log's measure is what was placed less what a published checkpoint cut
+   (`log_bytes()`, `log_entries()`). Past half of either bound, `ShardGroup::pressure` starts one checkpoint on
+   the group's loop (never from a commit hook), holding no pin; the group's close waits for it (`quiesce`, which
+   refuses a reactor or task thread). A checkpoint raises the cut to what was placed before it began, never
+   lowers it, so overlapping checkpoints (a COMMIT, a writer's, the pressure one) never subtract twice.
 2. **A full log.** A proposal that consensus still refuses as `LogFull` (applies behind, or a burst faster than a
    checkpoint) runs a checkpoint itself and proposes again; consensus retires the cut log's entries a
-   command's worth per step, so the following attempts drain it. A log still full after that, or any other
-   refusal, answers 503 naming consensus's reason, never 500.
+   command's worth per step, so the following attempts drain it. A log still full after that, or a refusal
+   that passes with time (busy, not the leader, not ready), answers 503 naming consensus's reason; an entry
+   too large or a duplicate request is a proposer's bug and answers 500.
 3. **RESTORE.** An object the server left unwritten (any 5xx in its result) makes the RESTORE's own answer that
    status; its items say which objects. A client's object refused for itself (a 4xx) leaves the answer 200, as
    before.
@@ -162,8 +165,8 @@ An index refuses to open, with one error line naming its cause and the same text
    index holds state: strata applied a log position, or the file set has `app.` files. A new group would
    restart the log and the file set over that state: the file set's recovery deletes the committed blob volumes,
    and new records land where old locators point. The open checks before the group is built
-   (`refuse_without_journal`) and touches nothing. Recovery: put the journal's directory back, or delete the
-   index and RESTORE it from a dump. An index directory copied to another node is this case: its acknowledged
+   (`refuse_without_journal`) and touches nothing. Recovery: put back the journal's directory this index last
+   stopped with, never an older copy (below), or delete the index and RESTORE it from a dump. An index directory copied to another node is this case: its acknowledged
    writes and its group membership live in the source node's journal, so the target refuses it rather than adopt
    a directory that may have lost writes. An index moves between nodes by replication (raise
    `number_of_replicas`, or drain the source node, so a replica on the target catches up, then remove the source)
@@ -174,11 +177,28 @@ An index refuses to open, with one error line naming its cause and the same text
    `rf = 1`; master served all but that volume's blobs. Recovery: restore the volume from a copy of the index
    taken at a clean stop and remove the damage marker (`rd` in the index's `strata` directory), or delete the
    index and RESTORE it from a dump.
+3. **The index is older than its journal.** The index's directory was put back from an earlier copy while the
+   journal kept running: the journal's bundle is past strata's durable head (P_b > P_H), and the log before the
+   bundle is cut, so nothing can replay the gap. strata fences its own open before the file set's recovery, and
+   the open refuses naming both positions; nothing is written. Recovery: put back the index as of the journal's
+   last stop, or delete the index and RESTORE it from a dump.
+
+Only the journal the index last stopped with may be put back with it. A journal older than the index (an earlier
+copy, or a copy of a running data root that took the journal before the indexes) still holds the group, so the
+first check passes, and recovery cuts the index's blob volumes to the older bundle's lengths: acknowledged writes
+are lost and blobs read other bytes. strata's open fences only the opposite case, an index older than its
+journal's bundle; refusing this one needs the recovered log's end before the file set's recovery, which strata's
+open does not expose.
 
 The journal's directory holds the journal's files only. The pool refuses an index path at or inside it
-(`errc::invalid`, a 400) before anything is created, and a directory found there at start (left by a build
-that let an index be made there) is moved to `<journal>.strays` with a warning, so the host's scan never takes
-it for its own.
+(`errc::invalid`, a 400) before anything is created, with or without a create: first by name, then, on a path
+whose `strata` directory does not open, by identity. Its deepest existing ancestor is made physical
+(`canonical`) and it and each parent are compared with the journal's directory by device and inode, read once
+at `set_journal`; so another spelling on a case-folding volume (APFS: `.Xapiand/journal/x`) or a symlink to the
+journal is refused too, and a reopen of an existing index pays no added syscall. A directory found there at
+start (left by a build that let an index be made there) is moved to `<journal>.strays` with a warning naming
+both paths, so the host's scan never takes it for its own; its bytes are kept and its old path answers 400. A
+move the volume refuses (EXDEV: the journal on another volume) ends the start naming the directory to move out.
 
 ## Levels
 

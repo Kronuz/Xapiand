@@ -30,6 +30,7 @@
 #include <random>                  // for std::random_device
 #include <span>                    // for std::span
 #include <stdexcept>               // for std::logic_error
+#include <system_error>            // for std::system_error
 #include <utility>                 // for std::move
 #include <variant>                 // for std::get_if
 
@@ -41,6 +42,7 @@
 #include "engine/strata/document.h"  // for engine::strata::StrataDocument
 #include "engine/strata/io_options.h"  // for engine::strata::posix_io_options
 #include "engine/strata/shard.h"   // for engine::strata::append_write
+#include "engine/sync.h"           // for engine::check_may_block
 #include "log.h"                    // for L_WARNING, L_DEBUG
 #include "repr.hh"                 // for repr
 #include "reserved/fields.h"       // for VERSION_FIELD_NAME
@@ -573,7 +575,14 @@ ShardGroups::ShardGroups(const std::string& directory, std::size_t chores) :
 		for (int n = 1; fs::exists(to); ++n) {
 			to = strays / (entry.path().filename().string() + "." + std::to_string(n));
 		}
-		fs::rename(entry.path(), to);
+		try {
+			fs::rename(entry.path(), to);
+		} catch (const fs::filesystem_error& exc) {
+			if (exc.code() != std::errc::cross_device_link) {
+				throw;
+			}
+			throw std::system_error(exc.code(), "The journal's directory held " + repr(entry.path().string()) + ", which is not the journal's, and it cannot move to " + repr(to.string()) + " on another volume (EXDEV): move it out of " + repr(directory) + " and start again");
+		}
 		L_WARNING("The journal's directory held {}, which is not the journal's: moved to {}", repr(entry.path().string()), repr(to.string()));
 	}
 	host_ = std::make_unique<jn::Host>(std::make_shared<jn::PosixIO>(directory, io_options_), jn::Identity{'X', 'H'}, jn::HostOptions{1, jn::TurnLogOptions{}});
@@ -737,6 +746,19 @@ ShardGroup::abort_open(const std::vector<std::uint64_t>& ids)
 }
 
 
+namespace {
+
+// Raises `count` to `at` unless it is already past it.
+void
+raise(std::atomic<std::size_t>& count, std::size_t at) noexcept
+{
+	for (auto now = count.load(); now < at && !count.compare_exchange_weak(now, at);) {
+	}
+}
+
+}  // namespace
+
+
 task::task<void>
 checkpoint(ShardGroup& shard_group)
 {
@@ -745,12 +767,12 @@ checkpoint(ShardGroup& shard_group)
 	std::exception_ptr error;
 	try {
 		// What was placed before the capture is behind the bundle once it publishes.
-		const auto bytes = shard_group.log_bytes.load();
-		const auto entries = shard_group.log_entries.load();
+		const auto bytes = shard_group.placed_bytes.load();
+		const auto entries = shard_group.placed_entries.load();
 		const auto published = co_await shard_group.group.checkpoint();
 		shard_group.checkpointed.store(published.through, std::memory_order_release);
-		shard_group.log_bytes.fetch_sub(bytes);
-		shard_group.log_entries.fetch_sub(entries);
+		raise(shard_group.cut_bytes, bytes);
+		raise(shard_group.cut_entries, entries);
 		if (shard_group.on_checkpoint) {
 			co_await shard_group.group.read_applied([&](prospect::index&) { shard_group.on_checkpoint(); });
 		}
@@ -809,6 +831,8 @@ ShardGroup::pressure()
 void
 ShardGroup::quiesce()
 {
+	// The pressure task it waits for runs on the group loop: a wait there, or on any loop, would stall or deadlock.
+	engine::check_may_block("ShardGroup::quiesce");
 	std::unique_lock<std::mutex> lk(pressure_mtx_);
 	quiesced_ = true;
 	pressure_cv_.wait(lk, [this] { return !pressure_running_; });
@@ -827,6 +851,7 @@ reject_reason(kronuz::consensus::RejectReason reason) noexcept
 		case R::NotReady: return "not ready";
 		case R::LogFull: return "the log is full";
 		case R::TooLarge: return "the entry is too large";
+		case R::DuplicateRequest: return "a duplicate request";
 		default: return "refused";
 	}
 }
@@ -836,6 +861,15 @@ reject_reason(kronuz::consensus::RejectReason reason) noexcept
 constexpr std::size_t LOG_FULL_ATTEMPTS = 2 + LOG_BYTES / COMMAND_ENTRY_BYTES;
 
 }  // namespace
+
+
+engine::errc
+refusal_kind(kronuz::consensus::RejectReason reason) noexcept
+{
+	using R = kronuz::consensus::RejectReason;
+	const bool passes = reason == R::LogFull || reason == R::Busy || reason == R::NotLeader || reason == R::NotReady;
+	return passes ? engine::errc::busy : engine::errc::internal;
+}
 
 
 task::task<strata::group::answer>
@@ -849,9 +883,9 @@ propose_entry(ShardGroup& shard_group, std::string entry, strata::group::ack lev
 	const auto bytes = entry.size();
 	// On the loop, at the placement: counts the entry, and past half the log's bound starts a checkpoint (L1).
 	auto placed = [&shard_group, bytes](cs::Placement) {
-		const auto log_bytes = shard_group.log_bytes.fetch_add(bytes) + bytes;
-		const auto log_entries = shard_group.log_entries.fetch_add(1) + 1;
-		if (log_bytes >= LOG_BYTES / 2 || log_entries >= LOG_ENTRIES / 2) {
+		shard_group.placed_bytes.fetch_add(bytes);
+		shard_group.placed_entries.fetch_add(1);
+		if (shard_group.log_bytes() >= LOG_BYTES / 2 || shard_group.log_entries() >= LOG_ENTRIES / 2) {
 			shard_group.pressure();
 		}
 	};
@@ -865,7 +899,7 @@ propose_entry(ShardGroup& shard_group, std::string entry, strata::group::ack lev
 			if (rejected.reason == cs::RejectReason::LogFull && attempt + 1 < LOG_FULL_ATTEMPTS) {
 				full = true;
 			} else {
-				error = std::make_exception_ptr(engine::Error(engine::errc::busy, std::string("The shard's group refused the write: ") + reject_reason(rejected.reason)));
+				error = std::make_exception_ptr(engine::Error(refusal_kind(rejected.reason), std::string("The shard's group refused the write: ") + reject_reason(rejected.reason)));
 			}
 		} catch (...) {
 			error = std::current_exception();

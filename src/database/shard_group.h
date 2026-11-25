@@ -40,6 +40,7 @@
 #include "completion/posix.h"      // for kronuz::journal::PosixIOOptions
 #include "database/command.h"      // for Command
 #include "engine/document.h"       // for engine::Document
+#include "engine/error.h"          // for engine::errc
 #include "engine/shard.h"          // for engine::PreparedWrite
 #include "prospect/index.hh"       // for prospect::index, prospect::transaction
 #include "completion/seam.h"      // for kronuz::journal::InlineCompletion
@@ -237,10 +238,12 @@ struct ShardGroup {
 	// follows the commit (engine::strata::Shard::checkpointed).
 	std::function<void()> on_checkpoint;
 
-	// The log placed since the last checkpoint's start, counted at each placement on the loop: the pressure
-	// trigger's measure (L1). An estimate: entries placed during a checkpoint are kept.
-	std::atomic<std::size_t> log_bytes{0};
-	std::atomic<std::size_t> log_entries{0};
+	// The log placed and the part a published checkpoint cut, counted at each placement on the loop: the pressure
+	// trigger's measure (L1). All four only grow: a checkpoint raises `cut_*` to what was placed before it began, so
+	// overlapping checkpoints never subtract twice; entries placed during a checkpoint stay counted.
+	std::atomic<std::size_t> placed_bytes{0}, placed_entries{0}, cut_bytes{0}, cut_entries{0};
+	std::size_t log_bytes() const noexcept { const auto cut = cut_bytes.load(); return placed_bytes.load() - cut; }
+	std::size_t log_entries() const noexcept { const auto cut = cut_entries.load(); return placed_entries.load() - cut; }
 
 	ShardGroup(ShardGroups& groups, kronuz::journal::IO& directory, prospect::index& index);
 	~ShardGroup();
@@ -268,9 +271,14 @@ private:
 	bool quiesced_ = false;           // under pressure_mtx_
 };
 
+// The engine's error for consensus's refusal of a proposal: errc::busy (a 503) for one that passes with time (a full
+// log, busy, not the leader, not ready); errc::internal (a 500) for the rest, a proposer's bug (N11).
+engine::errc refusal_kind(kronuz::consensus::RejectReason reason) noexcept;
+
 // Proposes `entry` on the group's loop from any scheduler and answers on the caller's: handler.h's ProposeEntry. A
 // closing group raises errc::not_available. A full log (LogFull) waits for a checkpoint and proposes again; a log
-// still full, or any other refusal, raises errc::busy naming consensus's reason (a 503).
+// still full, or a refusal that passes with time (busy, not the leader, not ready), raises errc::busy naming
+// consensus's reason (a 503); any other refusal (too large, a duplicate request) is a proposer's bug, errc::internal.
 task::task<strata::group::answer> propose_entry(ShardGroup& shard_group, std::string entry, strata::group::ack level);
 
 // Awaits, from any scheduler and on the caller's, until the group applied everything committed when it was called: a
