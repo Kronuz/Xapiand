@@ -7,7 +7,7 @@ Quest: .campaign/xapiand/quests/prospect-pool-reader-transient.md (the lead's; n
 
 Code committed in prospect (branch quest/xapiand/prospect-pool-reader-transient): the field-check-at-map
 patch applied (`transient` factored out of `dictionary`; `check_fields` scans a transient pool reader).
-Evidence jobs queued at prospect:c4e3e64. docs/perf/fielddict-pool-reader.md waits on the A3 job's numbers.
+Evidence jobs queued at prospect:c4e3e64 (pushed at prospect:e6cfcd5 with CHANGELOG.md; all four still queued behind other holds when I stopped). Local light dry run (not evidence): heap per segment 640 B base, 224 B fix at check; 416 B saved, same at 4 and 10 fields; query arm unchanged at 640 B. docs/perf/fielddict-pool-reader.md is NOT written: it waits on the A3 job's table (run `test/fielddict_pool_heap_ab.sh run` output in the job log); include the query arm's open-time cost (one extra pool reader construction at the first pooled query after a check) honestly.
 
 ## Next
 
