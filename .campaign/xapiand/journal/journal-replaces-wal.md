@@ -1,6 +1,6 @@
 # journal-replaces-wal: journal
 
-State: blocked on lead: design check of the lifecycle table (session 21, J1b and S1 classes, below). S1's refusal needs strata (Blocked on 13).
+State: ready for review (round 3 at Xapiand:bf7668b4a, pushed); jobs queued (session 21 table). S1 waits on strata-journal-behind (Next 0). Next: the lead reads the jobs; `campaign accept ... durability --confirm` is the lead's.
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
@@ -49,6 +49,41 @@ and test_a_cold_pin_reads_what_the_log_replays (existing).
 A1 and the nits change no state: `check_may_block` in quiesce() and the allow rows; N11 maps TooLarge and
 DuplicateRequest to 500; N9 makes the pressure counters monotonic (placed minus the largest count a published
 checkpoint covered, so overlapping checkpoints never subtract twice and the count never wraps).
+
+Done after the design check (msg-3), local quiet-light runs at build/ (-G Ninja, ASSERTS on), not evidence:
+- J1b (pool.cc `reaches`, resolve's miss branch; `journal_id_` at set_journal): test_another_spelling_of_the_journal_is_refused
+  (27 checks on APFS: the symlink alias and four case spellings, with and without a create; the journal's tree
+  unchanged; an outside name creates and an absent one is 404).
+- Held at start (J1, extended): test_an_index_inside_the_journal_is_refused also plants `x/.__1/strata`, checks it
+  moved with its bytes, its old path answers invalid, and an index committed before the start reads back (12 checks).
+- Index older than its journal (shard.cc catches strata's group_fenced from open_blocking):
+  test_an_index_older_than_its_journal_refuses (7 checks: twice errc::corrupt naming "P_b > P_H", every file of the
+  index byte-equal).
+- N9: test_overlapping_checkpoints_cut_the_log_count_once (8 rounds of two checkpoints at once, the count back to 0).
+- N11: `refusal_kind` (shard_group.h), test_only_a_passing_refusal_is_busy (every RejectReason). An oversized entry
+  never reaches consensus's TooLarge: admission throws std::length_error first (a 500 already).
+- N12: the strays move names EXDEV and the remedy (not run: no second volume in the tests).
+- J2's text and journal-durability.md ("Refusals at open" items 1 and 3, the journal-older hazard, the J1b paragraph,
+  the log's bound).
+- A1: `check_may_block("ShardGroup::quiesce")`; allow rows for the strays move, `reaches`' stats, set_journal,
+  `pressure_mtx_`, quiesce's wait and holds()' flag and wait; `async_check --strict` and `--strict --owed`: 0
+  unclassified. test_gate_tools.py 21 OK.
+- Full xapiand_test_pool OK (2,635 checks).
+
+Jobs at Xapiand:bf7668b4a (finding -> confirming job; mutants on branches mutant/jrw-r3-*, `--fails-without`; the
+N9 mutant failed 3 of 3 local runs, 16 of 25 checks):
+
+| Finding | Test job | Mutant (must fail) | Probe (confirming) |
+|---|---|---|---|
+| J1b | 261124-231558-1b3106 (full test_pool, shard_group, loop_yield, node) | j1b 261124-231602-a9e71c | reviewer's journalcase 261124-231619-cab4ba |
+| index older (S1 class) | 1b3106 | older 261124-231605-ebe75b | none (the stalejournal probe covers journal-older, Next 0) |
+| N9 | 1b3106 | n9 261124-231610-09be1d | |
+| N11 | 1b3106 | n11 261124-231614-0d6d34 | |
+| A1 | CI's Build + unit + smoke (async_check --strict) at the push; 1b3106 runs the ASSERTS build with check_may_block | | |
+| S1 | after strata-journal-behind (Next 0) | | stalejournal (fb40f3's script) then |
+
+Reruns at bf7668b4a: 231639-140abf, 231640-4f4566, 231640-6dbcfa, 231641-01874e, 231642-7dc2d2, 231642-5ba24a,
+231643-d3a472, 231643-34b7e8 (all 261124-); `campaign verify` below.
 
 Session 20 (2026-11-24), L1's unit test (lead's step): mutant 261124-201402-16805d left the log-bound test passing.
 
@@ -589,6 +624,12 @@ need group-catalog:
 
 ## Next
 
+0. When strata-journal-behind lands (after consensus-group-last): bump the strata and consensus pins; S1's two value
+   tests in test_pool (a journal put back from a copy taken at a clean stop, and one from a copy taken while the
+   group was open after a `kill -9`: each open refuses errc::corrupt naming P_H and E, every index file byte-equal,
+   nothing applied); the open's group_fenced refusal (session 21) carries strata's text; rerun the stalejournal
+   probe (261124-220619-fb40f3's script) as the confirming job.
+
 1. Read the six jobs and CI at ffd0f8dd9; the code was written without a build, so fix compile errors first (the
    step-c job at 089de4ba9 separates c's errors from d1's). For each job, check the log shows a complete build and
    the named test.
@@ -622,6 +663,10 @@ Done (session 2's plan, kept for reference):
 
 ## Messages
 
+- msg-3 (lead, 2026-11-24): table approved; Blocked on 13 answered (consensus-group-last, then strata-journal-behind;
+  this quest lands after it). Done: J1b, A1, N9, N11, N12, the J2 text and docs, the index-older refusal, each with
+  its value test (session 21); S1's two value tests and the pin bump wait under Next.
+
 - Lead 2026-11-21 (group-catalog's contract change, D169 revised): the catalog's commit hook never
   sync-waits on `group.checkpoint()` (commit hooks run inside chore_scope; the group's chore takes the
   index's write lease, which waits while the chore bit is held: deadlock on any lane). The commit stays
@@ -644,6 +689,8 @@ search_views.cc, the request tests, power_loss_check.sh, run_all.sh, docs). One 
 strata: `group-catalog` (item 4), which `core` step c waits on.
 
 ## Blocked on
+
+13 answered (lead, 2026-11-24, msg-3): consensus-group-last then strata-journal-behind; the pin bump and S1's tests are Next 0.
 
 13. (2026-11-24, session 21) S1 needs E, the recovered log's end, before strata's adopt touches the file set; nothing
     strata or consensus exposes gives it to Xapiand before `open_blocking` returns, and by then `files_.recover` has
@@ -885,3 +932,16 @@ Drafts, applied when the code lands; each names the contract it shapes (format-f
 55. L1's test slows a checkpoint by wrapping the group's own `on_checkpoint` hook (sleep 1 s once), not by a new
     seam in the write path: it is the only deterministic way to make placements outrun the pressure checkpoint
     (serial writes left the wait-only mutant passing; the upload alone killed it in about 2 runs of 5).
+56. J1b: the identity walk runs only on resolve's miss (the `strata` directory does not open), with or without a
+    create, so a reopen pays no syscall (cheap-reopen D2) and a GET of a reserved spelling answers 400, not 404. An
+    existing index under the journal is unreachable (create refused, start moves directories out), so the hit path
+    needs no check. The journal's device and inode are read once at set_journal.
+57. Held at start: the strays move stays (bytes kept, both paths logged); the old path then answers 400. A move the
+    volume refuses (EXDEV) ends the start with a std::system_error naming the directory and the remedy (N12); the
+    other errors rethrow as before.
+58. The index-older refusal catches strata's `group_fenced` from `open_blocking` only (strata tore the group down
+    already, so the group is reset, not closed) and answers errc::corrupt with strata's text; other open failures
+    keep their path. strata-journal-behind's P_H > E fence is expected to arrive the same way.
+59. N9: the counts are monotonic (placed, cut); a checkpoint raises the cut to what was placed at its start (CAS
+    max). An overlap can leave the count high until the next checkpoint (the trigger fires early), never wrapped.
+60. N11: 503 for LogFull, Busy, NotLeader, NotReady; every other consensus refusal is errc::internal (500).
