@@ -1,6 +1,6 @@
 # strata-journal-behind: journal
 
-State: working
+State: waiting on jobs 261125-004550-50832e, 261125-004551-0bc60c, 261125-004553-aab292
 Quest: .campaign/xapiand/quests/strata-journal-behind.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,9 +9,9 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Session 1 (2026-11-25). Pins bumped to consensus 6d710cb and its wave (task 477a7d3, completion
-3061516, journal f66c16e, faultlab 1ac0b17, crc32c 52889db), group_tests building under quiet light.
-The check is in group.hh (open reads E after recover/create; adopt refuses P_H > E first).
+Session 1 (2026-11-25). Code at strata:31821753, pushed. Only the consensus pin moves (to 6d710cb);
+the rest of its pin wave stays (Blocked on 1). The check is in group.hh (open reads E after
+recover/create; adopt refuses P_H > E first). Jobs queued: build-test, the test, the mutant.
 
 Lifecycle at open (P_b the recovered bundle, P_H strata's durable head `ix_->applied()`, E
 `driver.state(id).last` read on the loop in the continuation of `driver.recover`/`create`, so after
@@ -36,13 +36,21 @@ A sound group is never refused: every sound row has P_H <= E at the moment E is 
 
 ## Next
 
-1. Tests in test/group/journal_behind_test.cc (clean stop, crash, journal missing refuse byte-equal;
-   sound crash replays (P_H, E]); mutant `journal-behind-unchecked` in mutants.py.
-2. docs/mechanisms/group-open.md, CHANGELOG.md; verify + mutant jobs; push.
+1. Read the three jobs; on green, State ready for review.
 
 ## Blocked on
 
-Nothing.
+1. (lead, not blocking this quest) Consensus 6d710cb's own pins (task 477a7d3, completion 3061516,
+   journal f66c16e, faultlab 1ac0b17, crc32c 52889db) fail strata's build: completion's PosixIO now
+   takes a required FlushMode (`PosixIO(dir, PosixIOOptions{FlushMode, ...}, mode)`), and 15 files
+   construct it the old way: bench/{catalog_tiers,eager_open,hybrid,idle_index,kv,kv/probes,kv/proto,
+   manifest-log}, test/{counted_hooks.hh,counted_io_test.cc,directory_test.cc}, README.md,
+   include/strata/core/index.hh (a comment), test/group/footprint_test.cc. Only the last is in this
+   file set. Strata declares task, completion and journal first, so its pins win and consensus
+   6d710cb builds and passes against strata's (journal 9c7e31c): group_tests built, the targeted
+   group tests pass. Options: (a) land as is (consensus pin only) and move the wave in its own quest
+   that picks each bench's flush mode; (b) widen this file set to the 15 paths. Recommend (a): the
+   wave is mechanical but separate, and each bench's mode is a measurement choice.
 
 ## Evidence
 
@@ -53,14 +61,32 @@ jobs no journal names), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | test 261125-004551-0bc60c (journal_behind_test: clean-stop, crash, missing, sound); mutant journal-behind-unchecked 261125-004553-aab292 (--fails-without, clean-stop) |
+| A2 | build-test 261125-004550-50832e at strata:31821753 |
+| A3 | docs/mechanisms/group-open.md (three refusals, what each leaves on disk, the sound paths); CHANGELOG.md 2026-11-25 entry |
+
+Local runs (quiet light, not evidence): journal_behind_test ok (refusals P_H 6/E 3, 5/3, 4/0, every
+file byte-equal; sound P_b 3, P_H 3, E 7, 5 documents, seeds 1-8); the mutant fails clean-stop (no
+refusal, files changed, the replica then reads damaged); group_journal_behind, lifetime, catalog,
+install, repair, file_set, witness: 19 of 19 pass.
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+strata:31821753. `group::open()` reads E = `driver.state(id).last` after recover/create and
+`adopt(b, restored, log_end)` refuses P_H > E first, `group_fenced` naming both ("strata's durable
+head P_H = 6 is past the recovered log's end E = 3: the journal is older than the index"); an
+install's activation passes nullopt. How it works: docs/mechanisms/group-open.md. Tests:
+test/group/journal_behind_test.cc; mutant journal-behind-unchecked (test/group/mutants.py).
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- The check runs on create too (recover() serves both): a journal holding no group over an index
+  with state is P_H > E with the new log's E (0), the "journal missing" refusal. Before, replay
+  skipped new entries at or below P_H.
+- Checked before `resume` unconditionally, also when a persisted install stage is about to
+  activate: consensus refuses an install at or below its commit index (core.h:767), so the old
+  index's P_H < B <= E; a half-activated index has P_H = B. No sound row is refused (table above).
+- E is read in open's continuation right after recover/create returns, on the loop, before the
+  chore runs recovery: the log's tail is recovered and no election has appended.
+- CHANGELOG.md did not exist in strata: created in consensus's format with this entry.
+- Pins: consensus only (Blocked on 1).
