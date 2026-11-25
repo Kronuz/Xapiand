@@ -1,6 +1,6 @@
 # rocksdb-parity: journal
 
-State: waiting on jobs 261124-231350-d66cf1 261124-231353-1ad1c6
+State: waiting on jobs 261125-013258-77d915 261124-231353-1ad1c6
 Quest: .campaign/xapiand/quests/rocksdb-parity.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -30,16 +30,11 @@ Launch 1 (2026-11-24): first commit, gap table, one strata-only task.
 
 ## Next
 
-1. Read 261124-231350-d66cf1 (exclusive: A/A, A=strata:7823c51a B=strata:19ddcbd0 on ab.py's
-   `runs` set x3, readall identity) and 261124-231353-1ad1c6 (exclusive: tenx1 and twox1 at
-   strata:19ddcbd0 against RocksDB 11.11 pinned). Out dirs: ~/.scratch/rocksdb-parity/.
-   Decide: land step 1 if tenx1 fillseq moves past the A/A band and no row loses past it; twox1
-   fillseq's write amp is the row to watch (smoke 1.04 -> 1.63, light probes 1.04 both, twice). If
-   it loses, revert strata:19ddcbd0 and record it here and in `sorted-runs.md`.
-2. Fill the numbers in `docs/mechanisms/sorted-runs.md` and Result; then a `campaign verify`
-   round (build-test) at the head.
-3. Task 7 step 2: the runs' range index for gets and the run-count cap (N13); then settle flushes
-   under `run_bytes` (wamp ~1.2 -> ~0.6 needs it).
+1. Read build-test 261125-013258-77d915 at strata:31fcb7b3 and the RocksDB rows
+   261124-231353-1ad1c6 (tenx1, twox1 at strata:19ddcbd0); put the fillseq rows against RocksDB in
+   `sorted-runs.md` and Result.
+2. Task 7 step 2: the runs' range index for gets and the run-count cap (N13); then settle flushes
+   under `run_bytes` (write amp 1.31 -> ~0.6 needs it; RocksDB's is 0.64).
 
 ## Jobs read (launch 1)
 
@@ -52,6 +47,13 @@ Launch 1 (2026-11-24): first commit, gap table, one strata-only task.
   faster, CPU 5.78 -> 4.63 us/op, write amp 1.78 -> 1.32, peak RSS 160 -> 103 MiB; tenx1 fillrandom
   1.02x (tie); twox1 fillseq 0.94x, write amp 1.04 -> 1.63; twox1 fillrandom 1.04x; tenx1
   readrandom 0.95x. Noise band unknown until the exclusive A/A.
+- 261124-231350-d66cf1, exclusive, A=strata:7823c51a B=strata:19ddcbd0, 3 trials, medians: tenx1
+  fillseq write amp 2.08 -> 1.31, CPU 2.84 -> 2.10 us/op, peak RSS 134 -> 89 MiB, ops/s 1.07x
+  [1.00, 1.24]; tenx1 fillrandom 0.97x tie (wamp 2.10/2.09); twox1 fillseq tie (wamp 1.62/1.62,
+  CPU 2.05/1.88): the smoke's 1.04 -> 1.63 does not reproduce, the base reads 1.62 here too, so it
+  was merge timing under load; twox1 fillrandom tie (wamp 1.71/1.22, timing); tenx1 readrandom
+  0.96x tie. A/A spread: A 3.3-10.5%, B 4.5-37.5% (fillrandom). Identity: readall get digest
+  eb2a3ad93b05aafe, 1,000,000 hits, on A and B. Verdict: land; no row loses past the A/A band.
 
 ## Gap table (launch 1)
 
@@ -122,7 +124,14 @@ Nothing.
 
 ## Result
 
-<When ready for review.>
+Task 7 step 1 (D9 wired), strata:19ddcbd0, note `docs/mechanisms/sorted-runs.md` (strata:31fcb7b3):
+the index passes each segment's key range to the merge policy, so a sequential load's segments
+settle as runs instead of merging by size. tenx1 fillseq: 37% fewer bytes written (write amp 2.08
+-> 1.31), 1.35x less CPU per op (2.84 -> 2.10 us), 34% less peak RSS (134 -> 89 MiB); every other
+row in the runs set ties (job 261124-231350-d66cf1). Against the gate's RocksDB (wamp 0.64, CPU
+1.68 us): bytes written 3.2x -> about 2.0x, CPU 1.97x -> about 1.25x, pending the same-session
+rows of 261124-231353-1ad1c6. Open: step 2 (range index, run cap, settling flushes under
+`run_bytes`).
 
 ## Rulings I made
 
