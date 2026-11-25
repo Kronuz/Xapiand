@@ -79,7 +79,7 @@ N9 mutant failed 3 of 3 local runs, 16 of 25 checks):
 | index older (S1 class) | 1b3106 | older 261124-231605-ebe75b | none (the stalejournal probe covers journal-older, Next 0) |
 | N9 | 1b3106 | n9 261124-231610-09be1d | |
 | N11 | 1b3106 | n11 261124-231614-0d6d34 | |
-| A1 | CI's Build + unit + smoke (async_check --strict) at the push; 1b3106 runs the ASSERTS build with check_may_block | | |
+| review A1 | CI's Build + unit + smoke (async_check --strict) at the push; 1b3106 runs the ASSERTS build with check_may_block | | |
 | S1 | after strata-journal-behind (Next 0) | | stalejournal (fb40f3's script) then |
 
 Reruns at bf7668b4a: 231639-140abf, 231640-4f4566, 231640-6dbcfa, 231641-01874e, 231642-7dc2d2, 231642-5ba24a,
@@ -778,15 +778,15 @@ Jobs prove criteria by their tags; paste `campaign brief`'s generated table here
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261124-160758-92f823; 261124-160759-56ed44; 261123-165229-26f9f6; 261124-160801-40491e; no-wal 261124-160741-838232; crash 261124-160741-26cfd4; fails without: 261123-165135-36e01f, 261123-165137-8ec228, 261123-165140-99c0aa, 261123-165142-9e1f71, 261123-165145-a60381, 261123-165147-e4c73e, 261123-165232-41ee12 |
-| A2 | 261124-160800-54a48e; fails without: 261123-165109-560112, 261123-165112-923dcd |
-| A3 | 261124-160758-2e2d34; 261124-160800-a73a91; fails without: 261123-165120-541aae, 261123-165123-cf493c, 261123-165126-61010f |
-| A4 | 261124-160759-3536d4; 261124-160758-92f823; fails without: 261123-165132-60295c |
-| A5 | ci:Functional E2E (docs); 261124-021317-01a519; 261124-160801-9c2628; fails without: 261123-165154-d1a0f8, 261123-165157-ded424, 261123-165213-4ee4de, 261123-165215-2c8a56, 261123-165217-7c699d, 261123-165219-0f06b3, 261123-165221-583df2, 261123-165223-998438, 261123-165225-1c5d88, 261123-165227-d0f01f |
+| A1 | 261124-231639-140abf; 261124-201450-7f5e03; 261123-165229-26f9f6; 261124-201452-fdb9b5; no-wal 261124-231707-095b53; crash 261124-231707-777023; fails without: 261123-165135-36e01f, 261123-165137-8ec228, 261123-165140-99c0aa, 261123-165142-9e1f71, 261123-165145-a60381, 261123-165147-e4c73e, 261123-165232-41ee12 |
+| A2 | 261124-231642-7dc2d2; fails without: 261123-165109-560112, 261123-165112-923dcd |
+| A3 | 261124-231640-4f4566; 261124-231643-34b7e8; fails without: 261123-165120-541aae, 261123-165123-cf493c, 261123-165126-61010f |
+| A4 | 261124-231641-01874e; 261124-231639-140abf; fails without: 261123-165132-60295c |
+| A5 | ci:Functional E2E (docs); 261124-021317-01a519; 261124-201453-2f1df2; fails without: 261123-165154-d1a0f8, 261123-165157-ded424, 261123-165213-4ee4de, 261123-165215-2c8a56, 261123-165217-7c699d, 261123-165219-0f06b3, 261123-165221-583df2, 261123-165223-998438, 261123-165225-1c5d88, 261123-165227-d0f01f |
 | A6 | D113 (owner: Q1 (a), default ack quorum, bulk loaders choose none) and D142 (owner: Q6 as written, ?commit = ack=quorum&refresh=true; Q-F27 (a), read-your-writes served from the leader's replica); the code ships both defaults, A4's test covers Q-F27 |
 | A7 | docs/mechanisms/journal-durability.md: Every shard is a strata::group: a lone voter at rf = 1. The group's journal is the shard's only durability path |
-| A8 | 261124-160759-d57f08 |
-| A9 | 261124-160758-92f823; fails without: 261123-165200-4ebfb3, 261123-165202-26b0dd, 261123-165205-dd6ea0 |
+| A8 | 261124-231643-d3a472 |
+| A9 | 261124-231639-140abf; fails without: 261123-165200-4ebfb3, 261123-165202-26b0dd, 261123-165205-dd6ea0 |
 
 ## Result
 
