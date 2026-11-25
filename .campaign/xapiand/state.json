@@ -9322,7 +9322,9 @@
     },
     "consensus-recover-gate": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "detent:consensus-inline-sync-loop"
+      ],
       "base": "217481b63fbf465d82164ee967664d1d1b3f81e8",
       "branch": "quest/xapiand/consensus-recover-gate",
       "checks": [
@@ -9357,7 +9359,7 @@
       "risk": "high",
       "status": "active",
       "title": "consensus: recover refuses, before Start, a log that retains no accepted boundary",
-      "updated": "2026-11-25T03:31:50",
+      "updated": "2026-11-25T03:32:13",
       "worktree": "../consensus-wt/xapiand/consensus-recover-gate"
     },
     "consensus-request-install": {
