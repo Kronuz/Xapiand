@@ -1,6 +1,6 @@
 # strata-journal-behind: journal
 
-State: waiting on jobs 261125-033043-326a1d 261125-033050-247c98 261125-033054-178f63 261125-033057-a58c2b 261125-033101-eb5028 261125-033114-38a2d6 261125-033117-9af144 261125-033120-14f397 261125-033123-d47653 261125-033126-adce3d 261125-033134-b6ba15
+State: waiting on jobs 261125-033050-247c98 261125-033054-178f63 261125-033057-a58c2b 261125-033101-eb5028 261125-033120-14f397 261125-033123-d47653 261125-033134-b6ba15 261125-035701-f909a8 261125-040332-16209b
 Quest: .campaign/xapiand/quests/strata-journal-behind.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -52,7 +52,25 @@ reviewer's d5_flight_model.py): 54 of 54 fixed timings install under the retry, 
 jittered learners. Worst 49 flights at rpc_timeout 40 ms and c = 2000 ms: the flights before the
 pinning checkpoint's own duration elapses, not Busy losses (flights ~ c / (rpc_timeout + 1.5 s)).
 
-Session 2 notes follow.
+Session 3, second round (lead's message after the first handback). Blocked on 6 answered: the file
+set gained group-install.md, replication-group.md and bench/group/**; both docs now say the pin is at
+the bundle (strata:0b3d0092). Blocked on 7 is filed in hunt.md by the lead (not this quest's).
+
+msg-2 (lead, 2026-11-25), answered: the owner confirmed D-4/D-5 and Q1-Q3 (PLAN D183); the "owner
+default" marks are gone from journal-binding.md (status line and D6's title, strata:16cc3dfd).
+journal-replaces-wal lands first (D182); noted.
+
+C5 bench (D-2), strata:63ff3773..888d24b5: bench/group/checkpoint_latency.cc, target
+group_checkpoint_latency (and _base when STRATA_GROUP_BENCH_BASE names the merge base's
+strata/group headers). Three voters on in-memory faultfs (world.hh), a learner whose fetches fail so
+a peer always awaits an install and each flight fails after its pin fetch; every voter checkpoints
+each 20 writes; a write's wall time runs from propose to its quorum answer. bench/group/ab.sh build
+(light) then run (strict/exclusive: ABAB rounds, base-base the A/A). The device is memory, so it
+measures the chore's CPU (D5's extra pin read and commit), not fsync. Local dry run (300 writes,
+unheld, not evidence): base p50 90 us p99 787 us, fix p50 91 us p99 907 us; 15 checkpoints
+published per side, 8 refused learner fetches, 0 installs. Smoke 261125-035701-f909a8 (strict) and
+A/B 261125-040332-16209b (exclusive, after the smoke) queued.
+
 Session 2 notes follow.
 
 Session 2 (2026-11-25), design round after the durability review (CHANGES: F1, F2, N1-N4). The
@@ -113,18 +131,18 @@ States (the doc's table has the index, journal and compare columns):
 
 ## Next
 
-1. Read jobs above; on green, ready for review (durability re-review of D5 at e084e32d).
-2. C5 (D-2): not built this launch. No group latency bench exists (bench/ has none for strata::group);
-   it needs a real-disk, threaded 3-voter harness with a learner installing during periodic
-   checkpoints, fused vs split, under `quiet exclusive`. Proposed as the next step on this branch.
+1. Read the C5 A/B 16209b: p99 fix vs base within 10% across rounds, with base-base's spread as
+   the noise floor; else name the cost. Record it under Evidence.
+2. Read the mutants, confirmations and verify above; on green, ready for review (durability
+   re-review of D5).
 3. Step 3 once consensus:recover-gate and strata:applied-term land (other quests).
 
 ## Blocked on
 
-6. (lead) docs/mechanisms/group-install.md and replication-group.md still say the pin is "at or past"
-   the bundle (D16); both are outside this file set. Options: (a) widen the file set to them and I
+6. Answered: the file set gained both docs; fixed at strata:0b3d0092. Was: group-install.md and
+   replication-group.md said the pin is "at or past" the bundle (D16). Options: (a) widen the file set to them and I
    update them to D5 (recommend); (b) the lead edits them at landing.
-7. (lead, not this quest) Pre-existing, seen while choosing voters seeds: ungated storage schedules
+7. Filed in hunt.md by the lead (not this quest's). Pre-existing, seen while choosing voters seeds: ungated storage schedules
    28, 46 and 52 (outside the suite's seeds) fail "the cluster settles" at the merge base too (a
    leader fenced by a short write on its manifest log); 14 joins them under D5's interleaving. And 8
    mutants in test/group/mutants.py no longer apply at the merge base (first-commit-unsynced, four
