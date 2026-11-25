@@ -1,6 +1,6 @@
 # journal-replaces-wal: journal
 
-State: session 22, TSan finding T1 (index race at a pressure checkpoint): thread table written; fixing.
+State: ready for review; T1 (TSan finding at 1933c78f9) fixed at Xapiand:66bcd87eb (pushed at ca2a27058); waiting on jobs 261125-043517-a4b25b (T1 x20, L1 x5), mutants 261125-043520-724b20 (pressure), 261125-043523-718f1e (full), TSan 261125-043535-432e87 (L1 and T1 x20), 261125-043538-76be33 (test_pool, shard_group, node), no-wal 261125-043544-9e00b8, crash (held to the round's end), CI at ca2a27058. S1 waits on strata-journal-behind (Next 0).
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
@@ -72,6 +72,10 @@ main thread before the loops. "Miss" is resolve's branch where `<path>/strata` d
 | through a symlink whose target is `J` or under it (`alias/x`, `alias -> J`) | **J1b**: the same identity walk (canonical resolves the link) | **J1b**: 400 | unreachable | moved |
 | through a file of `J` (`J/layout/x`, any spelling) | lexical 400, or **J1b** (ENOTDIR: the walk starts at the file, its parent is `J`) | 400 | unreachable | n/a |
 | held at start: a directory inside `J` from a build before J1/J1b (an index, artifact-named directories fencing another index) | n/a | n/a | n/a | moved to `<J>.strays/` before the host scans, the log names both paths (J1, kept); its bytes are kept; its old path answers 400 (above); every other index serves, the fenced one included. **N12**: a rename that fails (EXDEV: `J` a mount or a symlink to another volume) ends the start naming EXDEV, the directory and the remedy |
+
+| Finding | Test job | Mutant (must fail) |
+|---|---|---|
+| T1 (checkpoint off the turn; class: every index write on the chore without a turn holder awaiting it) | 261125-043517-a4b25b; TSan 261125-043535-432e87, 261125-043538-76be33 | pressure 261125-043520-724b20 (mutant/jrw-t1-pressure), full 261125-043523-718f1e (mutant/jrw-t1-full) |
 
 Value tests (test_pool, one per transition): case spellings and `alias/x` create nothing and answer invalid on
 create and without create (fails without J1b: the case spellings create directories inside `J` on APFS, the alias
@@ -828,7 +832,7 @@ Jobs prove criteria by their tags; paste `campaign brief`'s generated table here
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261124-231639-140abf; 261124-201450-7f5e03; 261123-165229-26f9f6; 261124-201452-fdb9b5; no-wal 261124-231707-095b53; crash 261124-231707-777023; fails without: 261123-165135-36e01f, 261123-165137-8ec228, 261123-165140-99c0aa, 261123-165142-9e1f71, 261123-165145-a60381, 261123-165147-e4c73e, 261123-165232-41ee12 |
+| A1 | T1 at 66bcd87eb: 261125-043517-a4b25b, TSan 261125-043535-432e87, 261125-043538-76be33; fails without (T1): 261125-043520-724b20, 261125-043523-718f1e; 261124-231639-140abf; 261124-201450-7f5e03; 261123-165229-26f9f6; 261124-201452-fdb9b5; no-wal 261124-231707-095b53; crash 261124-231707-777023; fails without: 261123-165135-36e01f, 261123-165137-8ec228, 261123-165140-99c0aa, 261123-165142-9e1f71, 261123-165145-a60381, 261123-165147-e4c73e, 261123-165232-41ee12 |
 | A2 | 261124-231642-7dc2d2; fails without: 261123-165109-560112, 261123-165112-923dcd |
 | A3 | 261124-231640-4f4566; 261124-231643-34b7e8; fails without: 261123-165120-541aae, 261123-165123-cf493c, 261123-165126-61010f |
 | A4 | 261124-231641-01874e; 261124-231639-140abf; fails without: 261123-165132-60295c |
