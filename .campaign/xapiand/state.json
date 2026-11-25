@@ -38664,7 +38664,7 @@
         "consensus-flow-bench",
         "track-c-gates"
       ],
-      "base": "c5b571ab98ec7fd8b8683d1c1fef40db1f7fb721",
+      "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
       "branch": "quest/xapiand/track-c",
       "checks": [
         {
@@ -38764,9 +38764,9 @@
       "provides": [],
       "repo": "../strata",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Track C, the consensus gaps after C1",
-      "updated": "2026-11-25T05:59:33",
+      "updated": "2026-11-25T06:03:04",
       "worktree": "../strata-wt/xapiand/track-c"
     },
     "track-c-c1": {
