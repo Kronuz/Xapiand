@@ -2797,13 +2797,16 @@ std::pair<engine::errc, std::string> error_of(F&& f) {
 	return {engine::errc::internal, ""};
 }
 
-// A shard's log holds LOG_BYTES between checkpoints (L1). With no commit, writes past it at both levels, a RESTORE
-// slice past it and an upload 2.5 times it all succeed: a placement past half the bound checkpoints, and a write that
-// meets the bound waits for a checkpoint. Every write reads back.
+// A shard's log holds LOG_BYTES between checkpoints (L1). With no commit, writes past it at both levels and a RESTORE
+// slice past it are acknowledged (a placement past half the bound checkpoints), and so is an upload 2.5 times it
+// while that checkpoint is slow, which fills the log (a write that meets the bound waits for a checkpoint). Every
+// write reads back.
 void test_a_log_past_its_bound_checkpoints_instead_of_refusing() {
 	Watchdog watchdog("a log past its bound", 300s);
 	const auto journal = fresh("journal_full");
 	const auto path = fresh("group_full");
+	// Once set, the next checkpoint's hook holds it for a second, so placements meanwhile fill the log; outlives the pool.
+	std::atomic<bool> slow{false};
 	{
 		DatabasePool pool(control_loop(), 8);
 		pool.set_journal(journal);
@@ -2812,15 +2815,41 @@ void test_a_log_past_its_bound_checkpoints_instead_of_refusing() {
 		Shard none = use(entry, WRITE | DB_ACK_NONE);
 		auto* group = quorum.group();
 		REQUIRE(group != nullptr);
+		group->on_checkpoint = [&slow, hook = group->on_checkpoint] {
+			if (slow.exchange(false)) {
+				std::this_thread::sleep_for(1s);
+			}
+			hook();
+		};
 		constexpr std::size_t DOC = 128 * 1024;
-		constexpr std::size_t N = 3 * LOG_BYTES / 2 / DOC;   // 1.5 times the bound at each level
-		std::vector<engine::docid> dids;
+		constexpr std::size_t N = 3 * LOG_BYTES / 2 / DOC;   // 1.5 times the bound per phase
+		std::map<std::string, std::uint32_t> written;        // each acknowledged write's key and its seed
+		std::size_t refused = 0;
+		const auto write = [&](Shard& shard, const std::string& key, std::uint32_t seed) {
+			try {
+				engine::sync_wait(shard.add_document(make(key, noise(DOC, seed))));
+				written[key] = seed;
+			} catch (const engine::Error&) {
+				++refused;
+			}
+		};
+		auto through = group->checkpointed.load();
+		const auto checkpointed = [&] {   // a checkpoint published since the last call
+			const auto now = group->checkpointed.load();
+			return std::exchange(through, now) < now;
+		};
+
 		for (std::size_t i = 0; i < N; ++i) {
-			dids.push_back(engine::sync_wait(quorum.add_document(make("Kq" + std::to_string(i), noise(DOC, static_cast<std::uint32_t>(i))))).did);
+			write(quorum, "Kq" + std::to_string(i), static_cast<std::uint32_t>(i));
 		}
+		CHECK_EQ(refused, 0u);
+		CHECK_TRUE(checkpointed());
 		for (std::size_t i = 0; i < N; ++i) {
-			engine::sync_wait(none.add_document(make("Kn" + std::to_string(i), noise(DOC, static_cast<std::uint32_t>(N + i)))));
+			write(none, "Kn" + std::to_string(i), static_cast<std::uint32_t>(N + i));
 		}
+		CHECK_EQ(refused, 0u);
+		CHECK_TRUE(checkpointed());
+
 		std::vector<SliceWrite> writes(N);
 		for (std::size_t i = 0; i < N; ++i) {
 			writes[i].idx = i;
@@ -2832,29 +2861,48 @@ void test_a_log_past_its_bound_checkpoints_instead_of_refusing() {
 		while (at < writes.size()) {
 			engine::sync_wait(quorum.apply_slice(engine::inline_chores(), writes, at, std::chrono::seconds(60), missed));
 		}
-		for (const auto& write : writes) {
-			CHECK_FALSE(write.error);
+		std::size_t failed = 0;
+		for (const auto& slice_write : writes) {
+			failed += slice_write.error || slice_write.missed ? 1 : 0;
 		}
+		CHECK_EQ(failed, 0u);
+		CHECK_TRUE(checkpointed());
+
 		const auto uploaded = noise(5 * LOG_BYTES / 2, 7);
-		ChunkedUpload upload(engine::sync_wait(next_chunked_id(*group)), uploaded.size());
-		Pieces body(uploaded, 256 * 1024);
-		engine::sync_wait(propose_upload(group_proposer(*group), upload, body));
-		Data placeholder;
-		placeholder.update(ct_type_t("video/mp4"), 0, 0, uploaded.size());
-		placeholder.flush();
-		auto up = make("Kup", "");
-		up.set_data(placeholder.serialize());
-		const auto up_did = engine::sync_wait(quorum.replace_document_term("Kup", std::move(up), false, true, &upload)).did;
-		CHECK_GT(group->checkpointed.load(), 0u);   // the pressure checkpointed with no commit
+		slow = true;
+		engine::docid up_did = 0;
+		const auto up_refused = error_of([&] {
+			ChunkedUpload upload(engine::sync_wait(next_chunked_id(*group)), uploaded.size());
+			Pieces body(uploaded, 256 * 1024);
+			engine::sync_wait(propose_upload(group_proposer(*group), upload, body));
+			Data placeholder;
+			placeholder.update(ct_type_t("video/mp4"), 0, 0, uploaded.size());
+			placeholder.flush();
+			auto up = make("Kup", "");
+			up.set_data(placeholder.serialize());
+			up_did = engine::sync_wait(quorum.replace_document_term("Kup", std::move(up), false, true, &upload)).did;
+		}).second;
+		CHECK_EQ(up_refused, std::string());
+		CHECK_FALSE(slow.load());   // the slow checkpoint ran during the upload
+		CHECK_TRUE(checkpointed());
 		CHECK_LT(group->log_bytes.load(), LOG_BYTES);
-		for (std::size_t i = 0; i < N; i += N / 8) {
-			auto view = engine::sync_wait(quorum.get_view(dids[i]));
-			CHECK(view->data() == noise(DOC, static_cast<std::uint32_t>(i)));
+
+		CHECK_EQ(written.size(), 2 * N);
+		std::size_t differ = 0;
+		for (const auto& [key, seed] : written) {
+			const auto did = engine::sync_wait(quorum.written_key(key));
+			differ += did != 0 && engine::sync_wait(quorum.get_view(did))->data() == noise(DOC, seed) ? 0 : 1;
 		}
-		auto view = engine::sync_wait(quorum.get_view(writes[N - 1].info.did));
-		CHECK(view->data() == noise(DOC, static_cast<std::uint32_t>(3 * N - 1)));
-		const auto [up_type, up_read] = stored_blob(quorum, up_did, "video/mp4");
-		CHECK(up_read == uploaded);
+		for (const auto& slice_write : writes) {
+			const auto seed = static_cast<std::uint32_t>(2 * N + slice_write.idx);
+			const auto did = slice_write.info.did;
+			differ += did != 0 && engine::sync_wait(quorum.get_view(did))->data() == noise(DOC, seed) ? 0 : 1;
+		}
+		CHECK_EQ(differ, 0u);
+		CHECK_NE(up_did, 0u);
+		if (up_did != 0) {
+			CHECK(stored_blob(quorum, up_did, "video/mp4").second == uploaded);
+		}
 	}
 	std::filesystem::remove_all(journal);
 	std::filesystem::remove_all(path);

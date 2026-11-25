@@ -163,7 +163,11 @@ An index refuses to open, with one error line naming its cause and the same text
    restart the log and the file set over that state: the file set's recovery deletes the committed blob volumes,
    and new records land where old locators point. The open checks before the group is built
    (`refuse_without_journal`) and touches nothing. Recovery: put the journal's directory back, or delete the
-   index and RESTORE it from a dump.
+   index and RESTORE it from a dump. An index directory copied to another node is this case: its acknowledged
+   writes and its group membership live in the source node's journal, so the target refuses it rather than adopt
+   a directory that may have lost writes. An index moves between nodes by replication (raise
+   `number_of_replicas`, or drain the source node, so a replica on the target catches up, then remove the source)
+   or by DUMP/RESTORE.
 2. **A volume is damaged.** strata opens the group damaged (a file shorter than its bundle names, a sealed file
    failing its CRC32C) and arms its repair, which at `rf = 1` has no peer to repair from. The open closes the group
    on its loop, which skips the checkpoints, and refuses (`refuse_opened_group`), so the whole index refuses at
