@@ -13749,9 +13749,9 @@
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "strata checks a segment's field ids wherever it maps",
-      "updated": "2026-11-24T18:56:12",
+      "updated": "2026-11-24T19:57:30",
       "worktree": "../strata-wt/xapiand/field-check-at-map"
     },
     "field-table": {
