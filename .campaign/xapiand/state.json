@@ -35403,9 +35403,10 @@
         "consensus:group-last"
       ],
       "files": [
-        "include/strata/group/group.hh",
+        "include/strata/group/**",
         "test/group/**",
         "docs/mechanisms/group-open.md",
+        "docs/design/journal-binding.md",
         "CMakeLists.txt",
         "CHANGELOG.md"
       ],
@@ -35443,7 +35444,7 @@
       "risk": "high",
       "status": "review",
       "title": "strata: a group whose journal is behind its index refuses at open",
-      "updated": "2026-11-25T00:56:40",
+      "updated": "2026-11-25T01:25:24",
       "worktree": "../strata-wt/xapiand/strata-journal-behind"
     },
     "strata-journal-pin": {
