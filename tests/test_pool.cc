@@ -2953,8 +2953,13 @@ void test_a_checkpoint_holds_the_turn() {
 		slow = true;
 		auto pressure = std::async(std::launch::async, read_waits);
 		auto through = group->checkpointed.load();
-		for (std::size_t i = 0; slow.load() && i < LOG_BYTES / DOC; ++i) {
+		// Writes until one leaves the log pressed, and no more: no write of the writer's is in flight on the chore then.
+		for (std::size_t i = 0; i < LOG_BYTES / DOC; ++i) {
+			const bool last = group->log_bytes() + DOC >= LOG_BYTES / 2;
 			engine::sync_wait(writer.add_document(make("Kp" + std::to_string(i), noise(DOC, static_cast<std::uint32_t>(i)))));
+			if (last) {
+				break;
+			}
 		}
 		CHECK_FALSE(slow.load());   // a write's pressure checkpoint ran
 		CHECK_TRUE(pressure.get());
