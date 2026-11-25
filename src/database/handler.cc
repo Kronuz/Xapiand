@@ -649,7 +649,7 @@ DatabaseHandler::upload_stored(const MsgPack& document_id, size_t size, BodyChun
 	blob.upload = std::make_shared<ChunkedUpload>(co_await next_chunked_id(*group), size);
 	blob.size = size;
 	blob.shard = shard_num;
-	co_await propose_upload(group_proposer(*group), *blob.upload, body);
+	co_await propose_upload(group_proposer(*group, Proposer::pinned), *blob.upload, body);
 	co_return blob;
 }
 
@@ -677,7 +677,7 @@ DatabaseHandler::index_uploaded(const MsgPack& document_id, engine::rev document
 			lock_shard lk_shard(endpoints[blob.shard], flags, turn_token());
 			co_await lk_shard.pin();
 			if (auto* group = lk_shard->group()) {
-				co_await propose_abort(group_proposer(*group), blob.upload->id());
+				co_await propose_abort(group_proposer(*group, Proposer::pinned), blob.upload->id());
 			}
 		} catch (...) {
 			L_EXC("Unable to abort an upload whose document was not indexed");
@@ -2461,9 +2461,9 @@ propose_final(const ProposeEntry& propose, std::uint64_t id, std::string entry, 
 
 
 ProposeEntry
-group_proposer(ShardGroup& shard_group)
+group_proposer(ShardGroup& shard_group, Proposer proposer)
 {
-	return [&shard_group](std::string entry, strata::group::ack level) { return propose_entry(shard_group, std::move(entry), level); };
+	return [&shard_group, proposer](std::string entry, strata::group::ack level) { return propose_entry(shard_group, std::move(entry), level, proposer); };
 }
 
 

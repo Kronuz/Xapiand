@@ -68,6 +68,7 @@ struct ct_type_t;
 struct query_field_t;
 class ChunkedUpload;
 struct ShardGroup;
+enum class Proposer;
 
 namespace strata::group {
 struct answer;
@@ -328,8 +329,9 @@ public:
 // Proposes one entry to the shard's group at a level and answers what its proposer heard.
 using ProposeEntry = std::function<task::task<strata::group::answer>(std::string entry, strata::group::ack level)>;
 
-// Proposes to `shard_group` from any scheduler (propose_entry); valid while its index is pinned.
-ProposeEntry group_proposer(ShardGroup& shard_group);
+// Proposes to `shard_group` from any scheduler (propose_entry) as `proposer`: in the shard's turn, or holding only its
+// pin. Valid while its index is pinned.
+ProposeEntry group_proposer(ShardGroup& shard_group, Proposer proposer);
 
 // A blob streamed through the group into a volume of its own (D12): its bytes as chunk entries of the upload
 // stream, each entry within `limit`, then the final entry of the command that names it, or its abort.

@@ -220,6 +220,9 @@ class ShardEndpoint : public Endpoint
 
 	// A request's commit with a group: the group's checkpoint (D16), awaited from the request, under the turn.
 	task::task<bool> commit_group();
+	// The group's checkpoint in a turn of its own, for a proposer that holds the pin and no turn (ShardGroup's
+	// checkpoint_in_turn, T1).
+	task::task<void> checkpoint_in_turn();
 
 	// A document write, under the turn: prepared on the engine, then applied by the group on every voter in log
 	// order (cluster-release D3) and acknowledged at quorum, or applied on the engine when the index has no group.

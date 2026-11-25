@@ -24,7 +24,6 @@
 
 #include <array>                   // for std::array
 #include <atomic>                  // for std::atomic
-#include <condition_variable>      // for std::condition_variable
 #include <cstddef>                 // for std::size_t
 #include <functional>              // for std::function
 #include <cstdint>                 // for std::uint64_t
@@ -237,10 +236,13 @@ struct ShardGroup {
 	// Run on the chore after every checkpoint() publishes, with the index as it committed it: the engine's view
 	// follows the commit (engine::strata::Shard::checkpointed).
 	std::function<void()> on_checkpoint;
+	// Takes the shard's turn and runs checkpoint() in it (ShardEndpoint::checkpoint_in_turn): a pinned proposer's,
+	// which holds no turn (Proposer::pinned).
+	std::function<task::task<void>()> checkpoint_in_turn;
 
 	// The log placed and the part a published checkpoint cut, counted at each placement on the loop: the pressure
 	// trigger's measure (L1). All four only grow: a checkpoint raises `cut_*` to what was placed before it began, so
-	// overlapping checkpoints never subtract twice; entries placed during a checkpoint stay counted.
+	// checkpoints that overlap never subtract twice; entries placed during a checkpoint stay counted.
 	std::atomic<std::size_t> placed_bytes{0}, placed_entries{0}, cut_bytes{0}, cut_entries{0};
 	std::size_t log_bytes() const noexcept { const auto cut = cut_bytes.load(); return placed_bytes.load() - cut; }
 	std::size_t log_entries() const noexcept { const auto cut = cut_entries.load(); return placed_entries.load() - cut; }
@@ -248,13 +250,8 @@ struct ShardGroup {
 	ShardGroup(ShardGroups& groups, kronuz::journal::IO& directory, prospect::index& index);
 	~ShardGroup();
 
-	// Starts the pressure checkpoint on the loop unless one runs or the group is quiesced: a placement left the log
-	// past half its bound. It runs with no pin; quiesce() waits for it.
-	void pressure();
-
-	// Blocks the calling thread (never the loop) until no pressure checkpoint runs, and starts none after: before
-	// the group's close.
-	void quiesce();
+	// A placement left the log at or past half its bound in bytes or entries: the pressure trigger (L1).
+	bool pressed() const noexcept { return log_bytes() >= LOG_BYTES / 2 || log_entries() >= LOG_ENTRIES / 2; }
 
 	// Blocks the calling thread (never the loop or the chore) until the group applied everything committed when
 	// it was called: a linearizable read's barrier (D4). `at`, if any, then reads the state and the index on the chore.
@@ -263,23 +260,23 @@ struct ShardGroup {
 	// Blocks the calling thread until the abort of each chunked command `ids` names is placed (D12, A9): the leader's
 	// ready point ends what its term's earlier proposers left open, so their files are freed.
 	void abort_open(const std::vector<std::uint64_t>& ids);
-
-private:
-	std::mutex pressure_mtx_;
-	std::condition_variable pressure_cv_;
-	bool pressure_running_ = false;   // under pressure_mtx_
-	bool quiesced_ = false;           // under pressure_mtx_
 };
+
+// What a proposer holds (T1, docs/mechanisms/journal-durability.md "Who writes the index"): the shard's turn (a
+// document write, a RESTORE's batch, an upload's final entry) or only a pin (an upload's chunks, an abort). A checkpoint
+// writes the index, so it runs in the turn: a pinned proposer takes it for one.
+enum class Proposer { in_turn, pinned };
 
 // The engine's error for consensus's refusal of a proposal: errc::busy (a 503) for one that passes with time (a full
 // log, busy, not the leader, not ready); errc::internal (a 500) for the rest, a proposer's bug (N11).
 engine::errc refusal_kind(kronuz::consensus::RejectReason reason) noexcept;
 
 // Proposes `entry` on the group's loop from any scheduler and answers on the caller's: handler.h's ProposeEntry. A
-// closing group raises errc::not_available. A full log (LogFull) waits for a checkpoint and proposes again; a log
+// closing group raises errc::not_available. A full log (LogFull) checkpoints, in the turn, and proposes again; a log
 // still full, or a refusal that passes with time (busy, not the leader, not ready), raises errc::busy naming
 // consensus's reason (a 503); any other refusal (too large, a duplicate request) is a proposer's bug, errc::internal.
-task::task<strata::group::answer> propose_entry(ShardGroup& shard_group, std::string entry, strata::group::ack level);
+// A proposer in the turn whose placement left the log pressed checkpoints before it answers (L1).
+task::task<strata::group::answer> propose_entry(ShardGroup& shard_group, std::string entry, strata::group::ack level, Proposer proposer);
 
 // Awaits, from any scheduler and on the caller's, until the group applied everything committed when it was called: a
 // linearizable read's barrier (D4), and what a write prepared after an `ack=none` write waits for (D3).
@@ -289,6 +286,7 @@ task::task<void> caught_up(ShardGroup& shard_group);
 task::task<std::uint64_t> next_chunked_id(ShardGroup& shard_group);
 
 // A checkpoint of the group (D16), started on its loop from any scheduler and answered on the caller's: the shard's
-// commit, and the pressure trigger's. Never from a commit hook (D169): the checkpoint's chore takes the index's
-// write lease. The group's `on_checkpoint`, if any, then runs on the chore.
+// commit, the pressure trigger's and a full log's. It writes the index on the chore, so its caller holds the shard's
+// turn (T1). Never from a commit hook (D169): the checkpoint's chore takes the index's write lease. The group's
+// `on_checkpoint`, if any, then runs on the chore.
 task::task<void> checkpoint(ShardGroup& shard_group);

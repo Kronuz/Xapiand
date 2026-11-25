@@ -130,6 +130,24 @@ directory and index (strata's group-catalog, D169):
    its bundle covers what it committed, and the process keeps its closed record, so a reopen resumes its term
    with no election. The catalog's commit hook stays a plain strata commit.
 
+## Who writes the index
+
+The shard's turn (`ShardEndpoint::turn`) is the index's one writer: strata lets a thread read the index outside a
+view (`find_key`, the buffers, the field table) only while no other thread writes it (x-pool D5). Every path that
+reads or writes the index outside a view runs in the turn, or on the group's chore while a turn's holder awaits it:
+
+| Path | Thread | Held off by |
+|---|---|---|
+| prepare, `written_key`, `written_count`, a refresh before a read, a transaction, a commit without a group, the check-in at a turn's end | the holder's, or an index chore | the turn |
+| a command's apply | the group's chore | `quorum`: its proposer, in the turn, awaits it; `none`: the turn's next holder awaits it first (`caught_up`) |
+| a checkpoint: its capture, `sync_and_commit`, `on_checkpoint` (the engine's refresh) | the group's chore | the turn, held by the checkpoint's caller: a COMMIT, a pressed proposer in the turn, or a proposer at a full log (a pinned one takes it) |
+| the catalog's commit hook | a catalog worker | no pin, so no turn; strata's lease holds the group's writes off |
+| the open's catch-up, the close's checkpoint | the group's chore | nothing else holds the index then (before the open answers, after the last pin) |
+| a read through a view | any | nothing: views are published (D5) |
+
+A checkpoint thus runs only for a pinned task in the turn: none starts in the background, so the catalog never
+closes or demotes an index under one, and the close waits for nothing of its own.
+
 ## The log's bound
 
 A shard's retained log holds at most `LOG_BYTES` (16 MiB) and `LOG_ENTRIES` (65,536) between checkpoints
@@ -144,12 +162,13 @@ None refuses a write at its buffer, and neither does the group:
 
 1. **Pressure.** Each placement counts its bytes and entries on the loop (`ShardGroup::placed_bytes`,
    `placed_entries`); the log's measure is what was placed less what a published checkpoint cut
-   (`log_bytes()`, `log_entries()`). Past half of either bound, `ShardGroup::pressure` starts one checkpoint on
-   the group's loop (never from a commit hook), holding no pin; the group's close waits for it (`quiesce`, which
-   refuses a reactor or task thread). A checkpoint raises the cut to what was placed before it began, never
-   lowers it, so overlapping checkpoints (a COMMIT, a writer's, the pressure one) never subtract twice.
-2. **A full log.** A proposal that consensus still refuses as `LogFull` (applies behind, or a burst faster than a
-   checkpoint) runs a checkpoint itself and proposes again; consensus retires the cut log's entries a
+   (`log_bytes()`, `log_entries()`). A proposer in the turn whose placement leaves the log past half of either
+   bound (`ShardGroup::pressed`) checkpoints before it answers, still in its turn, so the index's writes never
+   meet a full log. A checkpoint raises the cut to what was placed before it began, never lowers it, so
+   checkpoints that overlap never subtract twice.
+2. **A full log.** A proposal that consensus still refuses as `LogFull` (an upload's chunks, which hold no turn
+   and do not checkpoint at half, or applies behind) runs a checkpoint in the turn, taking it when it holds only a
+   pin (`ShardGroup::checkpoint_in_turn`), and proposes again; consensus retires the cut log's entries a
    command's worth per step, so the following attempts drain it. A log still full after that, or a refusal
    that passes with time (busy, not the leader, not ready), answers 503 naming consensus's reason; an entry
    too large or a duplicate request is a proposer's bug and answers 500.

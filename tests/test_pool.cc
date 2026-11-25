@@ -696,7 +696,7 @@ void test_stored_blobs_survive_a_kill() {
 		auto* group = shard.group();
 		ChunkedUpload upload(engine::sync_wait(next_chunked_id(*group)), uploaded.size(), 64 * 1024);
 		Pieces body(uploaded, 10000);
-		engine::sync_wait(propose_upload(group_proposer(*group), upload, body));
+		engine::sync_wait(propose_upload(group_proposer(*group, Proposer::pinned), upload, body));
 		Data placeholder;
 		placeholder.update(ct_type_t("video/mp4"), 0, 0, uploaded.size());
 		placeholder.flush();
@@ -2761,7 +2761,7 @@ void test_a_reopen_aborts_an_upload_left_open() {
 			REQUIRE(group != nullptr);
 			upload.emplace(engine::sync_wait(next_chunked_id(*group)), 5000, 4096);
 			Pieces body(std::string(5000, 'u'), 1000);
-			engine::sync_wait(propose_upload(group_proposer(*group), *upload, body));
+			engine::sync_wait(propose_upload(group_proposer(*group, Proposer::pinned), *upload, body));
 			term = chunked_term(upload->id());
 			CHECK_TRUE(engine::sync_wait(shard.commit()));   // the sweep closes only a committed index
 		}
@@ -2803,14 +2803,14 @@ std::pair<engine::errc, std::string> error_of(F&& f) {
 }
 
 // A shard's log holds LOG_BYTES between checkpoints (L1). With no commit, writes past it at both levels and a RESTORE
-// slice past it are acknowledged (a placement past half the bound checkpoints), and so is an upload 2.5 times it
-// while that checkpoint is slow, which fills the log (a write that meets the bound waits for a checkpoint). Every
-// write reads back.
+// slice past it are acknowledged (a placement in the turn past half the bound checkpoints), and so is an upload 2.5
+// times it, whose chunks hold no turn and fill the log (a chunk that meets the bound takes the turn, checkpoints
+// slowly and proposes again). Every write reads back.
 void test_a_log_past_its_bound_checkpoints_instead_of_refusing() {
 	Watchdog watchdog("a log past its bound", 300s);
 	const auto journal = fresh("journal_full");
 	const auto path = fresh("group_full");
-	// Once set, the next checkpoint's hook holds it for a second, so placements meanwhile fill the log; outlives the pool.
+	// Once set, the next checkpoint's hook holds it for a second: the upload's, at its full log. Outlives the pool.
 	std::atomic<bool> slow{false};
 	{
 		DatabasePool pool(control_loop(), 8);
@@ -2879,7 +2879,7 @@ void test_a_log_past_its_bound_checkpoints_instead_of_refusing() {
 		const auto up_refused = error_of([&] {
 			ChunkedUpload upload(engine::sync_wait(next_chunked_id(*group)), uploaded.size());
 			Pieces body(uploaded, 256 * 1024);
-			engine::sync_wait(propose_upload(group_proposer(*group), upload, body));
+			engine::sync_wait(propose_upload(group_proposer(*group, Proposer::pinned), upload, body));
 			Data placeholder;
 			placeholder.update(ct_type_t("video/mp4"), 0, 0, uploaded.size());
 			placeholder.flush();
@@ -2888,7 +2888,7 @@ void test_a_log_past_its_bound_checkpoints_instead_of_refusing() {
 			up_did = engine::sync_wait(quorum.replace_document_term("Kup", std::move(up), false, true, &upload)).did;
 		}).second;
 		CHECK_EQ(up_refused, std::string());
-		CHECK_FALSE(slow.load());   // the slow checkpoint ran during the upload
+		CHECK_FALSE(slow.load());   // the upload met the full log and checkpointed
 		CHECK_TRUE(checkpointed());
 		CHECK_LT(group->log_bytes(), LOG_BYTES);
 
@@ -2908,6 +2908,72 @@ void test_a_log_past_its_bound_checkpoints_instead_of_refusing() {
 		if (up_did != 0) {
 			CHECK(stored_blob(quorum, up_did, "video/mp4").second == uploaded);
 		}
+	}
+	std::filesystem::remove_all(journal);
+	std::filesystem::remove_all(path);
+}
+
+// Every checkpoint writes the index on the group's chore, so it runs in the shard's turn (T1): a written read (the
+// lease-less lookup a write's placement makes) that asks while a checkpoint's hook runs waits for the checkpoint to
+// end. Both checkpoints a client starts without a COMMIT: the pressure one of a write in its turn, and the one an
+// upload's chunk, which holds no turn, runs at a full log.
+void test_a_checkpoint_holds_the_turn() {
+	Watchdog watchdog("a checkpoint holds the turn", 300s);
+	const auto journal = fresh("journal_turn");
+	const auto path = fresh("group_turn");
+	std::atomic<bool> slow{false};      // the next checkpoint's hook sleeps
+	std::atomic<bool> sleeping{false};  // the hook sleeps now
+	{
+		DatabasePool pool(control_loop(), 8);
+		pool.set_journal(journal);
+		auto entry = pin(pool, path);
+		Shard writer = use(entry, WRITE);
+		Shard reader = use(entry, WRITE);
+		auto* group = writer.group();
+		REQUIRE(group != nullptr);
+		group->on_checkpoint = [&slow, &sleeping, hook = group->on_checkpoint] {
+			if (slow.exchange(false)) {
+				sleeping = true;
+				std::this_thread::sleep_for(500ms);
+				sleeping = false;
+			}
+			hook();
+		};
+		engine::sync_wait(writer.add_document(make("Kt", "t")));
+		// Waits for the hook to sleep, then reads: true when the read waited for the checkpoint's end.
+		const auto read_waits = [&] {
+			while (!sleeping.load()) {
+				std::this_thread::sleep_for(1ms);
+			}
+			const auto did = engine::sync_wait(reader.written_key("Kt"));
+			return did != 0 && !sleeping.load();
+		};
+
+		constexpr std::size_t DOC = 128 * 1024;
+		slow = true;
+		auto pressure = std::async(std::launch::async, read_waits);
+		auto through = group->checkpointed.load();
+		for (std::size_t i = 0; slow.load() && i < LOG_BYTES / DOC; ++i) {
+			engine::sync_wait(writer.add_document(make("Kp" + std::to_string(i), noise(DOC, static_cast<std::uint32_t>(i)))));
+		}
+		CHECK_FALSE(slow.load());   // a write's pressure checkpoint ran
+		CHECK_TRUE(pressure.get());
+		CHECK_GT(group->checkpointed.load(), through);
+
+		const auto uploaded = noise(3 * LOG_BYTES / 2, 11);
+		slow = true;
+		auto full = std::async(std::launch::async, read_waits);
+		through = group->checkpointed.load();
+		const auto up_refused = error_of([&] {
+			ChunkedUpload upload(engine::sync_wait(next_chunked_id(*group)), uploaded.size());
+			Pieces body(uploaded, 256 * 1024);
+			engine::sync_wait(propose_upload(group_proposer(*group, Proposer::pinned), upload, body));
+			engine::sync_wait(propose_abort(group_proposer(*group, Proposer::pinned), upload.id()));
+		}).second;
+		CHECK_EQ(up_refused, std::string());
+		CHECK_FALSE(slow.load());   // the upload's checkpoint at the full log ran
+		CHECK_TRUE(full.get());
+		CHECK_GT(group->checkpointed.load(), through);
 	}
 	std::filesystem::remove_all(journal);
 	std::filesystem::remove_all(path);
@@ -3241,6 +3307,7 @@ int main(int argc, char** argv) {
 		{"test_the_id_counter_is_in_the_log", test_the_id_counter_is_in_the_log},
 		{"test_a_reopen_aborts_an_upload_left_open", test_a_reopen_aborts_an_upload_left_open},
 		{"test_a_log_past_its_bound_checkpoints_instead_of_refusing", test_a_log_past_its_bound_checkpoints_instead_of_refusing},
+		{"test_a_checkpoint_holds_the_turn", test_a_checkpoint_holds_the_turn},
 		{"test_an_index_inside_the_journal_is_refused", test_an_index_inside_the_journal_is_refused},
 		{"test_an_index_without_its_journal_refuses_and_keeps_its_volumes", test_an_index_without_its_journal_refuses_and_keeps_its_volumes},
 		{"test_a_damaged_volume_refuses_its_index", test_a_damaged_volume_refuses_its_index},

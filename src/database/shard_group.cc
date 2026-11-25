@@ -42,7 +42,6 @@
 #include "engine/strata/document.h"  // for engine::strata::StrataDocument
 #include "engine/strata/io_options.h"  // for engine::strata::posix_io_options
 #include "engine/strata/shard.h"   // for engine::strata::append_write
-#include "engine/sync.h"           // for engine::check_may_block
 #include "log.h"                    // for L_WARNING, L_DEBUG
 #include "repr.hh"                 // for repr
 #include "reserved/fields.h"       // for VERSION_FIELD_NAME
@@ -796,47 +795,7 @@ ShardGroup::ShardGroup(ShardGroups& groups, kronuz::journal::IO& directory_, pro
 }
 
 
-ShardGroup::~ShardGroup()
-{
-	quiesce();
-}
-
-
-void
-ShardGroup::pressure()
-{
-	{
-		std::lock_guard<std::mutex> lk(pressure_mtx_);
-		if (pressure_running_ || quiesced_) {
-			return;
-		}
-		pressure_running_ = true;
-	}
-	auto run = [](ShardGroup& shard_group) -> task::task<void> {
-		try {
-			co_await checkpoint(shard_group);
-		} catch (const std::exception& exc) {
-			// A writer that meets the full log runs its own checkpoint and answers its error.
-			L_DEBUG("The pressure checkpoint of group {} failed: {}", shard_group.group.id(), exc.what());
-		}
-	};
-	task::spawn(group.owner().scheduler(), run(*this), [this](std::exception_ptr) {
-		std::lock_guard<std::mutex> lk(pressure_mtx_);
-		pressure_running_ = false;
-		pressure_cv_.notify_all();   // under the lock: quiesce() may destroy the group once it sees false
-	});
-}
-
-
-void
-ShardGroup::quiesce()
-{
-	// The pressure task it waits for runs on the group loop: a wait there, or on any loop, would stall or deadlock.
-	engine::check_may_block("ShardGroup::quiesce");
-	std::unique_lock<std::mutex> lk(pressure_mtx_);
-	quiesced_ = true;
-	pressure_cv_.wait(lk, [this] { return !pressure_running_; });
-}
+ShardGroup::~ShardGroup() = default;
 
 
 namespace {
@@ -873,7 +832,7 @@ refusal_kind(kronuz::consensus::RejectReason reason) noexcept
 
 
 task::task<strata::group::answer>
-propose_entry(ShardGroup& shard_group, std::string entry, strata::group::ack level)
+propose_entry(ShardGroup& shard_group, std::string entry, strata::group::ack level, Proposer proposer)
 {
 	namespace cs = kronuz::consensus;
 	const auto home = task::current();
@@ -881,13 +840,10 @@ propose_entry(ShardGroup& shard_group, std::string entry, strata::group::ack lev
 	std::exception_ptr error;
 	std::optional<strata::group::answer> out;
 	const auto bytes = entry.size();
-	// On the loop, at the placement: counts the entry, and past half the log's bound starts a checkpoint (L1).
+	// On the loop, at the placement: counts the entry toward the log's measure (L1).
 	auto placed = [&shard_group, bytes](cs::Placement) {
 		shard_group.placed_bytes.fetch_add(bytes);
 		shard_group.placed_entries.fetch_add(1);
-		if (shard_group.log_bytes() >= LOG_BYTES / 2 || shard_group.log_entries() >= LOG_ENTRIES / 2) {
-			shard_group.pressure();
-		}
 	};
 	for (std::size_t attempt = 0;; ++attempt) {
 		bool full = false;
@@ -908,9 +864,10 @@ propose_entry(ShardGroup& shard_group, std::string entry, strata::group::ack lev
 			break;
 		}
 		if (attempt == 0) {
-			// The writer waits for the checkpoint the trigger missed, or a second one, and proposes again.
+			// The proposer checkpoints in the turn (T1), taking it when it holds only a pin, and proposes again.
+			co_await task::schedule_on{home};
 			try {
-				co_await checkpoint(shard_group);
+				co_await (proposer == Proposer::in_turn ? checkpoint(shard_group) : shard_group.checkpoint_in_turn());
 			} catch (...) {
 				error = std::current_exception();
 				break;
@@ -921,6 +878,17 @@ propose_entry(ShardGroup& shard_group, std::string entry, strata::group::ack lev
 	co_await task::schedule_on{home};
 	if (error) {
 		std::rethrow_exception(error);
+	}
+	if (proposer == Proposer::in_turn && shard_group.pressed()) {
+		// The pressure trigger: the log is cut before the turn passes on. The write stands whatever it answers; a
+		// failed checkpoint leaves the next full log to checkpoint again.
+		try {
+			co_await checkpoint(shard_group);
+		} catch (const std::exception& exc) {
+			L_DEBUG("The pressure checkpoint of group {} failed: {}", shard_group.group.id(), exc.what());
+		} catch (...) {
+			L_DEBUG("The pressure checkpoint of group {} failed", shard_group.group.id());
+		}
 	}
 	co_return std::move(*out);
 }

@@ -260,6 +260,7 @@ ShardEndpoint::open_blocking(kronuz::journal::IO& directory, prospect::index& in
 		auto* eng = &dynamic_cast<engine::strata::Shard&>(*engine_);
 		group_->app.applied = [eng] { eng->applied_by_group(); };
 		group_->on_checkpoint = [eng] { eng->checkpointed(); };
+		group_->checkpoint_in_turn = [this] { return checkpoint_in_turn(); };
 		try {
 			group_->group.open_blocking();
 		} catch (const strata::group::group_fenced& exc) {
@@ -344,7 +345,6 @@ ShardEndpoint::refuse_opened_group(std::exception_ptr failed)
 		reason = group_->group.damage_reason();
 	}
 	L_ERR("The index {} refuses to open: {}", repr(to_string()), reason);
-	group_->quiesce();
 	try {
 		group_->group.close_blocking();
 	} catch (...) {
@@ -364,7 +364,6 @@ ShardEndpoint::close_group()
 		return;
 	}
 	auto& group = group_->group;
-	group_->quiesce();
 	group.close_blocking();
 	database_pool.groups()->closed(group.id(), group.closed_record());
 }
@@ -511,6 +510,14 @@ ShardEndpoint::commit_group()
 }
 
 
+task::task<void>
+ShardEndpoint::checkpoint_in_turn()
+{
+	auto turn_ = co_await take_turn(DB_WRITABLE);
+	co_await checkpoint(*group_);
+}
+
+
 task::task<bool>
 ShardEndpoint::settle_merges(int flags)
 {
@@ -579,7 +586,7 @@ task::task<strata::group::answer>
 propose(ShardGroup& shard_group, const Command& command, strata::group::ack level = strata::group::ack::quorum)
 {
 	const auto id = co_await next_chunked_id(shard_group);
-	const auto entries = group_proposer(shard_group);
+	const auto entries = group_proposer(shard_group, Proposer::in_turn);
 	co_return co_await propose_command(entries, command, id, level);
 }
 
@@ -592,7 +599,7 @@ propose_upload_command(ShardGroup& shard_group, ChunkedUpload& upload, const Com
 		throw engine::Error(engine::errc::not_available, "The blob's upload ended: send it again");
 	}
 	upload.finish();
-	const auto entries = group_proposer(shard_group);
+	const auto entries = group_proposer(shard_group, Proposer::in_turn);
 	co_return co_await propose_upload_final(entries, upload, command, level);
 }
 
@@ -1264,7 +1271,7 @@ Shard::restore_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, st
 		std::exception_ptr failed;
 		try {
 			auto proposing = batch.entry.empty() ? propose(*entry.group(), batch.command, level)
-				: propose_entry(*entry.group(), std::move(batch.entry), level);
+				: propose_entry(*entry.group(), std::move(batch.entry), level, Proposer::in_turn);
 			const auto answer = co_await std::move(proposing);
 			if (at_placement) {
 				entry.unapplied_ = true;
