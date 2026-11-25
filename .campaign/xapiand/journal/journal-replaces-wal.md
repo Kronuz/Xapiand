@@ -1,9 +1,48 @@
 # journal-replaces-wal: journal
 
-State: ready for review; waiting on jobs 261124-231558-1b3106, -231602-a9e71c, -231605-ebe75b, -231610-09be1d, -231614-0d6d34, -231619-cab4ba, the eight reruns, crash 231707-777023, no-wal 231707-095b53 and CI at 3d5ce3627 (code at Xapiand:bf7668b4a, pushed). S1 waits on strata-journal-behind (Next 0). `campaign accept ... durability --confirm` is the lead's.
+State: session 22, TSan finding T1 (index race at a pressure checkpoint): thread table written; fixing.
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
+
+Session 22 (2026-11-25), TSan finding T1 (CI at 1933c78f9, test_pool, test_a_log_past_its_bound_checkpoints_instead_of_refusing):
+basic_index's buffers vector, written by the pressure checkpoint's `on_checkpoint` refresh on the group's chore
+(shard_group.cc checkpoint -> Shard::checkpointed -> Core::refresh -> flush -> freeze) and read by `written_key` on the
+main thread (index->find_key) under the shard's turn. Introduced by Xapiand:f76c395e4 (L1).
+
+Thread table: every path that touches the index outside a view. "Turn" is ShardEndpoint::turn, the index's one writer
+(strata's checkout contract, x-pool D5: lease-less reads are safe only while no other thread writes).
+
+| Path | Thread | What excludes it (before the fix) |
+|---|---|---|
+| prepare (prepare_write: find_key, find_docid, fields) | caller's (loop, RESTORE's worker) | the turn |
+| written_key, written_keys, written_count | loop (RESTORE: worker via sync_wait) | the turn |
+| fresh -> Shard::refresh (index->refresh), reclaim, settle_merges, commit (no group), transactions, set_metadata, check, close/reopen | IndexChores worker or inline | the turn |
+| Turn::release -> index->check_in | the holder's | the turn (its holder) |
+| catalog's commit chore (commit_blocking: index_->commit) | catalog worker | no pin, so no turn (try_lock asserts); strata's chore bit holds group writes off |
+| group apply of a command entry (index->apply, refresh, reclaim_for_space) | group's chore | ack=quorum: the proposer holds the turn and awaits it; ack=none: the next holder's caught_up (unapplied_) |
+| applied_by_group | group's chore | atomics only (dirty, pending) |
+| checkpoint: capture (empty apply), sync_and_commit (index->commit), on_checkpoint (Core::refresh), unlink/release | group's chore | commit_group and a writer's LogFull wait: the turn. **Pressure task: nothing (no turn, no pin).** **An upload chunk's or abort's LogFull wait: nothing (pin, no turn).** |
+| catch_up, abort_open at open | group's chore | nothing serves before the open returns |
+| close's checkpoint, release_pins_held | group's chore | no pins (catalog close), after quiesce |
+| release_superseded (sources' pins: index->release commits) | group's chore | unreachable at a lone voter (no sources); the cluster quest's |
+| views: find_key via view(), get_view, search, scan, metadata | any | none needed (published views, D5) |
+
+Verdict: two rows break the rule, both from L1: the pressure checkpoint (no turn, no pin, so it also overlaps the
+catalog's demote and commit transitions) and the LogFull checkpoint of a proposer without the turn (upload chunks,
+aborts). The finding is the first; `on_checkpoint` is only where TSan caught it: the checkpoint's own sync_and_commit
+(index->commit -> flush) writes the same buffers, so moving the refresh to the loop (option 1) leaves the race.
+Moving written_key into read_applied (option 2) leaves prepare, written_count and fresh racing the same checkpoint.
+
+Model (T1): the turn is the index's one writer; a checkpoint runs only in a turn, by a pinned task.
+1. A turn holder whose placement crosses half the bound checkpoints before it answers, in its turn (the pressure
+   trigger, inline: no background task, no quiesce).
+2. A proposal that meets LogFull checkpoints and retries: in its turn when it holds one; a proposer that holds only a
+   pin (an upload's chunks, an abort) takes the turn for the checkpoint. A pinned proposer does not checkpoint at
+   half: its one path is the full log.
+3. COMMIT (commit_group) as before, in its turn.
+L1 still holds: every write past the bound is acknowledged; a turn holder's placements never pass half the bound plus
+one entry; an upload fills the log to LogFull, takes the turn, checkpoints and retries (the L1 test's upload phase).
 
 Session 21 (2026-11-24), durability review round 3 (CHANGES at Xapiand:98ea84a70): J1b, S1, A1 blocking (L1-T done
 in session 20); N9, N11, N12 nits; N10 left.
