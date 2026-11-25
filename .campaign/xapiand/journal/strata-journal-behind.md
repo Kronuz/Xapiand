@@ -1,6 +1,6 @@
 # strata-journal-behind: journal
 
-State: waiting on the design review of journal-binding.md at strata:786f7102 (lead launched it 2026-11-25); Blocked on 2-4 and Q1-Q3 are answered with its verdict (msg-1).
+State: working: D5 on the quest branch (step 1); the design revised per the design review at strata:4c5536f7, pushed.
 Quest: .campaign/xapiand/quests/strata-journal-behind.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,24 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Session 3 (2026-11-25). Design review CHANGES at strata:786f7102 (D-1 blocking, D-2..D-8); the lead's
+rulings (msg-1, below). Revised docs/design/journal-binding.md at strata:4c5536f7, pushed: D5 tracks
+peers awaiting an install across flights, pins each checkpoint while one waits, retries a Busy
+publication after the next release (D-1); make_pin and check_stage at the bundle (D-3, C7); D6 split
+by refusal, marked owner default (D-4, D-5); D7's three pre-gate writes (D-7); States rows (D-6);
+consensus:recover-gate as a value API with recover_refused (D-8); C5 with an install in flight and a
+10% p99 threshold (D-2). Building D5 now.
+
+msg-1 (lead, 2026-11-25), answered: the binding (D1-D4, D3's gate) approved; Q1 (a), Q2 (a), Q3 (a).
+D-1: retry the pinning checkpoint after the flight's release, not pin every bundle; C2's busy case in
+the probe's order; the model 1b8f9a installs at all 54 timings. D-4/D-5 owner default: index older
+and a refused learner reinstall in place, journal older or another history on a voter refused and
+replaced. D-2 C5 threshold; D-3 a learner check_stage case with a mutant; D-6, D-7 fixed; D-8 the
+value API, exact signature (Contracts). Done: all in the doc at strata:4c5536f7; D5 builds here, the
+gate and applied-term stay other quests'.
+
+Session 2 notes follow.
 
 Session 2 (2026-11-25), design round after the durability review (CHANGES: F1, F2, N1-N4). The
 position check at strata:31821753 is wrong twice: E moves (a refused lone voter elects at Start and
