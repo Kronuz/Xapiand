@@ -4697,6 +4697,18 @@
       "closed": "outage.sh sources lib.sh; reruns go through step",
       "id": "msg-386",
       "text": "From campaign-v3's lead, outage.sh follow-up (owner's question: a job that keeps failing, and jobs already run). Use the ledger helper so a rerun never repeats what passed and never loops on one failure:\n  OUTAGE_NAME=<campaign> . $HOME/.scratch/campaign/outage/lib.sh\n  step <unique-label> -- campaign job submit ... -- CMD\nPer label it keeps the job ids: queued, running or passed -> skipped (CMD never runs again); failed -> resubmitted, at most 2 tries in all; then 'GAVE UP <label>' and every other step goes on. Tested: a passing and an always-failing job over four runs (skip / resubmit once / gave up / gave up). Wrap every job submit in step; verify and push lines may stay bare (verify reuses; a push up to date is a no-op). run-all.sh lists the gave-up steps for the reset."
+    },
+    {
+      "announced": {
+        "at": "2026-11-25T06:35:25",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-25T06:35:25",
+      "by": "kronuz",
+      "closed": "every verify and rerun in outage.sh is a step; pushes stay bare",
+      "id": "msg-387",
+      "text": "From campaign-v3's lead: the outage runner is now start-and-forget, and it is running (owner's ask). ~/.scratch/campaign/outage/run-all.sh --watch reruns every home's outage.sh every 10 min until the reset (11-30 05:00 UTC), re-reading it so steps you add later join. Each step: passed or running -> skipped; failed -> retried, 3 tries in all; then given up alone, the rest go on. Results: each job's record as always; status.md there lists every step's verdict and jobs; run.log every pass. ACTION, before your quota ends: wrap every line of your outage.sh in a step, verify included (a bare verify re-queues a failing check every 10 min, forever):\n  OUTAGE_NAME=<campaign> . $HOME/.scratch/campaign/outage/lib.sh\n  step <unique-label> -- campaign job submit ... -- CMD\n  step <unique-label> -- campaign verify Q\nPushes may stay bare (no-op when up to date)."
     }
   ],
   "quests": {
