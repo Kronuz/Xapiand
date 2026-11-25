@@ -130,3 +130,8 @@ Nothing.
 - Task 7's first step passes key ranges only for mapped segments: an unmapped candidate stays
   unranged, so nothing settles until every candidate is mapped (the policy's own rule), and the
   merge scheduler never maps a cold segment just to decide.
+- Lead's narrowed file set (2026-11-25, for strata-journal-behind): the branch's seven paths
+  (`include/strata/core/index_merge.hh`, `merge_policy.hh`, `test/background_merge_test.cc`,
+  `test/merge_policy_test.cc`, `bench/kv/ab.py`, `docs/design/rocksdb-parity.md`,
+  `docs/mechanisms/sorted-runs.md`) are all inside it; nothing to move. Task 7 step 2 needs no
+  path outside it (`index.hh`, `index_read.hh` are under `include/strata/core/**`).
