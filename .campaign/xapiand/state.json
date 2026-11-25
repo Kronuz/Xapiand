@@ -4763,6 +4763,32 @@
         "todo": "97c42654"
       },
       "text": "to do, critical path first:\ntodo: finish track-c (nothing moved it for 71 min: ready for review (strata:be00906f); to land: CI at f2358007137a (carried to be00906f2212 across clean merges): failed: CI (failure) (--no-ci REASON to land without it); listed 11 min): `campaign status track-c`"
+    },
+    {
+      "announced": {
+        "at": "2026-11-25T05:59:33",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-25T05:59:33",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-381",
+      "items": {
+        "format-freeze": "frees test/** for format-freeze",
+        "index-delete": "frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete",
+        "more-like-this": "frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this",
+        "track-c": "track-c"
+      },
+      "settles": {
+        "start": [
+          "format-freeze",
+          "index-delete",
+          "more-like-this",
+          "track-c"
+        ]
+      },
+      "text": "set track-c: unlocks track-c; frees test/** for format-freeze; frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete; frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this"
     }
   ],
   "quests": {
@@ -19646,7 +19672,81 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-25T07:38:05",
+          "ci": {
+            "commit": "ca2a27058cbbd0031eba06a0e95bcb440416734c",
+            "runs": [
+              45615287943
+            ]
+          },
+          "commit": "9c3ee442a47ac8b1684bcb7169b516163cde0ede",
+          "criteria": {
+            "A1": "261125-043544-9e00b8 (the no-wal check), 261125-050945-ca33ea, 261125-043544-9e00b8, 261125-051006-228c96, 261125-043517-a4b25b; fails without: 261121-105434-07ffd7, 261121-203232-09b718, 261122-230006-5fc529, 261123-165135-36e01f, 261123-165137-8ec228, 261123-165140-99c0aa, 261123-165142-9e1f71, 261123-165145-a60381, 261123-165147-e4c73e, 261123-165232-41ee12, 261124-021314-11605e, 261124-201404-07df1f, 261124-201406-0ce20a, 261124-201408-5abd1c, 261124-201409-4408e8, 261124-201411-01a364, 261124-222240-69101c, 261124-231602-a9e71c, 261124-231605-ebe75b, 261124-231610-09be1d, 261124-231614-0d6d34, 261125-043520-724b20, 261125-043523-718f1e",
+            "A2": "261125-051006-228c96 (the crash check), 261125-050959-813250, 261125-050956-d1011f, 261125-050950-94892e; fails without: 261121-115255-30ad58, 261123-142137-528ce7, 261123-165109-560112, 261123-165112-923dcd, 261124-021321-9231e2, 261124-034439-e01d6b, 261124-034443-5d5f29",
+            "A3": "261125-050947-d49979, 261125-051002-b4a141; fails without: 261121-105428-7308c6, 261121-105431-21e0e8, 261121-115257-10469a, 261123-152911-321a3c, 261123-165120-541aae, 261123-165123-cf493c, 261123-165126-61010f",
+            "A4": "261125-050945-ca33ea, 261125-050953-4bf89d; fails without: 261123-165132-60295c",
+            "A5": "ci:Functional E2E (docs); fails without: 261121-203231-13b0f8, 261122-230005-d4c585, 261122-230006-38ba97, 261123-165154-d1a0f8, 261123-165157-ded424, 261123-165215-2c8a56, 261123-165217-7c699d, 261123-165219-0f06b3, 261123-165221-583df2, 261123-165223-998438, 261123-165225-1c5d88, 261123-165227-d0f01f, 261123-232529-f93da2, 261124-033419-5c1d14, 261124-160810-feba37",
+            "A6": "D113 (owner: Q1 (a), default ack quorum, bulk loaders choose none) and D142 (owner: Q6 as written, ?commit = ack=quorum&refresh=true; Q-F27 (a), read-your-writes served from the leader's replica); the code ships both defaults, A4's test covers Q-F27",
+            "A7": "docs/mechanisms/journal-durability.md: Every shard is a strata::group: a lone voter at rf = 1. The group's journal is the shard's only durability path",
+            "A8": "261125-051004-177d44",
+            "A9": "261125-050945-ca33ea; fails without: 261123-165200-4ebfb3, 261123-165202-26b0dd, 261123-165205-dd6ea0"
+          },
+          "evidence": [
+            {
+              "check": "build-test",
+              "ci": "ci:Build + unit + smoke",
+              "commit": "ca2a27058cbbd0031eba06a0e95bcb440416734c",
+              "state": "done"
+            },
+            {
+              "check": "e2e",
+              "ci": "ci:Functional E2E (docs)",
+              "commit": "ca2a27058cbbd0031eba06a0e95bcb440416734c",
+              "state": "done"
+            },
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src",
+              "commit": "cb0a09b78963340d5a76d025539cd7d232a24337",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261125-051006-228c96",
+              "level": "light",
+              "seconds": 1026.0,
+              "state": "done",
+              "what": "journal-replaces-wal check crash at cb0a09b78963"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:AddressSanitizer",
+              "commit": "ca2a27058cbbd0031eba06a0e95bcb440416734c",
+              "state": "done"
+            },
+            {
+              "check": "tsan",
+              "ci": "ci:ThreadSanitizer",
+              "commit": "ca2a27058cbbd0031eba06a0e95bcb440416734c",
+              "state": "done"
+            },
+            {
+              "cmd": "! git grep -n DatabaseWAL -- src",
+              "commit": "ca2a27058cbbd0031eba06a0e95bcb440416734c",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261125-043544-9e00b8",
+              "level": "none",
+              "seconds": 0.9,
+              "state": "done",
+              "what": "journal-replaces-wal check no-wal at ca2a27058cbb"
+            }
+          ],
+          "final": true,
+          "from": "f4ed924a8d88ce48eeee1e77363891d346e99b10",
+          "reason": "",
+          "tested": "528a17c9fef082de7c6fbefa3a09d82556136481"
+        }
+      ],
       "lenses": [
         "durability"
       ],
@@ -19662,6 +19762,30 @@
           "closed": "recorded in its journal by the lead",
           "id": "msg-2",
           "text": "From the lead, answer to Blocked on 11: (a) with (c). Owner decision D177 makes the journal open plain (fsync) on macOS like master; it lands as completion-flush-mode -> journal-sync-mode, and this quest is ordered after journal-sync-mode. The bar is measured like for like after that pin moves. Not (b). The 2-flushes-per-proposal and artifact-path findings are hunt rows for Detent's review. docs/dev/agent-codebase.md and src/database/data.* are now in the file set (items 6 and 7). Next round: a fresh contributor after journal-sync-mode lands bumps the pins, does items 6 and 7, and queues evidence once."
+        },
+        {
+          "announced": {
+            "at": "2026-11-21T19:58:18",
+            "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+            "why": ""
+          },
+          "answered": "9c3ee442a47a",
+          "at": "2026-11-21T19:58:18",
+          "by": "xapiand-lead",
+          "id": "msg-1",
+          "text": "harness/async_allowlist.tsv, row src/single_flight.h [mutex]: its note says each site is an O(1) step, but the cancelled joiner's leave (single_flight.h:146) is std::erase over the flight's joiner list, linear in the waiting joiners (bounded, no I/O). When you next edit the allowlist, reword it, e.g. 'an O(1) map step, or an erase from the flight's joiner list (linear in its joiners)'. Found by single-flight-budget's correctness re-check."
+        },
+        {
+          "announced": {
+            "at": "2026-11-24T22:47:41",
+            "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+            "why": ""
+          },
+          "answered": "9c3ee442a47a",
+          "at": "2026-11-24T22:47:41",
+          "by": "xapiand-lead",
+          "id": "msg-3",
+          "text": "Lead answers Blocked on 13 and the design check (session 21): the lifecycle table is approved as written (J1b identity walk on a miss only; S1 refuses before resume and recover; index-older refusal; N9 monotonic counters). S1's strata half is two quests: consensus-group-last (Driver::GroupState.last) then strata-journal-behind (group::open reads E, adopt fences P_H > E before resume and files_.recover). journal-replaces-wal now lands after strata-journal-behind. Go ahead now with J1b, A1, N9, N11, N12, the J2 refusal text and docs, and the index-older refusal; when strata-journal-behind lands, bump the strata and consensus pins and add S1's two value tests; the stalejournal probe fb40f3 confirms."
         }
       ],
       "milestone": "Phase 7b",
@@ -19678,7 +19802,7 @@
       ],
       "repo": ".",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "tasks": {
         "chunks": {
           "base": "7e232b1f71688995bd97437c563b254d5a8e5b34",
@@ -19714,7 +19838,7 @@
         }
       },
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-25T05:09:28",
+      "updated": "2026-11-25T07:38:17",
       "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal"
     },
     "journal-seal-repeat": {
