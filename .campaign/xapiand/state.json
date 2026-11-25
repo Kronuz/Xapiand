@@ -13702,15 +13702,11 @@
       "milestone": "",
       "needs": [],
       "provides": [],
-      "reason": "the d1000s10 A3 gap is prospect's cached pool reader; resume reruns A3 with PROSPECT at its landed commit",
       "repo": "../strata",
       "risk": "high",
-      "status": "blocked",
+      "status": "active",
       "title": "strata checks a segment's field ids wherever it maps",
-      "until": [
-        "prospect-pool-reader-transient"
-      ],
-      "updated": "2026-11-24T16:01:11",
+      "updated": "2026-11-24T18:56:12",
       "worktree": "../strata-wt/xapiand/field-check-at-map"
     },
     "field-table": {
