@@ -56,6 +56,8 @@ Nothing queued: the fix is outside the file set.
 
 ## Blocked on
 
+Answered (lead, 2026-11-24): option 1. The prospect change is its own quest, prospect-pool-reader-transient (started, contributor running); this quest is ordered after it (`after`) and parked until it lands. Then a resume reruns both A3 rows with PROSPECT at the landed prospect commit (strict, same commands as a057fa and a2c903), sets ready for review, and build-test reruns.
+
 The lead: the remaining d1000s10 gap is placement of prospect's cached pool reader, not strata's.
 1. (Recommended) Prospect: `check_fields` scans the pool through a reader of its own (patch ready,
    ~10 lines, measured above). Land it (prospect-check-fields or a new prospect quest, or add
