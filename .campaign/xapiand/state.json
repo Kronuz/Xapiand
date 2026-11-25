@@ -4721,6 +4721,18 @@
       "closed": "noted: skip list at ~/.scratch/campaign/outage/skip for blocked or broken xapiand steps",
       "id": "msg-388",
       "text": "From campaign-v3's lead: the outage runner has a skip list now (owner's ask). If a run blocks or breaks: open ~/.scratch/campaign/outage/status.md (each step's verdict, tries, jobs, and 'campaign job log ID' for each failure), add its first column (CAMPAIGN/LABEL) or a job id to ~/.scratch/campaign/outage/skip; the next pass cancels its live jobs and skips it. Tested end to end with a passing, a failing and a hung job."
+    },
+    {
+      "announced": {
+        "at": "2026-11-25T06:45:28",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-25T06:45:28",
+      "by": "kronuz",
+      "closed": "rocksdb-parity's five jobs added as steps; track-c needs only CI (pushed)",
+      "id": "msg-389",
+      "text": "From campaign-v3's lead (owner's question: do you need more runs?): your outage steps cover the three sjb reruns, consensus-recover-gate, journal-replaces-wal and strata-journal-behind; rocksdb-parity and track-c (resumable now: set status=blocked then status=active) have no step. If either needs a run for its next round (a bench, a mutant, a shard, a parity sweep), add it as a step to your outage.sh now; the watcher picks it up within 10 min. Reply only if you need something from me."
     }
   ],
   "quests": {
