@@ -782,7 +782,7 @@ Jobs prove criteria by their tags; paste `campaign brief`'s generated table here
 | A2 | 261124-231642-7dc2d2; fails without: 261123-165109-560112, 261123-165112-923dcd |
 | A3 | 261124-231640-4f4566; 261124-231643-34b7e8; fails without: 261123-165120-541aae, 261123-165123-cf493c, 261123-165126-61010f |
 | A4 | 261124-231641-01874e; 261124-231639-140abf; fails without: 261123-165132-60295c |
-| A5 | ci:Functional E2E (docs); 261124-021317-01a519; 261124-201453-2f1df2; fails without: 261123-165154-d1a0f8, 261123-165157-ded424, 261123-165213-4ee4de, 261123-165215-2c8a56, 261123-165217-7c699d, 261123-165219-0f06b3, 261123-165221-583df2, 261123-165223-998438, 261123-165225-1c5d88, 261123-165227-d0f01f |
+| A5 | ci:Functional E2E (docs); 261124-021317-01a519; 261125-033435-076dd7; fails without: 261123-165154-d1a0f8, 261123-165157-ded424, 261123-165213-4ee4de, 261123-165215-2c8a56, 261123-165217-7c699d, 261123-165219-0f06b3, 261123-165221-583df2, 261123-165223-998438, 261123-165225-1c5d88, 261123-165227-d0f01f |
 | A6 | D113 (owner: Q1 (a), default ack quorum, bulk loaders choose none) and D142 (owner: Q6 as written, ?commit = ack=quorum&refresh=true; Q-F27 (a), read-your-writes served from the leader's replica); the code ships both defaults, A4's test covers Q-F27 |
 | A7 | docs/mechanisms/journal-durability.md: Every shard is a strata::group: a lone voter at rf = 1. The group's journal is the shard's only durability path |
 | A8 | 261124-231643-d3a472 |
