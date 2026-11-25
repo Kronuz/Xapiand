@@ -33,7 +33,7 @@ Nothing blocks the rows. Two notes for the lead:
 | A5 | `docs/gates/track-c-c4.md` (strata:560e8851): T7 rows, R19 row ("election_min: pass at both commits, every row at least 16 times under it (worst 59.0 ms)"; the stated 64 KiB-class bound: miss), consensus-flow-bench landed consensus:122564d61; detent:transport-groups/transport-identity/transport-connection = consensus:e4e394b, 361d5d2, 677c864; D18 third-failure stop and connection-wide window: "unbuilt", named in the report |
 | A6 | `docs/mechanisms/simulator.md`: "linearizability checker judges it" (group-heal landed strata:04e52312; group-sim dropped, docs/gates/phase-3r.md stays a stub) |
 | A7 | `docs/design/peer-transport.md` (strata:be00906f), first line: "Status: SUPERSEDED (D125, 2026-11-25) by the landed host transport"; unbuilt requirements 1 to 4 named there |
-| A8 | `docs/GOAL5-AUDIT.md` in consensus, goal5-audit landed consensus:ac323fe6e; order ruled D123 in `docs/design/track-c.md` Rulings 3 (strata:be00906f) |
+| A8 | docs/GOAL5-AUDIT.md in consensus, goal5-audit landed consensus:ac323fe6e; order ruled D123 in `docs/design/track-c.md` Rulings 3 (strata:be00906f) |
 | A9 | `docs/gates/track-c-c4.md` written and `docs/gates/track-c-c2.md` completed, track-c-gates landed strata:560e8851d (reviews `docs/reviews/track-c-c2.md`, track-c-c4.md: APPROVE WITH CONDITIONS); C1 `docs/gates/track-c-c1.md` strata:de99ec7e |
 
 ## Result
