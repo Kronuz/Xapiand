@@ -35499,7 +35499,10 @@
     },
     "strata-journal-behind": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "consensus-recover-gate",
+        "strata-applied-term"
+      ],
       "base": "539fa10e52848dfd0b37278150af26c9a8b8524e",
       "branch": "quest/xapiand/strata-journal-behind",
       "checks": [
@@ -35555,7 +35558,7 @@
       "risk": "high",
       "status": "review",
       "title": "strata: a group whose journal is behind its index refuses at open",
-      "updated": "2026-11-25T01:25:24",
+      "updated": "2026-11-25T03:31:14",
       "worktree": "../strata-wt/xapiand/strata-journal-behind"
     },
     "strata-journal-pin": {
