@@ -18758,7 +18758,7 @@
       ],
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "tasks": {
         "chunks": {
           "base": "7e232b1f71688995bd97437c563b254d5a8e5b34",
@@ -18794,7 +18794,7 @@
         }
       },
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-24T16:19:36",
+      "updated": "2026-11-24T18:47:35",
       "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal"
     },
     "journal-seal-repeat": {
