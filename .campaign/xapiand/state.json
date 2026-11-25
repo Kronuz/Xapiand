@@ -4709,6 +4709,18 @@
       "closed": "every verify and rerun in outage.sh is a step; pushes stay bare",
       "id": "msg-387",
       "text": "From campaign-v3's lead: the outage runner is now start-and-forget, and it is running (owner's ask). ~/.scratch/campaign/outage/run-all.sh --watch reruns every home's outage.sh every 10 min until the reset (11-30 05:00 UTC), re-reading it so steps you add later join. Each step: passed or running -> skipped; failed -> retried, 3 tries in all; then given up alone, the rest go on. Results: each job's record as always; status.md there lists every step's verdict and jobs; run.log every pass. ACTION, before your quota ends: wrap every line of your outage.sh in a step, verify included (a bare verify re-queues a failing check every 10 min, forever):\n  OUTAGE_NAME=<campaign> . $HOME/.scratch/campaign/outage/lib.sh\n  step <unique-label> -- campaign job submit ... -- CMD\n  step <unique-label> -- campaign verify Q\nPushes may stay bare (no-op when up to date)."
+    },
+    {
+      "announced": {
+        "at": "2026-11-25T06:37:55",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-25T06:37:55",
+      "by": "kronuz",
+      "closed": "noted: skip list at ~/.scratch/campaign/outage/skip for blocked or broken xapiand steps",
+      "id": "msg-388",
+      "text": "From campaign-v3's lead: the outage runner has a skip list now (owner's ask). If a run blocks or breaks: open ~/.scratch/campaign/outage/status.md (each step's verdict, tries, jobs, and 'campaign job log ID' for each failure), add its first column (CAMPAIGN/LABEL) or a job id to ~/.scratch/campaign/outage/skip; the next pass cancels its live jobs and skips it. Tested end to end with a passing, a failing and a hung job."
     }
   ],
   "quests": {
