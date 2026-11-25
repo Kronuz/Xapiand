@@ -4293,6 +4293,34 @@
       "closed": "noted: Detent keeps full this wave; its A6 measures the write-path cost of 7 barriers -> F_FULLFSYNC and one extra fsync; plain for refetchable stores is Detent's call on that number",
       "id": "msg-360",
       "text": "From Detent's lead, a correction to msg-367's premise for Detent: Detent's old pins built PosixIO with default options, so FlushMode::full is not its old behaviour exactly on macOS. pin-wave's trace shows 7 barriers become F_FULLFSYNC (completion:5942250) and Sync gains one fsync (completion:d5c6fd4); 72 calls over 31 steps. Detent keeps full for this wave (agreed); its A6 measures the write-path cost, which decides whether the refetchable stores move to plain later."
+    },
+    {
+      "announced": {
+        "at": "2026-11-24T15:43:29",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-24T15:43:29",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-352",
+      "items": {
+        "format-freeze": "frees test/** for format-freeze",
+        "index-delete": "frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete",
+        "journal-replaces-wal": "journal-replaces-wal (until journal-sync-mode met: `campaign set journal-replaces-wal status=active`)",
+        "more-like-this": "frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this",
+        "rocksdb-parity": "frees include/strata/core/**, test/**, docs/mechanisms/**, CMakeLists.txt for rocksdb-parity"
+      },
+      "settles": {
+        "start": [
+          "format-freeze",
+          "index-delete",
+          "journal-replaces-wal",
+          "more-like-this",
+          "rocksdb-parity"
+        ]
+      },
+      "text": "journal-sync-mode landed: unlocks journal-replaces-wal (until journal-sync-mode met: `campaign set journal-replaces-wal status=active`); frees test/** for format-freeze; frees include/strata/core/**, test/**, docs/mechanisms/**, CMakeLists.txt for rocksdb-parity; frees src/server/search_views.cc, src/database/shard_group.*, src/database/pool.*, tests/test_pool.cc for index-delete; frees src/server/search_views.cc, docs/src/content/docs/** for more-like-this"
     }
   ],
   "quests": {
@@ -27607,20 +27635,55 @@
           "weakened": []
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/prospect-pool-reader-transient",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-24T18:54:14",
+          "ci": {
+            "commit": "c99e6bed2854c560be6de5cf09797c4af1bcf34a",
+            "runs": [
+              45531065901
+            ]
+          },
+          "commit": "c99e6bed2854c560be6de5cf09797c4af1bcf34a",
+          "criteria": {
+            "A1": "261124-181031-a6c46d; fails without: 261124-160817-d40a36",
+            "A2": "261124-183855-4a24fa (the build-test check), 261124-183855-4a24fa",
+            "A3": "261124-183856-4ceebf",
+            "A4": "[artifact] CHANGELOG.md (new file; prospect had none)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "c99e6bed2854c560be6de5cf09797c4af1bcf34a",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261124-183855-4a24fa",
+              "level": "light",
+              "seconds": 312.2,
+              "state": "done",
+              "what": "prospect-pool-reader-transient check build-test at c99e6bed2854"
+            }
+          ],
+          "final": true,
+          "from": "44303965ec66e29a1674447990cbbedc0deb3b9a",
+          "reason": "",
+          "tested": "c99e6bed2854c560be6de5cf09797c4af1bcf34a"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "/Users/kronuz/code/Kronuz/prospect",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "prospect: the field check reads the pool through a reader it drops, so an opened index keeps no pool reader",
-      "updated": "2026-11-24T18:38:22",
-      "worktree": "../prospect-wt/xapiand/prospect-pool-reader-transient"
+      "updated": "2026-11-24T18:55:20",
+      "worktree": ""
     },
     "prospect-pruning-floors": {
       "accepted": {},
