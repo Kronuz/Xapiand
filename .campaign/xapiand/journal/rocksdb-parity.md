@@ -1,6 +1,6 @@
 # rocksdb-parity: journal
 
-State: waiting on jobs 261125-035316-b8b4f2 261125-020727-610311
+State: working: msg-1 search row (prospect_engine against the quest's strata, 64 runs vs max_runs 0)
 Quest: .campaign/xapiand/quests/rocksdb-parity.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -75,9 +75,9 @@ Launch 1 (2026-11-24): first commit, gap table, one strata-only task.
    it is the next step after the suite is green: an exclusive term/phrase p50/p99 row on a text
    index keyed in order, 64 runs against `max_runs = 0` (tiers), then the cap's mechanism named
    in sorted-runs.md and per-layout caps if search loses.
-0a. Full suite 261125-035316-b8b4f2 at pending/rocksdb-parity/tier-tests (strata:ff7b4d97 =
-   d80addd0 + the out-of-set test edits); green -> lead widens the file set, quest branch
-   fast-forwards to it. Mutants/tests/smoke read: size-gate failed only at 387, no-cap only at
+0a. Full suite 261125-035437-7398ae at strata:7ba472a4 (the lead merged
+   pending/rocksdb-parity/tier-tests into the quest branch and widened the file set; the earlier
+   261125-035316-b8b4f2 is cancelled). Mutants/tests/smoke read: size-gate failed only at 387, no-cap only at
    345 416, no-key-ranges only at 437-441, tests 9f6c9c pass; smoke 4543a9: tenx1 fillseq
    1.33x, wamp 1.25 -> 0.57; twox1 fillseq wamp 1.63 -> 0.58; readrandom 0.88 (1 trial).
 0b. Read jobs: tests 261125-020618-9f6c9c (e2c18e42); mutants 261125-020620-96fc88 (size-gate,
