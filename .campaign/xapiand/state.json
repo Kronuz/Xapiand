@@ -9667,11 +9667,46 @@
         "docs/DRIVER.md",
         "CHANGELOG.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/consensus-recover-gate",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-25T08:03:39",
+          "ci": {
+            "carried": true,
+            "commit": "b6a604abf39409b8db000e7c77977c529bcc0db5",
+            "runs": [
+              45607857230
+            ]
+          },
+          "commit": "deb12f7b0b1d0ca7c531148f73230ceb6cf68fa3",
+          "criteria": {
+            "A1": "261125-034814-cbfb1c (passed at b6a604abf394; only 1 merge from main since, none touching its files), 261125-034822-6f0c97 (passed at b6a604abf394; only 1 merge from main since, none touching its files); fails without: 261125-034825-3c9017",
+            "A2": "261125-034814-cbfb1c (the build-test check), 261125-034814-cbfb1c (passed at b6a604abf394; only 1 merge from main since, none touching its files)",
+            "A3": "consensus docs/DRIVER.md \"Recover gate\" (gate, reason text), CHANGELOG.md 2026-11-25 at consensus:b6a604a"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo >/dev/null && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "b6a604abf39409b8db000e7c77977c529bcc0db5",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261125-034814-cbfb1c",
+              "level": "light",
+              "seconds": 2045.1,
+              "state": "done",
+              "what": "consensus-recover-gate check build-test at b6a604abf394"
+            }
+          ],
+          "final": true,
+          "from": "80540ca61cf5deef48a42e0c2fed88fcf9f6e2d3",
+          "reason": "",
+          "tested": "deb12f7b0b1d0ca7c531148f73230ceb6cf68fa3"
+        }
+      ],
       "lenses": [
         "durability"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [
@@ -9679,10 +9714,10 @@
       ],
       "repo": "../consensus",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "consensus: recover refuses, before Start, a log that retains no accepted boundary",
-      "updated": "2026-11-25T04:35:25",
-      "worktree": "../consensus-wt/xapiand/consensus-recover-gate"
+      "updated": "2026-11-25T08:03:44",
+      "worktree": ""
     },
     "consensus-request-install": {
       "accepted": {
