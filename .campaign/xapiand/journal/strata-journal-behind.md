@@ -52,6 +52,8 @@ A sound group is never refused: every sound row has P_H <= E at the moment E is 
    that picks each bench's flush mode; (b) widen this file set to the 15 paths. Recommend (a): the
    wave is mechanical but separate, and each bench's mode is a measurement choice.
 
+1 answered (lead, 2026-11-25): agreed; only the consensus pin moves here. strata's move to the rest of the pin wave (completion's FlushMode in 15 files) is its own quest, filed in hunt.md.
+
 ## Evidence
 
 Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
