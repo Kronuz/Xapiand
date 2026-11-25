@@ -2,6 +2,7 @@
 # Queues the machine work xapiand's next rounds need during the quota outage. Idempotent:
 # verify and rerun reuse identical queued or passed jobs; a push already up to date is a no-op.
 cd "$(dirname "$0")/../.." || exit 1
+OUTAGE_NAME=xapiand . "$HOME/.scratch/campaign/outage/lib.sh"
 export GH_TOKEN="$(gh auth token --user Kronuz)"
 
 # Branches that need CI at their heads (code worktree, then the journal worktree).
@@ -18,7 +19,7 @@ done
 
 # Evidence that ran other code than the heads (reruns at the current head).
 for j in 261125-004551-0bc60c 261125-033043-326a1d 261125-033134-b6ba15; do
-	campaign job rerun "$j" 2>&1 | tail -1
+	step "sjb-rerun-$j" -- campaign job rerun "$j"
 done
 
 campaign job list --queued 2>/dev/null | head -40 || true
